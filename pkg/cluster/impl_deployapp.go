@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
@@ -23,7 +24,7 @@ import (
 )
 
 // wrong to use IAppPartitions to get total NumAppPartition because the app the cmd is called for is not deployed yet
-func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime, sidecarApps []appparts.SidecarApp) istructsmem.ExecCommandClosure {
+func provideCmdDeployApp(asp istructs.IAppStructsProvider, time timeu.ITime, sidecarApps []appparts.SidecarApp) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
 		appQName, err := appdef.ParseAppQName(appQNameStr)
@@ -79,7 +80,7 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime,
 					appQName, numAppPartitionsToDeploy, numPartitionsDeployed))
 			}
 			if numAppWorkspacesDeployed != numAppWorkspacesToDeploy {
-				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", ErrNumAppWorkspacesChanged.Error(),
+				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorkspaces=%d", ErrNumAppWorkspacesChanged.Error(),
 					appQName, numAppWorkspacesToDeploy, numAppWorkspacesDeployed))
 			}
 

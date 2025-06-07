@@ -18,4 +18,8 @@ type implIFederation struct {
 	adminPortGetter func() int
 }
 
+type implIFederationForQP struct {
+	fed IFederation
+}
+
 type OffsetsChan chan istructs.Offset

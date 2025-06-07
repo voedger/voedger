@@ -87,14 +87,35 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		PRIMARY KEY((AppWSID), AppIDLoginHash)
 	) AS RESULT OF ProjectorLoginIdx;
 
+	TYPE CreateEmailLoginParams (
+		Email varchar VERIFIABLE,
+		AppName text NOT NULL,
+		SubjectKind int32 NOT NULL,
+		WSKindInitializationData text(1024) NOT NULL,
+		ProfileCluster int32 NOT NULL
+	);
+
+	TYPE CreateEmailLoginUnloggedParams (
+		Password text NOT NULL
+	);
+
 	EXTENSION ENGINE BUILTIN (
-		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
+		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
+		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~server.users/cmp.registry.CreateEmailLogin.vsql~impl]
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
 		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(sys.View(LoginIdx));
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
+
+	GRANT EXECUTE ON COMMAND ChangePassword TO sys.Anonymous;
+	GRANT EXECUTE ON COMMAND ResetPasswordByEmail TO sys.Anonymous;
+	GRANT EXECUTE ON COMMAND CreateLogin TO sys.Anonymous;
+	GRANT EXECUTE ON QUERY IssuePrincipalToken TO sys.Anonymous;
+	GRANT EXECUTE ON QUERY InitiateResetPasswordByEmail TO sys.Anonymous;
+	GRANT EXECUTE ON QUERY IssueVerifiedValueTokenForResetPassword TO sys.Anonymous;
+	GRANT SELECT ON TABLE Login TO sys.ProfileOwner;
 );

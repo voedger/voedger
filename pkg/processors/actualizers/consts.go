@@ -8,26 +8,15 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
 var (
-	qnameProjectionOffsets       = appdef.NewQName(appdef.SysPackage, "projectionOffsets")
-	cudTypeKindToGlobalDocQNames = map[appdef.TypeKind][]appdef.QName{
-		appdef.TypeKind_CDoc:    {istructs.QNameCDoc, istructs.QNameCRecord},
-		appdef.TypeKind_WDoc:    {istructs.QNameWDoc, istructs.QNameWRecord},
-		appdef.TypeKind_ODoc:    {istructs.QNameODoc, istructs.QNameORecord},
-		appdef.TypeKind_CRecord: {istructs.QNameCRecord},
-		appdef.TypeKind_WRecord: {istructs.QNameWRecord},
-		appdef.TypeKind_ORecord: {istructs.QNameORecord},
-	}
-)
-
-const (
-	partitionFld     = "partition"
-	projectorNameFld = "projector"
-	offsetFld        = "offset"
+	qnameProjectionOffsets = sys.ProjectionOffsetsView.Name
+	partitionFld           = sys.ProjectionOffsetsView.Fields.Partition
+	projectorNameFld       = sys.ProjectionOffsetsView.Fields.Projector
+	offsetFld              = sys.ProjectionOffsetsView.Fields.Offset
 )
 
 const (

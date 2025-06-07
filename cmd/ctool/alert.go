@@ -55,7 +55,7 @@ func newAlertCmd() *cobra.Command {
 		Short: "Manage alerts",
 	}
 
-	if newCluster().Edition != clusterEditionCE {
+	if newCluster().Edition != clusterEditionN1 {
 		alertConfigsCmd := &cobra.Command{
 			Use:   "configs",
 			Short: "Manage alert configuration",
@@ -113,7 +113,7 @@ func setDiscordWebhook(cluster *clusterType, webhook string) error {
 	appNode1 := cluster.nodeByHost("app-node-1").address()
 	appNode2 := cluster.nodeByHost("app-node-2").address()
 
-	if webhook == emptyDiscordWebhookUrl {
+	if webhook == emptyDiscordWebhookURL {
 		loggerInfo(fmt.Sprintf("Removing Discord webhook from %s and %s", appNode1, appNode2))
 	} else {
 		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s and %s", webhook, appNode1, appNode2))
@@ -156,9 +156,9 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 
 	remoteDir := filepath.Join(homeDir, alertmanager)
 	remoteFile := filepath.Join(remoteDir, configFileName)
-	host := ceNodeName
+	host := n1NodeName
 
-	if webhook == emptyDiscordWebhookUrl {
+	if webhook == emptyDiscordWebhookURL {
 		loggerInfo("Removing Discord webhook from " + host)
 	} else {
 		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s", webhook, host))
@@ -199,7 +199,7 @@ func checkURL(s string) error {
 		return nil
 	}
 
-	return fmt.Errorf(errIsNotValidUrl, s, ErrIsNotValidUrl)
+	return fmt.Errorf(errIsNotValidURL, s, ErrIsNotValidURL)
 }
 
 func alertAddDiscord(cmd *cobra.Command, args []string) error {
@@ -221,7 +221,7 @@ func alertAddDiscord(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		if err = setDiscordWebhookCe(cluster, args[0]); err != nil {
 			return err
 		}
@@ -250,12 +250,12 @@ func alertRemoveDiscord(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if cluster.Edition != clusterEditionCE {
-		if err = setDiscordWebhook(cluster, emptyDiscordWebhookUrl); err != nil {
+	if cluster.Edition != clusterEditionN1 {
+		if err = setDiscordWebhook(cluster, emptyDiscordWebhookURL); err != nil {
 			return err
 		}
 	} else {
-		if err = setDiscordWebhookCe(cluster, emptyDiscordWebhookUrl); err != nil {
+		if err = setDiscordWebhookCe(cluster, emptyDiscordWebhookURL); err != nil {
 			return err
 		}
 	}
@@ -370,7 +370,7 @@ func (e *eventType) postAlert(cluster *clusterType) error {
 
 	script := "post-alert.sh"
 	dir := scriptsTempDir
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		dir = filepath.Join(dir, "ce")
 		script = filepath.Join("ce", "post-alert.sh")
 	}

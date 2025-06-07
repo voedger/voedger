@@ -23,7 +23,7 @@ func newMonCmd() *cobra.Command {
 		RunE: monPassword,
 	}
 
-	if newCluster().Edition != clusterEditionCE && !addSshKeyFlag(monPasswordCmd) {
+	if newCluster().Edition != clusterEditionN1 && !addSshKeyFlag(monPasswordCmd) {
 		return nil
 	}
 
@@ -91,10 +91,10 @@ func setMonPassword(cluster *clusterType, password string) error {
 	}
 
 	scriptName := "g-ds-update.sh"
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 
 		if err = newScriptExecuter("", "").
-			run(scriptName, cluster.nodeByHost(ceNodeName).address(), admin, admin, password); err != nil {
+			run(scriptName, cluster.nodeByHost(n1NodeName).address(), admin, admin, password); err != nil {
 			return err
 		}
 	} else {
@@ -136,9 +136,9 @@ func setGrafanaPassword(cluster *clusterType, password string) error {
 		return err
 	}
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		if err = newScriptExecuter("", "").
-			run("g-user-password-set.sh", cluster.nodeByHost(ceNodeName).address(), admin, admin, password); err != nil {
+			run("g-user-password-set.sh", cluster.nodeByHost(n1NodeName).address(), admin, admin, password); err != nil {
 			return err
 		}
 
@@ -164,7 +164,7 @@ func setGrafanaPassword(cluster *clusterType, password string) error {
 // password installation for admin user in Grafana
 func setGrafanaAdminPassword(cluster *clusterType, password string) error {
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		if err := newScriptExecuter("", "").
 			run("ce/grafana-admin-password.sh", password); err != nil {
 			return err
@@ -203,7 +203,7 @@ func setPrometheusPassword(cluster *clusterType, password string) error {
 		return err
 	}
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		args := []string{password, hash}
 
 		if err = newScriptExecuter("", "").

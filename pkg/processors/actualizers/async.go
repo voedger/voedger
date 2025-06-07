@@ -22,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
@@ -155,11 +154,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	// returns true if there are custom storages except «sys.View» and «sys.Record»
 	customStorages := func(ss appdef.IStorages) bool {
-		if ss.Len() > 2 {
-			return true
-		}
-		for storage := range ss.Enum {
-			n := storage.Name()
+		for _, n := range ss.Names() {
 			if n != sys.Storage_View && n != sys.Storage_Record {
 				return true
 			}
@@ -420,7 +415,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		p.aametrics.Set(aaCurrentOffset, p.partitionID, p.name, float64(w.pLogOffset))
 	}
 
-	if !isAcceptable(w.event, p.iProjector.WantErrors(), p.iProjector.Events().Map(), p.iProjector.App(), p.name) {
+	if !ProjectorEvent(p.iProjector, w.event) {
 		return nil, nil
 	}
 
@@ -594,7 +589,7 @@ func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.Partit
 	key.PutInt32(partitionFld, int32(partition))
 	key.PutQName(projectorNameFld, projectorName)
 	value, err := appStructs.ViewRecords().Get(istructs.NullWSID, key)
-	if errors.Is(err, istructsmem.ErrRecordNotFound) {
+	if errors.Is(err, istructs.ErrRecordNotFound) {
 		return istructs.NullOffset, nil
 	}
 	if err != nil {

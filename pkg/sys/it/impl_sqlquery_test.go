@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"testing"
 	"time"
 
@@ -319,25 +320,25 @@ func TestSqlQuery_records(t *testing.T) {
 					   {"fields":{"sys.ID":3,"sys.QName":"app1pkg.pos_emails","description":"invite"}}]}`
 	res := vit.PostWS(ws, "c.sys.CUD", body)
 
-	eftId := res.NewID()
-	cashId := res.NewIDs["2"]
-	emailId := res.NewIDs["3"]
+	eftID := res.NewID()
+	cashID := res.NewIDs["2"]
+	emailID := res.NewIDs["3"]
 
 	t.Run("Should read record with all fields by ID", func(t *testing.T) {
 		require := require.New(t)
-		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"},"elements":[{"fields":["Result"]}]}`, eftId)
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"},"elements":[{"fields":["Result"]}]}`, eftID)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 		require.Contains(resStr, `"sys.QName":"app1pkg.payments"`)
-		require.Contains(resStr, fmt.Sprintf(`"sys.ID":%d`, eftId))
+		require.Contains(resStr, fmt.Sprintf(`"sys.ID":%d`, eftID))
 		require.Contains(resStr, `"guid":"guidEFT"`)
 		require.Contains(resStr, `"name":"EFT"`)
 		require.Contains(resStr, `"sys.IsActive":true`)
 	})
 	t.Run("Should read records with one field by IDs range", func(t *testing.T) {
 		require := require.New(t)
-		body = fmt.Sprintf(`{"args":{"Query":"select name, sys.IsActive from app1pkg.payments where id in (%d,%d)"}, "elements":[{"fields":["Result"]}]}`, eftId, cashId)
+		body = fmt.Sprintf(`{"args":{"Query":"select name, sys.IsActive from app1pkg.payments where id in (%d,%d)"}, "elements":[{"fields":["Result"]}]}`, eftID, cashID)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		require.Equal(`{"name":"EFT","sys.IsActive":true}`, resp.SectionRow()[0])
@@ -352,9 +353,9 @@ func TestSqlQuery_records(t *testing.T) {
 			`{"args":{"Query":"select * from app1pkg.payments where id >= 2"}}`:                                            "unsupported operation: >=",
 			`{"args":{"Query":"select * from app1pkg.payments where id = 2 and something = 2"}}`:                           "unsupported expression: *sqlparser.AndExpr",
 			`{"args":{"Query":"select * from app1pkg.payments"}}`:                                                          "'app1pkg.payments' is not a singleton. At least one record ID must be provided",
-			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, emailId):                      fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailId),
+			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, emailID):                      fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailID),
 			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, istructs.NonExistingRecordID): fmt.Sprintf("record with ID '%d' not found", istructs.NonExistingRecordID),
-			fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailId):          "field 'abracadabra' not found in def",
+			fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailID):          "not found: field «abracadabra» in CDoc «app1pkg.pos_emails»",
 			`{"args":{"Query":"select * from app1pkg.payments.2 where id = 2"}}`:                                           "record ID and 'where id ...' clause can not be used in one query",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws.1"}}`:                                                 "conditions are not allowed to query a singleton",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws where id = 1"}}`:                                      "conditions are not allowed to query a singleton",
@@ -442,7 +443,7 @@ func TestSqlQuery(t *testing.T) {
 		body := `{"args":{"Query":"select * from git.hub"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "unsupported source: git.hub")
+		resp.RequireError(t, "do not know how to read from the requested git.hub, TypeKind_null")
 	})
 	t.Run("Should read sys.wlog from other workspace", func(t *testing.T) {
 		wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"}}`, ws.Owner.ProfileWSID))
@@ -515,8 +516,10 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 
 		// for example read cdoc.registry.Login.LoginHash from the app workspace
 		loginID := vit.GetCDocLoginID(prn.Login)
+		// request to the different app -> use sys token to avoid 403
+		sysPrincipal := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
-		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body)
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
 	})
@@ -525,8 +528,10 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		// for example read cdoc.registry.Login.LoginHash from the app workspace determined by the login name
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
 		loginID := vit.GetCDocLoginID(prn.Login)
+		// request to the different app -> use sys token to avoid 403
+		sysPrincipal := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.\"login\".registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, loginID)
-		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body)
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
 	})
@@ -546,5 +551,99 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog where offset = %d"},"elements":[{"fields":["Result"]}]}`, ws.WSID, istructs.NonExistingRecordID)
 		resp := vit.PostWS(wsAnother, "q.sys.SqlQuery", body)
 		require.True(resp.IsEmpty())
+	})
+}
+
+func TestAuthnz(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("foreign app", func(t *testing.T) {
+		loginID := vit.GetCDocLoginID(ws.Owner.Login)
+		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
+		require.NoError(t, err)
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, ws.Owner.Name, istructs.CurrentClusterID())
+		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
+		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+	})
+
+	t.Run("doc", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from app1pkg.TestDeniedCDoc.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+	})
+
+	t.Run("field", func(t *testing.T) {
+		// denied
+		body := `{"args":{"Query":"select DeniedFld2 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+
+		// allowed, just expect 400 not found
+		body = `{"args":{"Query":"select Fld1 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect400("record with ID '123' not found"))
+	})
+}
+
+func TestReadODocs(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	body := `{"args":
+		{"sys.ID": 1,"odocIntFld": 42,"orecord1":[
+			{"sys.ID":2,"sys.ParentID":1, "orecord1IntFld": 43, "orecord2": [
+				{"sys.ID":3, "sys.ParentID":2, "orecord2IntFld": 44}
+			]},
+			{"sys.ID":4,"sys.ParentID":1, "orecord1IntFld": 45, "orecord2": [
+				{"sys.ID":5, "sys.ParentID":4, "orecord2IntFld": 46}
+			]}
+		]}
+	}`
+	resp := vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
+		coreutils.WithMethod(http.MethodPost),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
+	)
+	odoc1ID := resp.NewIDs["1"]
+	odoc1ORec11ID := resp.NewIDs["2"]
+	odoc1ORec12ID := resp.NewIDs["4"]
+
+	body = `{"args":{"sys.ID": 1,"odocIntFld": 47}}`
+	resp = vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
+		coreutils.WithMethod(http.MethodPost),
+		coreutils.WithAuthorizeBy(ws.Owner.Token),
+	)
+	odoc2ID := resp.NewID()
+
+	t.Run("odoc", func(t *testing.T) {
+		res := vit.SqlQuery(ws, "select * from app1pkg.odoc1.%d", odoc1ID)
+		require.EqualValues(odoc1ID, res["sys.ID"])
+		require.EqualValues(42, res["odocIntFld"])
+	})
+
+	t.Run("orecord", func(t *testing.T) {
+		res := vit.SqlQuery(ws, "select * from app1pkg.orecord1.%d", odoc1ORec11ID)
+		require.EqualValues(odoc1ORec11ID, res["sys.ID"])
+		require.EqualValues(43, res["orecord1IntFld"])
+	})
+
+	t.Run("odocs", func(t *testing.T) {
+		res := vit.SqlQueryRows(ws, "select * from app1pkg.odoc1 where id in(%d, %d)", odoc1ID, odoc2ID)
+		require.Len(res, 2)
+		require.EqualValues(odoc1ID, res[0]["sys.ID"])
+		require.EqualValues(42, res[0]["odocIntFld"])
+		require.EqualValues(odoc2ID, res[1]["sys.ID"])
+		require.EqualValues(47, res[1]["odocIntFld"])
+	})
+
+	t.Run("orecords", func(t *testing.T) {
+		res := vit.SqlQueryRows(ws, "select * from app1pkg.orecord1 where id in(%d, %d)", odoc1ORec11ID, odoc1ORec12ID)
+		require.Len(res, 2)
+		require.EqualValues(odoc1ORec11ID, res[0]["sys.ID"])
+		require.EqualValues(43, res[0]["orecord1IntFld"])
+		require.EqualValues(odoc1ORec12ID, res[1]["sys.ID"])
+		require.EqualValues(45, res[1]["orecord1IntFld"])
 	})
 }

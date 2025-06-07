@@ -13,8 +13,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
@@ -56,7 +56,7 @@ func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.
 	}
 	v, err := s.appStructsFunc().ViewRecords().Get(k.wsid, k.IKeyBuilder)
 	if err != nil {
-		if errors.Is(err, istructsmem.ErrRecordNotFound) {
+		if errors.Is(err, istructs.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
@@ -139,6 +139,9 @@ func (s *viewRecordsStorage) ApplyBatch(items []state.ApplyBatchItem) (err error
 		}
 	}
 	for n, newOffset := range nn {
+		if logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("viewRecordStorage: sending n10n view: %s, wsid: %d, newOffset: %d", n.view, n.wsid, newOffset))
+		}
 		s.n10nFunc(n.view, n.wsid, newOffset)
 	}
 	return err
@@ -287,6 +290,8 @@ type viewValue struct {
 	value istructs.IValue
 }
 
+func (v *viewValue) AsInt8(name string) int8          { return v.value.AsInt8(name) }
+func (v *viewValue) AsInt16(name string) int16        { return v.value.AsInt16(name) }
 func (v *viewValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
 func (v *viewValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
 func (v *viewValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }

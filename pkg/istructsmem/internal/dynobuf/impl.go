@@ -19,12 +19,12 @@ func newSchemes() *DynoBufSchemes {
 
 // Prepares schemes
 func (sch *DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
-	for t := range appDef.Types() {
+	for _, t := range appDef.Types() {
 		if view, ok := t.(appdef.IView); ok {
 			sch.addView(view)
 			continue
 		}
-		if fld, ok := t.(appdef.IFields); ok {
+		if fld, ok := t.(appdef.IWithFields); ok {
 			sch.add(t.QName().String(), fld)
 		}
 	}
@@ -50,7 +50,7 @@ func (sch DynoBufSchemes) ViewClustColsScheme(name appdef.QName) *dynobuffers.Sc
 }
 
 // Adds scheme
-func (sch *DynoBufSchemes) add(name string, fields appdef.IFields) {
+func (sch *DynoBufSchemes) add(name string, fields appdef.IWithFields) {
 	sch.schemes[name] = NewFieldsScheme(name, fields)
 }
 

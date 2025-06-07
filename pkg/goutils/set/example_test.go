@@ -66,7 +66,7 @@ func ExampleFrom() {
 
 	// Create new Set from values.
 	s := set.From(Jan, Feb, Mar)
-	fmt.Println(s.AsArray())
+	fmt.Println(s.AsArray()) // nolint QF1010
 
 	// Output:
 	// [Jan Feb Mar]
@@ -96,7 +96,7 @@ func ExampleSet_AsArray() {
 	s := set.From(Jan, Feb, Mar)
 
 	// Receive values from Set as array.
-	fmt.Println(s.AsArray())
+	fmt.Println(s.AsArray()) // nolint QF1010
 
 	// Output:
 	// [Jan Feb Mar]

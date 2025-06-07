@@ -14,8 +14,6 @@ import (
 )
 
 func TestPbill(t *testing.T) {
-	t.Parallel()
-
 	date := time.Now()
 
 	t.Run("Singleton NextPBillNumber: insert", func(t *testing.T) {

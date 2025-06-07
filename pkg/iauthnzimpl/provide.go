@@ -9,10 +9,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func NewDefaultAuthorizer() iauthnz.IAuthorizer {
-	return &implIAuthorizer{acl: defaultACL}
-}
-
 func NewDefaultAuthenticator(subjectRolesGetter SubjectGetterFunc, isDeviceAllowedFuncs IsDeviceAllowedFuncs) iauthnz.IAuthenticator {
 	return &implIAuthenticator{
 		subjectRolesGetter:   subjectRolesGetter,

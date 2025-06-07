@@ -5,11 +5,13 @@
 package coreutils
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -29,35 +31,6 @@ var (
 		"recordID": appdef.DataKind_RecordID,
 	}
 
-	testAppDef = func(t *testing.T) appdef.IAppDef {
-		adb := appdef.New()
-
-		wsb := adb.AddWorkspace(testWS)
-
-		obj := wsb.AddObject(testQName)
-		addFieldDefs(obj, testFieldDefs)
-
-		simpleObj := wsb.AddObject(testQNameSimple)
-		simpleObj.AddField("int32", appdef.DataKind_int32, false)
-
-		view := wsb.AddView(testQNameView)
-		view.Key().PartKey().AddField("pk", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("cc", appdef.DataKind_string)
-		iValueFields := map[string]appdef.DataKind{}
-		for n, k := range testFieldDefs {
-			iValueFields[n] = k
-		}
-		iValueFields["record"] = appdef.DataKind_Record
-		for n, k := range iValueFields {
-			view.Value().AddField(n, k, false)
-		}
-
-		app, err := adb.Build()
-		require.NoError(t, err)
-
-		return app
-	}
-
 	testData = map[string]interface{}{
 		"int32":                  int32(1),
 		"int64":                  int64(2),
@@ -73,21 +46,6 @@ var (
 		appdef.SystemField_QName: testQNameSimple,
 		"int32":                  int32(42),
 	}
-	testBasic = func(expectedQName appdef.QName, m map[string]interface{}, require *require.Assertions) {
-		require.Equal(int32(1), m["int32"])
-		require.Equal(int64(2), m["int64"])
-		require.Equal(float32(3), m["float32"])
-		require.Equal(float64(4), m["float64"])
-		require.Equal("str", m["string"])
-		v, ok := m["bool"].(bool)
-		require.True(ok)
-		require.True(v)
-		require.Equal([]byte{5, 6}, m["bytes"])
-		require.Equal(istructs.RecordID(7), m["recordID"])
-		actualQName, err := appdef.ParseQName(m[appdef.SystemField_QName].(string))
-		require.NoError(err)
-		require.Equal(expectedQName, actualQName)
-	}
 )
 
 func addFieldDefs(fields appdef.IFieldsBuilder, fd map[string]appdef.DataKind) {
@@ -102,7 +60,7 @@ func TestToMap_Basic(t *testing.T) {
 	require := require.New(t)
 	obj := &TestObject{
 		Name: testQName,
-		Id:   42,
+		ID_:  42,
 		Data: testData,
 		Containers_: map[string][]*TestObject{
 			"container": {
@@ -123,7 +81,7 @@ func TestToMap_Basic(t *testing.T) {
 		require.Len(containerObjects, 1)
 		containerObj := containerObjects[0]
 		require.Equal(int32(42), containerObj["int32"])
-		require.Equal(testQNameSimple.String(), containerObj[appdef.SystemField_QName])
+		require.Equal(testQNameSimple, containerObj[appdef.SystemField_QName])
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
@@ -132,9 +90,9 @@ func TestToMap_Basic(t *testing.T) {
 	})
 
 	t.Run("null QName", func(t *testing.T) {
-		obj = &TestObject{
+		obj := &TestObject{
 			Name: appdef.NullQName,
-			Id:   42,
+			ID_:  42,
 			Data: map[string]interface{}{},
 		}
 		m := ObjectToMap(obj, appDef)
@@ -142,13 +100,18 @@ func TestToMap_Basic(t *testing.T) {
 		m = FieldsToMap(obj, appDef)
 		require.Empty(m)
 	})
+
+	t.Run("all fields", func(t *testing.T) {
+		m := ObjectToMap(obj, appDef, WithAllFields())
+		testBasic(testQName, m, require)
+	})
 }
 
 func TestToMap_Filter(t *testing.T) {
 	require := require.New(t)
 	obj := &TestObject{
 		Name: testQName,
-		Id:   42,
+		ID_:  42,
 		Data: testData,
 	}
 
@@ -190,53 +153,6 @@ func TestToMap_Filter(t *testing.T) {
 	})
 }
 
-func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
-	require := require.New(t)
-	testDataPartial := map[string]interface{}{
-		"int32":                  int32(1),
-		"string":                 "str",
-		"float32":                float32(2),
-		appdef.SystemField_QName: testQName,
-	}
-	obj := &TestObject{
-		Name: testQName,
-		Id:   42,
-		Data: testDataPartial,
-	}
-	expected := map[string]interface{}{
-		"int32":                  int32(1),
-		"string":                 "str",
-		appdef.SystemField_QName: testQName.String(),
-	}
-
-	appDef := testAppDef(t)
-
-	t.Run("ObjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
-			return name != "float32"
-		}))
-		require.Equal(expected, m)
-	})
-
-	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
-			return name != "float32"
-		}))
-		require.Equal(expected, m)
-	})
-
-	t.Run("ObjectToMap + filter", func(t *testing.T) {
-		filter := Filter(func(name string, kind appdef.DataKind) bool {
-			return name == "string"
-		})
-		expected := map[string]interface{}{
-			"string": "str",
-		}
-		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), filter)
-		require.Equal(expected, m)
-	})
-}
-
 func TestReadValue(t *testing.T) {
 	require := require.New(t)
 
@@ -249,11 +165,12 @@ func TestReadValue(t *testing.T) {
 	iValueValues[appdef.SystemField_QName] = testQNameView
 	iValueValues["record"] = &TestObject{
 		Data: testDataSimple,
+		Name: testQNameSimple,
 	}
 	iValue := &TestValue{
 		TestObject: &TestObject{
 			Name: testQNameView,
-			Id:   42,
+			ID_:  42,
 			Data: iValueValues,
 		},
 	}
@@ -262,27 +179,14 @@ func TestReadValue(t *testing.T) {
 		m := FieldsToMap(iValue, appDef)
 		testBasic(testQNameView, m, require)
 		require.Equal(
-			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple", appdef.SystemField_Container: ""},
+			map[string]interface{}{
+				"int32":                     int32(42),
+				appdef.SystemField_QName:    testQNameSimple,
+				appdef.SystemField_ID:       istructs.RecordID(0),
+				appdef.SystemField_IsActive: true,
+			},
 			m["record"],
 		)
-	})
-
-	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
-		m := FieldsToMap(iValue, appDef, WithNonNilsOnly())
-		testBasic(testQNameView, m, require)
-		require.Equal(
-			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"},
-			m["record"],
-		)
-	})
-
-	t.Run("panic if an object contains DataKind_Record field but is not IValue", func(t *testing.T) {
-		obj := &TestObject{
-			Name: testQName,
-			Data: iValueValues,
-		}
-		require.Panics(func() { FieldsToMap(obj, appDef) })
-		require.Panics(func() { FieldsToMap(obj, appDef, WithNonNilsOnly()) })
 	})
 }
 
@@ -312,4 +216,83 @@ func TestJSONMapToCUDBody(t *testing.T) {
 		}
 		require.Panics(t, func() { JSONMapToCUDBody(data) })
 	})
+}
+
+func TestCheckValueByKind(t *testing.T) {
+	okCases := []struct {
+		val  any
+		kind appdef.DataKind
+	}{
+		{int8(1), appdef.DataKind_int8},
+		{int16(2), appdef.DataKind_int16},
+		{int32(3), appdef.DataKind_int32},
+		{int64(4), appdef.DataKind_int64},
+		{int64(5), appdef.DataKind_RecordID},
+		{float32(6), appdef.DataKind_float32},
+		{float64(7), appdef.DataKind_float64},
+		{true, appdef.DataKind_bool},
+		{"str", appdef.DataKind_string},
+		{"str.str", appdef.DataKind_QName},
+		{[]byte{9}, appdef.DataKind_bytes},
+		{istructs.RecordID(10), appdef.DataKind_RecordID},
+		{int64(11), appdef.DataKind_RecordID},
+		{appdef.NewQName("1", "1"), appdef.DataKind_QName},
+	}
+	for _, c := range okCases {
+		t.Run(fmt.Sprintf("%v", c.val), func(t *testing.T) {
+			require.NoError(t, CheckValueByKind(c.val, c.kind))
+		})
+	}
+
+	t.Run("not ok", func(t *testing.T) {
+		for kind := appdef.DataKind(1); kind < appdef.DataKind_FakeLast; kind++ {
+			t.Run(kind.String(), func(t *testing.T) {
+				require.Error(t, CheckValueByKind(func() {}, kind))
+			})
+		}
+	})
+}
+
+func testBasic(expectedQName appdef.QName, m map[string]interface{}, require *require.Assertions) {
+	require.Equal(int32(1), m["int32"])
+	require.Equal(int64(2), m["int64"])
+	require.Equal(float32(3), m["float32"])
+	require.Equal(float64(4), m["float64"])
+	require.Equal("str", m["string"])
+	v, ok := m["bool"].(bool)
+	require.True(ok)
+	require.True(v)
+	require.Equal([]byte{5, 6}, m["bytes"])
+	require.Equal(istructs.RecordID(7), m["recordID"])
+	actualQName := m[appdef.SystemField_QName].(appdef.QName)
+	require.Equal(expectedQName, actualQName)
+}
+
+func testAppDef(t *testing.T) appdef.IAppDef {
+	adb := builder.New()
+
+	wsb := adb.AddWorkspace(testWS)
+
+	obj := wsb.AddObject(testQName)
+	addFieldDefs(obj, testFieldDefs)
+
+	simpleObj := wsb.AddObject(testQNameSimple)
+	simpleObj.AddField("int32", appdef.DataKind_int32, false)
+
+	view := wsb.AddView(testQNameView)
+	view.Key().PartKey().AddField("pk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddField("cc", appdef.DataKind_string)
+	iValueFields := map[string]appdef.DataKind{}
+	for n, k := range testFieldDefs {
+		iValueFields[n] = k
+	}
+	iValueFields["record"] = appdef.DataKind_Record
+	for n, k := range iValueFields {
+		view.Value().AddField(n, k, false)
+	}
+
+	app, err := adb.Build()
+	require.NoError(t, err)
+
+	return app
 }

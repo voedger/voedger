@@ -35,7 +35,7 @@ func newCounterOperator(startFrom, count int64, metrics IMetrics) pipeline.IAsyn
 func (o *CounterOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	begin := time.Now()
 	defer func() {
-		o.metrics.Increase(execCountSeconds, time.Since(begin).Seconds())
+		o.metrics.Increase(Metric_ExecCountSeconds, time.Since(begin).Seconds())
 	}()
 	if o.counter >= o.startFrom && o.limiter < o.count {
 		outWork = work

@@ -13,11 +13,11 @@ type ACLRule struct {
 	Comment   string `json:",omitempty"`
 	Policy    string // `Allow` or `Deny`
 	Ops       []string
-	Resources *ACLResourcePattern
+	Filter    ACLFilter
 	Principal *appdef.QName `json:",omitempty"`
 }
 
-type ACLResourcePattern struct {
-	On     appdef.QNames
+type ACLFilter struct {
+	Filter
 	Fields []appdef.FieldName `json:",omitempty"`
 }

@@ -3,7 +3,7 @@
 
 IMPORT SCHEMA 'mypkg1';
 
-WORKSPACE MyWS1 (
+ABSTRACT WORKSPACE MyWS2 INHERITS mypkg1.MyWS1 (
     TABLE MyTable2 INHERITS sys.ODoc (
         myfield3 ref(mypkg1.MyTable1) NOT NULL, -- incompatibility: OrderChanged
         myfield2 int32 NOT NULL -- incompatibility: OrderChanged

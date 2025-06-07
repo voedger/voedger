@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Workspace is a set of types.
 type IWorkspace interface {
 	IType
@@ -19,7 +17,7 @@ type IWorkspace interface {
 	// Ancestors are enumerated in alphabetic order.
 	// Only direct ancestors are enumerated.
 	// Workspace `sys.Workspace` is default ancestor used then no other ancestor is specified.
-	Ancestors(func(IWorkspace) bool)
+	Ancestors() []IWorkspace
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
@@ -41,10 +39,8 @@ type IWorkspace interface {
 	// If not found then empty type with TypeKind_null is returned
 	LocalType(QName) IType
 
-	// LocalTypes returns iterator for all types defined in the workspace.
-	//
-	// Types are iterated in alphabetical order.
-	LocalTypes() iter.Seq[IType]
+	// LocalTypes returns all types defined in the workspace in alphabetical order.
+	LocalTypes() []IType
 
 	// Returns a type by name. All ancestor types are searched recursively.
 	//
@@ -53,25 +49,21 @@ type IWorkspace interface {
 	// If not found then empty type with TypeKind_null is returned
 	Type(QName) IType
 
-	// Returns types iterator. All types from ancestors are iterated recursively.
+	// Returns all types, include types from all ancestors recursively, in alphabetical order.
 	//
-	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also iterated.
-	//
-	// Types are enumerated in alphabetical order.
-	Types() iter.Seq[IType]
+	// If the workspace uses other workspaces, these used workspaces (but not the types from them) also returned.
+	Types() []IType
 
-	// Returns used workspaces.
+	// Returns used workspaces in alphabetic order.
 	//
-	// Used workspaces enumerated in alphabetic order.
 	// Only direct used workspaces are enumerated.
-	UsedWorkspaces(func(IWorkspace) bool)
+	UsedWorkspaces() []IWorkspace
 }
 
 type IWorkspaceBuilder interface {
 	ITypeBuilder
 	IWithAbstractBuilder
 
-	ITypeCommenter
 	ITagsBuilder
 
 	IDataTypesBuilder
@@ -143,7 +135,7 @@ type IWithWorkspaces interface {
 	// Enumerates all application workspaces.
 	//
 	// Workspaces are enumerated in alphabetical order by QName
-	Workspaces(func(IWorkspace) bool)
+	Workspaces() []IWorkspace
 }
 
 type IWorkspacesBuilder interface {

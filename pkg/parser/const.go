@@ -8,27 +8,31 @@ package parser
 import "github.com/voedger/voedger/pkg/appdef"
 
 const (
-	nameCdoc       = "CDoc"
-	nameODoc       = "ODoc"
-	nameWDoc       = "WDoc"
-	nameCSingleton = "CSingleton"
-	nameWSingleton = "WSingleton"
-	nameCRecord    = "CRecord"
-	nameORecord    = "ORecord"
-	nameWRecord    = "WRecord"
-
+	nameCSingleton     = "CSingleton"
+	nameWSingleton     = "WSingleton"
 	nameAppWorkspaceWS = "AppWorkspaceWS"
 )
 
 const rootWorkspaceName = appdef.SysWorkspaceName // "Workspace"
+
+var QNameWDocBLOB = appdef.NewQName(appdef.SysPackage, "BLOB")
 
 const ExportedAppsFile = "apps.yaml"
 const ExportedPkgFolder = "pkg"
 
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
 const parserLookahead = 10
-const VSqlExt = ".vsql"
-const SqlExt = ".sql"
+const VSQLExt = ".vsql"
+const SQLExt = ".sql"
+
+const OP_SELECT = "SELECT"
+const OP_INSERT = "INSERT"
+const OP_UPDATE = "UPDATE"
+const OP_EXECUTE = "EXECUTE"
+const OP_ACTIVATE = "ACTIVATE"
+const OP_DEACTIVATE = "DEACTIVATE"
+
+const identifierRegexp = `([a-zA-Z]\w{0,254})|("[a-zA-Z]\w{0,254}")`
 
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ODoc:       {},
@@ -38,6 +42,12 @@ var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_CDoc:       {appdef.TypeKind_WDoc, appdef.TypeKind_WRecord, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
 	appdef.TypeKind_CRecord:    {appdef.TypeKind_WDoc, appdef.TypeKind_WRecord, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
 	appdef.TypeKind_ViewRecord: {appdef.TypeKind_ODoc, appdef.TypeKind_ORecord},
+}
+
+var grantAllToTableOps = []appdef.OperationKind{
+	appdef.OperationKind_Select,
+	appdef.OperationKind_Insert,
+	appdef.OperationKind_Update,
 }
 
 func defaultDescriptorName(wsName string) Ident {

@@ -29,8 +29,8 @@ func (k ProcessorKind) TrimString() string {
 	return strings.TrimPrefix(k.String(), pref)
 }
 
-// returns is the processor kind compatible with the extension and an error if not
-func (k ProcessorKind) compatibleWithExtension(ext appdef.IExtension) (bool, error) {
+// Returns is the processor kind compatible with the extension and an error if not
+func (k ProcessorKind) CompatibleWithExtension(ext appdef.IExtension) (bool, error) {
 	t := ext.Kind()
 	switch k {
 	case ProcessorKind_Command:

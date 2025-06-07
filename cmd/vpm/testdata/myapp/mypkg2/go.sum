@@ -4,11 +4,9 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
 github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
-github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
-github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/voedger/voedger v0.0.0-20241108143238-33e3a259dbe9 h1:6CDxFaDwLO6z+qh4U8UtkOroLnkZl8coeB7dXIglz+k=
-github.com/voedger/voedger v0.0.0-20241108143238-33e3a259dbe9/go.mod h1:XMigq/s2tao7Jn0PPIORDCucZFZFcmuwrYW0uN/q2gc=
-github.com/voedger/voedger v0.0.0-20241120121354-f9550d8df875 h1:Mnc5IgITetJPwoB2k1L2GUYzZQCePBVCy9Q8GyHSTXw=
-github.com/voedger/voedger v0.0.0-20241120121354-f9550d8df875/go.mod h1:XMigq/s2tao7Jn0PPIORDCucZFZFcmuwrYW0uN/q2gc=
+github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
+github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/voedger/voedger v0.0.0-20250401154149-84babc48d631 h1:GxCNhVPFbBxFFpgmfn7VR1+OkgR+veqlfNWdtMjcZ3w=
+github.com/voedger/voedger v0.0.0-20250401154149-84babc48d631/go.mod h1:ZWhKm692Mtigh9sgAnH1h+cJ96HR7VYAC1ghlldFUL8=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

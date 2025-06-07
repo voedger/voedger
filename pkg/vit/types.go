@@ -5,12 +5,14 @@
 package vit
 
 import (
+	"context"
 	"sync"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
@@ -33,11 +35,12 @@ type VIT struct {
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
-	mockTime             coreutils.IMockTime
+	mockTime             testingu.IMockTime
+	vvmProblemCtx        context.Context
 }
 
 type VITConfig struct {
-	opts     []vitConfigOptFunc
+	opts     []VITConfigOptFunc
 	isShared bool
 }
 
@@ -52,7 +55,7 @@ type vitPreConfig struct {
 	secrets      map[string][]byte
 }
 
-type vitConfigOptFunc func(*vitPreConfig)
+type VITConfigOptFunc func(*vitPreConfig)
 type AppOptFunc func(app *app, cfg *vvm.VVMConfig)
 type vitOptFunc func(vit *VIT)
 type signInOptFunc func(opts *signInOpts)
@@ -66,6 +69,7 @@ type Login struct {
 	subjectKind       istructs.SubjectKindType
 	clusterID         istructs.ClusterID
 	docs              map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	subjects          []subject
 }
 
 type WSParams struct {
@@ -124,9 +128,9 @@ type app struct {
 }
 
 type BLOB struct {
-	Content  []byte
-	Name     string
-	MimeType string
+	Content     []byte
+	Name        string
+	ContentType string
 }
 
 type signInOpts struct {

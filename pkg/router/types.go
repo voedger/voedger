@@ -6,24 +6,24 @@
 package router
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme/autocert"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/in10n"
-	"github.com/voedger/voedger/pkg/iprocbus"
-	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
 type RouterParams struct {
@@ -41,18 +41,20 @@ type RouterParams struct {
 
 type httpService struct {
 	RouterParams
-	*BlobberParams
 	listenAddress      string
 	router             *mux.Router
 	server             *http.Server
 	listener           net.Listener
 	n10n               in10n.IN10nBroker
 	blobWG             sync.WaitGroup
-	bus                ibus.IBus
-	busTimeout         time.Duration
+	requestSender      bus.IRequestSender
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
 	listeningPort      atomic.Uint32
+	blobRequestHandler blobprocessor.IRequestHandler
+	iTokens            itokens.ITokens
+	federation         federation.IFederation
+	appTokensFactory   payloads.IAppTokensFactory
 }
 
 type httpsService struct {
@@ -64,17 +66,6 @@ type acmeService struct {
 	http.Server
 }
 
-type BlobberServiceChannels []iprocbusmem.ChannelGroup
-
-type BlobberParams struct {
-	ServiceChannels        []iprocbusmem.ChannelGroup
-	BLOBStorage            iblobstorage.IBLOBStorage
-	BLOBWorkersNum         int
-	procBus                iprocbus.IProcBus
-	RetryAfterSecondsOn503 int
-	WLimiterFactory        func() iblobstorage.WLimiterType
-}
-
 type route struct {
 	targetURL  *url.URL
 	isRewrite  bool
@@ -84,4 +75,19 @@ type route struct {
 type subscriberParamsType struct {
 	Channel       in10n.ChannelID
 	ProjectionKey []in10n.ProjectionKey
+}
+
+type SubscriptionJSON struct {
+	Entity     string      `json:"entity"`
+	WSIDNumber json.Number `json:"wsid"`
+}
+
+type subscription struct {
+	entity appdef.QName
+	wsid   istructs.WSID
+}
+
+type N10nArgs struct {
+	Subscriptions    []SubscriptionJSON `json:"subscriptions"`
+	ExpiresInSeconds int64              `json:"expiresIn"`
 }

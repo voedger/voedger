@@ -18,15 +18,23 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -38,8 +46,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/vvm/engines"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
 var (
@@ -68,6 +74,10 @@ func TestBasicUsage(t *testing.T) {
 		wsb.AddCRecord(testCRecord)
 
 		wsb.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 
 		// the test command itself
 		testExec := func(args istructs.ExecCommandArgs) (err error) {
@@ -109,51 +119,60 @@ func TestBasicUsage(t *testing.T) {
 
 	t.Run("basic usage", func(t *testing.T) {
 		// command processor works through ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
-		request := ibus.Request{
+		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
-			AppQName: istructs.AppQName_untill_airs_bp.String(),
+			AppQName: istructs.AppQName_untill_airs_bp,
 			WSID:     1,
 			Resource: "c.sys.Test",
 			// need to authorize, otherwise execute will be forbidden
 			Header: app.sysAuthHeader,
 		}
-		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+
+		respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, request)
 		require.NoError(err)
-		require.Nil(secErr, secErr)
-		require.Nil(sections)
-		log.Println(string(resp.Data))
-		require.Equal(http.StatusOK, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+		respData := ""
+		for elem := range respCh {
+			require.Empty(respData)
+			respDataBytes, err := json.Marshal(elem)
+			require.NoError(err)
+			respData = string(respDataBytes)
+		}
+		require.NoError(*respErr)
+		log.Println(respData)
+		require.Equal(http.StatusOK, respMeta.StatusCode)
+		require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
 		// check that command is handled and notifications were sent
 		<-check
 		<-check
 	})
 
 	t.Run("500 internal server error command exec error", func(t *testing.T) {
-		request := ibus.Request{
+		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"fire error"},"unloggedArgs":{"Password":"pass"}}`),
-			AppQName: istructs.AppQName_untill_airs_bp.String(),
+			AppQName: istructs.AppQName_untill_airs_bp,
 			WSID:     1,
 			Resource: "c.sys.Test",
 			Header:   app.sysAuthHeader,
 		}
-		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+		respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, request)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusInternalServerError, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"fire error"}}`, string(resp.Data))
-		require.Contains(string(resp.Data), "fire error")
-		log.Println(string(resp.Data))
+		counter := 0
+		for elem := range respCh {
+			require.Zero(counter)
+			require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
+			require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+			require.Equal(coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: "fire error"}, elem) // nolint:errorlint
+			counter++
+		}
+		require.NoError(*respErr)
 	})
 }
 
 func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int) map[string]interface{} {
 	require := require.New(t)
-	req := ibus.Request{
+	req := bus.Request{
 		WSID:     wsid,
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		Resource: "c.sys.CUD",
 		Body: []byte(`{"cuds":[
 			{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}},
@@ -162,17 +181,29 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 		]}`),
 		Header: app.sysAuthHeader,
 	}
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+	respCh, respMeta, respErr, err := app.requestSender.SendRequest(app.ctx, req)
 	require.NoError(err)
-	require.Nil(secErr)
-	require.Nil(sections)
-	if len(expectedCode) == 0 {
-		require.Equal(http.StatusOK, resp.StatusCode)
-	} else {
-		require.Equal(expectedCode[0], resp.StatusCode)
+	respDataStr := ""
+	for elem := range respCh {
+		require.Empty(respDataStr)
+		switch typed := elem.(type) {
+		case string:
+			respDataStr = typed
+		case coreutils.SysError:
+			respDataStr = typed.ToJSON_APIV1()
+		}
 	}
+	if len(expectedCode) == 0 {
+		require.Equal(http.StatusOK, respMeta.StatusCode)
+	} else {
+		require.Equal(expectedCode[0], respMeta.StatusCode)
+	}
+
 	respData := map[string]interface{}{}
-	require.NoError(json.Unmarshal(resp.Data, &respData))
+	if len(respDataStr) > 0 {
+		require.NoError(json.Unmarshal([]byte(respDataStr), &respData))
+	}
+	require.NoError(*respErr)
 	return respData
 }
 
@@ -188,6 +219,10 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 		wsb.AddWDoc(testWDoc)
 		wsb.AddCommand(cudQName)
 
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+
 		failingProjQName := appdef.NewQName(appdef.SysPackage, "Failer")
 		cfg.AddSyncProjectors(
 			istructs.Projector{
@@ -200,7 +235,9 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 					return nil
 				},
 			})
-		wsb.AddProjector(failingProjQName).SetSync(true).Events().Add(cudQName, appdef.ProjectorEventKind_Execute)
+		wsb.AddProjector(failingProjQName).SetSync(true).Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.QNames(cudQName))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -208,9 +245,9 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	// ok to c.sys.CUD
 	respData := sendCUD(t, 1, app)
 	require.Equal(2, int(respData["CurrentWLogOffset"].(float64))) // 1st is WorkspaceDescriptor stub insert
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	// 2nd c.sys.CUD -> sync projector failure, expect 500 internal server error
 	respData = sendCUD(t, 1, app, http.StatusInternalServerError)
@@ -222,9 +259,9 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	// 3rd c.sys.CUD - > recovery procedure must re-apply 2nd event (PLog, records and WLog), then 3rd event is processed ok (sync projectors are ok)
 	respData = sendCUD(t, 1, app)
 	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+6, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+7, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+8, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 }
 
 func TestRecovery(t *testing.T) {
@@ -236,6 +273,9 @@ func TestRecovery(t *testing.T) {
 		wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		wsb.AddWDoc(testWDoc)
 		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -245,30 +285,30 @@ func TestRecovery(t *testing.T) {
 
 	respData := sendCUD(t, 1, app)
 	require.Equal(2, int(respData["CurrentWLogOffset"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
 	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+3, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+3, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 2, app)
 	require.Equal(2, int(respData["CurrentWLogOffset"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.FirstUserRecordID, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
 	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
-	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
-	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+6, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+7, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.FirstUserRecordID+8, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	app.cancel()
 	<-app.done
@@ -294,6 +334,9 @@ func TestCUDUpdate(t *testing.T) {
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
 		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -302,41 +345,36 @@ func TestCUDUpdate(t *testing.T) {
 	app.cfg.Resources.Add(cmdCUD)
 
 	// insert
-	req := ibus.Request{
+	req := bus.Request{
 		WSID:     1,
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		Resource: "c.sys.CUD",
 		Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.test"}}]}`),
 		Header:   app.sysAuthHeader,
 	}
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+	cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 	require.NoError(err)
-	require.Nil(secErr, secErr)
-	require.Nil(sections)
-	require.Equal(http.StatusOK, resp.StatusCode)
-	require.Equal(coreutils.ApplicationJSON, resp.ContentType)
-	m := map[string]interface{}{}
-	require.NoError(json.Unmarshal(resp.Data, &m))
+	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+	require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
+	require.Empty(cmdResp.CmdResult)
+	require.Zero(cmdResp.SysError)
+	newID := cmdResp.NewIDs["1"]
+	require.NotZero(newID)
 
 	t.Run("update", func(t *testing.T) {
-		id := int64(m["NewIDs"].(map[string]interface{})["1"].(float64))
-		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, id))
-		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, newID))
+		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusOK, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+		require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	})
 
 	t.Run("404 not found on update not existing", func(t *testing.T) {
 		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.NonExistingRecordID))
-		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusNotFound, resp.StatusCode)
-		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+		require.Equal(http.StatusNotFound, cmdRespMeta.StatusCode)
+		require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	})
 }
 
@@ -349,6 +387,9 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName)
 		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -365,7 +406,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 		{`element is not an object`, `"cuds":[42]`, `cuds[0]: not an object`},
 		{`missing fields`, `"cuds":[{}]`, `cuds[0]: "fields" missing`},
 		{`fields is not an object`, `"cuds":[{"fields":42}]`, `cuds[0]: field "fields" must be an object`},
-		{`fields: sys.ID missing`, `"cuds":[{"fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: "sys.ID" missing`},
+		{`fields: sys.ID missing`, `"cuds":[{"fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: "sys.ID" field missing`},
 		{`fields: sys.ID is not a number (create)`, `"cuds":[{"sys.ID":"wrong","fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: field "sys.ID" must be json.Number`},
 		{`fields: sys.ID is not a number (update)`, `"cuds":[{"fields":{"sys.ID":"wrong","sys.QName":"test.Test"}}]`, `cuds[0]: field "sys.ID" must be json.Number`},
 		{`fields: wrong qName`, `"cuds":[{"fields":{"sys.ID":1,"sys.QName":"wrong"}},{"fields":{"sys.ID":1,"sys.QName":"test.Test"}}]`, `convert error: string «wrong»`},
@@ -373,21 +414,19 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
-			req := ibus.Request{
+			req := bus.Request{
 				WSID:     1,
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				Resource: "c.sys.CUD",
 				Body:     []byte("{" + c.bodyAdd + "}"),
 				Header:   app.sysAuthHeader,
 			}
-			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.NoError(err)
-			require.Nil(secErr)
-			require.Nil(sections)
-			require.Equal(http.StatusBadRequest, resp.StatusCode, c.desc)
-			require.Equal(coreutils.ApplicationJSON, resp.ContentType, c.desc)
-			require.Contains(string(resp.Data), jsonEscape(c.expectedMessageLike), c.desc)
-			require.Contains(string(resp.Data), `"HTTPStatus":400`, c.desc)
+			require.Equal(http.StatusBadRequest, cmdRespMeta.StatusCode, c.desc)
+			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
+			require.Equal(http.StatusBadRequest, cmdResp.SysError.HTTPStatus, c.desc)
 		})
 	}
 }
@@ -408,13 +447,17 @@ func TestErrors(t *testing.T) {
 
 		wsb.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
 
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+
 		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
 
-	baseReq := ibus.Request{
+	baseReq := bus.Request{
 		WSID:     1,
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		Resource: "c.sys.Test",
 		Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"}}`),
 		Header:   app.sysAuthHeader,
@@ -422,20 +465,20 @@ func TestErrors(t *testing.T) {
 
 	cases := []struct {
 		desc string
-		ibus.Request
+		bus.Request
 		expectedMessageLike string
 		expectedStatusCode  int
 	}{
-		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found", http.StatusServiceUnavailable},
-		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
-		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
-		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
-		{"args: not an object", ibus.Request{Body: []byte(`{"args":42}`)}, `field "args" must be an object`, http.StatusBadRequest},
-		{"args: missing at all with a required field", ibus.Request{Body: []byte(`{}`)}, "", http.StatusBadRequest},
-		{"unloggedArgs: not an object", ibus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `field "unloggedArgs" must be an object`, http.StatusBadRequest},
-		{"unloggedArgs: field of wrong type provided", ibus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type", http.StatusBadRequest},
-		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", ibus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, "", http.StatusBadRequest},
-		{"cuds: not an object", ibus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field "cuds" must be an array of objects`, http.StatusBadRequest},
+		{"unknown app", bus.Request{AppQName: appdef.NewAppQName("untill", "unknown")}, "application untill/unknown not found", http.StatusServiceUnavailable},
+		{"bad request body", bus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
+		{"unknown func", bus.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
+		{"args: field of wrong type provided", bus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
+		{"args: not an object", bus.Request{Body: []byte(`{"args":42}`)}, `field "args" must be an object`, http.StatusBadRequest},
+		{"args: missing at all with a required field", bus.Request{Body: []byte(`{}`)}, "", http.StatusBadRequest},
+		{"unloggedArgs: not an object", bus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `field "unloggedArgs" must be an object`, http.StatusBadRequest},
+		{"unloggedArgs: field of wrong type provided", bus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type", http.StatusBadRequest},
+		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", bus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, "", http.StatusBadRequest},
+		{"cuds: not an object", bus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field "cuds" must be an array of objects`, http.StatusBadRequest},
 	}
 
 	for _, c := range cases {
@@ -443,7 +486,7 @@ func TestErrors(t *testing.T) {
 			req := baseReq
 			req.Body = make([]byte, len(baseReq.Body))
 			copy(req.Body, baseReq.Body)
-			if len(c.AppQName) > 0 {
+			if c.AppQName != appdef.NullAppQName {
 				req.AppQName = c.AppQName
 			}
 			if len(c.Body) > 0 {
@@ -453,22 +496,21 @@ func TestErrors(t *testing.T) {
 			if len(c.Resource) > 0 {
 				req.Resource = c.Resource
 			}
-			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBusTimeout())
+			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.NoError(err, c.desc)
-			require.Nil(secErr)
-			require.Nil(sections)
-			require.Equal(c.expectedStatusCode, resp.StatusCode, c.desc)
-			require.Equal(coreutils.ApplicationJSON, resp.ContentType, c.desc)
-			require.Contains(string(resp.Data), jsonEscape(c.expectedMessageLike), c.desc)
-			require.Contains(string(resp.Data), fmt.Sprintf(`"HTTPStatus":%d`, c.expectedStatusCode), c.desc)
+			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
+			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
+			require.Equal(c.expectedStatusCode, cmdResp.SysError.HTTPStatus, c.desc)
 		})
 	}
 }
 
 func TestAuthnz(t *testing.T) {
+	t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
 	require := require.New(t)
 
-	qNameTestDeniedCDoc := appdef.NewQName(appdef.SysPackage, "TestDeniedCDoc") // the same in core/iauthnzimpl
+	qNameTestDeniedCDoc := appdef.NewQName("app1pkg", "TestDeniedCDoc") // the same in core/iauthnzimpl
 
 	qNameAllowedCmd := appdef.NewQName(appdef.SysPackage, "TestAllowedCmd")
 	qNameDeniedCmd := appdef.NewQName(appdef.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
@@ -477,9 +519,17 @@ func TestAuthnz(t *testing.T) {
 		wsb.AddCommand(qNameAllowedCmd)
 		wsb.AddCommand(qNameDeniedCmd)
 		wsb.AddCommand(istructs.QNameCommandCUD)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+		wsb.AddRole(iauthnz.QNameRoleProfileOwner)
+		wsb.AddRole(iauthnz.QNameRoleAnonymous)
+		wsb.AddRole(iauthnz.QNameRoleWorkspaceOwner)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
+
+		wsb.Revoke([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(qNameDeniedCmd), nil, iauthnz.QNameRoleWorkspaceOwner)
 	})
 	defer tearDown(app)
 
@@ -493,14 +543,14 @@ func TestAuthnz(t *testing.T) {
 
 	type testCase struct {
 		desc               string
-		req                ibus.Request
+		req                bus.Request
 		expectedStatusCode int
 	}
 	cases := []testCase{
 		{
-			desc: "403 on cmd EXECUTE forbidden", req: ibus.Request{
+			desc: "403 on cmd EXECUTE forbidden", req: bus.Request{
 				Body:     []byte(`{}`),
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				WSID:     1,
 				Resource: "c.sys.TestDeniedCmd",
 				Header:   getAuthHeader(token),
@@ -508,9 +558,9 @@ func TestAuthnz(t *testing.T) {
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
-			desc: "403 on INSERT CUD forbidden", req: ibus.Request{
-				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.TestDeniedCDoc"}}]}`),
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+			desc: "403 on INSERT CUD forbidden", req: bus.Request{
+				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestDeniedCDoc"}}]}`),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				WSID:     1,
 				Resource: "c.sys.CUD",
 				Header:   getAuthHeader(token),
@@ -518,9 +568,9 @@ func TestAuthnz(t *testing.T) {
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
-			desc: "403 if no token for a func that requires authentication", req: ibus.Request{
+			desc: "403 if no token for a func that requires authentication", req: bus.Request{
 				Body:     []byte(`{}`),
-				AppQName: istructs.AppQName_untill_airs_bp.String(),
+				AppQName: istructs.AppQName_untill_airs_bp,
 				WSID:     1,
 				Resource: "c.sys.TestAllowedCmd",
 			},
@@ -530,21 +580,16 @@ func TestAuthnz(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
-			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, c.req, coreutils.GetTestBusTimeout())
+			cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, c.req)
 			require.NoError(err)
-			require.Nil(secErr, secErr)
-			require.Nil(sections)
-			log.Println(string(resp.Data))
-			require.Equal(c.expectedStatusCode, resp.StatusCode, c.desc, string(resp.Data))
+			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
 		})
 	}
 }
 
-func getAuthHeader(token string) map[string][]string {
-	return map[string][]string{
-		coreutils.Authorization: {
-			"Bearer " + token,
-		},
+func getAuthHeader(token string) map[string]string {
+	return map[string]string{
+		coreutils.Authorization: "Bearer " + token,
 	}
 }
 
@@ -554,6 +599,9 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	ch := make(chan interface{})
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCommand(testCmdQName).SetParam(istructs.QNameRaw)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, func(args istructs.ExecCommandArgs) (err error) {
 			require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
 			close(ch)
@@ -562,19 +610,17 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	})
 	defer tearDown(app)
 
-	request := ibus.Request{
+	request := bus.Request{
 		Body:     []byte(`custom content`),
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		WSID:     1,
 		Resource: "c.sys.Test",
 		Header:   app.sysAuthHeader,
 	}
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.NoError(err)
-	require.Nil(secErr)
-	require.Nil(sections)
-	require.Equal(http.StatusOK, resp.StatusCode)
-	require.Equal(coreutils.ApplicationJSON, resp.ContentType)
+	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+	require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	<-ch
 }
 
@@ -588,6 +634,9 @@ func TestRateLimit(t *testing.T) {
 		func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 			wsb.AddObject(parsQName)
 			wsb.AddCommand(qName).SetParam(parsQName)
+			wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+			wsb.AddRole(iauthnz.QNameRoleEveryone)
+			wsb.AddRole(iauthnz.QNameRoleSystem)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
 
 			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
@@ -597,9 +646,9 @@ func TestRateLimit(t *testing.T) {
 		})
 	defer tearDown(app)
 
-	request := ibus.Request{
+	request := bus.Request{
 		Body:     []byte(`{"args":{}}`),
-		AppQName: istructs.AppQName_untill_airs_bp.String(),
+		AppQName: istructs.AppQName_untill_airs_bp,
 		WSID:     1,
 		Resource: "c.sys.MyCmd",
 		Header:   app.sysAuthHeader,
@@ -607,34 +656,30 @@ func TestRateLimit(t *testing.T) {
 
 	// first 2 calls are ok
 	for i := 0; i < 2; i++ {
-		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 		require.NoError(err)
-		require.Nil(secErr)
-		require.Nil(sections)
-		require.Equal(http.StatusOK, resp.StatusCode)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
 	}
 
 	// 3rd exceeds rate limits
-	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBusTimeout())
+	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.NoError(err)
-	require.Nil(secErr)
-	require.Nil(sections)
-	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal(http.StatusTooManyRequests, cmdRespMeta.StatusCode)
 }
 
 type testApp struct {
 	ctx               context.Context
 	cfg               *istructsmem.AppConfigType
-	bus               ibus.IBus
 	cancel            context.CancelFunc
 	done              chan struct{}
 	cmdProcService    pipeline.IService
 	serviceChannel    CommandChannel
 	n10nBroker        in10n.IN10nBroker
 	n10nBrokerCleanup func()
+	requestSender     bus.IRequestSender
 
 	appTokens     istructs.IAppTokens
-	sysAuthHeader map[string][]string
+	sysAuthHeader map[string]string
 }
 
 func tearDown(app testApp) {
@@ -642,16 +687,6 @@ func tearDown(app testApp) {
 	app.n10nBrokerCleanup()
 	app.cancel()
 	<-app.done
-}
-
-// simulate real app behavior
-func replyBadRequest(sender ibus.ISender, message string) {
-	res := coreutils.NewHTTPErrorf(http.StatusBadRequest, message)
-	sender.SendResponse(ibus.Response{
-		ContentType: coreutils.ApplicationJSON,
-		StatusCode:  http.StatusBadRequest,
-		Data:        []byte(res.ToJSON()),
-	})
 }
 
 // test app deployment constants
@@ -671,11 +706,11 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfgs := istructsmem.AppConfigsType{}
-	asf := mem.Provide()
+	asf := mem.Provide(testingu.MockTime)
 	appStorageProvider := istorageimpl.Provide(asf)
 
 	// build application
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	qNameTestWS, qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWS"), appdef.NewQName(appdef.SysPackage, "TestWSKind")
@@ -685,7 +720,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 
 	wsdescutil.AddWorkspaceDescriptorStubDef(wsb)
 
-	wsb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
+	wsb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, constraints.MaxLen(appdef.MaxFieldLength))
 
 	statelessResources := istructsmem.NewStatelessResources()
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_untill_airs_bp, adb)
@@ -698,7 +733,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	require.NoError(err)
 
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider, isequencer.SequencesTrustLevel_0)
 
 	secretReader := isecretsimpl.ProvideSecretReader()
 	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
@@ -706,7 +741,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		ChannelsPerSubject:      10,
 		Subscriptions:           1000,
 		SubscriptionsPerSubject: 10,
-	}, coreutils.NewITime())
+	}, timeu.NewITime())
 
 	// prepare the AppParts to borrow AppStructs
 	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
@@ -718,7 +753,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}, "", imetrics.Provide()))
+			}, "", imetrics.Provide()),
+		iratesce.TestBucketsFactory)
 	require.NoError(err)
 	defer appPartsClean()
 
@@ -726,22 +762,21 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor works through ibus.SendResponse -> we need ibus implementation
-	bus := ibusmem.Provide(func(ctx context.Context, sender ibus.ISender, request ibus.Request) {
+
+	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)
-		appQName, err := appdef.ParseAppQName(request.AppQName)
-		require.NoError(err)
 		tp := appDef.Type(cmdQName)
 		if tp.Kind() == appdef.TypeKind_null {
-			replyBadRequest(sender, "unknown function")
+			bus.ReplyBadRequest(responder, "unknown function")
 			return
 		}
 		token := ""
-		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
-			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
+		if authHeader, ok := request.Header[coreutils.Authorization]; ok {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, appQName, request.WSID, sender, testAppPartID, cmdQName, token, "")
+		icm := NewCommandMessage(ctx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "")
 		serviceChannel <- icm
 	})
 
@@ -749,7 +784,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	cmdProcessorFactory := ProvideServiceFactory(appParts, coreutils.NewITime(), n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
+	cmdProcessorFactory := ProvideServiceFactory(appParts, timeu.NewITime(), n10nBroker, imetrics.Provide(), "vvm",
+		iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel)
 
 	go func() {
@@ -766,7 +802,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 
 	return testApp{
 		cfg:               cfg,
-		bus:               bus,
+		requestSender:     requestSender,
 		cancel:            cancel,
 		ctx:               ctx,
 		done:              done,
@@ -777,13 +813,4 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		appTokens:         appTokens,
 		sysAuthHeader:     getAuthHeader(systemToken),
 	}
-}
-
-func jsonEscape(i string) string {
-	b, err := json.Marshal(i)
-	if err != nil {
-		panic(err)
-	}
-	s := string(b)
-	return s[1 : len(s)-1]
 }

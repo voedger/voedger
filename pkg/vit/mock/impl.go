@@ -21,15 +21,6 @@ func (r *CUDRow) AsBool(name string) bool     { return r.Called(name).Bool(0) }
 func (r *CUDRow) QName() appdef.QName         { return r.Called().Get(0).(appdef.QName) }
 func (r *CUDRow) ID() istructs.RecordID       { return r.Called().Get(0).(istructs.RecordID) }
 
-type PLogEvent struct {
-	istructs.IPLogEvent
-	mock.Mock
-}
-
-func (e *PLogEvent) ArgumentObject() istructs.IObject    { return e.Called().Get(0).(istructs.IObject) }
-func (e *PLogEvent) CUDs(cb func(istructs.ICUDRow) bool) { e.Called(cb) }
-func (e *PLogEvent) Workspace() istructs.WSID            { return e.Called().Get(0).(istructs.WSID) }
-
 type State struct {
 	istructs.IState
 	mock.Mock

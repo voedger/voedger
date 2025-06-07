@@ -10,13 +10,16 @@ import (
 	"strconv"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -70,7 +73,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
 
 		t.Run("check the initialized workspace using collection", func(t *testing.T) {
-			body = `{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields":["sys.ID","image","preview"]}]}`
+			body = `{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields":["sys.ID"]}]}`
 			resp := vit.PostWS(ws, "q.sys.Collection", body)
 			require.Len(resp.Sections[0].Elements, 2) // from testTemplate
 			appEPs := vit.VVM.AppsExtensionPoints[istructs.AppQName_test1_app1]
@@ -83,7 +86,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 			cdoc, id := vit.GetCDocWSKind(ws)
 			idOfCDocWSKind = id
 			require.Equal(float64(10), cdoc["IntFld"])
-			require.Equal("", cdoc["StrFld"])
+			require.Empty(cdoc["StrFld"])
 			require.Len(cdoc, 2)
 		})
 
@@ -281,27 +284,21 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 		blobsMap[string(templateBLOB.Content)] = templateBLOB
 	}
 	rowIdx := 0
-	for _, temp := range blobs {
-		switch temp.RecordID {
+	for _, blob := range blobs {
+		switch blob.OwnerRecordRawID {
 		// IDs are taken from the actual templates
 		case 1:
 			rowIdx = 0
 		case 2:
 			rowIdx = 1
 		default:
-			vit.T.Fatal(temp.RecordID)
+			vit.T.Fatal(blob.OwnerRecordRawID)
 		}
-		var fieldIdx int
-		if temp.FieldName == "image" {
-			fieldIdx = 1
-		} else {
-			fieldIdx = 2
-		}
-		blobID := istructs.RecordID(resp.SectionRow(rowIdx)[fieldIdx].(float64))
-		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
+		ownerID := istructs.RecordID(resp.SectionRow(rowIdx)[0].(float64))
+		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blob.OwnerRecord, blob.OwnerRecordField, ownerID, token)
 		templateBLOB := blobsMap[string(uploadedBLOB.Content)]
 		require.Equal(templateBLOB.Name, uploadedBLOB.Name)
-		require.Equal(templateBLOB.MimeType, uploadedBLOB.MimeType)
+		require.Equal(templateBLOB.ContentType, uploadedBLOB.ContentType)
 		delete(blobsMap, string(uploadedBLOB.Content))
 		rowIdx++
 	}
@@ -332,4 +329,31 @@ func TestWorkspaceInitError(t *testing.T) {
 	vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
 
 	vit.WaitForWorkspace(wsName, prn, "failed to unmarshal workspace initialization data")
+}
+
+func TestCreateChildOfChildWorkspace(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	newWSName := vit.NextName()
+
+	body := fmt.Sprintf(`{"args": {"WSName": %q,"WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"IntFld\": 10}",
+		"TemplateName": "test_template","WSClusterID": 1}}`, newWSName)
+	vit.PostWS(ws, "c.sys.InitChildWorkspace", body)
+	newWS := vit.WaitForChildWorkspace(ws, newWSName)
+
+	// execute a simple operation in a new child of child
+	body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.Config","Fld1": "42"}}]}`
+	// owner of ws is not owner of child of ws so let's generate a token with a WorkspaceOwner role
+	// note: WSID the role belongs to must be ws, not newWS because iauthnz implementation compares wsid to ownerWSID
+	pp := payloads.PrincipalPayload{
+		Login:       ws.Owner.Name,
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: ws.Owner.ProfileWSID,
+		Roles:       []payloads.RoleType{{WSID: ws.WSID, QName: iauthnz.QNameRoleWorkspaceOwner}},
+	}
+	tokenForChildOfChild, err := vit.IssueToken(istructs.AppQName_test1_app1, time.Minute, &pp)
+	require.NoError(t, err)
+	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(tokenForChildOfChild))
 }

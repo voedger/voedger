@@ -10,12 +10,13 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, time coreutils.ITime) {
+func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, time timeu.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateInvitationByEMail,
 		execCmdInitiateInvitationByEMail(time),
@@ -23,16 +24,23 @@ func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, tim
 }
 
 // called in the workspace that we're inviting to.
-func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
+// [~server.invites.invite/c.sys.Workspace.InitiateInvitationByEMail~impl]
+func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
-		login := args.ArgumentObject.AsString(field_Email)
-		subjectExists, actualLogin, existingSubjectID, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
+		cmdInitiateInvitation_ArgEmail := args.ArgumentObject.AsString(field_Email)
+		// do not check if the login from token exists in subjects, see https://github.com/voedger/voedger/issues/3698
+		// because login is Inviter here, not Invitee
+		existingSubjectID, err := SubjectExistsByLogin(cmdInitiateInvitation_ArgEmail, args.State)
 		if err != nil {
 			return
+		}
+
+		if err := coreutils.ValidateEMail(cmdInitiateInvitation_ArgEmail); err != nil {
+			return err
 		}
 
 		skbViewInviteIndex, err := args.State.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
@@ -57,9 +65,9 @@ func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.Exe
 				return err
 			}
 
-			if subjectExists && !reInviteAllowedForState[svCDocInvite.AsInt32(field_State)] {
-				// If Subject exists by token.Login and state is not ToBeInvited and not Invited -> subject already exists error
-				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w cdoc.sys.Subject.%d by login "%s"`, ErrSubjectAlreadyExists, existingSubjectID, actualLogin))
+			inviteState := State(svCDocInvite.AsInt32(field_State))
+			if existingSubjectID > 0 && !reInviteAllowedForState[inviteState] {
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w %s`, ErrReInviteNotAllowedForState, inviteState))
 			}
 
 			if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateInvitationByEMail) {
@@ -72,9 +80,9 @@ func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.Exe
 			}
 			svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
-			svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
+			svbCDocInvite.PutInt32(field_State, int32(State_ToBeInvited))
 			svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
-			svbCDocInvite.PutString(field_ActualLogin, actualLogin)
+			svbCDocInvite.PutString(field_ActualLogin, "") // to be filled with Invitee's login by ap.sys.Apply
 
 			return nil
 		}
@@ -95,8 +103,8 @@ func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.Exe
 		svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 		svbCDocInvite.PutInt64(field_Created, now)
 		svbCDocInvite.PutInt64(field_Updated, now)
-		svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
-		svbCDocInvite.PutString(field_ActualLogin, actualLogin)
+		svbCDocInvite.PutInt32(field_State, int32(State_ToBeInvited))
+		// do not fill cdoc.sys.Invite.ActualLogin because it must be Invitee's login. It is unknown here
 
 		return
 	}

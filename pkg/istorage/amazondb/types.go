@@ -7,6 +7,7 @@ package amazondb
 
 import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
 type DynamoDBParams struct {
@@ -19,9 +20,11 @@ type DynamoDBParams struct {
 
 type implIAppStorageFactory struct {
 	params DynamoDBParams
+	iTime  timeu.ITime
 }
 
 type implIAppStorage struct {
 	client   *dynamodb.Client
 	keySpace string
+	iTime    timeu.ITime
 }

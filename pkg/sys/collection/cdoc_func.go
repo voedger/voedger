@@ -43,7 +43,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	}
 	vrkb.PutQName(Field_DocQName, rsv.AsQName(appdef.SystemField_QName))
 	vrkb.PutInt32(Field_PartKey, PartitionKeyCollection)
-	vrkb.PutRecordID(field_DocID, rsv.AsRecordID(appdef.SystemField_ID))
+	vrkb.PutRecordID(Field_DocID, rsv.AsRecordID(appdef.SystemField_ID))
 
 	var doc *collectionObject
 
@@ -129,15 +129,15 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 	}
 
 	references := make(map[string]map[string]interface{})
-	for recordId := range refs {
-		if recordId == istructs.NullRecordID {
+	for recordID := range refs {
+		if recordID == istructs.NullRecordID {
 			continue
 		}
 		rkb, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 		if err != nil {
 			return err
 		}
-		rkb.PutRecordID(sys.Storage_Record_Field_ID, recordId)
+		rkb.PutRecordID(sys.Storage_Record_Field_ID, recordID)
 
 		rkv, err := s.MustExist(rkb)
 		if err != nil {
@@ -150,7 +150,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 			references[rkv.AsQName(appdef.SystemField_QName).String()] = recmap
 		}
 
-		recKey := utils.UintToString(recordId)
+		recKey := utils.UintToString(recordID)
 		if _, ok := recmap[recKey]; !ok {
 			child := newCollectionObject(rkv.(istructs.IStateRecordValue).AsRecord())
 			obj, err := convert(child, appDef, nil, istructs.NullRecordID)

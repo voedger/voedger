@@ -11,13 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 func createAppDef() appdef.IAppDef {
-	adb := appdef.New()
+	adb := builder.New()
 
 	wsb := adb.AddWorkspace(testWSQName)
 	wsDesc := wsb.AddCDoc(testWSDescriptorQName)
@@ -64,7 +65,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 				items[1].Record = record2
 			})
 
-		adb := appdef.New()
+		adb := builder.New()
 		wsb := adb.AddWorkspace(testWSQName)
 		wsb.AddObject(testRecordQName1).
 			AddField("number", appdef.DataKind_int64, false)

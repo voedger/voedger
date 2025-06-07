@@ -21,13 +21,13 @@ var VerificationKind_Any = []VerificationKind{VerificationKind_EMail, Verificati
 type FieldName = string
 
 // Final types with fields are:
-//	- TypeKind_GDoc and TypeKind_GRecord,
-//	- TypeKind_CDoc and TypeKind_CRecord,
-//	- TypeKind_ODoc and TypeKind_CRecord,
-//	- TypeKind_WDoc and TypeKind_WRecord,
-//	- TypeKind_Object and TypeKind_Element,
-//	- TypeKind_ViewRecord
-type IFields interface {
+//	- GDoc and GRecord,
+//	- CDoc and CRecord,
+//	- ODoc and ORecord,
+//	- WDoc and WRecord,
+//	- Object,
+//	- ViewRecord
+type IWithFields interface {
 	// Finds field by name.
 	//
 	// Returns nil if not found.
@@ -147,7 +147,7 @@ type IRefField interface {
 	IField
 
 	// Returns list of target references
-	Refs() QNames
+	Refs() []QName
 
 	// Returns, is the link available
 	Ref(QName) bool

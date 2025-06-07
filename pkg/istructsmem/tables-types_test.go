@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -21,14 +22,14 @@ import (
 func Test_newRecord(t *testing.T) {
 
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("newNullRecord must return empty, nullQName record with specified sys.ID", func(t *testing.T) {
 		rec := NewNullRecord(100500)
 		require.Equal(appdef.NullQName, rec.QName())
 		require.Equal(istructs.RecordID(100500), rec.ID())
 		require.Equal(istructs.NullRecordID, rec.Parent())
-		require.Equal("", rec.Container())
+		require.Empty(rec.Container())
 	})
 
 	t.Run("newRecord must return empty, nullQName record", func(t *testing.T) {
@@ -40,7 +41,7 @@ func Test_newRecord(t *testing.T) {
 			require.Equal(appdef.NullQName, r.QName())
 			require.Equal(istructs.NullRecordID, r.ID())
 			require.Equal(istructs.NullRecordID, r.Parent())
-			require.Equal("", r.Container())
+			require.Empty(r.Container())
 		})
 
 		t.Run("test as ICRecord", func(t *testing.T) {
@@ -53,40 +54,47 @@ func Test_newRecord(t *testing.T) {
 			require.Equal(appdef.NullQName, r.AsQName(appdef.SystemField_QName))
 			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ID))
 			require.Equal(istructs.NullRecordID, r.AsRecordID(appdef.SystemField_ParentID))
-			require.Equal("", r.AsString(appdef.SystemField_Container))
+			require.Empty(r.AsString(appdef.SystemField_Container))
 			require.True(r.AsBool(appdef.SystemField_IsActive))
+		})
+
+		t.Run("test as ICUDRow", func(t *testing.T) {
+			var r istructs.ICUDRow = rec
+			require.False(r.IsActivated())
+			require.False(r.IsDeactivated())
+			require.False(r.IsNew())
 		})
 	})
 
 	t.Run("newEmptyTestCDoc must return empty, «test.CDoc»", func(t *testing.T) {
-		doc := newEmptyTestCDoc()
+		doc := test.newEmptyTestCDoc()
 		require.True(doc.empty())
 		require.Equal(test.testCDoc, doc.QName())
 		require.Equal(istructs.NullRecordID, doc.ID())
 		require.True(doc.IsActive())
 
 		t.Run("newEmptyTestCRec must return empty, «test.Record»", func(t *testing.T) {
-			rec := newEmptyTestCRecord()
+			rec := test.newEmptyTestCRecord()
 			require.True(rec.empty())
 			require.Equal(test.testCRec, rec.QName())
 			require.Equal(istructs.NullRecordID, rec.ID())
 			require.Equal(istructs.NullRecordID, rec.Parent())
-			require.Equal("", rec.Container())
+			require.Empty(rec.Container())
 			require.True(rec.IsActive())
 		})
 	})
 
 	t.Run("newTestCDoc must return non empty, full filled and valid «test.CDoc»", func(t *testing.T) {
-		doc := newTestCDoc(100500)
+		doc := test.newTestCDoc(100500)
 		require.False(doc.empty())
 		require.Equal(test.testCDoc, doc.QName())
 		require.Equal(istructs.RecordID(100500), doc.ID())
 		require.Equal(istructs.RecordID(100500), doc.AsRecordID(appdef.SystemField_ID))
 		require.Equal(istructs.NullRecordID, doc.Parent())
-		require.Equal("", doc.Container())
+		require.Empty(doc.Container())
 		require.True(doc.IsActive())
 
-		testTestCDoc(t, doc, 100500)
+		test.testTestCDoc(t, doc, 100500)
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
@@ -119,22 +127,22 @@ func Test_newRecord(t *testing.T) {
 			}
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
-			require.Equal(sysCnt+10, cnt)
+			require.Equal(sysCnt+test.testRowUserFieldCount, cnt)
 			require.Equal(doc.fields.FieldCount(), cnt)
 		})
 
 		t.Run("newTestCRec must return non empty, full filled and valid «test.Record»", func(t *testing.T) {
 			const recID istructs.RecordID = 100501
-			rec := newTestCRecord(recID)
+			rec := test.newTestCRecord(recID)
 			require.False(rec.empty())
 			require.Equal(test.testCRec, rec.QName())
 			require.Equal(recID, rec.ID())
 			require.Equal(recID, rec.AsRecordID(appdef.SystemField_ID))
 			require.Equal(istructs.NullRecordID, rec.Parent())
-			require.Equal("", rec.Container())
+			require.Empty(rec.Container())
 			require.True(rec.IsActive())
 
-			testTestCRec(t, rec, recID)
+			test.testTestCRec(t, rec, recID)
 
 			rec.PutRecordID(appdef.SystemField_ParentID, doc.ID())
 			require.Equal(doc.ID(), rec.Parent())
@@ -184,7 +192,7 @@ func Test_newRecord(t *testing.T) {
 				}
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
-				require.Equal(sysCnt+10, cnt)
+				require.Equal(sysCnt+test.testRowUserFieldCount, cnt)
 				require.Equal(rec.fields.FieldCount(), cnt)
 			})
 		})
@@ -193,23 +201,23 @@ func Test_newRecord(t *testing.T) {
 
 func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("test rec1 must be success storeToBytes() and test rec2 must success loadFromBytes(). rec1 and rec2 must be equals", func(t *testing.T) {
-		rec1 := newTestCDoc(100500)
+		rec1 := test.newTestCDoc(100500)
 
 		b := rec1.storeToBytes()
 
 		rec2 := newRecord(test.AppCfg)
 		err := rec2.loadFromBytes(b)
 		require.NoError(err)
-		testTestCDoc(t, rec2, 100500)
+		test.testTestCDoc(t, rec2, 100500)
 
 		testRecsIsEqual(t, rec1, rec2)
 	})
 
 	t.Run("same as previous test, but for deactivated CDoc", func(t *testing.T) {
-		rec1 := newTestCDoc(100501)
+		rec1 := test.newTestCDoc(100501)
 		rec1.PutBool(appdef.SystemField_IsActive, false)
 
 		b := rec1.storeToBytes()
@@ -217,7 +225,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec2 := newRecord(test.AppCfg)
 		err := rec2.loadFromBytes(b)
 		require.NoError(err)
-		testTestCDoc(t, rec2, 100501)
+		test.testTestCDoc(t, rec2, 100501)
 		require.False(rec2.AsBool(appdef.SystemField_IsActive))
 
 		testRecsIsEqual(t, rec1, rec2)
@@ -227,7 +235,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		store_codec_RawDynoBuffer := func(row *recordType) (out []byte) {
 			buf := new(bytes.Buffer)
 			_ = binary.Write(buf, binary.BigEndian, codec_RawDynoBuffer)
-			id, err := row.qNameID()
+			id, err := row.QNameID()
 			require.NoError(err)
 			_ = binary.Write(buf, binary.BigEndian, int16(id))
 			if row.QName() == appdef.NullQName {
@@ -256,20 +264,20 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		}
 
 		t.Run("test CDocs", func(t *testing.T) {
-			doc1 := newTestCDoc(100502)
+			doc1 := test.newTestCDoc(100502)
 
 			bytes := store_codec_RawDynoBuffer(doc1)
 
 			doc2 := newRecord(test.AppCfg)
 			err := doc2.loadFromBytes(bytes)
 			require.NoError(err)
-			testTestCDoc(t, doc2, 100502)
+			test.testTestCDoc(t, doc2, 100502)
 
 			testRecsIsEqual(t, doc1, doc2)
 		})
 
 		t.Run("test CRecords", func(t *testing.T) {
-			rec1 := newTestCRecord(100503)
+			rec1 := test.newTestCRecord(100503)
 			rec1.PutRecordID(appdef.SystemField_ParentID, 100502)
 			rec1.PutString(appdef.SystemField_Container, test.goodIdent)
 
@@ -287,7 +295,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		rec1 := newRecord(test.AppCfg)
 		b := rec1.storeToBytes()
 
-		rec2 := newEmptyTestCDoc()
+		rec2 := test.newEmptyTestCDoc()
 		err := rec2.loadFromBytes(b)
 		require.NoError(err)
 
@@ -296,7 +304,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	})
 
 	t.Run("empty records (with «test.record» QName) must be success storeToBytes() and success loadFromBytes()", func(t *testing.T) {
-		rec1 := newEmptyTestCDoc()
+		rec1 := test.newEmptyTestCDoc()
 		b := rec1.storeToBytes()
 
 		rec2 := newRecord(test.AppCfg)
@@ -308,12 +316,12 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	})
 
 	t.Run("test rec1 must be success storeToBytes(); rec2 loadFromBytes() from truncated bytes must fails", func(t *testing.T) {
-		rec1 := newTestCDoc(100500)
+		rec1 := test.newTestCDoc(100500)
 
 		b := rec1.storeToBytes()
 
 		length := len(b)
-		for i := 0; i < length; i++ {
+		for i := range length {
 			corrupted := b[0:i]
 			rec2 := newRecord(test.AppCfg)
 			err := rec2.loadFromBytes(corrupted)
@@ -329,13 +337,13 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			if testing.Short() {
 				t.Skip()
 			}
-			rec1 := newTestCDoc(100500)
+			rec1 := test.newTestCDoc(100500)
 
 			b := rec1.storeToBytes()
 
 			length := len(b)
 			stat := make(map[string]int)
-			for i := 0; i < length; i++ {
+			for i := range length {
 				b[i] ^= 255
 				rec2 := newRecord(test.AppCfg)
 				func() {
@@ -364,18 +372,20 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		})
 
 	t.Run("test field renaming availability", func(t *testing.T) {
-		rec1 := newTestCDoc(100500)
+		rec1 := test.newTestCDoc(100500)
 
 		b := rec1.storeToBytes()
 
 		newFieldName := func(oldValue string) string { return oldValue + "_1" }
 		oldFieldName := func(newValue string) string { return newValue[:len(newValue)-2] }
 
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("should be ok to build new ver of application", func(t *testing.T) {
-			wsb := adb.AddWorkspace(testData.wsName)
+			wsb := adb.AddWorkspace(defTestEnv.wsName)
+			wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+			wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 			newCDoc := wsb.AddCDoc(test.testCDoc)
 
 			oldCDoc := appdef.CDoc(rec1.appCfg.AppDef.Type, test.testCDoc)
@@ -398,7 +408,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		require.NoError(err)
 
 		require.Equal(rec1.QName(), rec2.QName())
-		rec1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {
+		rec1.dyB.IterateFields(nil, func(name string, val1 any) bool {
 			newName := name
 			if !appdef.IsSysField(name) {
 				newName = newFieldName(name)
@@ -408,7 +418,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			require.Equal(val1, val2)
 			return true
 		})
-		rec2.dyB.IterateFields(nil, func(name string, val2 interface{}) bool {
+		rec2.dyB.IterateFields(nil, func(name string, val2 any) bool {
 			oldName := name
 			if !appdef.IsSysField(name) {
 				oldName = oldFieldName(name)
@@ -422,19 +432,21 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 func Test_fieldValue(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("should return correct field values", func(t *testing.T) {
 
 		t.Run(fmt.Sprint(test.testCDoc), func(t *testing.T) {
-			rec := newTestCDoc(100500)
+			rec := test.newTestCDoc(100500)
 			tests := []struct {
 				f appdef.FieldName
-				v interface{}
+				v any
 			}{
 				{appdef.SystemField_QName, test.testCDoc},
 				{appdef.SystemField_ID, istructs.RecordID(100500)},
 				{appdef.SystemField_IsActive, true},
+				{"int8", int8(-2)},
+				{"int16", int16(-1)},
 				{"int32", int32(1)},
 				{"int64", int64(2)},
 				{"float32", float32(3)},
@@ -455,10 +467,10 @@ func Test_fieldValue(t *testing.T) {
 		})
 
 		t.Run(fmt.Sprint(test.testViewRecord.name), func(t *testing.T) {
-			vv := newTestViewValue()
+			vv := test.newTestViewValue()
 			tests := []struct {
 				f appdef.FieldName
-				v interface{}
+				v any
 			}{
 				{appdef.SystemField_QName, test.testViewRecord.name},
 				{test.testViewRecord.valueFields.buyer, test.buyerValue},
@@ -481,7 +493,7 @@ func Test_fieldValue(t *testing.T) {
 					require.NotNil(val)
 					rec, ok := val.(istructs.IRecord)
 					require.True(ok)
-					testTestCDoc(t, rec, 100888)
+					test.testTestCDoc(t, rec, 100888)
 				})
 
 				t.Run(test.testViewRecord.valueFields.event, func(t *testing.T) {
@@ -489,29 +501,29 @@ func Test_fieldValue(t *testing.T) {
 					require.NotNil(val)
 					ev, ok := val.(istructs.IDbEvent)
 					require.True(ok)
-					testTestEvent(t, ev, 100500, 1050, true)
+					test.testTestEvent(t, ev, 100500, 1050, true)
 				})
 			})
 		})
 	})
 }
 
-func TestModifiedFields(t *testing.T) {
+func TestSpecifiedValues(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("should has no modifications if new record", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		for _, _ = range rec.ModifiedFields {
+		for range rec.SpecifiedValues {
 			t.Fail()
 		}
 	})
 
-	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]interface{}) {
+	testEnum := func(rec istructs.ICUDRow, want map[appdef.FieldName]any) {
 		t.Run("enum", func(t *testing.T) {
-			got := make(map[appdef.FieldName]interface{})
-			for n, v := range rec.ModifiedFields {
-				got[n] = v
+			got := make(map[appdef.FieldName]any)
+			for n, v := range rec.SpecifiedValues {
+				got[n.Name()] = v
 			}
 			require.Equal(want, got)
 		})
@@ -519,8 +531,8 @@ func TestModifiedFields(t *testing.T) {
 		t.Run("breakable", func(t *testing.T) {
 			for stop := range want {
 				cnt := 0
-				for n, _ := range rec.ModifiedFields {
-					if n == stop {
+				for n := range rec.SpecifiedValues {
+					if n.Name() == stop {
 						break
 					}
 					cnt++
@@ -537,14 +549,22 @@ func TestModifiedFields(t *testing.T) {
 		rec.PutString("string", "test")
 		rec.PutInt64("int64", 0)   // zero (0) value should be enumerated too
 		rec.PutBool("bool", false) // zero (false) value should be enumerated too
+		rec.PutRecordID("RecordID", 3)
+		rec.PutInt64("RecordID_2", 4)
+		rec.PutQName("QName", qNameMyQName)
 		require.NoError(rec.build())
 
 		testEnum(rec,
-			map[appdef.FieldName]interface{}{
-				"int32":  int32(1),
-				"string": "test",
-				"int64":  int64(0),
-				"bool":   false,
+			map[appdef.FieldName]any{
+				"int32":                     int32(1),
+				"string":                    "test",
+				"int64":                     int64(0),
+				"bool":                      false,
+				appdef.SystemField_QName:    test.testCDoc,
+				appdef.SystemField_IsActive: true,
+				"RecordID":                  istructs.RecordID(3),
+				"RecordID_2":                istructs.RecordID(4),
+				"QName":                     qNameMyQName,
 			})
 	})
 
@@ -555,8 +575,9 @@ func TestModifiedFields(t *testing.T) {
 		require.NoError(rec.build())
 
 		testEnum(rec,
-			map[appdef.FieldName]interface{}{
+			map[appdef.FieldName]any{
 				appdef.SystemField_IsActive: false,
+				appdef.SystemField_QName:    test.testCDoc,
 			})
 	})
 
@@ -570,10 +591,12 @@ func TestModifiedFields(t *testing.T) {
 		require.NoError(rec.build())
 
 		testEnum(rec,
-			map[appdef.FieldName]interface{}{
-				"bytes":  []byte{},
-				"string": "",
-				"raw":    []byte{},
+			map[appdef.FieldName]any{
+				"bytes":                     []byte{},
+				"string":                    "",
+				"raw":                       []byte{},
+				appdef.SystemField_QName:    test.testCDoc,
+				appdef.SystemField_IsActive: true,
 			})
 	})
 }

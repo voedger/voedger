@@ -17,6 +17,9 @@ WORKSPACE test2app1WS (
 		QUERY TestEcho(TestEchoRequest) RETURNS TestEchoResult;
 		COMMAND TestCmdEcho(TestEchoRequest) RETURNS TestEchoResult;
 	);
+
+	GRANT EXECUTE ON QUERY TestEcho TO sys.WorkspaceOwner;
+	GRANT EXECUTE ON COMMAND TestCmdEcho TO sys.WorkspaceOwner;
 );
 
 ALTER WORKSPACE sys.AppWorkspaceWS (

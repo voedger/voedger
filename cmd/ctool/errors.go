@@ -12,7 +12,7 @@ import (
 
 // nolint
 var (
-	ErrInvalidClusterEdition                = errors.New("invalid cluster edition (expected SE or CE)")
+	ErrInvalidClusterEdition                = errors.New("invalid cluster edition (expected n1 or n5)")
 	ErrInvalidNumberOfDataCenters           = errors.New("invalid number of data centers")
 	ErrClusterConfNotFound                  = errors.New("cluster configuration not found")
 	ErrClusterConfAlreadyExists             = errors.New("the cluster configuration already exists")
@@ -82,6 +82,6 @@ const errBackupNotExistOnHost = "backup %s does not exist on host %s: %w"
 
 var ErrMonPasswordIsTooShort = fmt.Errorf("password must be at least %d characters long", minMonPasswordLength)
 
-var ErrIsNotValidUrl = errors.New("is not a valid URL")
+var ErrIsNotValidURL = errors.New("is not a valid URL")
 
-const errIsNotValidUrl = "%s %w"
+const errIsNotValidURL = "%s %w"

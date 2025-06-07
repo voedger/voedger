@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -32,7 +33,7 @@ var (
 	inviteEmailSubject = "you are invited"
 )
 
-// impossible to use the test workspace again with the same login due of invite error `subject already exists`
+// [~server.invites.invite/it~impl]
 func TestInvite_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -42,7 +43,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	expireDatetime := vit.Now().UnixMilli()
-	updatedRoles := "updated.Roles"
+	updatedRoles := "app1pkg.Updated"
 
 	email1 := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())
 	email2 := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())
@@ -54,11 +55,11 @@ func TestInvite_BasicUsage(t *testing.T) {
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	ws := vit.CreateWorkspace(wsParams, prn)
 
-	initiateUpdateInviteRoles := func(inviteID int64) {
+	initiateUpdateInviteRoles := func(inviteID istructs.RecordID) {
 		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`, inviteID, updatedRoles, updateRolesEmailTemplate, updateRolesEmailSubject))
 	}
 
-	findCDocInviteByID := func(inviteID int64) []interface{} {
+	findCDocInviteByID := func(inviteID istructs.RecordID) []interface{} {
 		return vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 			{"args":{"Schema":"sys.Invite"},
 			"elements":[{"fields":[
@@ -168,7 +169,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	_ = vit.CaptureEmail()
 	WaitForInviteState(vit, ws, inviteID3, invite.State_ToBeInvited, invite.State_Invited)
 
-	//Join workspaces
+	// [~server.invites/Join.InitiateJoinWorkspace~itest]
 	InitiateJoinWorkspace(vit, ws, inviteID, login1Prn, verificationCodeEmail)
 	InitiateJoinWorkspace(vit, ws, inviteID2, login2Prn, verificationCodeEmail2)
 
@@ -193,10 +194,11 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(istructs.SubjectKind_User), cDocSubject[1])
 	require.Equal(newRoles, cDocSubject[2]) // overwritten
 
-	t.Run("reinivite the joined already -> error", func(t *testing.T) {
+	t.Run("re-inivite the joined already -> error", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 			email1, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
-		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, coreutils.Expect400(invite.ErrSubjectAlreadyExists.Error()))
+		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body,
+			coreutils.Expect400("re-invite not allowed for state State_Joined"))
 	})
 
 	//Update roles
@@ -324,7 +326,7 @@ func TestInactiveCDocSubject(t *testing.T) {
 	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect403())
 }
 
-func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID int64) (verificationCode string) {
+func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID istructs.RecordID) (verificationCode string) {
 	require := require.New(t)
 
 	// reinvite when invitation is not accepted yet -> roles must be overwritten
@@ -340,4 +342,77 @@ func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email st
 	require.Equal(newRoles, resp.SectionRow()[0].(string))
 
 	return verificationCode
+}
+
+func TestRejectInvitationOnDifferentLogin(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	email := fmt.Sprintf("testcancelsentinvite_%d@123.com", vit.NextNumber())
+	login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+	loginPrn := vit.SignIn(login)
+	wsParams := it.SimpleWSParams("TestCancelSentInvite_ws")
+	ws := vit.CreateWorkspace(wsParams, loginPrn)
+	inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	actualEmail := vit.CaptureEmail()
+	verificationCode := actualEmail.Body[:6]
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	// simulate accepting invitation by different login
+	differentLogin := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	InitiateJoinWorkspace(vit, ws, inviteID, differentLogin, verificationCode,
+		coreutils.Expect400(fmt.Sprintf("invitation was sent to %s but current login is login", email)))
+}
+
+func TestWrongEmail(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	wrongEmails := []string{
+		"a",
+		"dwdw@",
+		"@sdsd",
+	}
+	for _, wrongEmail := range wrongEmails {
+		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			wrongEmail, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
+		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, coreutils.Expect400()).Println()
+	}
+}
+
+func TestResendInvitation(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	wsName := "TestResendInvitation" + vit.NextName()
+	wsParams := it.SimpleWSParams(wsName)
+	expireDatetime := vit.Now().UnixMilli()
+
+	email := fmt.Sprintf("testinvite_basicusage_%d@123.com", vit.NextNumber())
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(wsParams, prn)
+
+	// send invitation
+	inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sendEmail1 := vit.CaptureEmail()
+	sentEmail1Data := strings.Split(sendEmail1.Body, ";")
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	// resend invitation
+	// InitiateInvitationByEMail will return 0 because no new docs created
+	InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sendEmail2 := vit.CaptureEmail()
+	sentEmail2Data := strings.Split(sendEmail2.Body, ";")
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	require.Len(sentEmail1Data, len(sentEmail2Data))
+	verificationCode1 := sentEmail1Data[0]
+	verificationCode2 := sentEmail2Data[0]
+	require.NotEqual(verificationCode1, verificationCode2)
+	require.Equal(sentEmail1Data[1], sentEmail2Data[1])
+	require.Equal(sentEmail1Data[2], sentEmail2Data[2])
+	require.Equal(sentEmail1Data[3], sentEmail2Data[3])
+	require.Equal(sentEmail1Data[4], sentEmail2Data[4])
 }

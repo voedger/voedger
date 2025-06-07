@@ -36,7 +36,7 @@ ABSTRACT WORKSPACE Workspace (
 		TemplateParams varchar(1024),
 		WSID int64,
 		OwnerQName2 text
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	-- target app, new WSID
 	TABLE WorkspaceDescriptor INHERITS sys.CSingleton (
@@ -58,9 +58,9 @@ ABSTRACT WORKSPACE Workspace (
 		InitCompletedAtMs int64,
 		Status int32,
 		OwnerQName2 text
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
+	TABLE BLOB INHERITS WDoc (status int32 NOT NULL) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE Subject INHERITS sys.CDoc (
 		Login varchar NOT NULL,
@@ -68,7 +68,7 @@ ABSTRACT WORKSPACE Workspace (
 		Roles varchar(1024) NOT NULL,
 		ProfileWSID int64 NOT NULL,
 		UNIQUEFIELD Login
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE Invite INHERITS sys.CDoc (
 		SubjectKind int32,
@@ -84,13 +84,13 @@ ABSTRACT WORKSPACE Workspace (
 		InviteeProfileWSID int64,
 		ActualLogin varchar,
 		UNIQUEFIELD Email
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE JoinedWorkspace INHERITS sys.CDoc (
 		Roles varchar(1024) NOT NULL,
 		InvitingWorkspaceWSID int64 NOT NULL,
 		WSName varchar NOT NULL
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TYPE EchoParams (Text text NOT NULL);
 
@@ -135,7 +135,8 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE StateResult (
-		State varchar(32768) NOT NULL
+		State varchar(32768) NOT NULL,
+		MaxRelevantOffset int64 -- is max view.sys.CollectionView.offs among taken in account records of the collection
 	);
 
 	TYPE InitiateInvitationByEMailParams (
@@ -262,21 +263,21 @@ ABSTRACT WORKSPACE Workspace (
 		WLogOffset int64 NOT NULL,
 		QName qname NOT NULL,
 		PRIMARY KEY ((IDHi), ID)
-	) AS RESULT OF RecordsRegistryProjector;
+	) AS RESULT OF RecordsRegistryProjector WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW InviteIndexView (
 		Dummy int32 NOT NULL,
 		Login text NOT NULL,
 		InviteID ref NOT NULL,
 		PRIMARY KEY ((Dummy), Login)
-	) AS RESULT OF ProjectorInviteIndex;
+	) AS RESULT OF ProjectorInviteIndex  WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW JoinedWorkspaceIndexView (
 		Dummy int32 NOT NULL,
 		InvitingWorkspaceWSID int64 NOT NULL,
 		JoinedWorkspaceID ref NOT NULL,
 		PRIMARY KEY ((Dummy), InvitingWorkspaceWSID)
-	) AS RESULT OF ProjectorJoinedWorkspaceIndex;
+	) AS RESULT OF ProjectorJoinedWorkspaceIndex WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW WLogDates (
 		Year int32 NOT NULL,
@@ -284,7 +285,7 @@ ABSTRACT WORKSPACE Workspace (
 		FirstOffset int64 NOT NULL,
 		LastOffset int64 NOT NULL,
 		PRIMARY KEY((Year), DayOfYear)
-	) AS RESULT OF ProjectorWLogDates;
+	) AS RESULT OF ProjectorWLogDates WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW CollectionView (
 		PartKey int32 NOT NULL,
@@ -294,7 +295,7 @@ ABSTRACT WORKSPACE Workspace (
 		Record  record NOT NULL,
 		offs int64 NOT NULL,
 		PRIMARY KEY ((PartKey), DocQName, DocID, ElementID)
-	) AS RESULT OF ProjectorCollection;
+	) AS RESULT OF ProjectorCollection WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW Uniques (
 		QName qname NOT NULL, -- deprecated UNIQUEFIELD -> QName of the doc, new UNIQUE -> QName of the unique
@@ -302,7 +303,7 @@ ABSTRACT WORKSPACE Workspace (
 		Values bytes(65535) NOT NULL,
 		ID ref,
 		PRIMARY KEY ((QName, ValuesHash), Values) -- partitioning is not optimal, no better solution
-	) AS RESULT OF ApplyUniques;
+	) AS RESULT OF ApplyUniques WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW WorkspaceIDIdx (
 		OwnerWSID int64 NOT NULL,
@@ -310,14 +311,14 @@ ABSTRACT WORKSPACE Workspace (
 		WSID int64 NOT NULL,
 		IDOfCDocWorkspaceID ref(WorkspaceID), -- TODO: not required for backward compatibility. Actually is required
 		PRIMARY KEY ((OwnerWSID), WSName)
-	) AS RESULT OF ProjectorWorkspaceIDIdx;
+	) AS RESULT OF ProjectorWorkspaceIDIdx WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW ViewSubjectsIdx (
 		LoginHash int64 NOT NULL,
 		Login text NOT NULL,
 		SubjectID ref NOT NULL,
 		PRIMARY KEY ((LoginHash), Login)
-	) AS RESULT OF ApplyViewSubjectsIdx;
+	) AS RESULT OF ApplyViewSubjectsIdx WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE ChildWorkspace INHERITS sys.CDoc (
 		WSName varchar NOT NULL,
@@ -344,24 +345,25 @@ ABSTRACT WORKSPACE Workspace (
 		WSName text NOT NULL,
 		ChildWorkspaceID int64 NOT NULL,
 		PRIMARY KEY ((dummy), WSName)
-	) AS RESULT OF ProjectorChildWorkspaceIdx;
+	) AS RESULT OF ProjectorChildWorkspaceIdx WITH Tags=(WorkspaceOwnerTableTag);
 
 	EXTENSION ENGINE BUILTIN (
 
 		-- blobber
 
-		COMMAND UploadBLOBHelper;
+		COMMAND UploadBLOBHelper WITH Tags=(WorkspaceOwnerFuncTag);
 		COMMAND DownloadBLOBHelper; -- Deprecated: use q.sys.DownloadBLOBAuthnz
-		QUERY DownloadBLOBAuthnz RETURNS void;
+		COMMAND RegisterTempBLOB1d WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY DownloadBLOBAuthnz RETURNS void WITH Tags=(WorkspaceOwnerFuncTag);
 
 		-- builtin
 
-		COMMAND CUD();
+		COMMAND CUD() WITH Tags=(WorkspaceOwnerFuncTag);
 		COMMAND Init(); -- Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
-		QUERY Echo(EchoParams) RETURNS EchoResult;
-		QUERY GRCount RETURNS GRCountResult;
-		QUERY Modules RETURNS ModulesResult;
-		COMMAND RenameQName(RenameQNameParams);
+		QUERY Echo(EchoParams) RETURNS EchoResult WITH Tags=(AllowedToEveryoneTag);
+		QUERY GRCount RETURNS GRCountResult WITH Tags=(AllowedToEveryoneTag);
+		QUERY Modules RETURNS ModulesResult WITH Tags=(AllowedToEveryoneTag);
+		COMMAND RenameQName(RenameQNameParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		SYNC PROJECTOR RecordsRegistryProjector
 			AFTER INSERT ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
@@ -369,27 +371,27 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- authnz
 
-		QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult;
+		QUERY EnrichPrincipalToken(EnrichPrincipalTokenParams) RETURNS EnrichPrincipalTokenResult WITH Tags=(WorkspaceOwnerFuncTag);
 
 		-- collection
 
-		QUERY Collection(CollectionParams) RETURNS any;
-		QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult;
-		QUERY State(StateParams) RETURNS StateResult;
+		QUERY Collection(CollectionParams) RETURNS any WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY GetCDoc(GetCDocParams) RETURNS GetCDocResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY State(StateParams) RETURNS StateResult WITH Tags=(WorkspaceOwnerFuncTag);
 		SYNC PROJECTOR ProjectorCollection AFTER INSERT OR UPDATE ON (CRecord) INTENTS(sys.View(CollectionView));
 
 		-- invite
 
-		COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams);
-		COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams);
-		COMMAND InitiateUpdateInviteRoles(InitiateUpdateInviteRolesParams);
-		COMMAND InitiateCancelAcceptedInvite(InitiateCancelAcceptedInviteParams);
-		COMMAND InitiateLeaveWorkspace;
-		COMMAND CancelSentInvite(CancelSentInviteParams);
-		COMMAND CreateJoinedWorkspace(CreateJoinedWorkspaceParams);
-		COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams);
-		COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams);
-		QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult;
+		COMMAND InitiateInvitationByEMail(InitiateInvitationByEMailParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND InitiateJoinWorkspace(InitiateJoinWorkspaceParams) WITH Tags=(AllowedToAuthenticatedTag);
+		COMMAND InitiateUpdateInviteRoles(InitiateUpdateInviteRolesParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND InitiateCancelAcceptedInvite(InitiateCancelAcceptedInviteParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND InitiateLeaveWorkspace WITH Tags=(AllowedToAuthenticatedTag);
+		COMMAND CancelSentInvite(CancelSentInviteParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND CreateJoinedWorkspace(CreateJoinedWorkspaceParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ApplyInvitation AFTER EXECUTE ON (InitiateInvitationByEMail) STATE(sys.AppSecret) INTENTS(SendMail);
 		PROJECTOR ApplyCancelAcceptedInvite AFTER EXECUTE ON (InitiateCancelAcceptedInvite);
 		PROJECTOR ApplyJoinWorkspace AFTER EXECUTE ON (InitiateJoinWorkspace);
@@ -401,7 +403,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- journal
 
-		QUERY Journal(JournalParams) RETURNS JournalResult;
+		QUERY Journal(JournalParams) RETURNS JournalResult WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjectorWLogDates
 			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
@@ -410,7 +412,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- sqlquery
 
-		QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult;
+		QUERY SqlQuery(SqlQueryParams) RETURNS SqlQueryResult WITH Tags=(WorkspaceOwnerFuncTag);
 
 		-- uniques
 
@@ -421,13 +423,13 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- workspace
 
-		COMMAND CreateWorkspaceID(CreateWorkspaceIDParams);
-		COMMAND CreateWorkspace(CreateWorkspaceParams);
-		COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
-		COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
-		COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
-		COMMAND InitiateDeactivateWorkspace();
-		COMMAND InitChildWorkspace(InitChildWorkspaceParams);
+		COMMAND CreateWorkspaceID(CreateWorkspaceIDParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND CreateWorkspace(CreateWorkspaceParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND InitiateDeactivateWorkspace() WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND InitChildWorkspace(InitChildWorkspaceParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ApplyDeactivateWorkspace AFTER EXECUTE ON (InitiateDeactivateWorkspace);
 		PROJECTOR InvokeCreateWorkspace AFTER INSERT ON (WorkspaceID);
 		PROJECTOR InitializeWorkspace AFTER INSERT ON(WorkspaceDescriptor);
@@ -435,6 +437,39 @@ ABSTRACT WORKSPACE Workspace (
 		SYNC PROJECTOR ProjectorWorkspaceIDIdx AFTER INSERT ON (WorkspaceID) INTENTS(sys.View(WorkspaceIDIdx));
 		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(sys.View(ChildWorkspaceIdx));
 	);
+
+	TAG AllowedToAuthenticatedTag;
+	TAG WorkspaceOwnerTableTag;
+	TAG WorkspaceOwnerFuncTag;
+	TAG AllowedToEveryoneTag;
+
+	ROLE Everyone; -- assigned in any case regardless of whether the authorization token is provided or not
+	ROLE Anonymous;  -- assigned if the token is not provided
+	ROLE AuthenticatedUser; -- assigned if the valid token is provided
+	ROLE System; -- assigned -> everything is allowed, ACL checking skipped
+	ROLE ProfileOwner; -- assigned if the user or device works in its profile
+	ROLE WorkspaceDevice; -- assigned if the device MAY work in a workspace that is owned by its profile
+	ROLE RoleWorkspaceOwner; -- Deprecated: use WorkspaceOwner. Kept for backward compatibility only
+	ROLE WorkspaceOwner; -- assigned if user works in a workspace that is owned by his profile
+	ROLE ClusterAdmin; -- TODO: not used for now. Going to allow exec c.cluster.DeployApp to this role
+	ROLE WorkspaceAdmin;
+
+	GRANT WorkspaceOwner TO ProfileOwner;
+	GRANT WorkspaceOwner TO WorkspaceDevice;
+	GRANT WorkspaceOwner TO RoleWorkspaceOwner; --backward compatibility
+	GRANT Everyone TO Anonymous;
+	GRANT Everyone TO AuthenticatedUser;
+
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
+
+	GRANT SELECT ON TABLE ChildWorkspace TO WorkspaceOwner;
+
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO WorkspaceOwner;
+
+	GRANT EXECUTE ON ALL QUERIES WITH TAG AllowedToEveryoneTag TO Everyone;
+
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG AllowedToAuthenticatedTag TO AuthenticatedUser;
 );
 
 ALTERABLE WORKSPACE AppWorkspaceWS (
@@ -449,6 +484,8 @@ ABSTRACT WORKSPACE ProfileWS (
 	EXTENSION ENGINE BUILTIN (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
+
+	GRANT EXECUTE ON QUERY RefreshPrincipalToken TO ProfileOwner;
 );
 
 ALTERABLE WORKSPACE DeviceProfileWS INHERITS sys.ProfileWS (
@@ -538,11 +575,12 @@ EXTENSION ENGINE BUILTIN (
 			Body []byte
 			HTTPClientTimeoutMilliseconds int64
 			Header text (can be called multiple times)
+			HandleErrors bool (do not panic, return error in response)
 		Value:
 			StatusCode int32
 			Body []byte
 			Header text (headers combined)
-
+			Error text (if HandleErrors is true)
 		*/
 		READ SCOPE(QUERIES, PROJECTORS, JOBS)
 	);

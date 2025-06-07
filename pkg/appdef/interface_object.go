@@ -10,7 +10,7 @@ type IObject interface {
 	IStructure
 
 	// Unwanted type assertion stub
-	isObject()
+	IsObject()
 }
 
 type IObjectBuilder interface {

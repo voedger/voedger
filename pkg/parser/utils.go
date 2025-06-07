@@ -8,6 +8,7 @@ package parser
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -74,7 +75,7 @@ func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt
 	if item == nil {
 		var value interface{} = item
 		switch value.(type) {
-		case *TableStmt:
+		case *TableStmt, *WsDescriptorStmt:
 			return ErrUndefinedTable(fn)
 		case *CommandStmt:
 			return ErrUndefinedCommand(fn)
@@ -88,8 +89,8 @@ func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt
 			return ErrUndefinedType(fn)
 		case *WorkspaceStmt:
 			return ErrUndefinedWorkspace(fn)
-		case *JobStmt:
-			return ErrUndefinedJob(fn)
+		case *ProjectorStmt:
+			return ErrUndefinedProjector(fn)
 		case *RateStmt:
 			return ErrUndefinedRate(fn)
 		case *ViewStmt:
@@ -194,7 +195,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 					}
 					chain = append(chain, iws)
 					for _, dq := range iws.Inherits {
-						err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
+						err := resolveInCtx(dq, ictx, func(f *WorkspaceStmt, wSchema *PackageSchemaAST) error {
 							if !lookInOtherPackages && wSchema != ictx.pkg {
 								return nil // do not look tags in other packages
 							}
@@ -255,7 +256,7 @@ func iteratePackage(pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt
 
 func iteratePackageStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
 	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt | *JobStmt | *RateStmt | *GrantStmt |
-	*RevokeStmt | *RoleStmt | *TagStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
+	*RevokeStmt | *RoleStmt | *TagStmt | *LimitStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
 	iteratePackage(pkg, ctx, func(stmt interface{}, ctx *iterateCtx) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s, ctx)
@@ -284,7 +285,11 @@ func isInternalName(pkgName Ident, pkgAst *PackageSchemaAST) bool {
 	return pkg == "" || pkg == pkgAst.Name
 }
 
-func GetPackageName(pkgPath string) string {
+func isIdentifier(input string) bool {
+	return regexp.MustCompile("^" + identifierRegexp + "$").MatchString(input)
+}
+
+func ExtractLocalPackageName(pkgPath string) string {
 	parts := strings.Split(pkgPath, "/")
 	if len(parts) == 0 {
 		return ""
@@ -370,6 +375,13 @@ func dataTypeToDataKind(t DataType) appdef.DataKind {
 	}
 	if t.Float64 {
 		return appdef.DataKind_float64
+	}
+	// [~server.vsql.smallints/cmp.Parser~impl]
+	if t.Int8 {
+		return appdef.DataKind_int8
+	}
+	if t.Int16 {
+		return appdef.DataKind_int16
 	}
 	if t.Int32 {
 		return appdef.DataKind_int32

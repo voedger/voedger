@@ -39,7 +39,7 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 
 	var int64bytes []byte
 	b.Run("1. SafeWriteBuf go-type", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			buf := bytes.NewBuffer(nil)
 			for i := range int64slice {
 				SafeWriteBuf(buf, int64slice[i])
@@ -52,7 +52,7 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 
 	var usrBytes []byte
 	b.Run("2. SafeWriteBuf user type", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			buf := bytes.NewBuffer(nil)
 			for i := range usrSlice {
 				SafeWriteBuf(buf, usrSlice[i])
@@ -65,7 +65,7 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 
 	var synBytes []byte
 	b.Run("3. SafeWriteBuf synonym type", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			buf := bytes.NewBuffer(nil)
 			for i := range synSlice {
 				SafeWriteBuf(buf, synSlice[i])
@@ -78,7 +78,7 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 
 	var castBytes []byte
 	b.Run("4. SafeWriteBuf cast user type", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			buf := bytes.NewBuffer(nil)
 			for i := range usrSlice {
 				SafeWriteBuf(buf, uint64(usrSlice[i]))
@@ -96,7 +96,7 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 
 	var b_ []byte
 	b.Run("5. WriteUint64, no heap escapes", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			buf := bytes.NewBuffer(nil)
 			for i := range int64slice {
 				WriteUint64(buf, int64slice[i])
@@ -131,6 +131,8 @@ func old_SafeWriteBuf(b *bytes.Buffer, data any) {
 }
 
 /*
+2023-07-15, Nikolay Nikitin, go 1.20.6
+
 Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^Benchmark_BufWrite$ github.com/voedger/voedger/pkg/istructsmem/internal/utils
 
 goos: windows
@@ -143,6 +145,23 @@ Benchmark_BufWrite/naked_Write×××-4                         	 9676279	       
 PASS
 ok  	github.com/voedger/voedger/pkg/istructsmem/internal/utils	4.899s
 */
+
+/*
+2025-05-30, Nikolay Nikitin, go 1.24.2
+
+Running tool: C:\Program Files\Go\bin\go.exe test -benchmem -run=^$ -bench ^Benchmark_BufWrite$ github.com/voedger/voedger/pkg/istructsmem/internal/utils -count=1 -v
+
+goos: windows
+goarch: amd64
+pkg: github.com/voedger/voedger/pkg/istructsmem/internal/utils
+cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
+Benchmark_BufWrite/old_SafeWriteBuf_via_buf.Write-4             1726729	       688.6 ns/op	     160 B/op	      13 allocs/op
+Benchmark_BufWrite/new_SafeWriteBuf_via_Write×××-4              4626688	       254.0 ns/op	     112 B/op	       2 allocs/op
+Benchmark_BufWrite/naked_Write×××-4                             6287666	       191.1 ns/op	     112 B/op	       2 allocs/op
+PASS
+ok  	github.com/voedger/voedger/pkg/istructsmem/internal/utils	3.623s
+*/
+
 func Benchmark_BufWrite(b *testing.B) {
 
 	type s struct {
@@ -177,7 +196,7 @@ func Benchmark_BufWrite(b *testing.B) {
 	data := buf.Bytes()
 
 	b.Run("old SafeWriteBuf via buf.Write", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for i := 0; b.Loop(); i++ {
 			buf := bytes.NewBuffer(nil)
 			old_SafeWriteBuf(buf, s1.int8)
 			old_SafeWriteBuf(buf, s1.int16)
@@ -198,7 +217,7 @@ func Benchmark_BufWrite(b *testing.B) {
 	})
 
 	b.Run("new SafeWriteBuf via Write×××", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for i := 0; b.Loop(); i++ {
 			buf := bytes.NewBuffer(nil)
 			SafeWriteBuf(buf, s1.int8)
 			SafeWriteBuf(buf, s1.int16)
@@ -219,7 +238,7 @@ func Benchmark_BufWrite(b *testing.B) {
 	})
 
 	b.Run("naked Write×××", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for i := 0; b.Loop(); i++ {
 			buf := bytes.NewBuffer(nil)
 			WriteInt8(buf, s1.int8)
 			WriteInt16(buf, s1.int16)
@@ -241,6 +260,8 @@ func Benchmark_BufWrite(b *testing.B) {
 }
 
 /*
+2023-07-15, Nikolay Nikitin, go 1.20.6
+
 Running tool: D:\Go\bin\go.exe test -benchmem -run=^$ -bench ^Benchmark_BufRead$ github.com/voedger/voedger/pkg/istructsmem/internal/utils
 
 goos: windows
@@ -253,6 +274,23 @@ Benchmark_BufRead/no_err_control-4   	41306666	        28.52 ns/op	       0 B/op
 PASS
 ok  	github.com/voedger/voedger/pkg/istructsmem/internal/utils	4.473s
 */
+
+/*
+2025-05-30, Nikolay Nikitin, go 1.24.2
+
+Running tool: C:\Program Files\Go\bin\go.exe test -benchmem -run=^$ -bench ^Benchmark_BufRead$ github.com/voedger/voedger/pkg/istructsmem/internal/utils -count=1 -v
+
+goos: windows
+goarch: amd64
+pkg: github.com/voedger/voedger/pkg/istructsmem/internal/utils
+cpu: Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
+Benchmark_BufRead/buf.Read-4            2615833	       493.4 ns/op	      80 B/op	       9 allocs/op
+Benchmark_BufRead/Read×××-4            12698040	        94.35 ns/op	      48 B/op	       1 allocs/op
+Benchmark_BufRead/no_err_control-4     13905964	        78.68 ns/op	      48 B/op	       1 allocs/op
+PASS
+ok  	github.com/voedger/voedger/pkg/istructsmem/internal/utils	3.644s
+*/
+
 func Benchmark_BufRead(b *testing.B) {
 
 	type s struct {
@@ -281,7 +319,7 @@ func Benchmark_BufRead(b *testing.B) {
 	data := buf.Bytes()
 
 	b.Run("buf.Read", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for i := 0; b.Loop(); i++ {
 			s2 := s{}
 			buf := bytes.NewBuffer(data)
 			binary.Read(buf, binary.BigEndian, &s2.a)
@@ -300,7 +338,7 @@ func Benchmark_BufRead(b *testing.B) {
 	})
 
 	b.Run("Read×××", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for i := 0; b.Loop(); i++ {
 			s2 := s{}
 			buf := bytes.NewBuffer(data)
 			s2.a, _ = ReadInt16(buf)
@@ -319,7 +357,7 @@ func Benchmark_BufRead(b *testing.B) {
 	})
 
 	b.Run("no err control", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for i := 0; b.Loop(); i++ {
 			s2 := s{}
 			buf := bytes.NewBuffer(data)
 			s2.a = int16(binary.BigEndian.Uint16(buf.Next(2)))

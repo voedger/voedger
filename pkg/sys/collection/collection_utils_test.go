@@ -14,9 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
-	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
 type testDataType struct {
@@ -45,10 +43,10 @@ type testDataType struct {
 
 	tableArticlePrices        appdef.QName
 	articlePricesPriceIdent   string
-	articlePricesPriceIdIdent string
+	articlePricesPriceIDIdent string
 
 	tableArticlePriceExceptions         appdef.QName
-	articlePriceExceptionsPeriodIdIdent string
+	articlePriceExceptionsPeriodIDIdent string
 	articlePriceExceptionsPriceIdent    string
 
 	tableDepartments appdef.QName
@@ -93,11 +91,11 @@ var test = testDataType{
 	articleDeptIdent:   "id_department",
 
 	tableArticlePrices:        appdef.NewQName("test", "article_prices"),
-	articlePricesPriceIdIdent: "id_prices",
+	articlePricesPriceIDIdent: "id_prices",
 	articlePricesPriceIdent:   "price",
 
 	tableArticlePriceExceptions:         appdef.NewQName("test", "article_price_exceptions"),
-	articlePriceExceptionsPeriodIdIdent: "id_periods",
+	articlePriceExceptionsPeriodIDIdent: "id_periods",
 	articlePriceExceptionsPriceIdent:    "price",
 
 	tableDepartments: appdef.NewQName("test", "departments"),
@@ -182,43 +180,11 @@ func testProcessor(appParts appparts.IAppPartitions) *testCmdProc {
 	return proc
 }
 
-type idsGeneratorType struct {
-	istructs.IIDGenerator
-	idmap          map[istructs.RecordID]istructs.RecordID
-	nextPlogOffset istructs.Offset
-}
-
-func (me *idsGeneratorType) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
-	if storageID, err = me.IIDGenerator.NextID(rawID, t); err != nil {
-		return istructs.NullRecordID, err
-	}
-	me.idmap[rawID] = storageID
-	return
-}
-
-func (me *idsGeneratorType) nextOffset() (offset istructs.Offset) {
-	offset = me.nextPlogOffset
-	me.nextPlogOffset++
-	return
-}
-
-func (me *idsGeneratorType) decOffset() {
-	me.nextPlogOffset--
-}
-
-func newIdsGenerator() idsGeneratorType {
-	return idsGeneratorType{
-		idmap:          make(map[istructs.RecordID]istructs.RecordID),
-		nextPlogOffset: test.plogStartOfs,
-		IIDGenerator:   istructsmem.NewIDGenerator(),
-	}
-}
-
-func requireArticle(require *require.Assertions, name string, number int32, as istructs.IAppStructs, articleId istructs.RecordID) {
+func requireArticle(require *require.Assertions, name string, number int32, as istructs.IAppStructs, articleID istructs.RecordID) {
 	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
-	kb.PutRecordID(field_DocID, articleId)
+	kb.PutRecordID(Field_DocID, articleID)
 	kb.PutRecordID(field_ElementID, istructs.NullRecordID)
 	value, err := as.ViewRecords().Get(test.workspace, kb)
 	require.NoError(err)
@@ -227,29 +193,29 @@ func requireArticle(require *require.Assertions, name string, number int32, as i
 	require.Equal(number, recArticle.AsInt32(test.articleNumberIdent))
 }
 
-func requireArPrice(require *require.Assertions, priceId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceId istructs.RecordID) {
+func requireArPrice(require *require.Assertions, priceID istructs.RecordID, price float32, as istructs.IAppStructs, articleID, articlePriceID istructs.RecordID) {
 	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
-	kb.PutRecordID(field_DocID, articleId)
-	kb.PutRecordID(field_ElementID, articlePriceId)
+	kb.PutRecordID(Field_DocID, articleID)
+	kb.PutRecordID(field_ElementID, articlePriceID)
 	value, err := as.ViewRecords().Get(test.workspace, kb)
 	require.NoError(err)
 	recArticlePrice := value.AsRecord(Field_Record)
-	require.Equal(priceId, recArticlePrice.AsRecordID(test.articlePricesPriceIdIdent))
+	require.Equal(priceID, recArticlePrice.AsRecordID(test.articlePricesPriceIDIdent))
 	require.Equal(price, recArticlePrice.AsFloat32(test.articlePricesPriceIdent))
 }
 
-func requireArPriceException(require *require.Assertions, periodId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceExceptionId istructs.RecordID) {
+func requireArPriceException(require *require.Assertions, periodID istructs.RecordID, price float32, as istructs.IAppStructs, articleID, articlePriceExceptionID istructs.RecordID) {
 	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
-	kb.PutRecordID(field_DocID, articleId)
-	kb.PutRecordID(field_ElementID, articlePriceExceptionId)
+	kb.PutRecordID(Field_DocID, articleID)
+	kb.PutRecordID(field_ElementID, articlePriceExceptionID)
 	value, err := as.ViewRecords().Get(test.workspace, kb)
 	require.NoError(err)
 	recArticlePriceException := value.AsRecord(Field_Record)
-	require.Equal(periodId, recArticlePriceException.AsRecordID(test.articlePriceExceptionsPeriodIdIdent))
+	require.Equal(periodID, recArticlePriceException.AsRecordID(test.articlePriceExceptionsPeriodIDIdent))
 	require.Equal(price, recArticlePriceException.AsFloat32(test.articlePriceExceptionsPriceIdent))
 }
 
@@ -258,48 +224,3 @@ type resultElementRow []interface{}
 type resultElement []resultElementRow
 
 type resultRow []resultElement
-
-type testResultSenderClosable struct {
-	done       chan interface{}
-	resultRows []resultRow
-	handledErr error
-}
-
-func (s *testResultSenderClosable) StartArraySection(sectionType string, path []string) {
-}
-func (s *testResultSenderClosable) StartMapSection(string, []string) { panic("implement me") }
-func (s *testResultSenderClosable) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
-	return nil
-}
-func (s *testResultSenderClosable) SendElement(name string, sentRow interface{}) (err error) {
-	sentElements := sentRow.([]interface{})
-	resultRow := make([]resultElement, len(sentElements))
-
-	for elmIndex, sentElement := range sentElements {
-		sentElemRows := sentElement.([]queryprocessor.IOutputRow)
-		resultElm := make([]resultElementRow, len(sentElemRows))
-		for i, sentElemRow := range sentElemRows {
-			resultElm[i] = sentElemRow.Values()
-		}
-		resultRow[elmIndex] = resultElm
-	}
-
-	s.resultRows = append(s.resultRows, resultRow)
-	return nil
-}
-func (s *testResultSenderClosable) Close(err error) {
-	s.handledErr = err
-	close(s.done)
-}
-func (s *testResultSenderClosable) requireNoError(t *require.Assertions) {
-	if s.handledErr != nil {
-		t.FailNow(s.handledErr.Error())
-	}
-}
-
-func newTestSender() *testResultSenderClosable {
-	return &testResultSenderClosable{
-		done:       make(chan interface{}),
-		resultRows: make([]resultRow, 0), // array of elements, each element is array rows,
-	}
-}

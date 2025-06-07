@@ -22,7 +22,7 @@ var (
 	Storage_Record            = appdef.NewQName(PackageName, "Record")
 	Storage_View              = appdef.NewQName(PackageName, "View")
 	Storage_WLog              = appdef.NewQName(PackageName, "WLog")
-	Storage_Http              = appdef.NewQName(PackageName, "Http")
+	Storage_HTTP              = appdef.NewQName(PackageName, "Http")
 	Storage_SendMail          = appdef.NewQName(PackageName, "SendMail")
 	Storage_AppSecret         = appdef.NewQName(PackageName, "AppSecret")
 	Storage_RequestSubject    = appdef.NewQName(PackageName, "RequestSubject")
@@ -48,12 +48,14 @@ const (
 
 	Storage_View_Field_WSID = "WSID"
 
-	Storage_Http_Field_Url                           = "Url"
-	Storage_Http_Field_Method                        = "Method"
-	Storage_Http_Field_Header                        = "Header"
-	Storage_Http_Field_Body                          = "Body"
-	Storage_Http_Field_HTTPClientTimeoutMilliseconds = "HTTPClientTimeoutMilliseconds"
-	Storage_Http_Field_StatusCode                    = "StatusCode"
+	Storage_HTTP_Field_URL                           = "Url"
+	Storage_HTTP_Field_Method                        = "Method"
+	Storage_HTTP_Field_Header                        = "Header"
+	Storage_HTTP_Field_Body                          = "Body"
+	Storage_HTTP_Field_HTTPClientTimeoutMilliseconds = "HTTPClientTimeoutMilliseconds"
+	Storage_HTTP_Field_StatusCode                    = "StatusCode"
+	Storage_HTTP_Field_HandleErrors                  = "HandleErrors"
+	Storage_HTTP_Field_Error                         = "Error"
 
 	Storage_WLog_Field_Offset         = "Offset"
 	Storage_WLog_Field_ArgumentObject = "ArgumentObject"
@@ -116,13 +118,15 @@ const (
 	Storage_FederationCommand_Field_NewIDs        = "NewIDs"
 	Storage_FederationCommand_Field_Result        = "Result"
 
-	Storage_FederationBlob_Field_Body          = "Body"
-	Storage_FederationBlob_Field_WSID          = "WSID"
-	Storage_FederationBlob_Field_Token         = "Token"
-	Storage_FederationBlob_Field_Owner         = "Owner"
-	Storage_FederationBlob_Field_AppName       = "AppName"
-	Storage_FederationBlob_Field_ExpectedCodes = "ExpectedCodes"
-	Storage_FederationBlob_Field_BlobID        = "BlobID"
+	Storage_FederationBlob_Field_Body             = "Body"
+	Storage_FederationBlob_Field_WSID             = "WSID"
+	Storage_FederationBlob_Field_Token            = "Token"
+	Storage_FederationBlob_Field_Owner            = "Owner"
+	Storage_FederationBlob_Field_AppName          = "AppName"
+	Storage_FederationBlob_Field_ExpectedCodes    = "ExpectedCodes"
+	Storage_FederationBlob_Field_OwnerRecord      = "OwnerRecord"
+	Storage_FederationBlob_Field_OwnerRecordField = "OwnerRecordField"
+	Storage_FederationBlob_Field_OwnerID          = "OwnerID"
 
 	Storage_AppSecretField_Secret = "Secret"
 

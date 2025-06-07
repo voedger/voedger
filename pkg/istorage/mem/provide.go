@@ -4,8 +4,14 @@
 
 package mem
 
-import "github.com/voedger/voedger/pkg/istorage"
+import (
+	"github.com/voedger/voedger/pkg/goutils/timeu"
+	"github.com/voedger/voedger/pkg/istorage"
+)
 
-func Provide() istorage.IAppStorageFactory {
-	return &appStorageFactory{storages: map[string]map[string]map[string][]byte{}}
+func Provide(iTime timeu.ITime) istorage.IAppStorageFactory {
+	return &appStorageFactory{
+		storages: map[string]*storageWithLock{},
+		iTime:    iTime,
+	}
 }

@@ -36,7 +36,7 @@ func newAcmeCmd() *cobra.Command {
 		Short: "Manage ACME settings",
 	}
 
-	if newCluster().Edition != clusterEditionCE && !addSshKeyFlag(acmeAddCmd, acmeRemoveCmd) {
+	if newCluster().Edition != clusterEditionN1 && !addSshKeyFlag(acmeAddCmd, acmeRemoveCmd) {
 		return nil
 	}
 
@@ -64,12 +64,7 @@ func acmeAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer func(cluster *clusterType) {
-		err := cluster.saveToJSON()
-		if err != nil {
-			loggerError(err.Error())
-		}
-	}(cluster)
+	defer saveClusterToJson(cluster)
 
 	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
@@ -101,12 +96,7 @@ func acmeRemove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer func(cluster *clusterType) {
-		err := cluster.saveToJSON()
-		if err != nil {
-			loggerError(err.Error())
-		}
-	}(cluster)
+	defer saveClusterToJson(cluster)
 
 	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err

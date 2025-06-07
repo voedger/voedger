@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -25,7 +26,7 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 	jobNames := appdef.MustParseQNames("test.j1", "test.j2")
 
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 		for _, name := range jobNames {
@@ -141,9 +142,9 @@ func TestSchedulersDeploy(t *testing.T) {
 	jobName := appdef.MustParseQName("test.j1")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
-		adb.AddPackage("test", "test.com/test").
-			AddWorkspace(appdef.NewQName("test", "workspace")).
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+		adb.AddWorkspace(appdef.NewQName("test", "workspace")).
 			AddJob(jobName).SetCronSchedule("@every 5s")
 		return adb.MustBuild()
 	}()

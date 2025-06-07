@@ -9,7 +9,7 @@ APPLICATION APP(
     USE mypkg2;
 );
 
-WORKSPACE MyWS1 (
+WORKSPACE AppWS INHERITS mypkg1.MyWS1, mypkg2.MyWS2 (
     TABLE MyTable INHERITS sys.ODoc (
         myfield2 ref(mypkg2.MyTable2) NOT NULL,
         myfield3 ref(mypkg1.MyTable1) NOT NULL

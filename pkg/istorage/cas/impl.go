@@ -13,17 +13,18 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-type appStorageProviderType struct {
+type implIAppStorageFactory struct {
 	casPar  CassandraParamsType
 	cluster *gocql.ClusterConfig
 }
 
-func newStorageProvider(casPar CassandraParamsType) (prov *appStorageProviderType) {
-	provider := appStorageProviderType{
+func newCasStorageFactory(casPar CassandraParamsType) istorage.IAppStorageFactory {
+	provider := implIAppStorageFactory{
 		casPar: casPar,
 	}
 	provider.cluster = gocql.NewCluster(strings.Split(casPar.Hosts, ",")...)
@@ -47,7 +48,7 @@ func newStorageProvider(casPar CassandraParamsType) (prov *appStorageProviderTyp
 	return &provider
 }
 
-func (p appStorageProviderType) AppStorage(appName istorage.SafeAppName) (storage istorage.IAppStorage, err error) {
+func (p implIAppStorageFactory) AppStorage(appName istorage.SafeAppName) (storage istorage.IAppStorage, err error) {
 	session, err := getSession(p.cluster)
 	if err != nil {
 		// notest
@@ -87,7 +88,7 @@ func logScript(q string) {
 	}
 }
 
-func (p appStorageProviderType) Init(appName istorage.SafeAppName) error {
+func (p implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	session, err := getSession(p.cluster)
 	if err != nil {
 		// notest
@@ -126,10 +127,86 @@ func (p appStorageProviderType) Init(appName istorage.SafeAppName) error {
 	return nil
 }
 
+func (p implIAppStorageFactory) StopGoroutines() {}
+
 type appStorageType struct {
 	cluster  *gocql.ClusterConfig
 	session  *gocql.Session
 	keyspace string
+}
+
+func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	var q string
+	if ttlSeconds > 0 {
+		q = fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) if not exists using ttl %d", s.keyspace, ttlSeconds)
+	} else {
+		q = fmt.Sprintf("insert into %s.values (p_key, c_col, value) values (?,?,?) if not exists", s.keyspace)
+	}
+
+	m := make(map[string]interface{})
+	applied, err := s.session.Query(q, pKey, safeCcols(cCols), value).Consistency(gocql.Quorum).MapScanCAS(m)
+	if err != nil {
+		return false, err
+	}
+
+	return applied, nil
+}
+
+func (s *appStorageType) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	var q string
+	if ttlSeconds > 0 {
+		q = fmt.Sprintf("update %s.values using ttl %d set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace, ttlSeconds)
+	} else {
+		q = fmt.Sprintf("update %s.values set value = ? where p_key = ? and c_col = ? if value = ?", s.keyspace)
+	}
+
+	data := make([]byte, 0)
+	applied, err := s.session.Query(q, newValue, pKey, cCols, oldValue).ScanCAS(&data)
+	if err != nil {
+		return false, err
+	}
+
+	return applied, nil
+}
+
+func (s *appStorageType) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	q := fmt.Sprintf(`delete from %s.values where p_key = ? AND c_col = ? if value = ?`, s.keyspace)
+
+	data := make([]byte, 0)
+	applied, err := s.session.Query(q, pKey, cCols, expectedValue).ScanCAS(&data)
+	if err != nil {
+		return false, err
+	}
+
+	return applied, nil
+}
+
+func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	return s.Get(pKey, cCols, data)
+}
+
+func (s *appStorageType) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.Read(ctx, pKey, startCCols, finishCCols, cb)
+}
+
+func (s *appStorageType) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	q := fmt.Sprintf("SELECT TTL(value) FROM %s.values WHERE p_key = ? AND c_col = ?", s.keyspace)
+
+	// Initialize ttlInSeconds to handle the case where TTL is not set (will return 0)
+	ttlInSeconds = 0
+
+	err = s.session.Query(q, pKey, safeCcols(cCols)).
+		Consistency(gocql.Quorum).
+		Scan(&ttlInSeconds)
+
+	if errors.Is(err, gocql.ErrNotFound) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+
+	return ttlInSeconds, true, nil
 }
 
 func getSession(cluster *gocql.ClusterConfig) (*gocql.Session, error) {
@@ -285,6 +362,10 @@ func (s *appStorageType) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 	}
 
 	return scannerCloser(scanner, nil)
+}
+
+func (p implIAppStorageFactory) Time() timeu.ITime {
+	return timeu.NewITime()
 }
 
 func scannerCloser(scanner gocql.Scanner, err error) error {

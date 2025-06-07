@@ -7,15 +7,18 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type buildContext struct {
 	basicContext
-	adb              appdef.IAppDefBuilder
-	defs             []defBuildContext
-	variableResolver IVariableResolver
+	adb  appdef.IAppDefBuilder
+	defs []defBuildContext
 }
 
 func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
@@ -48,6 +51,7 @@ func (c *buildContext) build() error {
 		c.workspaces,
 		c.grantsAndRevokes,
 		c.packages,
+		c.limits,
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {
@@ -55,17 +59,6 @@ func (c *buildContext) build() error {
 		}
 	}
 	return errors.Join(c.errs...)
-}
-
-func supported(stmt interface{}) bool {
-	// FIXME: this must be empty in the end
-	if _, ok := stmt.(*RateStmt); ok {
-		return false
-	}
-	if _, ok := stmt.(*LimitStmt); ok {
-		return false
-	}
-	return true
 }
 
 // Prepares workspaces builders.
@@ -94,12 +87,105 @@ func (c *buildContext) packages() error {
 func (c *buildContext) rates() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(rate *RateStmt, ictx *iterateCtx) {
-			if rate.Value.Variable != nil {
-				if c.variableResolver != nil {
-					c.variableResolver.AsInt32(rate.Value.variable)
-					// TODO: use in appdef builder
+			var timeUnitAmount uint32 = 1
+			var period time.Duration
+			var rateScopes []appdef.RateScope
+
+			if rate.Value.TimeUnitAmounts != nil {
+				timeUnitAmount = *rate.Value.TimeUnitAmounts
+			}
+			if rate.Value.TimeUnit.Second {
+				period = time.Duration(timeUnitAmount) * time.Second
+			} else if rate.Value.TimeUnit.Minute {
+				period = time.Duration(timeUnitAmount) * time.Minute
+			} else if rate.Value.TimeUnit.Hour {
+				period = time.Duration(timeUnitAmount) * time.Hour
+			} else if rate.Value.TimeUnit.Day {
+				period = time.Duration(timeUnitAmount) * 24 * time.Hour
+			} else if rate.Value.TimeUnit.Year {
+				period = time.Duration(timeUnitAmount) * 365 * 24 * time.Hour
+			}
+			wsb := rate.workspace.mustBuilder(c)
+			if rate.ObjectScope != nil {
+				if rate.ObjectScope.PerAppPartition {
+					rateScopes = append(rateScopes, appdef.RateScope_AppPartition)
+				} else {
+					rateScopes = append(rateScopes, appdef.RateScope_Workspace)
+				}
+			} else {
+				rateScopes = append(rateScopes, appdef.RateScope_AppPartition) // default
+			}
+			if rate.SubjectScope != nil {
+				if rate.SubjectScope.PerSubject {
+					rateScopes = append(rateScopes, appdef.RateScope_User)
+				} else {
+					rateScopes = append(rateScopes, appdef.RateScope_IP)
 				}
 			}
+			wsb.AddRate(schema.NewQName(rate.Name), rate.Value.count, period, rateScopes, rate.Comments...)
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) limits() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(limit *LimitStmt, ictx *iterateCtx) {
+			wsb := limit.workspace.mustBuilder(c)
+			var opt appdef.LimitFilterOption
+			var types []appdef.TypeKind
+			var limitFilter appdef.IFilter
+			if limit.AllItems != nil {
+				opt = appdef.LimitFilterOption_ALL
+				if limit.AllItems.Commands {
+					types = append(types, appdef.TypeKind_Command)
+				}
+				if limit.AllItems.Queries {
+					types = append(types, appdef.TypeKind_Query)
+				}
+				if limit.AllItems.Tables {
+					types = append(types, appdef.TypeKind_Records.AsArray()...)
+				}
+				if limit.AllItems.Views {
+					types = append(types, appdef.TypeKind_ViewRecord)
+				}
+				if limit.AllItems.WithTag != nil {
+					limitFilter = filter.And(filter.Types(types...), filter.Tags(limit.AllItems.WithTag.qName))
+				} else {
+					limitFilter = filter.Types(types...)
+				}
+			} else if limit.EachItem != nil {
+				opt = appdef.LimitFilterOption_EACH
+				if limit.EachItem.Commands {
+					types = append(types, appdef.TypeKind_Command)
+				}
+				if limit.EachItem.Queries {
+					types = append(types, appdef.TypeKind_Query)
+				}
+				if limit.EachItem.Tables {
+					types = append(types, appdef.TypeKind_Records.AsArray()...)
+				}
+				if limit.EachItem.Views {
+					types = append(types, appdef.TypeKind_ViewRecord)
+				}
+				if limit.EachItem.WithTag != nil {
+					limitFilter = filter.And(filter.Types(types...), filter.Tags(limit.EachItem.WithTag.qName))
+				} else {
+					limitFilter = filter.Types(types...)
+				}
+			} else {
+				opt = appdef.LimitFilterOption_EACH
+				if limit.SingleItem.Command != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Command), filter.QNames(limit.SingleItem.Command.qName))
+				} else if limit.SingleItem.Query != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Query), filter.QNames(limit.SingleItem.Query.qName))
+				} else if limit.SingleItem.Table != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_Records.AsArray()...), filter.QNames(limit.SingleItem.Table.qName))
+				} else if limit.SingleItem.View != nil {
+					limitFilter = filter.And(filter.Types(appdef.TypeKind_ViewRecord), filter.QNames(limit.SingleItem.View.qName))
+				}
+			}
+			wsb.AddLimit(schema.NewQName(limit.Name), limit.ops, opt, limitFilter, limit.RateName.qName, limit.Comments...)
 		})
 	}
 	return nil
@@ -130,8 +216,12 @@ func (c *buildContext) workspaces() error {
 			wb.bld.SetDescriptor(wb.pkg.NewQName(wb.w.Descriptor.Name))
 		}
 
+		ancestors := make([]appdef.QName, 0)
 		for _, ancWS := range wb.w.inheritedWorkspaces {
-			wb.bld.SetAncestors(ancWS.qName)
+			ancestors = append(ancestors, ancWS.qName)
+		}
+		if len(ancestors) > 0 {
+			wb.bld.SetAncestors(ancestors[0], ancestors[1:]...)
 		}
 
 		for _, usedWS := range wb.w.usedWorkspaces {
@@ -155,12 +245,12 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommenter) {
 func (c *buildContext) tags() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
-			qname := tag.workspace.pkg.NewQName(tag.Name)
+			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
-			builder.AddTag(qname)
-			if len(tag.Comments) > 0 {
-				builder.SetTypeComment(qname, tag.Comments...)
-			}
+			featureAndComments := make([]string, 0)
+			featureAndComments = append(featureAndComments, tag.Feature)
+			featureAndComments = append(featureAndComments, tag.Comments...)
+			builder.AddTag(qname, featureAndComments...)
 		})
 	}
 	return nil
@@ -183,6 +273,9 @@ func (c *buildContext) roles() error {
 		iteratePackageStmt(schema, &c.basicContext, func(role *RoleStmt, ictx *iterateCtx) {
 			wsb := role.workspace.mustBuilder(c)
 			rb := wsb.AddRole(schema.NewQName(role.Name))
+			if role.Published {
+				rb.SetPublished(true)
+			}
 			c.addComments(role, rb)
 		})
 	}
@@ -193,34 +286,74 @@ func (c *buildContext) roles() error {
 func (c *buildContext) grantsAndRevokes() error {
 	grants := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
-			if s.Grant != nil && len(s.Grant.on) > 0 {
+			if s.Grant != nil {
 				wsb := s.Grant.workspace.mustBuilder(c)
 				comments := s.Grant.GetComments()
+
+				// Handle ALL cases
 				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
-					(s.Grant.Table != nil && s.Grant.Table.All != nil) ||
 					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
-					wsb.GrantAll(s.Grant.on, s.Grant.toRole, comments...)
+					wsb.Grant(grantAllToTableOps, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
 					continue
 				}
-				wsb.Grant(s.Grant.ops, s.Grant.on, s.Grant.columns, s.Grant.toRole, comments...)
+
+				if s.Grant.Table != nil && s.Grant.Table.All != nil {
+					wsb.Grant(grantAllToTableOps, s.Grant.filter(), s.Grant.Table.All.columns, s.Grant.toRole, comments...)
+					continue
+				}
+
+				if s.Grant.Table != nil && s.Grant.Table.Items != nil {
+					for op, columns := range s.Grant.opColumns {
+						wsb.Grant([]appdef.OperationKind{op}, s.Grant.filter(), columns, s.Grant.toRole, comments...)
+					}
+					continue
+				}
+
+				if s.Grant.View != nil {
+					wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.View.columns, s.Grant.toRole, comments...)
+					continue
+				}
+
+				wsb.Grant(s.Grant.ops, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
 			}
 		}
 	}
+
 	revokes := func(stmts []WorkspaceStatement) {
 		for _, s := range stmts {
-			if s.Revoke != nil && len(s.Revoke.on) > 0 {
+			if s.Revoke != nil {
 				wsb := s.Revoke.workspace.mustBuilder(c)
 				comments := s.Revoke.GetComments()
+
+				// Handle ALL cases
 				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
-					(s.Revoke.Table != nil && s.Revoke.Table.All != nil) ||
 					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
-					wsb.RevokeAll(s.Revoke.on, s.Revoke.toRole, comments...)
+					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
 					continue
 				}
-				wsb.Revoke(s.Revoke.ops, s.Revoke.on, s.Revoke.columns, s.Revoke.toRole, comments...)
+
+				if s.Revoke.Table != nil && s.Revoke.Table.All != nil {
+					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), s.Revoke.Table.All.columns, s.Revoke.toRole, comments...)
+					continue
+				}
+
+				if s.Revoke.Table != nil && s.Revoke.Table.Items != nil {
+					for op, columns := range s.Revoke.opColumns {
+						wsb.Revoke([]appdef.OperationKind{op}, s.Revoke.filter(), columns, s.Revoke.toRole, comments...)
+					}
+					continue
+				}
+
+				if s.Revoke.View != nil {
+					wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.View.columns, s.Revoke.toRole, comments...)
+					continue
+				}
+
+				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
 			}
 		}
 	}
+
 	handleWorkspace := func(stmts []WorkspaceStatement) {
 		grants(stmts)
 		revokes(stmts)
@@ -280,31 +413,65 @@ func (c *buildContext) projectors() error {
 			builder := wsb.AddProjector(pQname)
 			// Triggers
 			for _, trigger := range proj.Triggers {
-				evKinds := make([]appdef.ProjectorEventKind, 0)
+				ops := make([]appdef.OperationKind, 0)
 				if trigger.ExecuteAction != nil {
 					if trigger.ExecuteAction.WithParam {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_ExecuteWithParam)
+						ops = append(ops, appdef.OperationKind_ExecuteWithParam)
 					} else {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+						ops = append(ops, appdef.OperationKind_Execute)
 					}
 				} else {
 					if trigger.insert() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Insert)
+						ops = append(ops, appdef.OperationKind_Insert)
 					}
 					if trigger.update() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Update)
+						ops = append(ops, appdef.OperationKind_Update)
 					}
 					if trigger.activate() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Activate)
+						ops = append(ops, appdef.OperationKind_Activate)
 					}
 					if trigger.deactivate() {
-						evKinds = append(evKinds, appdef.ProjectorEventKind_Deactivate)
+						ops = append(ops, appdef.OperationKind_Deactivate)
 					}
 				}
-				for _, qn := range trigger.qNames {
-					builder.Events().Add(qn, evKinds...)
+				if len(ops) == 0 {
+					c.errs = append(c.errs, fmt.Errorf("no trigger operations specified for projector %s", proj.Name))
+					return
 				}
-			}
+
+				flt := []appdef.IFilter{}
+				qNames := appdef.QNames{}
+				types := []appdef.TypeKind{}
+				for _, n := range trigger.QNames {
+					switch n.qName {
+					case istructs.QNameCRecord:
+						types = append(types, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord)
+					case istructs.QNameWRecord:
+						types = append(types, appdef.TypeKind_WDoc, appdef.TypeKind_WRecord)
+					case istructs.QNameODoc:
+						types = append(types, appdef.TypeKind_ODoc)
+					default:
+						qNames.Add(n.qName)
+					}
+				} //Trigger qNames
+
+				if len(qNames) > 0 {
+					flt = append(flt, filter.QNames(qNames...))
+				}
+				if len(types) > 0 {
+					flt = append(flt, filter.Types(types...))
+				}
+
+				switch len(flt) {
+				case 0:
+					c.errs = append(c.errs, fmt.Errorf("no triggers names specified for projector %s", proj.Name))
+					return
+				case 1:
+					builder.Events().Add(ops, flt[0])
+				default:
+					builder.Events().Add(ops, filter.Or(flt...))
+				}
+			} //Triggers
 
 			if proj.IncludingErrors {
 				builder.SetWantErrors()
@@ -326,7 +493,7 @@ func (c *buildContext) projectors() error {
 			builder.SetSync(proj.Sync)
 		})
 	}
-	return nil
+	return errors.Join(c.errs...)
 }
 
 func (c *buildContext) views() error {
@@ -344,11 +511,11 @@ func (c *buildContext) views() error {
 				switch k := dataTypeToDataKind(f.Type); k {
 				case appdef.DataKind_bytes:
 					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
+						cc = append(cc, constraints.MaxLen(uint16(*f.Type.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				case appdef.DataKind_string:
 					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
+						cc = append(cc, constraints.MaxLen(uint16(*f.Type.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				}
 				return cc
@@ -577,19 +744,21 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 	if field.Type.DataType.Bytes != nil {
 		if field.Type.DataType.Bytes.MaxLen != nil {
-			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, constraints.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 		} else {
 			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 		}
 	} else if field.Type.DataType.Varchar != nil {
-		constraints := make([]appdef.IConstraint, 0)
+		cc := make([]appdef.IConstraint, 0)
 		if field.Type.DataType.Varchar.MaxLen != nil {
-			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
+			cc = append(cc, constraints.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 		}
 		if field.CheckRegexp != nil {
-			constraints = append(constraints, appdef.Pattern(field.CheckRegexp.Regexp))
+			cc = append(cc, constraints.Pattern(field.CheckRegexp.Regexp))
 		}
-		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
+		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, cc...)
+	} else if field.Type.DataType.Blob {
+		bld.AddRefField(fieldName, field.NotNull, QNameWDocBLOB)
 	} else {
 		bld.AddField(fieldName, sysDataKind, field.NotNull)
 	}
@@ -599,7 +768,7 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 		// TODO: Support different verification kindsbuilder, &c
 	}
 
-	comments := field.Statement.GetComments()
+	comments := field.GetComments()
 	if len(comments) > 0 {
 		bld.SetFieldComment(fieldName, comments...)
 	}
@@ -674,7 +843,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	tabName := c.defCtx().qname
 	tab := c.adb.AppDef().Type(tabName)
 	if constraint.UniqueField != nil {
-		f := tab.(appdef.IFields).Field(string(constraint.UniqueField.Field))
+		f := tab.(appdef.IWithFields).Field(string(constraint.UniqueField.Field))
 		if f == nil {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
@@ -683,7 +852,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 	} else if constraint.Unique != nil {
 		fields := make([]string, len(constraint.Unique.Fields))
 		for i, f := range constraint.Unique.Fields {
-			if tab.(appdef.IFields).Field(string(f)) == nil {
+			if tab.(appdef.IWithFields).Field(string(f)) == nil {
 				c.stmtErr(&constraint.Pos, ErrUndefinedField(string(f)))
 				return
 			}
@@ -710,6 +879,7 @@ func (c *buildContext) addNestedTableToDef(schema *PackageSchemaAST, nested *Nes
 	if !c.isExists(contQName, nestedTable.tableTypeKind) {
 		c.pushDef(contQName, nestedTable.tableTypeKind, nestedTable.workspace)
 		c.addTableItems(schema, nestedTable.Items)
+		c.applyTags(nestedTable.With, c.defCtx().defBuilder.(appdef.ITagger))
 		c.popDef()
 	}
 

@@ -19,12 +19,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -38,9 +37,7 @@ func (s *httpsService) Prepare(work interface{}) error {
 }
 
 func (s *httpsService) Run(ctx context.Context) {
-	s.log("starting on %s", s.server.Addr)
-	s.log("write timeout: %d", s.server.WriteTimeout)
-	s.log("read timeout: %d", s.server.ReadTimeout)
+	s.preRun(ctx)
 	if err := s.server.ServeTLS(s.listener, "", ""); err != http.ErrServerClosed {
 		s.log("ServeTLS() error: %s", err.Error())
 	}
@@ -53,7 +50,16 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	// https://dev.untill.com/projects/#!627072
 	s.router.SkipClean(true)
 
-	if err = s.registerHandlers(s.busTimeout, s.numsAppsWorkspaces); err != nil {
+	s.registerRouterCheckerHandler()
+
+	s.registerHandlersV1()
+
+	s.registerHandlersV2()
+
+	s.registerDebugHandlers()
+
+	// must be the last
+	if err := s.registerReverseProxyHandler(); err != nil {
 		return err
 	}
 
@@ -77,12 +83,16 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	return nil
 }
 
-// pipeline.IService
-func (s *httpService) Run(ctx context.Context) {
+func (s *httpService) preRun(ctx context.Context) {
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
 	s.log("starting on %s", s.listener.Addr().(*net.TCPAddr).String())
+}
+
+// pipeline.IService
+func (s *httpService) Run(ctx context.Context) {
+	s.preRun(ctx)
 	if err := s.server.Serve(s.listener); err != http.ErrServerClosed {
 		s.log("Serve() error: %s", err.Error())
 	}
@@ -117,36 +127,7 @@ func (s *httpService) GetPort() int {
 	return int(port)
 }
 
-func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (err error) {
-	redirectMatcher, err := s.getRedirectMatcher()
-	if err != nil {
-		return err
-	}
-	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "OPTIONS").Name("router check")
-	/*
-		launching app from localhost from browser. Trying to execute POST from web app within browser.
-		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
-		-> need to allow OPTIONS
-	*/
-	if s.BlobberParams != nil {
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_AppOwner, URLPlaceholder_AppName, URLPlaceholder_WSID), corsHandler(s.blobWriteRequestHandler())).
-			Methods("POST", "OPTIONS").
-			Name("blob write")
-
-		// allowed symbols according to see base64.URLEncoding
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_AppOwner, URLPlaceholder_AppName, URLPlaceholder_WSID, URLPlaceholder_blobID), corsHandler(s.blobReadRequestHandler())).
-			Methods("POST", "GET", "OPTIONS").
-			Name("blob read")
-	}
-	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_AppOwner, URLPlaceholder_AppName,
-		URLPlaceholder_WSID, URLPlaceholder_ResourceName), corsHandler(RequestHandler(s.bus, busTimeout, numsAppsWorkspaces))).
-		Methods("POST", "PATCH", "OPTIONS").Name("api")
-
-	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
-	s.router.Handle("/n10n/subscribe", corsHandler(s.subscribeHandler())).Methods("GET")
-	s.router.Handle("/n10n/unsubscribe", corsHandler(s.unSubscribeHandler())).Methods("GET")
-	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
-
+func (s *httpService) registerDebugHandlers() {
 	// pprof profile
 	s.router.Handle("/debug/pprof", http.HandlerFunc(pprof.Index))
 	s.router.Handle("/debug/cmdline", http.HandlerFunc(pprof.Cmdline))
@@ -158,21 +139,53 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspa
 		r.URL.Path = "/debug/pprof/" + newPath
 		pprof.Index(w, r)
 	})) // must be the last
+}
 
+func (s *httpService) registerReverseProxyHandler() error {
+	redirectMatcher, err := s.getRedirectMatcher()
+	if err != nil {
+		return err
+	}
 	// must be the last handler
 	s.router.MatcherFunc(redirectMatcher).Name("reverse proxy")
 	return nil
 }
 
-func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		queueRequest, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
-		if !ok {
-			return
-		}
+func (s *httpService) registerRouterCheckerHandler() {
+	s.router.HandleFunc("/api/check", corsHandler(checkHandler())).Methods("POST", "GET", "OPTIONS").Name("router check")
+}
 
-		queueRequest.Resource = vars[URLPlaceholder_ResourceName]
+func (s *httpService) registerHandlersV1() {
+	/*
+		launching app from localhost from browser. Trying to execute POST from web app within browser.
+		Browser sees that hosts differs: from localhost to alpha -> need CORS -> denies POST and executes the same request with OPTIONS header
+		-> need to allow OPTIONS
+	*/
+	if s.blobRequestHandler != nil {
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
+			corsHandler(s.blobHTTPRequestHandler_Write())).
+			Methods("POST", "OPTIONS").
+			Name("blob write")
+
+		// allowed symbols according to see base64.URLEncoding
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner,
+			URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID), corsHandler(s.blobHTTPRequestHandler_Read())).
+			Methods("POST", "GET", "OPTIONS").
+			Name("blob read")
+	}
+	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_appOwner, URLPlaceholder_appName,
+		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler_V1(s.requestSender, s.numsAppsWorkspaces))).
+		Methods("POST", "PATCH", "OPTIONS").Name("api")
+
+	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
+	s.router.Handle("/n10n/subscribe", corsHandler(s.subscribeHandler())).Methods("GET")
+	s.router.Handle("/n10n/unsubscribe", corsHandler(s.unSubscribeHandler())).Methods("GET")
+	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
+}
+
+func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
+		request := createBusRequest(req.Method, data, req)
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
@@ -180,25 +193,20 @@ func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces 
 		// requestCtx.Done() -> SendRequest2 implementation will notify the handler that the consumer has left us
 		requestCtx, cancel := context.WithCancel(req.Context())
 		defer cancel() // to avoid context leak
-		res, sections, secErr, err := bus.SendRequest2(requestCtx, queueRequest, busTimeout)
+		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, request)
 		if err != nil {
-			logger.Error("IBus.SendRequest2 failed on ", queueRequest.Resource, ":", err, ". Body:\n", string(queueRequest.Body))
+			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
 			status := http.StatusInternalServerError
-			if errors.Is(err, ibus.ErrBusTimeoutExpired) {
+			if errors.Is(err, bus.ErrSendTimeoutExpired) {
 				status = http.StatusServiceUnavailable
 			}
-			WriteTextResponse(resp, err.Error(), status)
+			WriteTextResponse(rw, err.Error(), status)
 			return
 		}
 
-		if sections == nil {
-			resp.Header().Set(coreutils.ContentType, res.ContentType)
-			resp.WriteHeader(res.StatusCode)
-			writeResponse(resp, string(res.Data))
-			return
-		}
-		writeSectionedResponse(requestCtx, resp, sections, secErr, cancel)
-	}
+		initResponse(rw, responseMeta.ContentType, responseMeta.StatusCode)
+		reply_v1(requestCtx, rw, responseCh, responseErr, responseMeta.ContentType, cancel, request, responseMeta.Mode())
+	})
 }
 
 func corsHandler(h http.Handler) http.HandlerFunc {
@@ -221,4 +229,10 @@ func checkHandler() http.HandlerFunc {
 			log.Println("failed to write 'ok' response:", err)
 		}
 	}
+}
+
+func initResponse(w http.ResponseWriter, contentType string, statusCode int) {
+	w.Header().Set(coreutils.ContentType, contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(statusCode)
 }

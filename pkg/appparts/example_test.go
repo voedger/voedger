@@ -9,8 +9,11 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -23,7 +26,7 @@ func Example() {
 	wsName := appdef.NewQName("test", "workspace")
 	verInfo := appdef.NewQName("test", "verInfo")
 	buildAppDef := func(ver ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)
@@ -47,7 +50,7 @@ func Example() {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(), ""))
+		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0)
 
 	appParts, cleanupParts, err := appparts.New(appStructs)
 	if err != nil {

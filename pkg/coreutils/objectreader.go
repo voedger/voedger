@@ -22,6 +22,10 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 		}
 	}()
 	switch kind {
+	case appdef.DataKind_int8: //#3435 small integer types
+		return rr.AsInt8(name)
+	case appdef.DataKind_int16: //#3435 small integer types
+		return rr.AsInt16(name)
 	case appdef.DataKind_int32:
 		return rr.AsInt32(name)
 	case appdef.DataKind_int64:
@@ -37,7 +41,7 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 	case appdef.DataKind_RecordID:
 		return rr.AsRecordID(name)
 	case appdef.DataKind_QName:
-		return rr.AsQName(name).String()
+		return rr.AsQName(name) // not .String(), see https://github.com/voedger/voedger/issues/3477
 	case appdef.DataKind_bool:
 		return rr.AsBool(name)
 	default:
@@ -46,8 +50,8 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 }
 
 type mapperOpts struct {
-	filter      func(name string, kind appdef.DataKind) bool
-	nonNilsOnly bool
+	filter    func(name string, kind appdef.DataKind) bool
+	allFields bool
 }
 
 type MapperOpt func(opt *mapperOpts)
@@ -58,9 +62,11 @@ func Filter(filterFunc func(name string, kind appdef.DataKind) bool) MapperOpt {
 	}
 }
 
-func WithNonNilsOnly() MapperOpt {
-	return func(opts *mapperOpts) {
-		opts.nonNilsOnly = true
+// will run on all fields independing on wether is has value or not
+// zero values will be emitted for fields that has no value
+func WithAllFields() MapperOpt {
+	return func(opt *mapperOpts) {
+		opt.allFields = true
 	}
 }
 
@@ -95,15 +101,30 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		}
 	}
 
-	if fields, ok := t.(appdef.IFields); ok {
-		if opts.nonNilsOnly {
-			for fieldName := range obj.FieldNames {
-				proceedField(fieldName, fields.Field(fieldName).DataKind())
+	if fields, ok := t.(appdef.IWithFields); ok {
+		var iFieldsToProcess []appdef.IField
+		if view, ok := t.(appdef.IView); ok {
+			if _, ok := obj.(istructs.IValue); ok {
+				iFieldsToProcess = view.Value().Fields()
+			} else if _, ok := obj.(istructs.IKey); ok {
+				iFieldsToProcess = view.Key().Fields()
 			}
+		} else if opts.allFields {
+			iFieldsToProcess = fields.Fields()
 		} else {
-			for _, f := range fields.Fields() {
-				proceedField(f.Name(), f.DataKind())
-			}
+			obj.SpecifiedValues(func(iField appdef.IField, val any) bool {
+				if opts.filter != nil {
+					if !opts.filter(iField.Name(), iField.DataKind()) {
+						return true
+					}
+				}
+				res[iField.Name()] = val
+				return true
+			})
+			return res
+		}
+		for _, iField := range iFieldsToProcess {
+			proceedField(iField.Name(), iField.DataKind())
 		}
 	}
 
@@ -175,7 +196,7 @@ func JSONMapToCUDBody(data []map[string]interface{}) string {
 		}
 		cuds = append(cuds, c)
 	}
-	bb, err := json.Marshal(CUDs{Cuds: cuds})
+	bb, err := json.Marshal(CUDs{Values: cuds})
 	if err != nil {
 		panic(err)
 	}
@@ -184,7 +205,11 @@ func JSONMapToCUDBody(data []map[string]interface{}) string {
 
 func CheckValueByKind(val interface{}, kind appdef.DataKind) error {
 	ok := false
-	switch val.(type) {
+	switch typed := val.(type) {
+	case int8: // #3434 [small integers]
+		ok = kind == appdef.DataKind_int8
+	case int16: // #3434 [small integers]
+		ok = kind == appdef.DataKind_int16
 	case int32:
 		ok = kind == appdef.DataKind_int32
 	case int64:
@@ -196,9 +221,18 @@ func CheckValueByKind(val interface{}, kind appdef.DataKind) error {
 	case bool:
 		ok = kind == appdef.DataKind_bool
 	case string:
-		ok = kind == appdef.DataKind_string || kind == appdef.DataKind_QName
+		if kind == appdef.DataKind_QName {
+			_, err := appdef.ParseQName(typed)
+			ok = err == nil
+		} else {
+			ok = kind == appdef.DataKind_string
+		}
 	case []byte:
 		ok = kind == appdef.DataKind_bytes
+	case istructs.RecordID:
+		ok = kind == appdef.DataKind_RecordID || kind == appdef.DataKind_int64
+	case appdef.QName:
+		ok = kind == appdef.DataKind_QName
 	}
 	if !ok {
 		return fmt.Errorf("provided value %v has type %T but %s is expected: %w", val, val, kind.String(), appdef.ErrInvalidError)

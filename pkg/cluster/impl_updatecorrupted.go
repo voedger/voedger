@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
@@ -77,14 +76,14 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		return err
 	}
 	if update.QName == plog {
-		_, err = update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(istructs.RecordID, istructs.RecordID, appdef.IType) error {
+		_, err = update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(istructs.RecordID, istructs.RecordID) error {
 			// notest
 			panic("must not use ID generator on corrupted event create")
 		}))
 		return err
 	}
-	nonStoredPLogEvent := update.appStructs.Events().BuildPLogEvent(syncRawEvent)
-	return update.appStructs.Events().PutWlog(nonStoredPLogEvent)
+	pLogEventToOverwriteBy := update.appStructs.Events().BuildPLogEvent(syncRawEvent)
+	return update.appStructs.Events().PutWlog(pLogEventToOverwriteBy)
 }
 
 func validateQuery_Corrupted(update update) error {

@@ -193,22 +193,22 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]*rowType) (er
 	}
 
 	for _, rec := range ev.cud.creates {
-		parId := rec.Parent()
-		if target, ok := ids[parId]; ok {
-			if parentType, ok := ev.appCfg.AppDef.Type(target.QName()).(appdef.IContainers); ok {
+		parID := rec.Parent()
+		if target, ok := ids[parID]; ok {
+			if parentType, ok := ev.appCfg.AppDef.Type(target.QName()).(appdef.IWithContainers); ok {
 				cont := parentType.Container(rec.Container())
 				if cont == nil {
 					err = errors.Join(err,
 						// CRecord «CRec: test.CRecord» has parent ID «1» refers to CDoc «test.CDoc», which has no container «Record»
 						validateError(ECode_InvalidRefRecordID,
-							ErrWrongRecordID("%v has parent ID «%d» refers to %v, which has no container «%s»", rec, parId, target, rec.Container())))
+							ErrWrongRecordID("%v has parent ID «%d» refers to %v, which has no container «%s»", rec, parID, target, rec.Container())))
 					return
 				}
 				if cont.QName() != rec.QName() {
 					err = errors.Join(err,
 						// CRecord «Record: test.CRecord» has parent ID «1» refers to CDoc «test.CDoc», which container «Record» has another QName «test.CRecord1»
 						validateError(ECode_InvalidRefRecordID,
-							ErrWrongRecordID("%v has parent ID «%d» refers to %s, which container «%s» has another QName «%s»", rec, parId, target, rec.Container(), cont.QName())))
+							ErrWrongRecordID("%v has parent ID «%d» refers to %s, which container «%s» has another QName «%s»", rec, parID, target, rec.Container(), cont.QName())))
 					return
 				}
 			}
@@ -268,12 +268,12 @@ func validateEventArgs(ev *eventType) (err error) {
 func validateObject(o *objectType) (err error) {
 	err = validateRow(&o.rowType)
 
-	t := o.typ.(appdef.IContainers)
+	t := o.typ.(appdef.IWithContainers)
 
 	// validate occurrences
 	for _, cont := range t.Containers() {
 		n, occurs := cont.Name(), appdef.Occurs(0)
-		for _ = range o.Children(n) {
+		for range o.Children(n) {
 			occurs++
 		}
 		if minO := cont.MinOccurs(); occurs < minO {

@@ -10,18 +10,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
-	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestEventStorage_Get(t *testing.T) {
@@ -31,6 +33,7 @@ func TestEventStorage_Get(t *testing.T) {
 	app := appStructs(
 		`APPLICATION test();
 		WORKSPACE ws1 (
+			DESCRIPTOR ();
 			TABLE t1 INHERITS sys.CDoc (
 				x int32
 			);
@@ -120,8 +123,8 @@ type (
 //go:embed sql_example_syspkg/*.vsql
 var sfs embed.FS
 
-func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	fs, err := parser.ParseFile("file1.vsql", appdefSql)
+func appStructs(appdefSQL string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	fs, err := parser.ParseFile("file1.vsql", appdefSQL)
 	if err != nil {
 		panic(err)
 	}
@@ -150,7 +153,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 
 	appName := istructs.AppQName_test1_app1
 
-	appDef := appdef.New()
+	appDef := builder.New()
 
 	err = parser.BuildAppDefs(packages, appDef)
 	if err != nil {
@@ -164,13 +167,15 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		prepareAppCfg(cfg)
 	}
 
-	asf := mem.Provide()
+	asf := mem.Provide(testingu.MockTime)
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		storageProvider)
+		storageProvider,
+		isequencer.SequencesTrustLevel_0,
+	)
 	structs, err := prov.BuiltIn(appName)
 	if err != nil {
 		panic(err)

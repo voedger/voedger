@@ -25,6 +25,7 @@ const (
 	Field_WSName                    = "WSName"
 	Field_WSKind                    = "WSKind"
 	Field_AppName                   = "AppName"
+	Field_Email                     = "Email" // c.registry.CreateEmailLogin.Email
 	DefaultPrincipalTokenExpiration = time.Hour
 )
 

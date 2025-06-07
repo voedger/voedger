@@ -1,6 +1,14 @@
-# iextsse
+# iextsee
 
-- [server/vsql-select-update.md](https://github.com/voedger/voedger-internals/blob/main/server/vsql-select-update.md)
+Status: Frozen
+
+see: State Storage Extension Engines
+
+- [server/storage-extensions.md](https://github.com/voedger/voedger-internals/blob/main/server/storage-extensions.md)
+
+## Motivation
+
+- https://github.com/voedger/voedger/issues/2653
 
 ## Key components
 
@@ -9,29 +17,56 @@ erDiagram
     %% Entities
 
 
+    AppPartition["apparts.appPartitionRT"]
+    ISSEVvmFactory["iextsee.ISSEVvmFactory"]
+
+    %% It is here for better layout
+    ISSEVvmFactory ||--|| "iextsee.Config" : "receives"
+
+    ISSEAppVerFactory["iextsee.ISSEAppVerFactory"]
+    ISSEPartitionFactory["iextsee.ISSEPartitionFactory"]
+    ISSEStateStorage["iextsee.ISSEStateStorage"]
+
+    App["apparts.appRT"]
+
+    "iextsee.Config" {
+        Logger ISSELogger
+    }
+    
+    ProjectorState
+
     %% Relationships
-    "iextsse.IMainFactory" ||--|| "iextsse.Config" : "has"
-    "iextsse.Config" ||--|| "iextsse.ISSELogger" : "has"
-    "iextsse.IMainFactory" ||--|{ "iextsse.IAppSSEFactory" : "creates"
-    "iextsse.IAppSSEFactory" ||--|{ "iextsse.IPartitionSSEFactory" : "creates"
-    "iextsse.IPartitionSSEFactory" ||--|{ "iextsse.ISSE" : "creates"
+
+    VVM ||--|{ App : "1+"
+    VVM ||--|{ SSEInstance : "1+"
+    SSEInstance ||--||SSEType : "one per"
+    SSEType ||--|| ISSEVvmFactory: ""
+
+    ISSEVvmFactory ||--|{ ISSEAppVerFactory : "creates"
+    ISSEAppVerFactory ||--|{ ISSEPartitionFactory : "creates"
 
 
-    VVM ||--|{ DeployedApplication : "1+"
-    DeployedApplication ||--|{ AppSSEModuleVersion : "1+"
-    AppSSEModuleVersion ||--|| "iextsse.IAppSSEFactory": "1"
+    App ||--|| AppVersion : "1 current"
+    App ||--o{ AppVersion : "0+ active"
+    App ||--o{ AppPartition : ""
 
-    DeployedApplication ||--|{ AppPartition : "1+"
+    AppPartition ||--o{ AppPartitionVersion : "0+ active"
+    AppPartition ||--|| AppPartitionVersion : "1 current"
 
-    AppPartition ||--|| "iextsse.IPartitionSSEFactory" : "1"
+    AppVersion ||--|| ISSEAppVerFactory: ""
+
+
+    ISSEPartitionFactory ||--o{ ISSEStateStorage : "creates"
 
     AppPartition ||--o{ Workspace : "0+"
 
-    Workspace ||--o{ "State" : "0+"
+    Workspace ||--o{ "State" : ""
 
-    State ||--|| "iextsse.ISSE" : "1"
+    State ||--|| ISSEStateStorage : "1"
 
     QueryState ||--|| State : "is"
     CommandState  ||--|| State : "is"
+    AppPartitionVersion ||--|| ISSEPartitionFactory : ""
+    ProjectorState ||--|| State : is
 
 ```

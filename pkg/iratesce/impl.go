@@ -8,6 +8,7 @@ package iratesce
 import (
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 )
 
@@ -53,11 +54,12 @@ func (bucket *bucketType) reset(now time.Time) {
 
 // Try to take n tokens from the given buckets
 // The operation must be atomic - either all buckets are modified or none
-func (b *bucketsType) TakeTokens(buckets []irates.BucketKey, n int) bool {
+func (b *bucketsType) TakeTokens(buckets []irates.BucketKey, n int) (ok bool, excLimit appdef.QName) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	var keyIdx int
-	res := true
+	ok = true
+	excLimit = appdef.NullQName
 	t := b.time.Now()
 	// let's check the presence of a token using the requested keys
 	for keyIdx = 0; keyIdx < len(buckets); keyIdx++ {
@@ -70,21 +72,22 @@ func (b *bucketsType) TakeTokens(buckets []irates.BucketKey, n int) bool {
 
 		// if the next token is not received, then we leave the request cycle
 		if !bucket.limiter.allowN(t, n) {
-			res = false
+			ok = false
+			excLimit = buckets[keyIdx].RateLimitName
 			break
 		}
 
 	}
 
 	// if we have not received tokens for all keys, then we will return the tokens taken back to the buckets
-	if !res {
+	if !ok {
 		for i := 0; i < keyIdx; i++ {
 			if bucket := b.bucketByKey(&buckets[i]); bucket != nil {
 				bucket.limiter.allowN(t, -n)
 			}
 		}
 	}
-	return res
+	return ok, excLimit
 }
 
 // returns bucket from the map
@@ -107,14 +110,14 @@ func (b *bucketsType) bucketByKey(key *irates.BucketKey) (bucket *bucketType) {
 // at the same time, the working Bucket's parameters of restrictions do not change
 // to change the parameters of working buckets, use the ReserRateBuckets function
 // setting the "default" constraint parameters for an action named RateLimitName
-func (b *bucketsType) SetDefaultBucketState(rateLimitName string, bucketState irates.BucketState) {
+func (b *bucketsType) SetDefaultBucketState(rateLimitName appdef.QName, bucketState irates.BucketState) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.defaultStates[rateLimitName] = bucketState
 }
 
 // returns irates.ErrorRateLimitNotFound
-func (b *bucketsType) GetDefaultBucketsState(rateLimitName string) (state irates.BucketState, err error) {
+func (b *bucketsType) GetDefaultBucketsState(rateLimitName appdef.QName) (state irates.BucketState, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if state, ok := b.defaultStates[rateLimitName]; ok {
@@ -125,7 +128,7 @@ func (b *bucketsType) GetDefaultBucketsState(rateLimitName string) (state irates
 
 // change the restriction parameters with the name RateLimitName for running buckets on bucketState
 // the corresponding buckets will be "reset" to the maximum allowed number of available tokens
-func (b *bucketsType) ResetRateBuckets(rateLimitName string, bucketState irates.BucketState) {
+func (b *bucketsType) ResetRateBuckets(rateLimitName appdef.QName, bucketState irates.BucketState) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	_, ok := b.defaultStates[rateLimitName]

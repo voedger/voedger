@@ -125,10 +125,10 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 		if t, ok := item.(appdef.IWithAbstract); ok {
 			node.Props = append(node.Props, buildAbstractNode(node, t))
 		}
-		if t, ok := item.(appdef.IFields); ok {
+		if t, ok := item.(appdef.IWithFields); ok {
 			node.Props = append(node.Props, buildFieldsNode(node, t, NodeNameFields))
 		}
-		if t, ok := item.(appdef.IContainers); ok {
+		if t, ok := item.(appdef.IWithContainers); ok {
 			node.Props = append(node.Props, buildContainersNode(node, t))
 		}
 	}
@@ -162,7 +162,7 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 	if item == nil {
 		return
 	}
-	if fieldsObj, ok := item.(appdef.IFields); ok {
+	if fieldsObj, ok := item.(appdef.IWithFields); ok {
 		for _, field := range fieldsObj.Fields() {
 			node.Props = append(node.Props, buildFieldNode(node, field))
 		}
@@ -186,7 +186,7 @@ func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (no
 	return
 }
 
-func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
+func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IWithUniques) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniques, nil)
 	for _, unique := range item.Uniques() {
 		node.Props = append(node.Props, buildUniqueNode(node, unique))
@@ -194,7 +194,7 @@ func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (
 	return
 }
 
-func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
+func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IWithContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
 	for _, container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))
@@ -213,9 +213,9 @@ func buildWorkspaceNode(parentNode *CompatibilityTreeNode, ws appdef.IWorkspace)
 	return
 }
 
-func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.SeqType, qNamesOnly bool) (node *CompatibilityTreeNode) {
+func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.TypesSlice, qNamesOnly bool) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameTypes, nil)
-	for t := range types {
+	for _, t := range types {
 		if qNamesOnly {
 			node.Props = append(node.Props, buildQNameNode(node, t, t.QName().String(), true))
 		} else {
@@ -227,7 +227,7 @@ func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.SeqType, qNa
 
 func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNamePackages, nil)
-	for localName, fullPath := range item.Packages {
+	for localName, fullPath := range item.Packages() {
 		node.Props = append(node.Props, newNode(node, fullPath, localName))
 	}
 	return

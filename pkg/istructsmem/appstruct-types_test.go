@@ -10,8 +10,11 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -29,7 +32,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 	t.Run("should be ok to add config for known builtin app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -38,11 +41,14 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 		require.Equal(istructs.DefaultNumAppWorkspaces, cfg.NumAppWorkspaces())
 
 		_, storageProvider := teststore.New(appName)
-		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 		t.Run("should be ok to change appDef after add config", func(t *testing.T) {
 			wsName := appdef.NewQName("test", "workspace")
 			ws := adb.AddWorkspace(wsName)
+			wsDescQName := appdef.NewQName("test", "WSDesc")
+			ws.AddCDoc(wsDescQName)
+			ws.SetDescriptor(wsDescQName)
 			docName := appdef.NewQName("test", "doc")
 			doc := ws.AddCDoc(docName)
 			doc.AddField("field", appdef.DataKind_int64, true)
@@ -61,12 +67,12 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 	t.Run("misc", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(42)
 		_, storageProvider := teststore.New(appName)
-		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		as, err := appStructs.BuiltIn(appName)
 		require.NoError(err)
 		require.Equal(istructs.NumAppWorkspaces(42), as.NumAppWorkspaces())
@@ -74,7 +80,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 
 	t.Run("should be error to make invalid changes in appDef after add config", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		cfgs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -85,7 +91,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 			AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
 
 		_, storageProvider := teststore.New(appName)
-		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 		appStr, err := appStructs.BuiltIn(appName)
 		require.Nil(appStr)
@@ -97,7 +103,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 			cfgs := make(AppConfigsType)
 			appName := appdef.NewAppQName("unknown", "unknown")
 			require.Panics(func() {
-				cfgs.AddBuiltInAppConfig(appName, appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+				cfgs.AddBuiltInAppConfig(appName, builder.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 			}, require.Is(istructs.ErrAppNotFound), require.Has(appName))
 		})
 
@@ -107,7 +113,7 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 			require.Panics(func() {
 				_ = cfgs.AddBuiltInAppConfig(appName,
 					func() appdef.IAppDefBuilder {
-						adb := appdef.New()
+						adb := builder.New()
 						adb.AddPackage("test", "test.com/test")
 						wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 						wsb.AddObject(appdef.NewQName("test", "obj")).
@@ -122,19 +128,19 @@ func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 func TestAppConfigsType_GetConfig(t *testing.T) {
 	require := require.New(t)
 
-	asf := mem.Provide()
+	asf := mem.Provide(testingu.MockTime)
 	storages := istorageimpl.Provide(asf)
 
 	cfgs := make(AppConfigsType)
 	for app, id := range istructs.ClusterApps {
-		cfg := cfgs.AddBuiltInAppConfig(app, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(app, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
 		require.Equal(cfg.ClusterAppID, id)
 	}
 
-	appStructsProvider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storages)
+	appStructsProvider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storages, isequencer.SequencesTrustLevel_0)
 
 	t.Run("must be ok to create configs for all known cluster apps", func(t *testing.T) {
 		for app := range istructs.ClusterApps {
@@ -183,9 +189,12 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	appDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(wsName)
+		wsDescQName := appdef.NewQName("test", "WSDesc")
+		ws.AddCDoc(wsDescQName)
+		ws.SetDescriptor(wsDescQName)
 		doc := ws.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_string, true)
@@ -201,7 +210,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddBuiltInAppConfig(appName, appDef)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 		as, err := provider.BuiltIn(appName)
 		require.NoError(err)
@@ -217,7 +226,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		cfgs.AddBuiltInAppConfig(appName, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		_, err := provider.BuiltIn(appName)
 		require.ErrorIs(err, testError)
 	})
@@ -231,7 +240,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		cfgs.AddBuiltInAppConfig(appName, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		_, err := provider.BuiltIn(appName)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
@@ -245,7 +254,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		cfgs.AddBuiltInAppConfig(appName, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		_, err := provider.BuiltIn(appName)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
@@ -259,7 +268,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		cfgs.AddBuiltInAppConfig(appName, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		_, err := provider.BuiltIn(appName)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
@@ -267,7 +276,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddBuiltInAppConfig(appName, appDef)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		_, err := provider.BuiltIn(appName)
 		require.NoError(err)
 		require.Panics(func() { cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces) })
@@ -277,7 +286,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddBuiltInAppConfig(appName, appDef)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		_, err := provider.BuiltIn(appName)
 		require.NoError(err)
 		require.Panics(func() { cfg.AppDefBuilder() })
@@ -286,7 +295,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	t.Run("unable to work is NumAppWorkspaces is not set", func(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfgs.AddBuiltInAppConfig(appName, appDef)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 		_, err := provider.BuiltIn(appName)
 		require.Error(err, require.Is(ErrNumAppWorkspacesNotSetError), require.Has(appName))
 	})
@@ -301,10 +310,10 @@ func Test_NewAppStructs(t *testing.T) {
 	wsCount := istructs.NumAppWorkspaces(10)
 
 	_, storageProvider := teststore.New(name)
-	structs := Provide(make(AppConfigsType, 1), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+	structs := Provide(make(AppConfigsType, 1), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
 
 	t.Run("should be ok to create new AppStructs", func(t *testing.T) {
-		def := appdef.New().MustBuild()
+		def := builder.New().MustBuild()
 		str, err := structs.New(name, def, id, wsCount)
 		require.NoError(err)
 		require.NotNil(str)
@@ -329,7 +338,7 @@ func Test_NewAppStructs(t *testing.T) {
 
 		t.Run("if storage is not exists", func(t *testing.T) {
 			unknown := appdef.NewAppQName("unknown", "unknown")
-			def := appdef.New().MustBuild()
+			def := builder.New().MustBuild()
 			str, err := structs.New(unknown, def, id, wsCount)
 			require.Error(err,
 				require.Is(istorage.ErrStorageDoesNotExist),
@@ -338,7 +347,7 @@ func Test_NewAppStructs(t *testing.T) {
 		})
 
 		t.Run("if workspaces count is omitted", func(t *testing.T) {
-			def := appdef.New().MustBuild()
+			def := builder.New().MustBuild()
 			str, err := structs.New(name, def, id, 0)
 			require.Error(err, require.Is(ErrNumAppWorkspacesNotSetError), require.Has(name))
 			require.Nil(str)

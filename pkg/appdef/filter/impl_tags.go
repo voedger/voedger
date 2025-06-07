@@ -7,8 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -23,12 +21,11 @@ type tagsFilter struct {
 	tags appdef.QNames
 }
 
-func makeTagsFilter(tag appdef.QName, tags ...appdef.QName) appdef.IFilter {
-	f := &tagsFilter{tags: appdef.QNamesFrom(tag)}
-	for _, t := range tags {
-		f.tags.Add(t)
+func newTagsFilter(tags ...appdef.QName) *tagsFilter {
+	if len(tags) == 0 {
+		panic("no tags provided")
 	}
-	return f
+	return &tagsFilter{tags: appdef.QNamesFrom(tags...)}
 }
 
 func (tagsFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Tags }
@@ -43,7 +40,8 @@ func (f tagsFilter) Match(t appdef.IType) bool {
 }
 
 func (f tagsFilter) String() string {
-	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
+	// TAGS(…)
+	s := "TAGS("
 	for i, c := range f.tags {
 		if i > 0 {
 			s += ", "
@@ -53,6 +51,4 @@ func (f tagsFilter) String() string {
 	return s + ")"
 }
 
-func (f tagsFilter) Tags() iter.Seq[appdef.QName] {
-	return slices.Values(f.tags)
-}
+func (f tagsFilter) Tags() []appdef.QName { return f.tags }

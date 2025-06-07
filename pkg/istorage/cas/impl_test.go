@@ -120,6 +120,6 @@ func TestDCAwareRoundRobinPolicy(t *testing.T) {
 		KeyspaceWithReplication: SimpleWithReplication,
 		DC:                      "dc1",
 	}
-	provider := newStorageProvider(casPar)
-	require.NotNil(t, provider.cluster.PoolConfig.HostSelectionPolicy)
+	provider := newCasStorageFactory(casPar)
+	require.NotNil(t, provider.(*implIAppStorageFactory).cluster.PoolConfig.HostSelectionPolicy)
 }

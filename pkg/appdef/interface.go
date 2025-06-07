@@ -5,8 +5,6 @@
 
 package appdef
 
-import "iter"
-
 // Application definition is a set of types, views, commands, queries and workspaces.
 type IAppDef interface {
 	IWithComments
@@ -20,15 +18,12 @@ type IAppDef interface {
 	// If not found then empty type with TypeKind_null is returned
 	Type(QName) IType
 
-	// Iterate types.
-	//
-	// Types are iterated in alphabetical order of QNames.
-	Types() iter.Seq[IType]
+	// Returns all application types from all workspaces in alphabetical order.
+	Types() []IType
 }
 
 type IAppDefBuilder interface {
 	ICommenter
-	ITypeCommenter
 
 	IPackagesBuilder
 	IWorkspacesBuilder

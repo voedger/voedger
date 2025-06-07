@@ -17,7 +17,7 @@ type grcountRR struct {
 	istructs.NullObject
 }
 
-func (e *grcountRR) AsInt32(string) int32 { return int32(runtime.NumGoroutine()) }
+func (e *grcountRR) AsInt32(string) int32 { return int32(runtime.NumGoroutine()) } // nolint G115
 
 func provideQryGRCount(sr istructsmem.IStatelessResources) {
 	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(

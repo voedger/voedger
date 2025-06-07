@@ -20,6 +20,10 @@ func Provide(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, federation
 		QNameCommandCreateLogin,
 		execCmdCreateLogin,
 	))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		QNameCommandCreateEmailLogin,
+		execCmdCreateEmailLogin,
+	))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(RegistryPackage, "IssuePrincipalToken"),

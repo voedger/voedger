@@ -21,7 +21,7 @@ const (
 //	- TypeKind_ODoc and TypeKind_CRecord,
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object,
-type IContainers interface {
+type IWithContainers interface {
 	// Finds container by name.
 	//
 	// Returns nil if not found.

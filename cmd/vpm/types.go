@@ -6,8 +6,9 @@
 package main
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"slices"
+
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type vpmParams struct {
@@ -24,7 +25,7 @@ type packageFiles map[string][]string
 
 // baselineInfo is a struct that is saved to baseline.json file
 type baselineInfo struct {
-	BaselinePackageUrl string
+	BaselinePackageURL string
 	Timestamp          string
 	GitCommitHash      string `json:",omitempty"`
 }
@@ -54,7 +55,7 @@ type ormPackageItem struct {
 	Name         string
 	Type         string
 	// TODO: find a way to extract sql-code of the package item from parser/appdef
-	SqlContent string
+	SQLContent string
 }
 
 type ormTableItem struct {
@@ -73,7 +74,7 @@ type ormProjector struct {
 type ormProjectorEventItem struct {
 	ormPackageItem
 	EventItem      any
-	Kinds          []appdef.ProjectorEventKind
+	Ops            []appdef.OperationKind
 	Projector      ormProjector
 	SkipGeneration bool
 }
@@ -119,7 +120,7 @@ func isExecutableWithParam(p ormProjector) bool {
 }
 
 func doesExecuteWithParam(p ormProjectorEventItem) bool {
-	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_ExecuteWithParam)
+	return slices.Contains(p.Ops, appdef.OperationKind_ExecuteWithParam)
 }
 
 func hasEventItemName(p ormProjector, name string) bool {
@@ -133,9 +134,10 @@ func hasEventItemName(p ormProjector, name string) bool {
 }
 
 func doesExecuteOn(p ormProjectorEventItem) bool {
-	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_Execute)
+	return slices.Contains(p.Ops, appdef.OperationKind_Execute)
 }
 
 func doesTriggerOnCUD(p ormProjectorEventItem) bool {
-	return slices.Contains(p.Kinds, appdef.ProjectorEventKind_Insert) || slices.Contains(p.Kinds, appdef.ProjectorEventKind_Update)
+	//nnv: Is OperationKind_Activate / OperationKind_Deactivate triggers CUD too?
+	return slices.Contains(p.Ops, appdef.OperationKind_Insert) || slices.Contains(p.Ops, appdef.OperationKind_Update)
 }

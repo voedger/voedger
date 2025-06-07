@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -18,14 +19,14 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
-func asyncProjectorApplyUpdateInviteRoles(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
+func asyncProjectorApplyUpdateInviteRoles(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyUpdateInviteRoles,
 		Func: applyUpdateInviteRolesProjector(time, federation, tokens, smtpCfg),
 	}
 }
 
-func applyUpdateInviteRolesProjector(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
@@ -77,7 +78,6 @@ func applyUpdateInviteRolesProjector(time coreutils.ITime, federation federation
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
 		replacer := strings.NewReplacer(EmailTemplatePlaceholder_Roles, event.ArgumentObject().AsString(Field_Roles))
-
 		//Send roles update email
 		skbSendMail, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 		if err != nil {

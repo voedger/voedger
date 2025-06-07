@@ -9,10 +9,9 @@ APPLICATION appcomplex(
     USE pkg2;
 );
 
-
-WORKSPACE MyWS1 (
+WORKSPACE AppWS INHERITS pkg1.MyWS1 (
 	TABLE MyTable2 INHERITS sys.ODoc (
-  	  myfield1 ref(pkg1.MyTable1) NOT NULL,
+  	    myfield1 ref(pkg1.MyTable1) NOT NULL,
     	myfield2 int32 NOT NULL
 	);
 );

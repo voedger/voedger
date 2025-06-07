@@ -25,7 +25,7 @@ type PartitionActualizers struct {
 	rtWG sync.WaitGroup
 }
 
-func newActualizers(app appdef.AppQName, part istructs.PartitionID) *PartitionActualizers {
+func New(app appdef.AppQName, part istructs.PartitionID) *PartitionActualizers {
 	return &PartitionActualizers{
 		app:  app,
 		part: part,

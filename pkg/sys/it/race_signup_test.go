@@ -23,33 +23,32 @@ const (
 
 // Test_Race_SUsignUpIn: sign up,sign in with existing logins & sign in with un-existing logins
 func Test_Race_SUsignUpIn(t *testing.T) {
-	// t.Skip()
 	if testing.Short() {
 		t.Skip()
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	wg := &sync.WaitGroup{}
+	wgUp := &sync.WaitGroup{}
 	logins := make(chan it.Login, loginCnt)
 	for i := 0; i < loginCnt; i++ {
-		wg.Add(1)
+		wgUp.Add(1)
 		go func() {
-			defer wg.Done()
+			defer wgUp.Done()
 			login := vit.SignUp("login"+strconv.Itoa(vit.NextNumber()), "1", istructs.AppQName_test1_app1)
 			logins <- login
 		}()
 	}
-	wg.Wait()
+	wgUp.Wait()
 	close(logins)
 
-	wgin := &sync.WaitGroup{}
+	wgIn := &sync.WaitGroup{}
 	for login := range logins {
-		wgin.Add(1)
+		wgIn.Add(1)
 		go func(login it.Login) {
-			defer wgin.Done()
+			defer wgIn.Done()
 			vit.SignIn(login, it.DoNotFailOnTimeout())
 		}(login)
 	}
-	wgin.Wait()
+	wgIn.Wait()
 }

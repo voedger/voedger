@@ -7,4 +7,5 @@ package descr
 
 type Tag struct {
 	Type
+	Feature string `json:",omitempty"`
 }

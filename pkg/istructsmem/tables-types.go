@@ -6,11 +6,14 @@
 package istructsmem
 
 import (
+	"encoding/binary"
+	"fmt"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// Implements interfaces:
+// # Supports:
 //
 //	— istructs.IRecord
 //	— istructs.IORecord
@@ -38,30 +41,29 @@ func newRecord(appCfg *AppConfigType) *recordType {
 	return &r
 }
 
-// copyFrom assigns record from specified source record
-func (rec *recordType) copyFrom(src *recordType) {
-	rec.rowType.copyFrom(&src.rowType)
-	rec.isNew = src.isNew
-}
-
-// istructs.ICUDRow.IsNew
-func (rec *recordType) IsNew() bool {
-	return rec.isNew
-}
-
 func NewNullRecord(id istructs.RecordID) istructs.IRecord {
 	rec := newRecord(NullAppConfig)
 	rec.setID(id)
 	return rec
 }
 
+// copyFrom assigns record from specified source record
+func (rec *recordType) copyFrom(src *recordType) {
+	rec.rowType.copyFrom(&src.rowType)
+	rec.isNew = src.isNew
+}
+
 // return field value by field definition.
 //
 // # Panics
 //   - if unsupported field type
-func (row *rowType) fieldValue(f appdef.IField) interface{} {
+func (row *rowType) fieldValue(f appdef.IField) any {
 	n := f.Name()
 	switch f.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		return row.AsInt8(n)
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		return row.AsInt16(n)
 	case appdef.DataKind_int32:
 		return row.AsInt32(n)
 	case appdef.DataKind_int64:
@@ -96,20 +98,112 @@ func (row *rowType) fieldValue(f appdef.IField) interface{} {
 	panic(ErrWrongFieldType("%v", f))
 }
 
-// istructs.ICUDRow.ModifiedFields
-func (row *rowType) ModifiedFields(cb func(appdef.FieldName, interface{}) bool) {
-	if row.isActiveModified {
-		if !cb(appdef.SystemField_IsActive, row.isActive) {
+// istructs.ICUDRow.IsActivated
+func (rec *recordType) IsActivated() bool {
+	return !rec.isNew && rec.isActiveModified && rec.isActive
+}
+
+// istructs.ICUDRow.IsDeactivated
+func (rec *recordType) IsDeactivated() bool {
+	return !rec.isNew && rec.isActiveModified && !rec.isActive
+}
+
+// istructs.ICUDRow.IsNew
+func (rec *recordType) IsNew() bool {
+	return rec.isNew
+}
+
+func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
+	if row.QName() != appdef.NullQName {
+		if !cb(row.fieldDef(appdef.SystemField_QName), row.QName()) {
 			return
 		}
 	}
 
-	for _, fld := range row.fields.Fields() {
-		n := fld.Name()
-		if row.dyB.HasValue(n) || row.nils[n] != nil {
-			if !cb(n, row.fieldValue(fld)) {
-				return
-			}
+	if row.id != istructs.NullRecordID {
+		if !cb(row.fieldDef(appdef.SystemField_ID), row.id) {
+			return
 		}
+	}
+
+	if row.parentID != istructs.NullRecordID {
+		if !cb(row.fieldDef(appdef.SystemField_ParentID), row.parentID) {
+			return
+		}
+	}
+
+	if len(row.container) > 0 {
+		if !cb(row.fieldDef(appdef.SystemField_Container), row.container) {
+			return
+		}
+	}
+
+	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
+		if !cb(row.fieldDef(appdef.SystemField_IsActive), row.isActive) {
+			return
+		}
+	}
+
+	// user fields
+	goOn := true
+	row.dyB.IterateFields(nil, func(name string, value any) bool {
+		field := row.fieldDef(name)
+		switch field.DataKind() {
+		case appdef.DataKind_RecordID:
+			value = istructs.RecordID(value.(int64)) //nolint:gosec
+		case appdef.DataKind_QName:
+			QNameID := binary.BigEndian.Uint16(value.([]byte))
+			qName, err := row.appCfg.qNames.QName(QNameID)
+			if err != nil {
+				// notest
+				panic(err)
+			}
+			value = qName
+		}
+		switch field.DataKind() {
+		case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+			value = int8(value.(byte)) // nolint G115 : dynobuffers uses byte to store int8
+		}
+		goOn = cb(row.fieldDef(name), value)
+		return goOn
+	})
+
+	if !goOn {
+		return
+	}
+
+	for _, nilledIField := range row.nils {
+		if !cb(nilledIField, nilToZeroValue(nilledIField.DataKind())) {
+			return
+		}
+	}
+}
+
+func nilToZeroValue(kind appdef.DataKind) any {
+	switch kind {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		return int8(0)
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		return int16(0)
+	case appdef.DataKind_int32:
+		return int32(0)
+	case appdef.DataKind_int64:
+		return int64(0)
+	case appdef.DataKind_float32:
+		return float32(0)
+	case appdef.DataKind_float64:
+		return float64(0)
+	case appdef.DataKind_string:
+		return ""
+	case appdef.DataKind_RecordID:
+		return istructs.RecordID(0)
+	case appdef.DataKind_QName:
+		return appdef.NullQName
+	case appdef.DataKind_bool:
+		return false
+	case appdef.DataKind_bytes:
+		return []byte{}
+	default:
+		panic(fmt.Sprintf("unsupported nilled field kind: %s", kind))
 	}
 }

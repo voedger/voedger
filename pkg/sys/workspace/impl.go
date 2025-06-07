@@ -12,12 +12,11 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/sys"
 
@@ -91,18 +90,8 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 		coreutils.WithExpectedCode(http.StatusOK),
 		coreutils.WithExpectedCode(http.StatusConflict),
 	); createWSIDCmdErr != nil {
-		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", err, body))
-		ownerAppQName, err := appdef.ParseAppQName(ownerApp)
-		if err != nil {
-			// notest
-			return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
-		}
-		ownerAppToken, err := payloads.GetSystemPrincipalToken(tokensAPI, ownerAppQName)
-		if err != nil {
-			// notest
-			return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
-		}
-		return updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, ownerAppToken, federation)
+		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr.Error(), body))
+		return updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, tokensAPI, federation)
 	}
 	return nil
 }
@@ -222,8 +211,8 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 			}
 			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
-				// nolint G115 ownerWSID came from WSID so its highest but is always 0 -> no data loss possible
-				if err := updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, systemPrincipalToken, federation); err != nil {
+				// nolint G115 ownerWSID came from WSID so its highest bit is always 0 -> no data loss possible
+				if err := updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, tokensAPI, federation); err != nil {
 					return err
 				}
 			}
@@ -233,8 +222,8 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 }
 
 // c.sys.CreateWorkspace
-// must be called in the target application because the user profile is located in the target application according to schema
-func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure {
+// targetApp/newWSID
+func execCmdCreateWorkspace(time timeu.ITime) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
@@ -307,7 +296,7 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
+func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {
@@ -356,17 +345,6 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 			if err != nil {
 				return fmt.Errorf("%s: %w", logPrefix, err)
 			}
-			ownerAppQName, err := appdef.ParseAppQName(ownerApp)
-			if err != nil {
-				// parsed already by c.registry.CreateLogin and InitChildWorkspace ?????????
-				// notest
-				return err
-			}
-			systemPrincipalToken_OwnerApp, err := payloads.GetSystemPrincipalToken(tokensAPI, ownerAppQName)
-			if err != nil {
-				// notest
-				return fmt.Errorf("%s: %w", logPrefix, err)
-			}
 
 			// If len(new.createError) > 0 -> UpdateOwner(wsParams, new.WSID, new.createError), return
 			createErrorStr := wsDescr.AsString(Field_CreateError)
@@ -375,7 +353,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 				info("have new.createError, will just updateOwner():", createErrorStr)
 				// nolint G115: highest bit of newWSID is always 0 -> safe to cast to WSID
 				ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
-					istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
+					istructs.WSID(newWSID), wsError, tokensAPI, federation)
 				continue
 			}
 
@@ -433,17 +411,28 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 
 			// nolint G115
 			ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
-				istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
+				istructs.WSID(newWSID), wsError, tokensAPI, federation)
 		}
 		return nil
 	}
 }
 
 func updateOwnerErr(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp string, ownerQNameStr string, newWSID istructs.WSID, err error,
-	principalToken string, federation federation.IFederation) error {
+	iTokens itokens.ITokens, federation federation.IFederation) error {
 	errStr := ""
 	if err != nil {
 		errStr = err.Error()
+	}
+
+	ownerAppQName, err := appdef.ParseAppQName(ownerApp)
+	if err != nil {
+		// notest
+		return fmt.Errorf("updateOwner: failed to parse AppQName %s: %w", ownerApp, err)
+	}
+	ownerAppToken, err := payloads.GetSystemPrincipalToken(iTokens, ownerAppQName)
+	if err != nil {
+		// notest
+		return fmt.Errorf("updateOwner: failed to issue system token for app %s: %w", ownerAppQName.String(), err)
 	}
 
 	updateOwnerURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", ownerApp, ownerWSID)
@@ -451,20 +440,21 @@ func updateOwnerErr(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp
 		ownerApp, ownerWSID, newWSID, errStr))
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"%s":%d,"%s":%q}}]}`,
 		ownerID, authnz.Field_WSID, newWSID, authnz.Field_WSError, errStr)
-	_, err = federation.Func(updateOwnerURL, body, coreutils.WithAuthorizeBy(principalToken), coreutils.WithDiscardResponse())
+	_, err = federation.Func(updateOwnerURL, body, coreutils.WithAuthorizeBy(ownerAppToken), coreutils.WithDiscardResponse())
 	return err
 }
 
 func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp string, ownerQNameStr string, newWSID istructs.WSID, err error,
-	principalToken string, federation federation.IFederation) (ok bool) {
-	updateOwnerErr := updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQNameStr, newWSID, err, principalToken, federation)
+	iTokens itokens.ITokens, federation federation.IFederation) (ok bool) {
+	updateOwnerErr := updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQNameStr, newWSID, err, iTokens, federation)
 	if updateOwnerErr != nil {
 		logger.Error("failed to updateOwner:", updateOwnerErr)
 	}
 	return updateOwnerErr == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []BLOBWorkspaceTemplateField, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS,
+	wsTemplateData []map[string]interface{}) (blobs []BLOBWorkspaceTemplateField, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -473,36 +463,56 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			if underscorePos < 0 {
 				return nil, fmt.Errorf("wrong blob file name format: %s", ent.Name())
 			}
-			recordIDStr := ent.Name()[:underscorePos]
-			recordID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
+			blobOwnerRawIDStr := ent.Name()[:underscorePos]
+			blobOwnerRawIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(blobOwnerRawIDStr), appdef.DataKind_RecordID)
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
-			fieldName := strings.Replace(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "", -1)
+			blobOwnerRawID := blobOwnerRawIDIntf.(istructs.RecordID)
+			fieldName := strings.ReplaceAll(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "")
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
 			}
-			fieldNames, ok := blobIDs[istructs.RecordID(recordID)]
+			fieldNames, ok := blobIDs[blobOwnerRawID]
 			if !ok {
 				fieldNames = map[string]struct{}{}
-				blobIDs[istructs.RecordID(recordID)] = fieldNames
+				blobIDs[blobOwnerRawID] = fieldNames
 			}
 			if _, exists := fieldNames[fieldName]; exists {
-				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", recordID, fieldName, ent.Name())
+				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", blobOwnerRawID, fieldName, ent.Name())
 			}
 			fieldNames[fieldName] = struct{}{}
 			blobContent, err := wsTemplateFS.ReadFile(ent.Name())
 			if err != nil {
 				return nil, fmt.Errorf("failed to read blob %s content: %w", ent.Name(), err)
 			}
+			ownerQName := appdef.NullQName
+			for _, wsTemplateRecord := range wsTemplateData {
+				recordNumberFromTemplate := wsTemplateRecord[appdef.SystemField_ID].(json.Number)
+				recordIDFromTemplateIntf, err := coreutils.ClarifyJSONNumber(recordNumberFromTemplate, appdef.DataKind_RecordID)
+				if err != nil {
+					return nil, err
+				}
+				recordIDFromTemplate := recordIDFromTemplateIntf.(istructs.RecordID)
+				if recordIDFromTemplate == blobOwnerRawID {
+					ownerQNameStr := wsTemplateRecord[appdef.SystemField_QName].(string)
+					ownerQName, err = appdef.ParseQName(ownerQNameStr)
+					if err != nil {
+						// notest: do not test here. Will fail on further doc write
+						return nil, err
+					}
+					break
+				}
+			}
 			blobs = append(blobs, BLOBWorkspaceTemplateField{
 				DescrType: iblobstorage.DescrType{
-					Name:     ent.Name(),
-					MimeType: filepath.Ext(ent.Name())[1:], // excluding dot
+					Name:        ent.Name(),
+					ContentType: filepath.Ext(ent.Name())[1:], // excluding dot
 				},
-				FieldName: fieldName,
-				Content:   blobContent,
-				RecordID:  istructs.RecordID(recordID),
+				OwnerRecord:      ownerQName,
+				OwnerRecordField: fieldName,
+				Content:          blobContent,
+				OwnerRecordRawID: blobOwnerRawID,
 			})
 		}
 	}
@@ -575,7 +585,7 @@ func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint,
 	// check blob entries
 	//          newBLOBID   fieldName
 	blobIDs := map[istructs.RecordID]map[string]struct{}{}
-	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS)
+	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS, wsData)
 	if err != nil {
 		return nil, nil, err
 	}

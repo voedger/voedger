@@ -105,8 +105,8 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 	}
 
 	return appStructs.ViewRecords().Read(ctx, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-		data := coreutils.FieldsToMap(key, appStructs.AppDef(), getFilter(f.filter), coreutils.WithNonNilsOnly())
-		for k, v := range coreutils.FieldsToMap(value, appStructs.AppDef(), getFilter(f.filter), coreutils.WithNonNilsOnly()) {
+		data := coreutils.FieldsToMap(key, appStructs.AppDef(), getFilter(f.filter))
+		for k, v := range coreutils.FieldsToMap(value, appStructs.AppDef(), getFilter(f.filter)) {
 			data[k] = v
 		}
 		bb, err := json.Marshal(data)

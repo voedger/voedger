@@ -26,3 +26,10 @@ func TestNewSUUID(t *testing.T) {
 	_, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(string(suuid))
 	require.NoError(t, err)
 }
+
+func TestDurationSeconds(t *testing.T) {
+	dt := DurationType(1)
+	require.Equal(t, 86400, dt.Seconds())
+	dt = DurationType(2)
+	require.Equal(t, 86400*4, dt.Seconds())
+}

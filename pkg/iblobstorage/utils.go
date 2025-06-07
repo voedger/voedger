@@ -29,3 +29,7 @@ func NewSUUID() SUUID {
 	// Encode to Base64 using URL-safe encoding
 	return SUUID(base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(combined))
 }
+
+func (dt DurationType) Seconds() int {
+	return int(dt*dt) * secondsInDay
+}

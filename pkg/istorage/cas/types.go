@@ -25,3 +25,4 @@ func (p CassandraParamsType) cqlVersion() string {
 	}
 	return p.CQLVersion
 }
+

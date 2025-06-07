@@ -7,7 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
 	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -23,16 +22,17 @@ type orFilter struct {
 	children []appdef.IFilter
 }
 
-func makeOrFilter(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
-	f := &orFilter{children: []appdef.IFilter{f1, f2}}
-	f.children = append(f.children, ff...)
-	return f
+func newOrFilter(ff ...appdef.IFilter) *orFilter {
+	if len(ff) < 1+1 {
+		panic("less then two filters are provided")
+	}
+	return &orFilter{children: slices.Clone(ff)}
 }
 
 func (orFilter) Kind() appdef.FilterKind { return appdef.FilterKind_Or }
 
 func (f orFilter) Match(t appdef.IType) bool {
-	for c := range f.Or() {
+	for _, c := range f.Or() {
 		if c.Match(t) {
 			return true
 		}
@@ -40,15 +40,21 @@ func (f orFilter) Match(t appdef.IType) bool {
 	return false
 }
 
-func (f orFilter) Or() iter.Seq[appdef.IFilter] { return slices.Values(f.children) }
+func (f orFilter) Or() []appdef.IFilter { return f.children }
 
 func (f orFilter) String() string {
-	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
+	// QNAMES(…) OR TAGS(…)
+	// (QNAMES(…) AND TYPES(…)) OR NOT TAGS(…)
+	s := ""
 	for i, c := range f.children {
-		if i > 0 {
-			s += ", "
+		cStr := fmt.Sprint(c)
+		if (c.Kind() == appdef.FilterKind_Or) || (c.Kind() == appdef.FilterKind_And) {
+			cStr = fmt.Sprintf("(%s)", cStr)
 		}
-		s += fmt.Sprint(c)
+		if i > 0 {
+			s += " OR "
+		}
+		s += cStr
 	}
-	return s + ")"
+	return s
 }

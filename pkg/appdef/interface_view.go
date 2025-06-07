@@ -10,7 +10,7 @@ type IView interface {
 	IType
 
 	// All view fields, include key and value.
-	IFields
+	IWithFields
 
 	// Returns full (pk + ccols) view key
 	Key() IViewKey
@@ -44,7 +44,7 @@ type IViewKey interface {
 	// All key fields, include partition key and clustering columns.
 	//
 	// Partition key fields is required, clustering columns is not.
-	IFields
+	IWithFields
 
 	// Returns partition key
 	PartKey() IViewPartKey
@@ -69,10 +69,10 @@ type IViewKeyBuilder interface {
 // https://opensource.com/article/20/5/apache-cassandra#:~:text=As%20a%20rule%20of%20thumb%2C,design%20supports%20desired%20cluster%20performance
 type IViewPartKey interface {
 	// Partition key fields.
-	IFields
+	IWithFields
 
 	// Unwanted type assertion stub
-	isPartKey()
+	IsViewPK()
 }
 
 type IViewPartKeyBuilder interface {
@@ -97,10 +97,10 @@ type IViewPartKeyBuilder interface {
 // Defines fields for sorting values inside partition.
 type IViewClustCols interface {
 	// Clustering columns fields.
-	IFields
+	IWithFields
 
 	// Unwanted type assertion stub
-	isClustCols()
+	IsViewCC()
 }
 
 type IViewClustColsBuilder interface {
@@ -127,10 +127,10 @@ type IViewClustColsBuilder interface {
 // View value. Like a structure, view value has fields, but has not containers and uniques.
 type IViewValue interface {
 	// View value fields.
-	IFields
+	IWithFields
 
 	// Unwanted type assertion stub
-	isViewValue()
+	IsViewValue()
 }
 
 type IViewValueBuilder interface {

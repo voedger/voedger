@@ -7,8 +7,6 @@ package filter
 
 import (
 	"fmt"
-	"iter"
-	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -23,10 +21,11 @@ type qNamesFilter struct {
 	names appdef.QNames
 }
 
-func makeQNamesFilter(name appdef.QName, names ...appdef.QName) appdef.IFilter {
-	f := &qNamesFilter{names: appdef.QNamesFrom(name)}
-	f.names.Add(names...)
-	return f
+func newQNamesFilter(names ...appdef.QName) *qNamesFilter {
+	if len(names) == 0 {
+		panic("no qualified names specified")
+	}
+	return &qNamesFilter{names: appdef.QNamesFrom(names...)}
 }
 
 func (qNamesFilter) Kind() appdef.FilterKind { return appdef.FilterKind_QNames }
@@ -35,12 +34,13 @@ func (f qNamesFilter) Match(t appdef.IType) bool {
 	return f.names.Contains(t.QName())
 }
 
-func (f qNamesFilter) QNames() iter.Seq[appdef.QName] {
-	return slices.Values(f.names)
+func (f qNamesFilter) QNames() []appdef.QName {
+	return f.names
 }
 
 func (f qNamesFilter) String() string {
-	s := fmt.Sprintf("filter.%s(", f.Kind().TrimString())
+	// QNAMES(…)
+	s := "QNAMES("
 	for i, c := range f.names {
 		if i > 0 {
 			s += ", "

@@ -6,20 +6,20 @@
 package main
 
 import (
-	"air/wasm/orm"
 	"testing"
 	"time"
 
 	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
+
+	"air/wasm/orm"
 )
 
 func TestProjectorFillPbillDates(t *testing.T) {
 	date := time.Date(2023, 1, 9, 0, 0, 0, 0, time.UTC)
 
-	t.Run("View View_PbillDates: insert", func(t *testing.T) {
+	t.Run("View View_PbillDates:insert", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Projector_FillPbillDates(),
 			ProjectorFillPbillDates,
 		).
 			EventQName(orm.Package_air.Command_Pbill).
@@ -50,10 +50,9 @@ func TestProjectorFillPbillDates(t *testing.T) {
 			Run()
 	})
 
-	t.Run("View View_PbillDates: update", func(t *testing.T) {
+	t.Run("View View_PbillDates:update", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Projector_FillPbillDates(),
 			ProjectorFillPbillDates,
 		).
 			EventQName(orm.Package_air.Command_Pbill).
@@ -97,8 +96,7 @@ func TestProjectorFillPbillDates(t *testing.T) {
 func TestPbill(t *testing.T) {
 	date := time.Now()
 
-	t.Run("Singleton NextPBillNumber: insert", func(t *testing.T) {
-
+	t.Run("Singleton.NextPBillNumber:insert", func(t *testing.T) {
 		test.NewCommandTest(
 			t,
 			orm.Package_air.Command_Pbill,
@@ -136,7 +134,7 @@ func TestPbill(t *testing.T) {
 			Run()
 	})
 
-	t.Run("Singleton NextPBillNumber: update", func(t *testing.T) {
+	t.Run("Singleton.NextPBillNumber:update", func(t *testing.T) {
 		nextNumber := 5
 
 		test.NewCommandTest(
@@ -186,7 +184,6 @@ func TestProjectorODoc(t *testing.T) {
 	t.Run("ProjectorODoc", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Projector_ProjectorODoc(),
 			ProjectorODoc,
 		).
 			EventWLogOffset(123).
@@ -215,7 +212,6 @@ func TestProjectorApplySalesMetrics(t *testing.T) {
 	t.Run("ProjectorApplySalesMetrics", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Projector_ApplySalesMetrics(),
 			ProjectorApplySalesMetrics,
 		).
 			EventWLogOffset(123).
@@ -251,7 +247,6 @@ func TestProjectorNewVideoRecord(t *testing.T) {
 	t.Run("ProjectorNewVideoRecord", func(t *testing.T) {
 		test.NewProjectorTest(
 			t,
-			orm.Package_air.Projector_ProjectorNewVideoRecord(),
 			ProjectorNewVideoRecord,
 		).
 			EventWLogOffset(123).

@@ -54,17 +54,18 @@ type federationCommandKeyBuilder struct {
 }
 
 func (b *federationCommandKeyBuilder) PutString(name string, value string) {
-	if name == sys.Storage_FederationCommand_Field_Owner {
+	switch name {
+	case sys.Storage_FederationCommand_Field_Owner:
 		b.owner = value
-	} else if name == sys.Storage_FederationCommand_Field_AppName {
+	case sys.Storage_FederationCommand_Field_AppName:
 		b.appname = value
-	} else if name == sys.Storage_FederationCommand_Field_Body {
+	case sys.Storage_FederationCommand_Field_Body:
 		b.body = value
-	} else if name == sys.Storage_FederationCommand_Field_Token {
+	case sys.Storage_FederationCommand_Field_Token:
 		b.token = value
-	} else if name == sys.Storage_FederationCommand_Field_ExpectedCodes {
+	case sys.Storage_FederationCommand_Field_ExpectedCodes:
 		b.expectedCodes = value
-	} else {
+	default:
 		b.baseKeyBuilder.PutString(name, value)
 	}
 }
@@ -176,11 +177,11 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 
 	appOwnerAndName := owner + appdef.AppQNameQualifierChar + appname
 
-	relativeUrl := fmt.Sprintf("api/%s/%d/c.%s", appOwnerAndName, wsid, command)
+	relativeURL := fmt.Sprintf("api/%s/%d/c.%s", appOwnerAndName, wsid, command)
 
 	var resStatus int
 	var resBody string
-	var newIDs map[string]int64
+	var newIDs map[string]istructs.RecordID
 	var err error
 	var result map[string]interface{}
 
@@ -197,7 +198,6 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 			}
 		}
 	} else {
-
 		if kb.token != "" {
 			opts = append(opts, coreutils.WithAuthorizeBy(kb.token))
 		} else {
@@ -209,7 +209,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
 		}
 
-		resp, err := s.federation.Func(relativeUrl, body, opts...)
+		resp, err := s.federation.Func(relativeURL, body, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -262,12 +262,12 @@ func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
 
 type fcCmdNewIds struct {
 	baseStateValue
-	newIds map[string]int64
+	newIds map[string]istructs.RecordID
 }
 
 func (v *fcCmdNewIds) AsInt64(name string) int64 {
 	if id, ok := v.newIds[name]; ok {
-		return id
+		return int64(id) // nolint G115
 	}
 	panic(errInt64FieldUndefined(name))
 }

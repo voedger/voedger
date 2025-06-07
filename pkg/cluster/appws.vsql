@@ -13,12 +13,12 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	TYPE AppDeploymentDescriptor (
 		AppQName varchar NOT NULL,
 		NumPartitions int32 NOT NULL,
-		NumAppWorkspaces int32 NOT NULL,
-		AppImage blob
+		NumAppWorkspaces int32 NOT NULL
+		-- AppImage blob
 	);
 
 	TYPE VSqlUpdateParams (
-		Query varchar NOT NULL
+		Query varchar(65535) NOT NULL
 	);
 
 	TYPE VSqlUpdateResult (
@@ -29,4 +29,8 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		COMMAND DeployApp(AppDeploymentDescriptor);
 		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
 	);
+
+	ROLE ClusterAdmin;
+
+	GRANT EXECUTE ON COMMAND DeployApp TO ClusterAdmin;
 );

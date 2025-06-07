@@ -24,10 +24,11 @@ func AddWorkspaceDescriptorStubDef(wsb appdef.IWorkspaceBuilder) {
 	wsDesc.
 		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 		AddField("Status", appdef.DataKind_int32, true).
-		AddField("InitCompletedAtMs", appdef.DataKind_int64, true).
+		AddField("InitCompletedAtMs", appdef.DataKind_int64, false).
 		AddField("InitError", appdef.DataKind_string, false).
 		AddField(authnz.Field_WSName, appdef.DataKind_string, false).
-		AddField("CreatedAtMs", appdef.DataKind_int64, false)
+		AddField("CreatedAtMs", appdef.DataKind_int64, false).
+		AddField("OwnerWSID", appdef.DataKind_int64, false)
 	wsDesc.SetSingleton()
 }
 

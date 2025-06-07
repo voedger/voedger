@@ -10,7 +10,7 @@ This package provides a driver for AWS DynamoDB storage as implementation of int
 To run DynamoDB locally, use the following command:
 
 ```bash
-docker run -p 8000:8000 -e AWS_REGION={AWS_REGION} -e AWS_ACCESS_KEY_ID={ACESS_KEY_ID} -e AWS_SECRET_ACCESS_KEY={SECRET_ACCESS_KEY} amazon/dynamodb-local
+docker run -p 8000:8000 -e AWS_REGION=eu-west-1 -e AWS_ACCESS_KEY_ID=local -e AWS_SECRET_ACCESS_KEY=local amazon/dynamodb-local
 ```
 
 To connect to the local instance of DynamoDB in go code configure the session as follows:
@@ -32,3 +32,4 @@ AWS DynamoDB does not have a concept of KeySpace. Keyspaces are emulated using t
 ## Notes
 
 Partition key and sort key attributes of base tables continue to require non-empty values for all data types, including String and Binary. To make a workaround `byte(0)` is prefixed to each sort key value. See `prefixZero()` and `unprefixZero() functions.
+

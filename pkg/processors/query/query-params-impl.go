@@ -107,7 +107,7 @@ func (p queryParams) validate(rootFieldsKinds FieldsKinds, rootType appdef.IType
 		currentType := rootType
 		var deepestContainer appdef.IContainer
 		for _, nestedName := range path {
-			currentContainers, ok  := currentType.(appdef.IContainers)
+			currentContainers, ok := currentType.(appdef.IWithContainers)
 			if !ok {
 				return fmt.Errorf("elements: table %s has no nested tables but %s nested table is queried: %w", currentType.QName(), nestedName, ErrUnexpected)
 			}
@@ -118,7 +118,7 @@ func (p queryParams) validate(rootFieldsKinds FieldsKinds, rootType appdef.IType
 			currentType = nestedContainer.Type()
 			deepestContainer = nestedContainer
 		}
-		deepestContainerFields := deepestContainer.Type().(appdef.IFields)
+		deepestContainerFields := deepestContainer.Type().(appdef.IWithFields)
 		for _, field := range e.ResultFields() {
 			iField := deepestContainerFields.Field(field.Field())
 			if iField == nil {

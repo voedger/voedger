@@ -99,7 +99,7 @@ func getPkgAppDefObjs(
 		HeaderFileContent: headerContent,
 	}
 
-	for localName, fullPath := range appDef.Packages {
+	for localName, fullPath := range appDef.Packages() {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
 		}
@@ -132,11 +132,11 @@ func getPkgAppDefObjs(
 	}
 
 	// gather objects from the current package
-	for workspace := range appDef.Workspaces {
+	for _, workspace := range appDef.Workspaces() {
 		// add workspace itself to the list of objects as well
 		collectITypeObjs(workspace)(workspace)
 		// then add all types of the workspace
-		for typ := range workspace.Types() {
+		for _, typ := range workspace.Types() {
 			collectITypeObjs(workspace)(typ)
 		}
 	}
@@ -198,7 +198,7 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
-		formattedContent, err := imports.Process("", ormFileContent, nil)
+		formattedContent, err := imports.Process(ormFile, ormFileContent, nil)
 		if err != nil {
 			return err
 		}
@@ -361,7 +361,7 @@ func processITypeObj(
 		}
 
 		// fetching fields
-		for _, field := range t.(appdef.IFields).Fields() {
+		for _, field := range t.(appdef.IWithFields).Fields() {
 			// skip sys fields
 			if slices.Contains(sysFields, field.Name()) {
 				continue
@@ -385,7 +385,7 @@ func processITypeObj(
 			}
 		}
 
-		if iContainers, ok := t.(appdef.IContainers); ok {
+		if iContainers, ok := t.(appdef.IWithContainers); ok {
 			for _, container := range iContainers.Containers() {
 				containerName := container.Name()
 				tableData.Containers = append(tableData.Containers, ormField{
@@ -407,30 +407,32 @@ func processITypeObj(
 		iProjectorEvents := t.Events()
 
 		// collecting projector events (Commands, CUDs, etc.)
-		iProjectorEvents.Enum(func(iProjectorEvent appdef.IProjectorEvent) {
-			ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, iProjectorEvent.On(), uniqueProjectorCommandEvents)
-			// Avoiding double generation of the same Cmd_ORM object via
-			// checking if it already exists in other projector events
-			cmdOrmObj, ok := ormObject.(ormCommand)
-			skipGeneration := false
-			if ok {
-				skipGeneration = true
-				if _, contains := uniqueProjectorCommandEvents[cmdOrmObj.QName]; !contains {
-					uniqueProjectorCommandEvents[cmdOrmObj.QName] = true
-					skipGeneration = false
+		for _, event := range iProjectorEvents {
+			for _, obj := range appdef.FilterMatches(event.Filter(), t.Workspace().Types()) {
+				ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
+				// Avoiding double generation of the same Cmd_ORM object via
+				// checking if it already exists in other projector events
+				cmdOrmObj, ok := ormObject.(ormCommand)
+				skipGeneration := false
+				if ok {
+					skipGeneration = true
+					if _, contains := uniqueProjectorCommandEvents[cmdOrmObj.QName]; !contains {
+						uniqueProjectorCommandEvents[cmdOrmObj.QName] = true
+						skipGeneration = false
+					}
+				}
+
+				if ormObject != nil {
+					ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
+						ormPackageItem: extractOrmPackageItem(ormObject),
+						Projector:      ormProjectorItem,
+						Ops:            event.Ops(),
+						EventItem:      ormObject,
+						SkipGeneration: skipGeneration,
+					})
 				}
 			}
-
-			if ormObject != nil {
-				ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
-					ormPackageItem: extractOrmPackageItem(ormObject),
-					Projector:      ormProjectorItem,
-					Kinds:          iProjectorEvent.Kind(),
-					EventItem:      ormObject,
-					SkipGeneration: skipGeneration,
-				})
-			}
-		})
+		}
 
 		newItem = ormProjectorItem
 	case appdef.IWorkspace:
@@ -657,6 +659,10 @@ func getFieldType(field appdef.IField) string {
 	switch field.DataKind() {
 	case appdef.DataKind_bool:
 		return "bool"
+	case appdef.DataKind_int8: // #3434 [small integers]
+		return "int8"
+	case appdef.DataKind_int16: // #3434 [small integers]
+		return "int16"
 	case appdef.DataKind_int32:
 		return "int32"
 	case appdef.DataKind_int64:

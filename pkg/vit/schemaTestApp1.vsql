@@ -3,6 +3,18 @@
 
 APPLICATION app1();
 
+ALTER WORKSPACE sys.UserProfileWS (
+	TABLE Doc INHERITS sys.CDoc (
+		EmailField varchar NOT NULL VERIFIABLE,
+		PhoneField varchar,
+		NonVerifiedField varchar
+	);
+
+	EXTENSION ENGINE BUILTIN ();
+
+	GRANT SELECT, UPDATE, INSERT ON TABLE Doc TO sys.WorkspaceOwner;
+);
+
 ALTERABLE WORKSPACE test_wsWS_another (
 	DESCRIPTOR test_ws_another ();
 
@@ -26,22 +38,25 @@ ALTERABLE WORKSPACE test_wsWS (
 		article_hash int32 NOT NULL,
 		hideonhold int32 NOT NULL,
 		time_active int32 NOT NULL,
-		control_active int32 NOT NULL
-	);
+		control_active int32 NOT NULL,
+		picture blob
+	) WITH Tags=(WorkspaceOwnerTableTag, ApiArticlesFeatureTag);
 
-	TABLE options INHERITS sys.CDoc ();
+	TABLE options INHERITS sys.CDoc () WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE department INHERITS sys.CDoc (
 		pc_fix_button int32 NOT NULL,
 		rm_fix_button int32 NOT NULL,
 		id_food_group ref,
+		department_options_2 TABLE department_options_2 (
+		) WITH Tags=(WorkspaceOwnerTableTag),
 		department_options TABLE department_options (
 			id_department ref NOT NULL,
 			id_options ref,
 			option_number int32,
 			option_type int32
-		)
-	);
+		) WITH Tags=(WorkspaceOwnerTableTag)
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE air_table_plan INHERITS sys.CDoc (
 		fstate int32,
@@ -50,9 +65,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		num int32,
 		width int32,
 		height int32,
-		image int64,
+		image blob,
 		is_hidden int32,
-		preview int64,
+		preview blob,
 		bg_color int32,
 		air_table_plan_item TABLE air_table_plan_item (
 			id_air_table_plan ref, --deprecated link to air_table_plan
@@ -72,8 +87,8 @@ ALTERABLE WORKSPACE test_wsWS (
 			code varchar,
 			text varchar,
 			hide_seats bool
-		)
-	);
+		) WITH Tags=(WorkspaceOwnerTableTag)
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE printers INHERITS sys.CDoc (
 		guid varchar NOT NULL,
@@ -113,7 +128,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		id_order_ticket ref,
 		purpose_receipt_enabled bool,
 		purpose_preparation_enabled bool
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE sales_area INHERITS sys.CDoc (
 		name varchar,
@@ -132,7 +147,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		sa_external_id varchar,
 		is_default bool,
 		id_table_plan ref
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE payments INHERITS sys.CDoc (
 		name varchar,
@@ -147,7 +162,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		guid varchar,
 		ml_name bytes,
 		paym_external_id varchar
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE untill_users INHERITS sys.CDoc (
 		name varchar,
@@ -192,7 +207,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		tpapi_permissions bytes,
 		hide_wm int32,
 		creation_date int64
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE computers INHERITS sys.CDoc (
 		name varchar,
@@ -309,8 +324,8 @@ ALTERABLE WORKSPACE test_wsWS (
 			id_tickets_prof_fiscal_footer ref,
 			id_tickets_giftcardsbill ref,
 			id_printers_giftcardsbill ref
-		)
-	);
+		) WITH Tags=(WorkspaceOwnerTableTag)
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE bill INHERITS sys.CDoc (
 		tableno int32 NOT NULL,
@@ -383,13 +398,13 @@ ALTERABLE WORKSPACE test_wsWS (
 		ayce_time int64,
 		remaining_quantity float64,
 		working_day varchar
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE pos_emails INHERITS sys.CDoc (
 		kind int32,
 		email varchar,
 		description varchar
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE category INHERITS sys.CDoc (
 		name varchar,
@@ -398,13 +413,13 @@ ALTERABLE WORKSPACE test_wsWS (
 		cat_external_id varchar,
 		int_fld1 int32,
 		int_fld2 int32
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag, ApiFeatureTag);
 
-	TABLE Doc INHERITS sys.CDoc (
-		EmailField varchar NOT NULL VERIFIABLE,
-		PhoneField varchar,
-		NonVerifiedField varchar
-	);
+	-- TABLE Doc INHERITS sys.CDoc (
+	-- 	EmailField varchar NOT NULL VERIFIABLE,
+	-- 	PhoneField varchar,
+	-- 	NonVerifiedField varchar
+	-- ) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE DocConstraints INHERITS sys.CDoc (
 		Int int32,
@@ -413,13 +428,13 @@ ALTERABLE WORKSPACE test_wsWS (
 		Float32 float32,
 		Bytes bytes(65535) NOT NULL,
 		UNIQUE (Int, Str, Bool, Bytes)
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE DocConstraintsString INHERITS sys.CDoc (
 		Str varchar,
 		Int int32,
 		UNIQUE ("Str")
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE DocManyTypes INHERITS sys.CDoc (
 		Int int32,
@@ -429,7 +444,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		Str varchar,
 		Bytes bytes,
 		Bool bool
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE DocConstraintsFewUniques INHERITS sys.CDoc (
 		Int1 int32,
@@ -442,32 +457,36 @@ ALTERABLE WORKSPACE test_wsWS (
 		Bytes2 bytes,
 		UNIQUE ("Int1", "Str1", "Bool1", "Bytes1"),
 		CONSTRAINT uniq1 UNIQUE ("Int2", "Str2", "Bool2", "Bytes2")
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE DocConstraintsOldAndNewUniques INHERITS sys.CDoc (
 		Str varchar,
 		Int int32,
 		UNIQUE (Str),
 		UNIQUEFIELD Int
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE Config INHERITS sys.CSingleton (
 		Fld1 varchar NOT NULL
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
-	TABLE cdoc1 INHERITS sys.CDoc ();
+	TABLE cdoc1 INHERITS sys.CDoc () WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE cdoc2 INHERITS sys.CDoc (
 		field1 ref, -- war RecordID, should be denied to create RecordID field -> ref type for now
 		field2 ref(cdoc1, department),
 		field3 ref
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE odoc1 INHERITS sys.ODoc (
+		odocIntFld int32,
 		orecord1 TABLE orecord1(
-			orecord2 TABLE orecord2()
-		)
-	);
+			orecord1IntFld int32,
+			orecord2 TABLE orecord2(
+				orecord2IntFld int32
+			)
+		) WITH Tags=(WorkspaceOwnerTableTag)
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE odoc2 INHERITS sys.ODoc (
 		refToODoc1 ref(odoc1),
@@ -476,7 +495,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		refToAny ref,
 		refToCDoc1 ref(cdoc1),
 		refToCDoc1OrODoc1 ref(cdoc1, odoc1)
-	);
+	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TYPE RatedQryParams (
 		Fld text
@@ -516,15 +535,32 @@ ALTERABLE WORKSPACE test_wsWS (
 		ViewStrFld text NOT NULL,
 		ViewByteFld bytes(512),
 		PRIMARY KEY ((ViewIntFld), ViewStrFld)
-	) AS RESULT OF ProjDummy;
+	) AS RESULT OF ProjDummy WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW CategoryIdx (
 		Name varchar,
 		Dummy int32,
 		IntFld int32,
 		Val int32,
+		offs int64,
 		PRIMARY KEY ((IntFld), Dummy)
-	) AS RESULT OF ApplyCategoryIdx;
+	) AS RESULT OF ApplyCategoryIdx WITH Tags=(WorkspaceOwnerTableTag);
+
+	VIEW DailyIdx (
+    	Year int32,
+    	Month int32,
+    	Day int32,
+    	StringValue text,
+    	offs int64,
+    	PRIMARY KEY ((Year), Month, Day)
+    ) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
+
+    TABLE Daily INHERITS sys.CDoc (
+    	Year int32,
+    	Month int32,
+    	Day int32,
+    	StringValue text
+    ) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TYPE QryIntentsResult (
 		Fld1 varchar
@@ -540,6 +576,33 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	TABLE JobTable INHERITS sys.CDoc (
 		Str1 varchar NOT NULL
+	) WITH Tags=(WorkspaceOwnerTableTag);
+
+	-- all denied for all
+	TABLE TestDeniedCDoc INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
+	TABLE TestCDocWithDeniedFields INHERITS sys.CDoc (
+		Fld1 int32,
+		DeniedFld2 int32 -- denied field, no grants
+	);
+
+	TABLE DocActivateDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+	TABLE DocDeactivateDenied INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
+	TABLE DocFieldInsertDenied INHERITS sys.CDoc (
+		FldDenied int32,
+		FldAllowed int32
+	);
+
+	TABLE DocFieldUpdateDenied INHERITS sys.CDoc (
+		FldDenied int32,
+		FldAllowed int32
 	);
 
 	TABLE Root INHERITS sys.CDoc (
@@ -552,23 +615,191 @@ ALTERABLE WORKSPACE test_wsWS (
 		)
 	);
 
+	TYPE QryDailyIdxParams (
+		Year int32 NOT NULL,
+		Month int32,
+		Day int32
+	);
+
+	TYPE QryDailyIdxResult (
+		Year int32,
+		Month int32,
+		Day int32,
+		StringValue text
+	);
+
+	TYPE QryReturnsCategoryResult (
+		CategoryID ref(category)
+	);
+
+	TYPE QryReturnsCategoryParams (
+		CategoryID int64
+	);
+
+    TABLE Country INHERITS sys.CDoc (
+        Name text
+    );
+
+    TABLE Currency INHERITS sys.CDoc (
+        CharCode text,
+        Code int32
+    ) WITH Tags=(ApiCirrencyFeatureTag);
+
+    TABLE Wallet INHERITS sys.WDoc (
+        Balance int64,
+        Currency ref(Currency),
+        Capabilities ref(Capabilities)
+    );
+
+    TABLE Capabilities INHERITS sys.WDoc (
+        Withdraw bool,
+        Deposit bool
+    );
+
+    TABLE Client INHERITS sys.WDoc (
+        FirstName text,
+        LastName text,
+        DOB int64,
+        Wallet ref(Wallet),
+        Country ref(Country)
+    );
+
+    VIEW Clients (
+        Year int32,
+        Month int32,
+        Day int32,
+        Client ref(Client),
+        offs int64,
+        PRIMARY KEY ((Year, Month), Day, Client)
+    ) AS RESULT OF ApplyClient WITH Tags=(WorkspaceOwnerTableTag, ApiFeatureTag);
+
+    TABLE Batch INHERITS sys.CDoc (
+        Cfg ref(Cfg),
+        Number int32,
+        GroupA Task,
+        GroupB Task
+    ) WITH Tags=(WorkspaceOwnerTableTag, ApiFeatureTag);
+
+    TABLE Cfg INHERITS sys.CDoc (
+        Name text
+    );
+
+    TABLE Task INHERITS sys.CRecord (
+        Cfg ref(Cfg),
+        Name text,
+        GroupA Task,
+        GroupB Task
+    );
+
+	TABLE DocWithBLOB INHERITS sys.CDoc (
+		Blob blob,
+		AnotherBlob blob,
+		IntFld int32,
+		BlobReadDenied blob
+	);
+
+	TABLE ODocWithBLOB INHERITS sys.ODoc (
+		Blob blob,
+		IntFld int32
+	);
+
+	TABLE AllDataKindsUnique INHERITS sys.CDoc (
+		Int8Fld int8,
+		Int16Fld int16,
+		Int32Fld int32,
+		Int64Fld int64,
+		Float32Fld float32,
+		Float64Fld float64,
+		RefFld ref,
+		StrFld text,
+		QNameFld qname,
+		BoolFld bool,
+		BytesFld bytes,
+		UNIQUE (Int8Fld, Int16Fld, Int32Fld, Int64Fld, Float32Fld, Float64Fld, RefFld, StrFld, QNameFld, BoolFld, BytesFld)
+	);
+
 	EXTENSION ENGINE BUILTIN (
-		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
-		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
-		QUERY QryIntents() RETURNS QryIntentsResult;
+		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryIntents() RETURNS QryIntentsResult WITH Tags=(WorkspaceOwnerFuncTag);
 
-		COMMAND RatedCmd(RatedCmdParams);
-		COMMAND MockCmd(MockCmdParams);
-		COMMAND TestCmd(TestCmdParams) RETURNS TestCmdResult;
+		COMMAND RatedCmd(RatedCmdParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND MockCmd(MockCmdParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND TestCmd(TestCmdParams) RETURNS TestCmdResult WITH Tags=(WorkspaceOwnerFuncTag);
 
-		COMMAND CmdODocOne(odoc1);
-		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
+		COMMAND TestDeniedCmd;
+		QUERY TestDeniedQuery() RETURNS TestCmdResult;
 
-		COMMAND TestCmdRawArg(sys.Raw);
+		COMMAND CmdODocOne(odoc1) WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
+		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2) WITH Tags=(WorkspaceOwnerFuncTag);
+
+		COMMAND TestCmdRawArg(sys.Raw) WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx));
+		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
+		PROJECTOR ApplyClient AFTER INSERT ON (Client) INTENTS(sys.View(Clients));
 
-		COMMAND CmdWithResponseIntent(WithResponseIntentParams);
-		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult;
+		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryDailyIdx(QryDailyIdxParams) RETURNS QryDailyIdxResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY QryReturnsCategory(QryReturnsCategoryParams) RETURNS QryReturnsCategoryResult WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
+		QUERY QryVoid RETURNS void;
+		COMMAND CmdODocWithBLOB(ODocWithBLOB) WITH Tags=(WorkspaceOwnerFuncTag);
 	);
+
+	ROLE Updated; -- need for invite tests
+	ROLE SpecialAPITokenRole; -- need to test foreign auth using APIToken
+	ROLE LimitedAccessRole; -- need to test ACL
+
+	TAG WorkspaceOwnerTableTag;
+	TAG WorkspaceOwnerFuncTag;
+	TAG ApiFeatureTag FEATURE 'Backoffice API';
+	TAG ApiCirrencyFeatureTag FEATURE 'Backoffice: Currency';
+	TAG ApiArticlesFeatureTag FEATURE 'Backoffice: Articles';
+
+	/* ApiRole is used for testing API access */
+	PUBLISHED ROLE ApiRole;
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON TABLE Currency TO ApiRole;
+	GRANT SELECT ON TABLE category TO ApiRole;
+	GRANT SELECT, INSERT ON TABLE articles TO ApiRole;
+	GRANT INSERT ON TABLE orecord1 TO ApiRole;
+	GRANT EXECUTE ON COMMAND CmdODocOne TO ApiRole;
+	GRANT EXECUTE ON QUERY QryReturnsCategory TO ApiRole;
+	GRANT SELECT ON VIEW Clients TO ApiRole;
+
+	GRANT SELECT, UPDATE, INSERT ON TABLE Root TO sys.WorkspaceOwner;
+	GRANT SELECT, UPDATE, INSERT ON TABLE Nested TO sys.WorkspaceOwner;
+	GRANT SELECT, UPDATE, INSERT ON TABLE Third TO sys.WorkspaceOwner;
+
+	GRANT SELECT, UPDATE ON TABLE test_ws TO sys.WorkspaceOwner;
+
+	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
+	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
+
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
+
+	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
+	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
+
+	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
+
+	GRANT SELECT ON VIEW CategoryIdx TO sys.WorkspaceOwner;
+	GRANT SELECT ON VIEW DailyIdx TO sys.WorkspaceOwner;
+	GRANT SELECT ON VIEW Clients TO sys.WorkspaceOwner;
+	GRANT SELECT(Year, Month, Day, offs) ON VIEW DailyIdx TO LimitedAccessRole;
+
+	GRANT EXECUTE ON QUERY QryVoid TO sys.WorkspaceOwner;
+
+	GRANT SELECT ON TABLE DocWithBLOB TO sys.WorkspaceOwner;
+	GRANT SELECT ON TABLE Country TO sys.WorkspaceOwner;
+	GRANT SELECT ON TABLE ODocWithBLOB TO sys.WorkspaceOwner;
+
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldInsertDenied TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE ON TABLE DocFieldUpdateDenied TO sys.WorkspaceOwner;
+	REVOKE INSERT(FldDenied) ON TABLE DocFieldInsertDenied FROM sys.WorkspaceOwner;
+	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
+
+	REVOKE SELECT(BlobReadDenied) ON TABLE DocWithBLOB FROM sys.WorkspaceOwner;
 );

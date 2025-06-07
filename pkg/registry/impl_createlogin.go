@@ -22,8 +22,16 @@ import (
 
 // sys/registry, pseudoProfileWSID translated to appWSID
 // creation of CDoc<Login> triggers opAsyncProjectorInvokeCreateWorkspaceID
-func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
-	loginStr := args.ArgumentObject.AsString(authnz.Field_Login)
+func execCmdCreateLogin(args istructs.ExecCommandArgs) error {
+	return createLogin(args, args.ArgumentObject.AsString(authnz.Field_Login))
+}
+
+// [~server.users/cmp.registry.CreateEmailLogin.go~impl]
+func execCmdCreateEmailLogin(args istructs.ExecCommandArgs) error {
+	return createLogin(args, args.ArgumentObject.AsString(authnz.Field_Email))
+}
+
+func createLogin(args istructs.ExecCommandArgs, login string) (err error) {
 	appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 
 	subjectKind := args.ArgumentObject.AsInt32(authnz.Field_SubjectKind)
@@ -46,20 +54,20 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 		}
 		return err
 	}
-	
+
 	// still need this check after https://github.com/voedger/voedger/issues/1311: the command is tkaen from AppWS, number of AppWS related to the login is checked here
-	if err = CheckAppWSID(loginStr, args.WSID, args.State.AppStructs().NumAppWorkspaces()); err != nil {
+	if err = CheckAppWSID(login, args.WSID, args.State.AppStructs().NumAppWorkspaces()); err != nil {
 		return
 	}
 
 	// see https://dev.untill.com/projects/#!537026
-	if strings.HasPrefix(loginStr, "-") || strings.HasPrefix(loginStr, ".") || strings.HasPrefix(loginStr, " ") ||
-		strings.HasSuffix(loginStr, "-") || strings.HasSuffix(loginStr, ".") || strings.HasSuffix(loginStr, " ") ||
-		strings.Contains(loginStr, "..") || strings.HasPrefix(loginStr, "sys.") || !validLoginRegexp.MatchString(loginStr) {
-		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", loginStr)
+	if strings.HasPrefix(login, "-") || strings.HasPrefix(login, ".") || strings.HasPrefix(login, " ") ||
+		strings.HasSuffix(login, "-") || strings.HasSuffix(login, ".") || strings.HasSuffix(login, " ") ||
+		strings.Contains(login, "..") || strings.HasPrefix(login, "sys.") || !validLoginRegexp.MatchString(login) {
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", login)
 	}
 
-	cdocLoginID, err := GetCDocLoginID(args.State, args.WSID, appName, loginStr)
+	cdocLoginID, err := GetCDocLoginID(args.State, args.WSID, appName, login)
 	if err != nil {
 		return err
 	}
@@ -90,7 +98,7 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 	cdocLogin.PutBytes(field_PwdHash, pwdSaltedHash)
 	cdocLogin.PutString(authnz.Field_AppName, appName)
 	cdocLogin.PutInt32(authnz.Field_SubjectKind, subjectKind)
-	cdocLogin.PutString(authnz.Field_LoginHash, GetLoginHash(loginStr))
+	cdocLogin.PutString(authnz.Field_LoginHash, GetLoginHash(login))
 	cdocLogin.PutRecordID(appdef.SystemField_ID, 1)
 	cdocLogin.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationData)
 

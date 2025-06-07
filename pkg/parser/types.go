@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
@@ -21,9 +22,10 @@ type FileSchemaAST struct {
 }
 
 type PackageSchemaAST struct {
-	Name string // Fill on the analysis stage, when the APPLICATION statement is found
-	Path string
-	Ast  *SchemaAST
+	Name               string // Fill on the analysis stage, when the APPLICATION statement is found
+	Path               string
+	Ast                *SchemaAST
+	localNameToPkgPath map[string]string
 }
 
 type AppSchemaAST struct {
@@ -44,10 +46,6 @@ type PackageFS struct {
 type statementNode struct {
 	Pkg  *PackageSchemaAST
 	Stmt INamedStatement
-}
-
-func (s *statementNode) qName() appdef.QName {
-	return s.Pkg.NewQName(Ident(s.Stmt.GetName()))
 }
 
 type Ident string
@@ -90,6 +88,9 @@ func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
+	for i := 0; i < len(s.Imports); i++ {
+		callback(&s.Imports[i])
+	}
 	for i := 0; i < len(s.Statements); i++ {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
@@ -105,14 +106,19 @@ type ImportStmt struct {
 	Alias *Ident `parser:"('AS' @Ident)?"`
 }
 
+func (i *ImportStmt) GetLocalPkgName() string {
+	if i.Alias != nil {
+		return string(*i.Alias)
+	}
+	return ExtractLocalPackageName(i.Name)
+}
+
 type RootStatement struct {
 	// Only allowed in root
 	Template *TemplateStmt `parser:"@@"`
 
 	// Also allowed in root
 	Role           *RoleStmt           `parser:"| @@"`
-	Rate           *RateStmt           `parser:"| @@"`
-	Limit          *LimitStmt          `parser:"| @@"`
 	ExtEngine      *RootExtEngineStmt  `parser:"| @@"`
 	Workspace      *WorkspaceStmt      `parser:"| @@"`
 	AlterWorkspace *AlterWorkspaceStmt `parser:"| @@"`
@@ -199,7 +205,7 @@ type DeclareStmt struct {
 	Statement
 	Name         Ident  `parser:"'DECLARE' @Ident"`
 	DataType     string `parser:"@('int' | 'int32')"`
-	DefaultValue *int   `parser:"'DEFAULT' @Int"`
+	DefaultValue int32  `parser:"'DEFAULT' @Int"`
 }
 
 func (s DeclareStmt) GetName() string { return string(s.Name) }
@@ -226,35 +232,12 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	nodes               map[appdef.QName]workspaceNode
 	inheritedWorkspaces []*WorkspaceStmt
 	usedWorkspaces      []*WorkspaceStmt
 
 	// filled on build stage
 	qName   appdef.QName
 	builder appdef.IWorkspaceBuilder
-}
-
-type workspaceNode struct {
-	workspace *WorkspaceStmt
-	node      statementNode
-}
-
-func (s *WorkspaceStmt) registerNode(qn appdef.QName, node statementNode, ws *WorkspaceStmt) {
-	wsNode := workspaceNode{workspace: ws, node: node}
-	if s.nodes == nil {
-		s.nodes = make(map[appdef.QName]workspaceNode)
-	}
-	s.nodes[qn] = wsNode
-}
-
-func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for k := range s.nodes {
-		if k == qName {
-			return true
-		}
-	}
-	return false
 }
 
 func (s WorkspaceStmt) GetName() string { return string(s.Name) }
@@ -312,8 +295,9 @@ func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
 
 type DefQName struct {
 	Pos     lexer.Position
-	Package Ident `parser:"(@Ident '.')?"`
-	Name    Ident `parser:"@Ident"`
+	Package Ident        `parser:"(@Ident '.')?"`
+	Name    Ident        `parser:"@Ident"`
+	qName   appdef.QName // may be filled on the analysis stage
 }
 
 func (q DefQName) String() string {
@@ -345,8 +329,11 @@ type VoidOrDef struct {
 }
 
 type DataType struct {
+	Pos       lexer.Position
 	Varchar   *TypeVarchar `parser:"( @@"`
 	Bytes     *TypeBytes   `parser:"| @@"`
+	Int8      bool         `parser:"| @('tinyint' | 'int8')"`
+	Int16     bool         `parser:"| @('smallint' | 'int16')"`
 	Int32     bool         `parser:"| @('integer' | 'int' | 'int32')"`
 	Int64     bool         `parser:"| @('bigint' | 'int64')"`
 	Float32   bool         `parser:"| @('real' | 'float' | 'float32')"`
@@ -364,6 +351,10 @@ func (q DataType) String() (s string) {
 			return fmt.Sprintf("varchar[%d]", *q.Varchar.MaxLen)
 		}
 		return fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)
+	} else if q.Int8 {
+		return "int8"
+	} else if q.Int16 {
+		return "int16"
 	} else if q.Int32 {
 		return "int32"
 	} else if q.Int64 {
@@ -464,8 +455,6 @@ type ProjectorTrigger struct {
 	ExecuteAction *ProjectorCommandAction `parser:"'AFTER' (@@"`
 	TableActions  []ProjectionTableAction `parser:"| (@@ ('OR' @@)* ))"`
 	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!)"`
-
-	qNames []appdef.QName // filled on the analysis stage
 }
 
 type ProjectorStmt struct {
@@ -543,6 +532,7 @@ func (s TemplateStmt) GetName() string { return string(s.Name) }
 
 type RoleStmt struct {
 	Statement
+	Published bool          `parser:"@'PUBLISHED'?"`
 	Name      Ident         `parser:"'ROLE' @Ident"`
 	workspace workspaceAddr // filled on the analysis stage
 }
@@ -551,7 +541,8 @@ func (s RoleStmt) GetName() string { return string(s.Name) }
 
 type TagStmt struct {
 	Statement
-	Name      Ident `parser:"'TAG' @Ident"`
+	Name      Ident  `parser:"'TAG' @Ident"`
+	Feature   string `parser:"('FEATURE' @String)?"`
 	workspace workspaceAddr
 }
 
@@ -585,10 +576,9 @@ type RateValueTimeUnit struct {
 type RateValue struct {
 	Count           *int              `parser:"(@Int"`
 	Variable        *DefQName         `parser:"| @@) 'PER'"`
-	TimeUnitAmounts *int              `parser:"@Int?"`
+	TimeUnitAmounts *uint32           `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
-	variable        appdef.QName      // filled on the analysis stage
-	declare         *DeclareStmt      // filled on the analysis stage
+	count           uint32            // filled on the analysis stage
 }
 
 type RateObjectScope struct {
@@ -597,8 +587,8 @@ type RateObjectScope struct {
 }
 
 type RateSubjectScope struct {
-	PerUser bool `parser:"@('PER' 'USER')"`
-	PerIp   bool `parser:" | @('PER' 'IP')"`
+	PerSubject bool `parser:"@('PER' 'SUBJECT')"`
+	PerIP      bool `parser:" | @('PER' 'IP')"`
 }
 
 type RateStmt struct {
@@ -607,47 +597,89 @@ type RateStmt struct {
 	Value        RateValue         `parser:"@@"`
 	ObjectScope  *RateObjectScope  `parser:"@@?"`
 	SubjectScope *RateSubjectScope `parser:"@@?"`
+	workspace    workspaceAddr     // filled on the analysis stage
 }
 
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
 	Pos        lexer.Position
-	Table      *DefQName `parser:"(ONTABLE @@)"`
-	Command    *DefQName `parser:"| ('ON' 'COMMAND' @@)"`
-	Query      *DefQName `parser:"| ('ON' 'QUERY' @@)"`
-	Tag        *DefQName `parser:"| ('ON' 'TAG' @@)"`
-	Everything bool      `parser:"| @('ON' 'EVERYTHING')"`
+	Select     bool `parser:"(@'SELECT'"`
+	Execute    bool `parser:"| @EXECUTE"`
+	Activate   bool `parser:"| @'ACTIVATE'"`
+	Deactivate bool `parser:"| @'DEACTIVATE'"`
+	Insert     bool `parser:"| @'INSERT'"`
+	Update     bool `parser:"| @'UPDATE')"`
 }
 
+type LimitSingleItemFilter struct {
+	Pos     lexer.Position
+	Command *DefQName `parser:"( (ONCOMMAND @@)"`
+	Query   *DefQName `parser:"| (ONQUERY @@)"`
+	Table   *DefQName `parser:"| (ONTABLE @@)"`
+	View    *DefQName `parser:"| (ONVIEW @@) )"`
+}
+
+type LimitAllItemsFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @ONALLCOMMANDS"`
+	Queries  bool      `parser:"| @ONALLQUERIES"`
+	Tables   bool      `parser:"| @ONALLTABLES"`
+	Views    bool      `parser:"| @ONALLVIEWS )"`
+	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
+}
+
+type LimitEachItemFilter struct {
+	Pos      lexer.Position
+	Commands bool      `parser:"( @('ON' 'EACH' 'COMMAND')"`
+	Queries  bool      `parser:"| @('ON' 'EACH' 'QUERY')"`
+	Tables   bool      `parser:"| @('ON' 'EACH' 'TABLE')"`
+	Views    bool      `parser:"| @('ON' 'EACH' 'VIEW') )"`
+	WithTag  *DefQName `parser:"(WITHTAG @@)?"`
+}
 type LimitStmt struct {
 	Statement
-	Name     Ident       `parser:"'LIMIT' @Ident"`
-	Action   LimitAction `parser:"@@"`
-	RateName DefQName    `parser:"'WITH' 'RATE' @@"`
+	Name       Ident                  `parser:"'LIMIT' @Ident"`
+	Actions    []LimitAction          `parser:"(@@ (',' @@)*)?"`
+	SingleItem *LimitSingleItemFilter `parser:"( @@"`
+	AllItems   *LimitAllItemsFilter   `parser:"| @@"`
+	EachItem   *LimitEachItemFilter   `parser:"| @@ )"`
+	RateName   DefQName               `parser:"'WITH' 'RATE' @@"`
+	workspace  workspaceAddr          // filled on the analysis stage
+	ops        []appdef.OperationKind // filled on the analysis stage
 }
 
 func (s LimitStmt) GetName() string { return string(s.Name) }
 
-type GrantTableAction struct {
+type GrantColumn struct {
 	Pos     lexer.Position
-	Select  bool         `parser:"(@'SELECT'"`
-	Insert  bool         `parser:"| @'INSERT'"`
-	Update  bool         `parser:"| @'UPDATE')"`
-	Columns []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
+	SysName string      `parser:"@(('sys' '.' 'ID') | 'sys' '.' 'ParentID' | 'sys' '.' 'IsActive' | 'sys' '.' 'QName' | 'sys' '.' 'Container')"`
+	Name    *Identifier `parser:"| @@"`
+}
+type GrantTableAction struct {
+	Pos        lexer.Position
+	Select     bool          `parser:"(@'SELECT'"`
+	Insert     bool          `parser:"| @'INSERT'"`
+	Update     bool          `parser:"| @'UPDATE'"`
+	Activate   bool          `parser:"| @'ACTIVATE'"`
+	Deactivate bool          `parser:"| @'DEACTIVATE')"`
+	Columns    []GrantColumn `parser:"( '(' @@ (',' @@)* ')' )?"`
 }
 
 type GrantAllTablesAction struct {
-	Pos    lexer.Position
-	Select bool `parser:"@'SELECT'"`
-	Insert bool `parser:"| @'INSERT'"`
-	Update bool `parser:"| @'UPDATE'"`
+	Pos        lexer.Position
+	Select     bool `parser:"@'SELECT'"`
+	Insert     bool `parser:"| @'INSERT'"`
+	Update     bool `parser:"| @'UPDATE'"`
+	Activate   bool `parser:"| @'ACTIVATE'"`
+	Deactivate bool `parser:"| @'DEACTIVATE'"`
 }
 
 type GrantTableAll struct {
 	Pos      lexer.Position
-	GrantAll bool         `parser:"@'ALL'"`
-	Columns  []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
+	GrantAll bool               `parser:"@'ALL'"`
+	Columns  []Identifier       `parser:"( '(' @@ (',' @@)* ')' )?"`
+	columns  []appdef.FieldName // filled on the analysis stage
 }
 
 type GrantTableActions struct {
@@ -661,7 +693,7 @@ type GrantAllTablesWithTagActions struct {
 	Pos   lexer.Position
 	All   bool                   `parser:"( @'ALL' | "`
 	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
-	Tag   DefQName               `parser:"ONALLTABLESWITHTAG @@"`
+	Tag   DefQName               `parser:"ONALLTABLES WITHTAG @@"`
 }
 
 type GrantAllTables struct {
@@ -673,34 +705,90 @@ type GrantAllTables struct {
 
 type GrantView struct {
 	Pos        lexer.Position
-	AllColumns bool         `parser:"(@SELECTONVIEW | "`
-	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
-	View       DefQName     `parser:"@@"`
+	AllColumns bool               `parser:"(@(SELECT ONVIEW) | "`
+	Columns    []Identifier       `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
+	View       DefQName           `parser:"@@"`
+	columns    []appdef.FieldName // filled on the analysis stage
 }
 
 type GrantOrRevoke struct {
-	Command              *DefQName                     `parser:"( (EXECUTEONCOMMAND @@)"`
-	AllCommandsWithTag   *DefQName                     `parser:"  | (EXECUTEONALLCOMMANDSWITHTAG @@)"`
-	Query                *DefQName                     `parser:"  | (EXECUTEONQUERY @@)"`
-	AllQueriesWithTag    *DefQName                     `parser:"  | (EXECUTEONALLQUERIESWITHTAG @@)"`
-	AllViewsWithTag      *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
-	Workspace            *DefQName                     `parser:"  | (INSERTONWORKSPACE @@)"`
-	AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
-	View                 *GrantView                    `parser:"  | @@"`
-	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"  | @@"`
-	Table                *GrantTableActions            `parser:"  | @@"`
-	AllCommands          bool                          `parser:"  | @EXECUTEONALLCOMMANDS"`
-	AllQueries           bool                          `parser:"  | @EXECUTEONALLQUERIES"`
-	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
-	AllTables            *GrantAllTables               `parser:"  | @@"`
-	Role                 *DefQName                     `parser:"  | @@)"`
+	Command            *DefQName                     `parser:"( (EXECUTE ONCOMMAND @@)"`
+	AllCommandsWithTag *DefQName                     `parser:"  | (EXECUTE ONALLCOMMANDS WITHTAG @@)"`
+	Query              *DefQName                     `parser:"  | (EXECUTE ONQUERY @@)"`
+	AllQueriesWithTag  *DefQName                     `parser:"  | (EXECUTE ONALLQUERIES WITHTAG @@)"`
+	AllViewsWithTag    *DefQName                     `parser:"  | (SELECT ONALLVIEWS WITHTAG @@)"`
+	View               *GrantView                    `parser:"  | @@"`
+	AllTablesWithTag   *GrantAllTablesWithTagActions `parser:"  | @@"`
+	Table              *GrantTableActions            `parser:"  | @@"`
+	AllCommands        bool                          `parser:"  | @(EXECUTE ONALLCOMMANDS)"`
+	AllQueries         bool                          `parser:"  | @(EXECUTE ONALLQUERIES)"`
+	AllViews           bool                          `parser:"  | @(SELECT ONALLVIEWS)"`
+	AllTables          *GrantAllTables               `parser:"  | @@"`
+	Role               *DefQName                     `parser:"  | @@)"`
+	//AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
+	//Workspace *DefQName `parser:"  | (INSERTONWORKSPACE @@)"`
 
 	/* filled on the analysis stage */
 	toRole    appdef.QName
-	on        []appdef.QName
 	ops       []appdef.OperationKind
-	columns   []appdef.FieldName
+	opColumns map[appdef.OperationKind][]appdef.FieldName
+
 	workspace workspaceAddr
+}
+
+func (g GrantOrRevoke) filter() appdef.IFilter {
+	if g.Role != nil {
+		return filter.QNames(g.Role.qName)
+	}
+	if g.Command != nil {
+		return filter.QNames(g.Command.qName)
+	}
+	if g.Query != nil {
+		return filter.QNames(g.Query.qName)
+	}
+	if g.View != nil {
+		return filter.QNames(g.View.View.qName)
+	}
+	if g.AllCommandsWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Command),
+			filter.Tags(g.AllCommandsWithTag.qName),
+		)
+	}
+	if g.AllCommands {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Command)
+	}
+	if g.AllQueriesWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Query),
+			filter.Tags(g.AllQueriesWithTag.qName),
+		)
+	}
+	if g.AllQueries {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Query)
+	}
+	if g.AllViewsWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_ViewRecord),
+			filter.Tags(g.AllViewsWithTag.qName),
+		)
+	}
+	if g.AllViews {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_ViewRecord)
+	}
+	if g.AllTablesWithTag != nil {
+		return filter.And(
+			filter.Types(appdef.TypeKind_Records.AsArray()...),
+			filter.Tags(g.AllTablesWithTag.Tag.qName),
+		)
+	}
+	if g.AllTables != nil {
+		return filter.WSTypes(g.workspace.qName(), appdef.TypeKind_Records.AsArray()...)
+	}
+	if g.Table != nil {
+		return filter.QNames(g.Table.Table.qName)
+	}
+	panic("unknown grant/revoke statement")
 }
 
 type GrantStmt struct {
@@ -1056,11 +1144,5 @@ type IVariableResolver interface {
 	AsInt32(name appdef.QName) (int32, bool)
 }
 
-// BuildAppDefsOption is a function that can be passed to BuildAppDefs to configure it.
-type BuildAppDefsOption = func(*buildContext)
-
-func WithVariableResolver(resolver IVariableResolver) BuildAppDefsOption {
-	return func(c *buildContext) {
-		c.variableResolver = resolver
-	}
-}
+// ParserOption is a function that can be passed to BuildAppDefs to configure it.
+type ParserOption = func(*basicContext)

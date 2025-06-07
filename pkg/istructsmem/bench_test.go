@@ -13,7 +13,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -70,13 +72,13 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// application
 	appDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
 		doc := wsb.AddODoc(oDocQName)
-		for i := 0; i < numOfIntFields; i++ {
+		for i := range numOfIntFields {
 
 			intFieldName := fmt.Sprintf("i%v", i)
 			doc.AddField(intFieldName, appdef.DataKind_int64, true)
@@ -104,15 +106,14 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 	}
 
-	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
 	appStructs, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	start := time.Now()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 
 		bld := appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
@@ -130,7 +131,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 		cmd := bld.ArgumentObjectBuilder()
 		cmd.PutRecordID(appdef.SystemField_ID, 1)
-		for i := 0; i < numOfIntFields; i++ {
+		for i := range numOfIntFields {
 			cmd.PutNumber(intFieldNames[i], intFieldNamesFloat64Values[intFieldNames[i]])
 			cmd.PutString(stringFieldNames[i], stringFieldValues[stringFieldNames[i]])
 		}
@@ -177,11 +178,11 @@ func bench_UnmarshalJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	require := require.New(b)
 
-	srcMap := make(map[string]interface{})
+	srcMap := make(map[string]any)
 
 	// Prepare source map
 	{
-		for i := 0; i < numOfIntFields; i++ {
+		for i := range numOfIntFields {
 
 			intFieldName := fmt.Sprintf("i%v", i)
 			srcMap[intFieldName] = float64(i)
@@ -195,10 +196,9 @@ func bench_UnmarshalJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
 	require.NoError(err)
 
 	start := time.Now()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		m := make(map[string]interface{})
+	for b.Loop() {
+		m := make(map[string]any)
 		err = json.Unmarshal(bytes, &m)
 		if err != nil {
 			panic("err != nil")

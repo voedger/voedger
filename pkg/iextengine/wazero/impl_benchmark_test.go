@@ -16,8 +16,8 @@ import (
 func bench_purecall(b *testing.B) {
 	ctx := context.Background()
 	const simple = "simple"
-	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := testFactoryHelper(ctx, moduleUrl, []string{simple}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
+	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
+	ee, err := testFactoryHelper(ctx, moduleURL, []string{simple}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
 	if err != nil {
 		panic(err)
 	}
@@ -38,8 +38,8 @@ func bench_gc(b *testing.B, cycles int) {
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
-	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
+	moduleURL := testModuleURL("./_testdata/allocs/pkggc.wasm")
+	ee, err := testFactoryHelper(ctx, moduleURL, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
 	if err != nil {
 		panic(err)
 	}
@@ -100,8 +100,8 @@ func bench_extensions(b *testing.B, gc bool, compile bool) {
 	if gc {
 		wsm = "./_testdata/benchmarks/pkggc.wasm"
 	}
-	moduleUrl := testModuleURL(wsm)
-	ee, err := testFactoryHelper(ctx, moduleUrl, funcs, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, compile)
+	moduleURL := testModuleURL(wsm)
+	ee, err := testFactoryHelper(ctx, moduleURL, funcs, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, compile)
 	if err != nil {
 		panic(err)
 	}
@@ -150,8 +150,8 @@ func Skip_Benchmark_Extensions_WithGc(b *testing.B) {
 func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	const arrAppend2 = "arrAppend2"
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, true)
+	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
+	ee, err := testFactoryHelper(ctx, moduleURL, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, true)
 	if err != nil {
 		panic(err)
 	}
@@ -182,8 +182,8 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 
 func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := testFactoryHelper(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, true)
+	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
+	ee, err := testFactoryHelper(ctx, moduleURL, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, true)
 	if err != nil {
 		panic(err)
 	}

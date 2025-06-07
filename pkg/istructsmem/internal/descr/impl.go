@@ -19,7 +19,7 @@ func newApplication() *Application {
 func (a *Application) read(name appdef.AppQName, app appdef.IAppDef) {
 	a.Packages = make(map[string]*Package)
 
-	for localName, fullPath := range app.Packages {
+	for localName, fullPath := range app.Packages() {
 		if localName == appdef.SysPackage {
 			continue
 		}
@@ -31,7 +31,7 @@ func (a *Application) read(name appdef.AppQName, app appdef.IAppDef) {
 
 	a.Name = name
 
-	for ws := range app.Workspaces {
+	for _, ws := range app.Workspaces() {
 		if ws.IsSystem() {
 			continue
 		}

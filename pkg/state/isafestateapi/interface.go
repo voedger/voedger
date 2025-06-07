@@ -26,6 +26,7 @@ type IStateSafeAPI interface {
 	// Key Builder
 	KeyBuilderPutInt32(key TKeyBuilder, name string, value int32)
 	KeyBuilderPutInt64(key TKeyBuilder, name string, value int64)
+	KeyBuilderPutRecordID(key TKeyBuilder, name string, value int64)
 	KeyBuilderPutFloat32(key TKeyBuilder, name string, value float32)
 	KeyBuilderPutFloat64(key TKeyBuilder, name string, value float64)
 	KeyBuilderPutString(key TKeyBuilder, name string, value string)

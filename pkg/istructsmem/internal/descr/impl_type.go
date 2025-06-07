@@ -13,7 +13,7 @@ func (t *Type) read(typ appdef.IType) {
 	t.Kind = typ.Kind()
 
 	t.Tags = appdef.QNames{}
-	for tag := range typ.Tags() {
+	for _, tag := range typ.Tags() {
 		t.Tags.Add(tag.QName())
 	}
 }

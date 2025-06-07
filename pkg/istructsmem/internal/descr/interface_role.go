@@ -7,5 +7,7 @@ package descr
 
 type Role struct {
 	Type
-	ACL *ACL `json:",omitempty"`
+
+	// #3335: is role published
+	Published bool `json:",omitempty,omitzero"`
 }

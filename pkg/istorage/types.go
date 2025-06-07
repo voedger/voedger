@@ -25,3 +25,4 @@ type IStorageDelaySetter interface {
 	SetTestDelayGet(time.Duration)
 	SetTestDelayPut(time.Duration)
 }
+

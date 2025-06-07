@@ -9,19 +9,20 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func provideCmdInitiateLeaveWorkspace(sr istructsmem.IStatelessResources, time coreutils.ITime) {
+func provideCmdInitiateLeaveWorkspace(sr istructsmem.IStatelessResources, time timeu.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateLeaveWorkspace,
 		execCmdInitiateLeaveWorkspace(time),
 	))
 }
 
-func execCmdInitiateLeaveWorkspace(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbPrincipal, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 		if err != nil {
@@ -61,7 +62,7 @@ func execCmdInitiateLeaveWorkspace(time coreutils.ITime) func(args istructs.Exec
 		if err != nil {
 			return err
 		}
-		svbCDocInvite.PutInt32(field_State, State_ToBeLeft)
+		svbCDocInvite.PutInt32(field_State, int32(State_ToBeLeft))
 		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
 		svbCDocInvite.PutBool(appdef.SystemField_IsActive, false)
 

@@ -5,7 +5,12 @@
 
 package coreutils
 
-import "strings"
+import (
+	"fmt"
+	"net/http"
+	"net/mail"
+	"strings"
+)
 
 func IsValidEmailTemplate(emailTemplate string) bool {
 	if !strings.HasPrefix(emailTemplate, EmailTemplatePrefix_Text) && !strings.HasPrefix(emailTemplate, emailTemplatePrefix_Resource) {
@@ -19,4 +24,11 @@ func TruncateEmailTemplate(emailTemplate string) string {
 		return emailTemplate[len(EmailTemplatePrefix_Text):]
 	}
 	return emailTemplate[len(emailTemplatePrefix_Resource):]
+}
+
+func ValidateEMail(email string) error {
+	if _, err := mail.ParseAddress(email); err != nil {
+		return NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("email validation failed: %s", err.Error()))
+	}
+	return nil
 }

@@ -6,9 +6,18 @@
 package main
 
 import (
-	"fmt"
+	mypkg1 "pkg1/pkg"
+	mypkg2 "pkg2/pkg"
+
+	_ "github.com/voedger/voedger/pkg/sys"
 )
 
 func main() {
-	fmt.Println("This file is included unless excludeFile is defined.")
+	appFunc()
+	mypkg1.MyPkg1()
+	mypkg2.MyPkg2()
+}
+
+func appFunc() {
+	println("app.AppFunc")
 }

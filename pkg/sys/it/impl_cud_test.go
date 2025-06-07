@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -434,15 +435,15 @@ func TestEraseString(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	idAnyAirTablePlan := vit.GetAny("app1pkg.air_table_plan", ws)
+	anyAirTablePlanID := vit.GetAny("app1pkg.air_table_plan", ws)
 
-	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, idAnyAirTablePlan)
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, anyAirTablePlanID)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, idAnyAirTablePlan)
+	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.air_table_plan"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, anyAirTablePlanID)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
-	require.Equal(t, "", resp.SectionRow()[0].(string))
+	require.Empty(t, resp.SectionRow()[0].(string))
 }
 
 func TestEraseString1(t *testing.T) {
@@ -459,7 +460,7 @@ func TestEraseString1(t *testing.T) {
 	body = fmt.Sprintf(`{"args":{"Schema":"app1pkg.articles"},"elements":[{"fields": ["name","sys.ID"]}],"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, id)
 	resp := vit.PostWS(ws, "q.sys.Collection", body)
 
-	require.Equal(t, "", resp.SectionRow()[0].(string))
+	require.Empty(t, resp.SectionRow()[0].(string))
 }
 
 func TestDenyCreateNonRawIDs(t *testing.T) {
@@ -482,7 +483,7 @@ func TestSelectFromNestedTables(t *testing.T) {
 		{"fields":{"sys.ID": 2,"sys.QName": "app1pkg.Nested", "sys.ParentID":1,"sys.Container": "Nested","FldNested":3}},
 		{"fields":{"sys.ID": 3,"sys.QName": "app1pkg.Third", "Fld1": 42,"sys.ParentID":2,"sys.Container": "Third"}}
 	]}`
-	vit.PostWS(ws, "c.sys.CUD", body).NewID()
+	vit.PostWS(ws, "c.sys.CUD", body)
 
 	t.Run("normal select", func(t *testing.T) {
 		body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
@@ -492,9 +493,10 @@ func TestSelectFromNestedTables(t *testing.T) {
 		]}`
 		resp := vit.PostWS(ws, "q.sys.Collection", body)
 
-		require.EqualValues(2, resp.Sections[0].Elements[0][0][0][0])
-		require.EqualValues(3, resp.Sections[0].Elements[0][1][0][0])
-		require.EqualValues(42, resp.Sections[0].Elements[0][2][0][0])
+		actualRow := resp.Sections[0].Elements[len(resp.Sections[0].Elements)-1]
+		require.EqualValues(2, actualRow[0][0][0])
+		require.EqualValues(3, actualRow[1][0][0])
+		require.EqualValues(42, actualRow[2][0][0])
 	})
 
 	t.Run("unknown nested table", func(t *testing.T) {
@@ -558,4 +560,80 @@ func TestSelectFromNestedTables(t *testing.T) {
 			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table Fld1"))
 		})
 	})
+}
+
+func TestFieldsAuthorization_OpForbidden(t *testing.T) {
+	t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
+	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevel(logger.LogLevelInfo)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("activate", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocActivateDenied"}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":true}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Activate", "operation forbidden"))
+	})
+
+	t.Run("deactivate", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocDeactivateDenied"}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":false}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Deactivate", "operation forbidden"))
+	})
+
+	t.Run("field insert", func(t *testing.T) {
+		// allowed
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldInsertDenied","FldAllowed":42}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// denied
+		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldInsertDenied","FldDenied":42}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Insert", "operation forbidden"))
+	})
+
+	t.Run("field update", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldUpdateDenied", "FldAllowed":42,"FldDenied":43}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		// allowed
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"FldAllowed":45}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		// denied
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"FldDenied":46}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Update", "operation forbidden"))
+	})
+
+	// note: select authorization is tested in [TestDeniedResourcesAuthorization]
+}
+
+func TestErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("no QName on insert -> 400 bad request", func(t *testing.T) {
+		body := `{"cuds": [{"fields": {"sys.ID": 1,"FldAllowed":42}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("failed to parse sys.QName"))
+	})
+}
+
+func TestUnnamingInQueryResult(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	catID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	body = fmt.Sprintf(`{"args": {"CategoryID":%d},"elements": [{"path":"","fields": ["CategoryID"],"refs":[["CategoryID", "name"],["CategoryID","int_fld1"]]}]}`, catID)
+	vit.PostWS(ws, "q.app1pkg.QryReturnsCategory", body).Println()
 }

@@ -8,10 +8,10 @@ package main
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/exttinygo"
+
 	"appsimple/wasm/exttest"
 	"appsimple/wasm/orm"
-
-	"github.com/voedger/voedger/pkg/exttinygo"
 )
 
 func Test_FillPbillDates(t *testing.T) {

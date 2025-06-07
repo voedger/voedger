@@ -5,12 +5,14 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -18,7 +20,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
-	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -38,28 +39,28 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 		rw.Header().Set("Connection", "keep-alive")
 		jsonParam, ok := req.URL.Query()["payload"]
 		if !ok || len(jsonParam[0]) < 1 {
-			err = errors.New("query parameter with payload (SubjectLogin id and ProjectionKey) is missing")
-			logger.Error(err)
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			errMsg := "query parameter with payload (SubjectLogin id and ProjectionKey) is missing"
+			logger.Error(errMsg)
+			WriteTextResponse(rw, errMsg, http.StatusBadRequest)
 			return
 		}
-		err = json.Unmarshal([]byte(jsonParam[0]), &urlParams)
-		if err != nil {
+		if err = json.Unmarshal([]byte(jsonParam[0]), &urlParams); err != nil {
 			err = fmt.Errorf("cannot unmarshal input payload %w", err)
 			logger.Error(err)
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			WriteTextResponse(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 		logger.Info("n10n subscribeAndWatch: ", urlParams)
 		flusher, ok = rw.(http.Flusher)
 		if !ok {
-			http.Error(rw, "Streaming unsupported!", http.StatusInternalServerError)
+			// notest
+			WriteTextResponse(rw, "streaming unsupported!", http.StatusInternalServerError)
 			return
 		}
 		channel, err = s.n10n.NewChannel(urlParams.SubjectLogin, hours24)
 		if err != nil {
 			logger.Error(err)
-			http.Error(rw, "create new channel failed: "+err.Error(), n10nErrorToStatusCode(err))
+			WriteTextResponse(rw, "create new channel failed: "+err.Error(), n10nErrorToStatusCode(err))
 			return
 		}
 		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
@@ -67,54 +68,60 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			return
 		}
 		for _, projection := range urlParams.ProjectionKey {
-			err = s.n10n.Subscribe(channel, projection)
-			if err != nil {
+			if err = s.n10n.Subscribe(channel, projection); err != nil {
 				logger.Error(err)
-				http.Error(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
+				WriteTextResponse(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}
 		flusher.Flush()
-		ch := make(chan in10nmem.UpdateUnit)
-		go func() {
-			defer close(ch)
-			s.n10n.WatchChannel(req.Context(), channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
-				var unit = in10nmem.UpdateUnit{
-					Projection: projection,
-					Offset:     offset,
-				}
-				ch <- unit
-			})
-		}()
-		for req.Context().Err() == nil {
-			var (
-				projection, offset []byte
-			)
-			result, ok := <-ch
-			if !ok {
-				logger.Info("watch done")
-				break
+		serveN10NChannel(req.Context(), rw, flusher, channel, s.n10n, urlParams.SubjectLogin)
+	}
+}
+
+// finishes when ctx is closed or on SSE message sending failure
+func serveN10NChannel(ctx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker,
+	subjectLogin istructs.SubjectLogin) {
+	ch := make(chan in10nmem.UpdateUnit)
+	watchChannelContext, cancel := context.WithCancel(ctx)
+	go func() {
+		defer close(ch)
+		n10n.WatchChannel(watchChannelContext, channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+			var unit = in10nmem.UpdateUnit{
+				Projection: projection,
+				Offset:     offset,
 			}
-			projection, err = json.Marshal(&result.Projection)
-			if err == nil {
-				if _, err = fmt.Fprintf(rw, "event: %s\n", projection); err != nil {
-					logger.Error("failed to write projection key event to client:", err)
-				}
-			}
-			offset, _ = json.Marshal(&result.Offset) // error impossible
-			if _, err = fmt.Fprintf(rw, "data: %s\n\n", offset); err != nil {
-				logger.Error("failed to write projection key offset to client:", err)
-			}
-			flusher.Flush()
+			ch <- unit
+		})
+	}()
+	defer logger.Info("watch done")
+	for ctx.Err() == nil {
+		result, ok := <-ch
+		if !ok {
+			break
 		}
+		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset))
+		if _, err := fmt.Fprint(rw, sseMessage); err != nil {
+			logger.Error("failed to write sse message for subjectLogin", subjectLogin, "to client:", sseMessage, ":", err.Error())
+			break // WatchChannel will be finished on cancel()
+		}
+		if logger.IsVerbose() {
+			logger.Verbose(fmt.Sprintf("sse message sent for subjectLogin %s:", subjectLogin), strings.ReplaceAll(sseMessage, "\n", " "))
+		}
+		flusher.Flush()
+	}
+	// graceful client disconnect -> req.Context() closed
+	// failed to write sse message -> need to close watchChannelContext
+	cancel()
+	for range ch {
 	}
 }
 
 func n10nErrorToStatusCode(err error) int {
 	switch {
-	case errors.Is(err, in10n.ErrChannelDoesNotExist), errors.Is(err, in10nmemv1.ErrMetricDoesNotExists):
+	case errors.Is(err, in10n.ErrChannelDoesNotExist), errors.Is(err, in10nmem.ErrMetricDoesNotExists):
 		return http.StatusBadRequest
-	case errors.Is(err, in10n.ErrQuotaExceeded_Subsciptions), errors.Is(err, in10n.ErrQuotaExceeded_SubsciptionsPerSubject),
+	case errors.Is(err, in10n.ErrQuotaExceeded_Subscriptions), errors.Is(err, in10n.ErrQuotaExceeded_SubscriptionsPerSubject),
 		errors.Is(err, in10n.ErrQuotaExceeded_Channels), errors.Is(err, in10n.ErrQuotaExceeded_ChannelsPerSubject):
 		return http.StatusTooManyRequests
 	}
@@ -127,7 +134,7 @@ curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f
 func (s *httpService) subscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
-		err := getJsonPayload(req, &parameters)
+		err := getJSONPayload(req, &parameters)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
@@ -149,7 +156,7 @@ curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f
 func (s *httpService) unSubscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
-		err := getJsonPayload(req, &parameters)
+		err := getJSONPayload(req, &parameters)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 		}
@@ -191,7 +198,7 @@ func (s *httpService) updateHandler() http.HandlerFunc {
 	}
 }
 
-func getJsonPayload(req *http.Request, payload *subscriberParamsType) (err error) {
+func getJSONPayload(req *http.Request, payload *subscriberParamsType) (err error) {
 	jsonParam, ok := req.URL.Query()["payload"]
 	if !ok || len(jsonParam[0]) < 1 {
 		err = errors.New("url parameter with payload (channel id and projection key) is missing")

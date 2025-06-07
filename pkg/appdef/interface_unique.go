@@ -9,7 +9,7 @@ package appdef
 // - TypeKind_GDoc and TypeKind_GRecord,
 // - TypeKind_CDoc and TypeKind_CRecord,
 // - TypeKind_WDoc and TypeKind_WRecord
-type IUniques interface {
+type IWithUniques interface {
 	// Return unique by qualified name.
 	//
 	// Returns nil if not unique found
@@ -18,7 +18,7 @@ type IUniques interface {
 	// Return uniques count
 	UniqueCount() int
 
-	// All uniques.
+	// All uniques as map. Key is unique name. Value is unique.
 	Uniques() map[QName]IUnique
 
 	// Returns single field unique.
@@ -60,6 +60,6 @@ type IUnique interface {
 	// Returns qualified name of unique.
 	Name() QName
 
-	// Returns unique fields list. Fields are sorted alphabetically
+	// Returns unique fields list in alphabetically order
 	Fields() []IField
 }

@@ -17,21 +17,22 @@ func Test_BuildRow(t *testing.T) {
 
 	require := require.New(t)
 
-	test := test()
+	test := newTest()
 
 	t.Run("Should be ok to BuildRow implemented by local rowType", func(t *testing.T) {
-		w := newTestRow()
+		w := test.newTestRow()
 
 		r, err := istructs.BuildRow(w)
 		require.NoError(err)
 
-		testTestRow(t, r)
+		test.testTestRow(t, r)
 	})
 
 	t.Run("Should be ok to BuildRow implemented by local rowType descendants", func(t *testing.T) {
 
 		t.Run("recordType", func(t *testing.T) {
-			w := newTestCRecord(100500)
+			const recID = 100500
+			w := test.newTestCRecord(recID)
 
 			r, err := istructs.BuildRow(w)
 			require.NoError(err)
@@ -39,12 +40,12 @@ func Test_BuildRow(t *testing.T) {
 			rec, ok := r.(istructs.IRecord)
 			require.True(ok)
 
-			testTestCRec(t, rec, 100500)
+			test.testTestCRec(t, rec, recID)
 		})
 
 		t.Run("objectType", func(t *testing.T) {
 			w := newObject(test.AppCfg, test.saleCmdDocName, nil)
-			fillTestObject(w)
+			test.fillTestObject(w)
 
 			r, err := istructs.BuildRow(w)
 			require.NoError(err)
@@ -52,7 +53,7 @@ func Test_BuildRow(t *testing.T) {
 			o, ok := r.(istructs.IObject)
 			require.True(ok)
 
-			testTestObject(t, o)
+			test.testTestObject(t, o)
 		})
 
 		t.Run("keyType", func(t *testing.T) {
@@ -75,7 +76,7 @@ func Test_BuildRow(t *testing.T) {
 		})
 
 		t.Run("valueType", func(t *testing.T) {
-			w := newTestViewValue()
+			w := test.newTestViewValue()
 
 			r, err := istructs.BuildRow(w)
 			require.NoError(err)
@@ -83,12 +84,12 @@ func Test_BuildRow(t *testing.T) {
 			v, ok := r.(istructs.IValue)
 			require.True(ok)
 
-			testTestViewValue(t, v)
+			test.testTestViewValue(t, v)
 		})
 	})
 
 	t.Run("Should be error to BuildRow with errors", func(t *testing.T) {
-		w := newEmptyTestRow()
+		w := test.newEmptyTestRow()
 		w.PutBool("unknownField", true)
 
 		r, err := istructs.BuildRow(w)

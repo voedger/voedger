@@ -439,7 +439,7 @@ LinkedListBucket {&#xD;
       <child xsi:type="archimate:SketchModelSticky" id="id-687f26aee32143139a9745da919a3949" name="Sticky" lineColor="#5c5c5c" textAlignment="1" fillColor="#c9e7b7">
         <bounds x="624" y="168" width="253" height="85"/>
         <content>P_List&#xD;
-- qnameid&#xD;
+- QNameID&#xD;
 - qnameid_related_idx</content>
       </child>
     </element>

@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
@@ -42,13 +43,13 @@ func renameQName(storage istorage.IAppStorage, oldQName, newQName appdef.QName) 
 		return fmt.Errorf(errWrapFmt, oldQName, newQName, fmt.Sprintf("new already exists (id=%v)", exists), err)
 	}
 
-	set := func(n appdef.QName, id QNameID) {
+	set := func(n appdef.QName, id istructs.QNameID) {
 		qnames.qNames[n] = id
 		qnames.ids[id] = n
 		qnames.changes++
 	}
 
-	set(oldQName, NullQNameID)
+	set(oldQName, istructs.NullQNameID)
 	set(newQName, id)
 
 	if err := qnames.store(storage, vers); err != nil {

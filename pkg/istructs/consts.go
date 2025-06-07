@@ -42,6 +42,10 @@ var (
 	QNameCRecord = appdef.NewQName(appdef.SysPackage, "CRecord")
 	QNameWRecord = appdef.NewQName(appdef.SysPackage, "WRecord")
 	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
+
+	// sequences QNames has hardcoded QNameIDs: [QNameIDWLogOffsetSequence] etc
+	QNameWLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "WLogOffsetSequence")
+	QNameRecordIDSequence   = appdef.NewQName(appdef.SysPackage, "RecordIDSequence")
 )
 
 // *********************************************************************************************************
@@ -59,19 +63,6 @@ const FirstOffset = Offset(1)
 const MinRawRecordID = RecordID(1)
 const MaxRawRecordID = RecordID(0xffff)
 
-// RecordID generation
-const (
-	// RecordID = RegisterID * RegisterFactor + BaseRecordID
-	RegisterFactor = 5000000000
-
-	// ClusterDBSer is used to generate cluster-side IDs
-	// ID = PrimaryDCBaseID + some sequenced number
-	ClusterAsRegisterID = 0xFFFF - 1000 + iota
-	ClusterAsCRecordRegisterID
-)
-
-var MinClusterRecordID = NewRecordID(NullRecordID)
-
 // *********************************************************************************************************
 //
 //				Events-related constants
@@ -86,6 +77,29 @@ const ReadToTheEnd = int(^uint(0) >> 1)
 //				Workspace-related constants
 //
 
+// RecordIDs range layout
+//
+// ────────────────────┼──────────────────────────┐
+// 0                   | NullRecordID             |
+// ────────────────────┼──────────────────────────┤
+// 1                   | MinRawRecordID           |
+//                     |                          |
+// 65535               | MaxRawRecordID           |
+// ────────────────────┼──────────────────────────┤
+// 65536               | MinReservedBaseRecordID  |
+//                     |                          |
+//                     |  ┌───────────────────────┤
+// 65537               |  | FirstSingletonID      |
+//                     |  |                       |
+// 66047               |  | MaxSingletonID        |
+//                     |  └───────────────────────┤
+//                     |                          |
+// 66048               |  NonExistingRecordID     |
+//                     |                          |
+// 131071              | MaxReservedBaseRecordID  |
+// ────────────────────┼──────────────────────────┤
+// 131072              | FirstBaseRecordID        |
+
 const NullWSID = WSID(0)
 
 // WSID = ClusterID << WSIDClusterLShift + NextWSID()
@@ -93,19 +107,19 @@ const WSIDClusterLShift = 64 - 16 - 1
 
 const MaxBaseWSID = 1<<WSIDClusterLShift - 1
 
-const MinReservedBaseRecordID = MaxRawRecordID + 1
-const MaxReservedBaseRecordID = MinReservedBaseRecordID + 0xffff
+const MinReservedRecordID = MaxRawRecordID + 1
+const MaxReservedRecordID = RecordID(200000)
 const MaxAllowedWSID = math.MaxUint64 >> 1
 
 // Singleton - CDoc which has at most one record
-const FirstSingletonID = MinReservedBaseRecordID
+const FirstSingletonID = MinReservedRecordID
 const MaxSingletonID = FirstSingletonID + 0x1ff
 
 // Used to test behaviour on providing the unexisting record ID
 const NonExistingRecordID = MaxSingletonID + 1
 
 // This is the first value which must be returned by the IDGenerator (in the Command Processor) for the given workspace
-const FirstBaseRecordID = MaxReservedBaseRecordID + 1
+const FirstUserRecordID = MaxReservedRecordID + 1
 
 // Pseudo Workspaces
 
@@ -177,6 +191,7 @@ var AppQName_sys_router = appdef.NewAppQName(SysOwner, "router")   // Deprecated
 var AppQName_untill_resellerportal = appdef.NewAppQName("untill", "resellerportal")
 var AppQName_sys_cluster = appdef.NewAppQName(SysOwner, "cluster")
 var AppQName_untill_fiscalcloud = appdef.NewAppQName("untill", "fiscalcloud")
+var AppQName_sys_vvm = appdef.NewAppQName(SysOwner, "vvm") // used for storage only
 
 // Cluster applications
 
@@ -210,3 +225,15 @@ const SysGuestLogin = appdef.SysPackage + ".Guest"
 func CurrentClusterID() ClusterID {
 	return MainClusterID_useWithCare
 }
+
+// IDs for wellknown QNames
+const (
+	NullQNameID QNameID = 0 + iota
+	QNameIDForError
+	QNameIDCommandCUD
+	QNameIDForCorruptedData
+	QNameIDWLogOffsetSequence
+	QNameIDRecordIDSequence
+
+	QNameIDSysLast QNameID = 0xFF
+)

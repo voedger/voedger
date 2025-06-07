@@ -8,11 +8,13 @@ import (
 	"os"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
@@ -37,27 +39,27 @@ func NewVVMDefaultConfig() VVMConfig {
 		RouterReadTimeout:      router.DefaultRouterWriteTimeout, // same
 		RouterConnectionsLimit: router.DefaultConnectionsLimit,
 		BLOBMaxSize:            DefaultBLOBMaxSize,
-		Time:                   coreutils.NewITime(),
+		Time:                   timeu.NewITime(),
 		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
-		BusTimeout:             BusTimeout(ibus.DefaultTimeout),
-		BlobberServiceChannels: router.BlobberServiceChannels{
-			{
-				NumChannels:       1,
-				ChannelBufferSize: 0,
-			},
-		},
-		NumCommandProcessors: DefaultNumCommandProcessors,
-		NumQueryProcessors:   DefaultNumQueryProcessors,
-		StorageCacheSize:     DefaultCacheSize,
-		MaxPrepareQueries:    DefaultMaxPrepareQueries,
-		VVMPort:              DefaultVVMPort,
-		MetricsServicePort:   DefaultMetricsServicePort,
+		SendTimeout:            bus.DefaultSendTimeout,
+		NumCommandProcessors:   DefaultNumCommandProcessors,
+		NumQueryProcessors:     DefaultNumQueryProcessors,
+		NumBLOBProcessors:      DefaultNumBLOBProcessors,
+		StorageCacheSize:       DefaultCacheSize,
+		MaxPrepareQueries:      DefaultMaxPrepareQueries,
+		VVMPort:                DefaultVVMPort,
+		MetricsServicePort:     DefaultMetricsServicePort,
 		StorageFactory: func() (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
-			return mem.Provide(), nil
+			return mem.Provide(testingu.MockTime), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
+		IP:            coreutils.LocalhostIP,
+		NumVVM:        1,
+
+		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
+		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
 	}
 	if coreutils.IsTest() {
 		res.SecretsReader = itokensjwt.ProvideTestSecretsReader(res.SecretsReader)

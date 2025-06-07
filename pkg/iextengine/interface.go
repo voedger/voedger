@@ -64,7 +64,7 @@ type BuiltInExtFuncs map[appdef.FullQName]BuiltInExtFunc // Provided to construc
 
 type ExtensionModule struct {
 	Path           string   // e.g. github.com/voedger/voedger
-	ModuleUrl      *url.URL // drive path to the wasm file
+	ModuleURL      *url.URL // drive path to the wasm file
 	ExtensionNames []string // list of names defined in EXTENSION ENGINE WASM
 }
 

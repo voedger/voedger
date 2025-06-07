@@ -37,8 +37,6 @@ EXTENSION ENGINE WASM (
 
 );
 
---  Default object scope is PER APP PARTITION and no subject scope
-RATE AppDefaultRate 1000 PER HOUR;
 
 -- WORKSPACE statement declares the Workspace, descriptor and definitions, allowed in this workspace
 WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
@@ -50,8 +48,11 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
         Description varchar(100)
     );
 
+    --  Default object scope is PER APP PARTITION and no subject scope
+    RATE AppDefaultRate 1000 PER HOUR;
+
     -- Declare tag to assign it later to definition(s)
-    TAG BackofficeTag;
+    TAG BackofficeTag FEATURE 'Backoffice Management';
 
     /*
         Abstract tables can only be used for INHERITance by other tables.
@@ -137,6 +138,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     ROLE LocationManager;
     ROLE LocationUser;
     ROLE LocationGuest;
+    PUBLISHED ROLE ApiRole;
 
     TYPE TypeWithKind (
         Kind int
@@ -264,16 +266,15 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     --  Custom scopes
     RATE BackofficeRate 1000 PER HOUR PER APP PARTITION;
     RATE QueryRate 1000 PER HOUR PER APP PARTITION PER IP;
-    RATE CudRate 100 PER HOUR PER USER;
+    RATE CudRate 100 PER HOUR PER SUBJECT;
     RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;
     RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;
+    RATE RatePerYear 1000 PER YEAR PER WORKSPACE;
 
-	LIMIT AntiDDOS ON EVERYTHING WITH RATE AntiDDosRate; -- all commands, queries and CUD
 	LIMIT RestorePasswordLimit1 ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;   -- Single command applied with rate
 	LIMIT RestorePasswordLimit2 ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;   -- Combination of two rates
 	LIMIT Query1Limit ON QUERY Query1 WITH RATE QueryRate; -- Single query applied with rate
 	LIMIT tl1 ON TABLE WsTable WITH RATE CudRate; -- CUD operations on a single table
-	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
     -- GRANTs
     -- Roles
@@ -297,10 +298,10 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
     GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT SELECT ON TABLE untill.Prices TO LocationUser;
-    GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
+    GRANT SELECT(Price, sys.ID) ON TABLE untill.Prices TO LocationUser;
     GRANT INSERT(Discount) ON TABLE untill.Promotions TO LocationManager; 
     GRANT SELECT ON VIEW XZReports TO LocationUser;
-    GRANT SELECT(Year) ON VIEW XZReports TO LocationUser;
+    GRANT SELECT(Year,XZReportWDocID) ON VIEW XZReports TO LocationUser;
 
     -- REVOKEs
     -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace    

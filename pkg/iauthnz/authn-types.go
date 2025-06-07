@@ -53,26 +53,44 @@ const (
 )
 
 var (
-	QNameRoleSystem          = appdef.NewQName(appdef.SysPackage, "RoleSystem")
-	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
-	QNameRoleWorkspaceDevice = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceDevice")
+	QNameRoleSystem = appdef.QNameRoleSystem
+
+	// Deprecated: use QNameRoleWorkspaceOwner. Kept for backward compatibility
+	QNameRoleRoleWorkspaceOwner = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceOwner")
+
+	QNameRoleWorkspaceOwner  = appdef.NewQName(appdef.SysPackage, "WorkspaceOwner")
+	QNameRoleWorkspaceDevice = appdef.NewQName(appdef.SysPackage, "WorkspaceDevice")
 
 	// assigned if request is came to subject's profile
-	QNameRoleProfileOwner = appdef.NewQName(appdef.SysPackage, "RoleProfileOwner")
+	QNameRoleProfileOwner = appdef.NewQName(appdef.SysPackage, "ProfileOwner")
 
-	// asssigned automatically if has e.g. RoleResellersAdmin or RoleUntillPaymentsReseller
-	QNameRoleWorkspaceAdmin = appdef.NewQName(appdef.SysPackage, "RoleWorkspaceAdmin")
+	// asssigned automatically if has e.g. ResellersAdmin or UntillPaymentsReseller
+	QNameRoleWorkspaceAdmin = appdef.NewQName(appdef.SysPackage, "WorkspaceAdmin")
+
+	// assigned if a valid token is provided
+	QNameRoleAuthenticatedUser = appdef.NewQName(appdef.SysPackage, "AuthenticatedUser")
+
+	// assigned regardles of wether token is rpvided or not
+	QNameRoleEveryone = appdef.NewQName(appdef.SysPackage, "Everyone")
+
+	// assigned if token is not provided
+	QNameRoleAnonymous = appdef.NewQName(appdef.SysPackage, "Anonymous")
+
+	// assigned if a token is not provided
+	QNameRoleGuest = appdef.NewQName(appdef.SysPackage, "Guest")
 )
 
 var SysRoles = []appdef.QName{
 	QNameRoleSystem,
 	QNameRoleWorkspaceOwner,
+	QNameRoleRoleWorkspaceOwner,
 	QNameRoleWorkspaceDevice,
 	QNameRoleProfileOwner,
 	QNameRoleWorkspaceAdmin,
 }
 
 var rolesInheritance = map[appdef.QName]appdef.QName{
-	QNameRoleProfileOwner:    QNameRoleWorkspaceOwner,
-	QNameRoleWorkspaceDevice: QNameRoleWorkspaceOwner,
+	QNameRoleProfileOwner:       QNameRoleWorkspaceOwner,
+	QNameRoleWorkspaceDevice:    QNameRoleWorkspaceOwner,
+	QNameRoleRoleWorkspaceOwner: QNameRoleWorkspaceOwner,
 }

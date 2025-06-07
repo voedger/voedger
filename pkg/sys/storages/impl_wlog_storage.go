@@ -65,17 +65,18 @@ func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 }
 
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
-	if name == sys.Storage_WLog_Field_WSID {
+	switch name {
+	case sys.Storage_WLog_Field_WSID:
 		wsid, err := coreutils.Int64ToWSID(value)
 		if err != nil {
 			panic(err)
 		}
 		b.wsid = wsid
-	} else if name == sys.Storage_WLog_Field_Offset {
+	case sys.Storage_WLog_Field_Offset:
 		b.offset = istructs.Offset(value) // nolint G115
-	} else if name == sys.Storage_WLog_Field_Count {
+	case sys.Storage_WLog_Field_Count:
 		b.count = int(value)
-	} else {
+	default:
 		b.baseKeyBuilder.PutInt64(name, value)
 	}
 }

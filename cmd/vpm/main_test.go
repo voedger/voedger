@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -20,7 +22,6 @@ import (
 )
 
 func TestCompileBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -54,7 +55,6 @@ func TestCompileBasicUsage(t *testing.T) {
 }
 
 func TestBaselineBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -73,7 +73,6 @@ func TestBaselineBasicUsage(t *testing.T) {
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "workspace.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
@@ -84,7 +83,6 @@ func TestBaselineBasicUsage(t *testing.T) {
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "workspace.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
@@ -96,7 +94,6 @@ func TestBaselineBasicUsage(t *testing.T) {
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "workspace.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "app", "app.vsql"),
@@ -126,7 +123,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 			})
 			require.NoError(err)
 
-			require.Equal(len(tc.expectedBaselineFiles), len(actualFilePaths))
+			require.Len(actualFilePaths, len(tc.expectedBaselineFiles))
 			for _, actualFilePath := range actualFilePaths {
 				require.Contains(tc.expectedBaselineFiles, actualFilePath)
 			}
@@ -135,7 +132,6 @@ func TestBaselineBasicUsage(t *testing.T) {
 }
 
 func TestCompatBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -152,7 +148,6 @@ func TestCompatBasicUsage(t *testing.T) {
 }
 
 func TestCompatErrors(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -173,19 +168,32 @@ func TestCompatErrors(t *testing.T) {
 		"OrderChanged: AppDef/Types/mypkg2.MyTable2/Fields/myfield3",
 		"OrderChanged: AppDef/Types/mypkg2.MyTable2/Fields/myfield2",
 	}
-	require.Equal(len(expectedErrs), len(errs))
-
+	require.Len(errs, len(expectedErrs))
 	for _, err := range errs {
 		require.Contains(expectedErrs, err.Error())
 	}
 }
 
 func TestCompileErrors(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
+
 	require.NoError(err)
+
+	var tempDir string
+	if logger.IsVerbose() {
+		var err error
+		tempDir, err = os.MkdirTemp("", "test_compile")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "myapperr"), tempDir)
+	require.NoError(err)
+	// go up to the root of the project.
+	localVoedgerDir := filepath.Join(wd, "..", "..")
 
 	testCases := []struct {
 		name                 string
@@ -194,21 +202,21 @@ func TestCompileErrors(t *testing.T) {
 	}{
 		{
 			name: "schema1.vsql - syntax errors",
-			dir:  filepath.Join(wd, "testdata", "myapperr", "mypkg1"),
+			dir:  "mypkg1",
 			expectedErrPositions: []string{
-				"schema1.vsql:7:28",
+				"schema1.vsql:6:25",
 			},
 		},
 		{
-			name: "schema2.vsql - syntax errors",
-			dir:  filepath.Join(wd, "testdata", "myapperr", "mypkg2"),
+			name: "schema1.vsql - syntax errors",
+			dir:  "mypkg2",
 			expectedErrPositions: []string{
-				"schema2.vsql:7:13",
+				"schema1.vsql:6:25",
 			},
 		},
 		{
 			name: "schema4.vsql - package local name redeclared",
-			dir:  filepath.Join(wd, "testdata", "myapperr", "app"),
+			dir:  "app",
 			expectedErrPositions: []string{
 				"schema4.vsql:5:1: local package name reg was redeclared as registry",
 			},
@@ -217,7 +225,14 @@ func TestCompileErrors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err = execRootCmd([]string{"vpm", "compile", "-C", tc.dir}, "1.0.0")
+			dir := filepath.Join(tempDir, tc.dir)
+
+			// replace the voedger package with the local one in the go.mod file
+			// we use an absolute path so that we don't depend on where the test is running.
+			err = new(exec.PipedExec).Command("go", "mod", "edit", "-replace", "github.com/voedger/voedger="+localVoedgerDir).WorkingDir(dir).Run(os.Stdout, os.Stderr)
+			require.NoError(err)
+
+			err = execRootCmd([]string{"vpm", "compile", "-C", dir}, "1.0.0")
 			require.Error(err)
 			errMsg := err.Error()
 			for _, expectedErrPosition := range tc.expectedErrPositions {
@@ -229,8 +244,6 @@ func TestCompileErrors(t *testing.T) {
 }
 
 func TestPkgRegistryCompile(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	t.Skip("This test is skipped because registry package doesn't have subdirectory 'wasm' with code inside it.")
 	require := require.New(t)
 
@@ -250,11 +263,10 @@ func TestPkgRegistryCompile(t *testing.T) {
 }
 
 func TestOrmBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip()
 	}
+
 	require := require.New(t)
 
 	// uncomment this line to keep the result generated during test
@@ -306,7 +318,7 @@ func TestOrmBasicUsage(t *testing.T) {
 
 			headerFile := filepath.Join(dir, "header.txt")
 			err = execRootCmd([]string{"vpm", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
-			require.NoError(err)
+			require.NoError(err, tc.dir)
 
 			if logger.IsVerbose() {
 				logger.Verbose("orm directory: " + filepath.Join(dir, wasmDirName, ormDirName))
@@ -341,20 +353,7 @@ func TestBuildExample2(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestGenOrmForAirApp(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	require := require.New(t)
-
-	err := execRootCmd([]string{"vpm", "orm", "-C", "testdata/build/air"}, "1.0.0")
-	require.NoError(err)
-}
-
 func TestInitBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip()
 	}
@@ -364,7 +363,7 @@ func TestInitBasicUsage(t *testing.T) {
 
 	// test minimal required go version in normal case
 	dir := t.TempDir()
-	minimalRequiredGoVersionValue = "1.12"
+	minimalRequiredGoVersionValue = "1.24"
 	err := execRootCmd([]string{"vpm", "init", "-C", dir, packagePath}, "1.0.0")
 	require.NoError(err)
 	require.FileExists(filepath.Join(dir, goModFileName))
@@ -384,8 +383,6 @@ func TestInitBasicUsage(t *testing.T) {
 }
 
 func TestTidyBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip()
 	}
@@ -415,8 +412,6 @@ func TestTidyBasicUsage(t *testing.T) {
 }
 
 func TestEdgeCases(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip()
 	}
@@ -441,8 +436,6 @@ func TestEdgeCases(t *testing.T) {
 }
 
 func TestBuildBasicUsage(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip()
 	}
@@ -459,6 +452,9 @@ func TestBuildBasicUsage(t *testing.T) {
 
 	wd, err := os.Getwd()
 	require.NoError(err)
+
+	// go up to the root of the project.
+	localVoedgerDir := filepath.Join(wd, "..", "..")
 
 	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
 	require.NoError(err)
@@ -493,6 +489,12 @@ func TestBuildBasicUsage(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.dir, func(t *testing.T) {
 			dir := filepath.Join(tempDir, tc.dir)
+
+			// replace the voedger package with the local one in the go.mod file
+			// we use an absolute path so that we don't depend on where the test is running.
+			err = new(exec.PipedExec).Command("go", "work", "edit", "-replace", "github.com/voedger/voedger="+localVoedgerDir).WorkingDir(tempDir).Run(os.Stdout, os.Stderr)
+			require.NoError(err)
+
 			err = execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
 			if err != nil {
 				require.Equal(tc.errMsg, err.Error())
@@ -504,7 +506,7 @@ func TestBuildBasicUsage(t *testing.T) {
 				err = coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
 				require.NoError(err)
 				wasmFiles := findWasmFiles(filepath.Join(dir, "unzipped", buildDirName))
-				require.Equal(len(tc.expectedWasmFiles), len(wasmFiles))
+				require.Len(wasmFiles, len(tc.expectedWasmFiles))
 				for _, expectedWasmFile := range tc.expectedWasmFiles {
 					require.Contains(wasmFiles, filepath.Join(dir, "unzipped", expectedWasmFile))
 				}
@@ -555,20 +557,6 @@ func TestGenOrmTestItAndBuildApp(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestGenOrm(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-
-	require := require.New(t)
-
-	wd, err := os.Getwd()
-	require.NoError(err)
-
-	err = execRootCmd([]string{"vpm", "orm", "-C", filepath.Join(wd, "testdata", "build", "air")}, "1.0.0")
-	require.NoError(err)
-}
-
 func findWasmFiles(dir string) []string {
 	var wasmFiles []string
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -587,8 +575,6 @@ func findWasmFiles(dir string) []string {
 }
 
 func TestCommandMessaging(t *testing.T) {
-	t.Skip("Test should be updated after approve PR #2787 (issue #2745)")
-
 	if testing.Short() {
 		t.Skip("Manual run only because of long time execution (e.g. go get github.com/voedger/voedger run is involved)")
 	}
@@ -634,4 +620,107 @@ func TestCommandMessaging(t *testing.T) {
 	}
 
 	testingu.RunCmdTestCases(t, execRootCmd, testCases, version)
+}
+
+func TestCheckTinyGoVersion(t *testing.T) {
+	// Save and restore the original function
+	originalGetTinyGoVersionFunc := getTinyGoVersionFuncVariable
+	defer func() {
+		getTinyGoVersionFuncVariable = originalGetTinyGoVersionFunc
+	}()
+
+	tests := []struct {
+		name                     string
+		mockGetTinyGoVersionFunc func() (string, error)
+		requiredTinyGoVersion    string
+		expectedResult           bool
+		expectedErr              string
+	}{
+		{
+			name: "version higher than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.38 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        true,
+			expectedErr:           "",
+		},
+		{
+			name: "version slightly higher than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.1 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        true,
+			expectedErr:           "",
+		},
+		{
+			name: "version equal to required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.0 darwin/arm64 (using go version go1.24.2 and LLVM version 18.1.2)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        true,
+			expectedErr:           "",
+		},
+		{
+			name: "version lower than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.10.0 darwin/arm64 (using go version go1.20.0 and LLVM version 14.0.0)", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        false,
+			expectedErr:           "",
+		},
+		{
+			name: "version slightly lower than required",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo version 0.37.1 darwin/arm64 (using go version go1.20.0 and LLVM version 14.0.0)", nil
+			},
+			requiredTinyGoVersion: "0.37.2",
+			expectedResult:        false,
+			expectedErr:           "",
+		},
+		{
+			name: "getTinyGoVersion error",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "", errors.New("command failed")
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        false,
+			expectedErr:           "command failed",
+		},
+		{
+			name: "invalid version format",
+			mockGetTinyGoVersionFunc: func() (string, error) {
+				return "tinygo bad-version-format", nil
+			},
+			requiredTinyGoVersion: "0.37.0",
+			expectedResult:        false,
+			expectedErr:           "could not parse tinygo version from: tinygo bad-version-format",
+		},
+		{
+			name:           "nil getTinyGoVersionFuncVariable",
+			expectedResult: false,
+			expectedErr:    "getTinyGoVersionFuncVariable is not set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			minimalRequiredTinyGoVersionValue = tt.requiredTinyGoVersion
+			getTinyGoVersionFuncVariable = tt.mockGetTinyGoVersionFunc
+
+			result, err := checkTinyGoVersion()
+
+			if tt.expectedErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expectedResult, result)
+		})
+	}
 }

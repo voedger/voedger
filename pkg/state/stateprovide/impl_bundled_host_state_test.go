@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -83,7 +84,7 @@ func mockedAppStructs() istructs.IAppStructs {
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
-	adb := appdef.New()
+	adb := builder.New()
 	wsb := adb.AddWorkspace(testWSQName)
 	wsDesc := wsb.AddCDoc(testWSDescriptorQName)
 	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)

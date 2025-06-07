@@ -4,7 +4,6 @@
 APPLICATION appsimple();
 
 WORKSPACE MyWS1 (
-
     TABLE MyTable1 INHERITS sys.ODoc (
         myfield1 int32 NOT NULL
     );

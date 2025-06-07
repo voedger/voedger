@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -18,10 +19,10 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type ServiceFactory func(commandsChannel CommandChannel) pipeline.IService
@@ -35,12 +36,15 @@ type ICommandMessage interface {
 	Body() []byte
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID // url WSID
-	Sender() ibus.ISender
+	Responder() bus.IResponder
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
-	QName() appdef.QName
+	QName() appdef.QName // APIv1 -> cmd QName, APIv2 -> cmdQName or DocQName
 	Token() string
 	Host() string
+	APIPath() processors.APIPath
+	DocID() istructs.RecordID
+	Method() string
 }
 
 type xPath string
@@ -68,12 +72,13 @@ type cmdWorkpiece struct {
 	pLogEvent                    istructs.IPLogEvent
 	appPartition                 *appPartition
 	workspace                    *workspace
-	idGenerator                  *implIDGenerator
+	idGeneratorReporter          *implIDGeneratorReporter
 	eca                          istructs.ExecCommandArgs
 	metrics                      commandProcessorMetrics
 	syncProjectorsStart          time.Time
 	principals                   []iauthnz.Principal
 	principalPayload             payloads.PrincipalPayload
+	roles                        []appdef.QName
 	parsedCUDs                   []parsedCUD
 	wsDesc                       istructs.IRecord
 	hostStateProvider            *hostStateProvider
@@ -83,16 +88,19 @@ type cmdWorkpiece struct {
 	iCommand                     appdef.ICommand
 	iWorkspace                   appdef.IWorkspace
 	appPartitionRestartScheduled bool
+	cmdQName                     appdef.QName
+	statusCodeOfSuccess          int
+	reapplier                    istructs.IEventReapplier
 }
 
-type implIDGenerator struct {
+type implIDGeneratorReporter struct {
 	istructs.IIDGenerator
 	generatedIDs map[istructs.RecordID]istructs.RecordID
 }
 
 type parsedCUD struct {
-	opKind         iauthnz.OperationKindType
-	existingRecord istructs.IRecord // create -> nil
+	opKind         appdef.OperationKind // update can not be activate\deactivate because IsActive modified -> other fields update is not allowed, see
+	existingRecord istructs.IRecord     // create -> nil
 	id             int64
 	qName          appdef.QName
 	fields         coreutils.MapObject
@@ -103,12 +111,15 @@ type implICommandMessage struct {
 	body        []byte
 	appQName    appdef.AppQName // need to determine where to send c.sys.Init request on create a new workspace
 	wsid        istructs.WSID
-	sender      ibus.ISender
+	responder   bus.IResponder
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
-	qName       appdef.QName
+	qName       appdef.QName // APIv1 -> cmd QName, APIv2 -> cmdQName or DocQName
 	token       string
 	host        string
+	apiPath     processors.APIPath
+	docID       istructs.RecordID
+	method      string
 }
 
 type wrongArgsCatcher struct {

@@ -8,6 +8,6 @@ import istorage "github.com/voedger/voedger/pkg/istorage"
 
 type RouterAppStoragePtr *istorage.IAppStorage
 
-type autoCertDbCache struct {
+type autoCertDBCache struct {
 	appStorage *istorage.IAppStorage
 }

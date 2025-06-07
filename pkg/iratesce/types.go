@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	irates "github.com/voedger/voedger/pkg/irates"
 )
 
@@ -22,8 +23,8 @@ type bucketType struct {
 type bucketsType struct {
 	mu            sync.Mutex
 	buckets       map[irates.BucketKey]*bucketType
-	defaultStates map[string]irates.BucketState
-	time          coreutils.ITime
+	defaultStates map[appdef.QName]irates.BucketState
+	time          timeu.ITime
 }
 
 // A Limiter controls how frequently events are allowed to happen.
@@ -58,7 +59,7 @@ type Limiter struct {
 	last time.Time
 	// lastEvent is the latest time of a rate-limited event (past or future)
 	lastEvent time.Time
-	// time  coreutils.ITime
+	// time  timeu.ITime
 }
 
 // A Reservation holds information about events that are permitted by a Limiter to happen after a delay.

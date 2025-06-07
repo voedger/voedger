@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
@@ -67,7 +66,7 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 	data := make([]byte, 0)
 	if ok, err := vr.app.config.storage.Get(pKey, cKey, &data); !ok {
 		if err == nil {
-			err = ErrRecordNotFound
+			err = istructs.ErrRecordNotFound
 		}
 		return value, err
 	}
@@ -92,15 +91,15 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 	}
 	batches := make([]batchPtrType, len(kv))
 	plan := make(map[string][]istorage.GetBatchItem)
-	for i := 0; i < len(kv); i++ {
+	for i := range kv {
 		kv[i].Ok = false
 		kv[i].Value = newNullValue()
 		k := kv[i].Key.(*keyType)
 		if err = k.build(); err != nil {
-			return fmt.Errorf("error building key at batch item %d: %w", i, err)
+			return enrichError(err, "error building key at batch item %d", i)
 		}
 		if err = validateViewKey(k, false); err != nil {
-			return fmt.Errorf("not valid key at batch item %d: %w", i, err)
+			return enrichError(err, "not valid key at batch item %d", i)
 		}
 		pKey, cKey := k.storeToBytes(workspace)
 		batch, ok := plan[string(pKey)]
@@ -116,7 +115,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 			return err
 		}
 	}
-	for i := 0; i < len(batches); i++ {
+	for i := range batches {
 		b := batches[i]
 		kv[i].Ok = b.batch.Ok
 		if kv[i].Ok {
@@ -243,7 +242,7 @@ func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key
 type keyType struct {
 	appCfg   *AppConfigType
 	viewName appdef.QName
-	viewID   qnames.QNameID
+	viewID   istructs.QNameID
 	view     appdef.IView
 	partRow  rowType
 	ccolsRow rowType
@@ -332,6 +331,26 @@ func (key *keyType) AsFloat64(name appdef.FieldName) float64 {
 	return key.ccolsRow.AsFloat64(name)
 }
 
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowReader.AsInt8
+func (key *keyType) AsInt8(name appdef.FieldName) int8 {
+	if key.partRow.fieldDef(name) != nil {
+		return key.partRow.AsInt8(name)
+	}
+	return key.ccolsRow.AsInt8(name)
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowReader.AsInt16
+func (key *keyType) AsInt16(name appdef.FieldName) int16 {
+	if key.partRow.fieldDef(name) != nil {
+		return key.partRow.AsInt16(name)
+	}
+	return key.ccolsRow.AsInt16(name)
+}
+
 // istructs.IRowReader.AsInt32
 func (key *keyType) AsInt32(name appdef.FieldName) int32 {
 	if key.partRow.fieldDef(name) != nil {
@@ -391,8 +410,12 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 			if err := k.build(); err == nil {
 
 				equalRow := func(r1, r2 rowType) bool {
+					if r1.dyB.Scheme != r2.dyB.Scheme {
+						// notest: key.viewName == k.viewName
+						return false
+					}
 
-					equalVal := func(d1, d2 interface{}) bool {
+					equalVal := func(d1, d2 any) bool {
 						switch v := d1.(type) {
 						case []byte: // non comparable type
 							return bytes.Equal(d2.([]byte), v)
@@ -401,8 +424,9 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 						}
 					}
 
-					for _, f := range r1.fields.Fields() {
-						if !equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name())) {
+					// where are no system fields in key, so we can fast iterate over dynobuffer fields
+					for _, f := range r1.dyB.Scheme.Fields {
+						if !equalVal(r1.dyB.GetByField(f), r2.dyB.GetByField(f)) {
 							return false
 						}
 					}
@@ -416,18 +440,16 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 	return false
 }
 
-// istructs.IRowReader.FieldNames
-func (key *keyType) FieldNames(cb func(appdef.FieldName) bool) {
-	for f := range key.partRow.FieldNames {
-		if !cb(f) {
-			return
-		}
-	}
-	for f := range key.ccolsRow.FieldNames {
-		if !cb(f) {
-			return
-		}
-	}
+// istructs.IRowReader.Fields
+func (key *keyType) Fields(cb func(appdef.IField) bool) {
+	key.partRow.Fields(cb)
+	key.ccolsRow.Fields(cb)
+}
+
+// istructs.IRowReader.SpecifiedValues
+func (key *keyType) SpecifiedValues(cb func(appdef.IField, any) bool) {
+	key.partRow.SpecifiedValues(cb)
+	key.ccolsRow.SpecifiedValues(cb)
 }
 
 // istructs.IKeyBuilder.PartitionKey
@@ -487,6 +509,28 @@ func (key *keyType) PutFromJSON(j map[appdef.FieldName]any) {
 
 	key.partRow.PutFromJSON(pkJ)
 	key.ccolsRow.PutFromJSON(ccJ)
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowWriter.PutInt8
+func (key *keyType) PutInt8(name appdef.FieldName, value int8) {
+	if key.partRow.fieldDef(name) != nil {
+		key.partRow.PutInt8(name, value)
+	} else {
+		key.ccolsRow.PutInt8(name, value)
+	}
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructs~impl]
+//
+// istructs.IRowWriter.PutInt16
+func (key *keyType) PutInt16(name appdef.FieldName, value int16) {
+	if key.partRow.fieldDef(name) != nil {
+		key.partRow.PutInt16(name, value)
+	} else {
+		key.ccolsRow.PutInt16(name, value)
+	}
 }
 
 // istructs.IRowWriter.PutInt32
@@ -611,7 +655,7 @@ func (val *valueType) loadFromBytes(in []byte) (err error) {
 
 	var codec byte
 	if codec, err = utils.ReadByte(buf); err != nil {
-		return fmt.Errorf("error read codec version: %w", err)
+		return enrichError(err, "error read codec version")
 	}
 	switch codec {
 	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:

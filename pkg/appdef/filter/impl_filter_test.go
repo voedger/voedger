@@ -8,6 +8,7 @@ package filter
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -30,4 +31,5 @@ func Test_filter(t *testing.T) {
 	for range f.Types() {
 		require.Fail("filter.Types() should be empty")
 	}
+	require.Equal(appdef.NullQName, f.WS(), "filter.WS() should be NullQName")
 }

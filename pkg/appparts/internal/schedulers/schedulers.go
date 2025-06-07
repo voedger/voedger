@@ -27,11 +27,11 @@ type PartitionSchedulers struct {
 	rtWG        sync.WaitGroup
 }
 
-func newPartitionSchedulers(appQName appdef.AppQName, partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, partitionID istructs.PartitionID) *PartitionSchedulers {
+func New(app appdef.AppQName, partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, part istructs.PartitionID) *PartitionSchedulers {
 	return &PartitionSchedulers{
-		appQName:    appQName,
-		partitionID: partitionID,
-		wsNumbers:   AppWorkspacesHandledByPartition(partCount, wsCount, partitionID),
+		appQName:    app,
+		partitionID: part,
+		wsNumbers:   AppWorkspacesHandledByPartition(partCount, wsCount, part),
 		rt:          sync.Map{},
 		rtWG:        sync.WaitGroup{},
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/isequencer"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
@@ -43,7 +44,7 @@ func (cfgs *AppConfigsType) AddBuiltInAppConfig(appName appdef.AppQName, appDef 
 func (cfgs *AppConfigsType) GetConfig(appName appdef.AppQName) *AppConfigType {
 	c, ok := (*cfgs)[appName]
 	if !ok {
-		panic(fmt.Errorf("unable return configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
+		panic(enrichError(istructs.ErrAppNotFound, "unable return configuration for unknown application «%v»", appName))
 	}
 	return c
 }
@@ -76,6 +77,7 @@ type AppConfigType struct {
 	eventValidators    []istructs.EventValidator
 	numAppWorkspaces   istructs.NumAppWorkspaces
 	jobs               []BuiltinJob
+	seqTypes           map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -86,6 +88,7 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 		syncProjectors:   make(istructs.Projectors),
 		asyncProjectors:  make(istructs.Projectors),
 		numAppWorkspaces: wsCount,
+		seqTypes:         map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{},
 	}
 
 	cfg.AppDef = def
@@ -107,12 +110,12 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	id, ok := istructs.ClusterApps[appName]
 	if !ok {
-		panic(fmt.Errorf("unable construct configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
+		panic(enrichError(istructs.ErrAppNotFound, "unable construct configuration for unknown application «%v»", appName))
 	}
 
 	def, err := appDef.Build()
 	if err != nil {
-		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
+		panic(enrichError(err, "unable build application «%v»", appName))
 	}
 
 	cfg := newAppConfig(appName, id, def, 0)
@@ -123,7 +126,7 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
 func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.IAppStorage) error {
-	// if cfg.QNameID == istructs.NullClusterAppID {…} — unnecessary check. QNameIDmust be checked before prepare()
+	// if cfg.QNameID == istructs.NullClusterAppID {…} — unnecessary check. QNameID must be checked before prepare()
 
 	if cfg.prepared {
 		return nil
@@ -131,11 +134,11 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	if cfg.appDefBuilder != nil {
 		// BuiltIn application, appDefBuilder can be changed after add config
-		app, err := cfg.appDefBuilder.Build()
+		appDef, err := cfg.appDefBuilder.Build()
 		if err != nil {
-			return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
+			return enrichError(err, "unable rebuild changed application «%v»", cfg.Name)
 		}
-		cfg.AppDef = app
+		cfg.AppDef = appDef
 	}
 
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
@@ -176,6 +179,19 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	if cfg.numAppWorkspaces <= 0 {
 		return ErrNumAppWorkspacesNotSet(cfg.Name)
+	}
+
+	for _, iWorkspace := range cfg.AppDef.Workspaces() {
+		if iWorkspace.Abstract() {
+			continue
+		}
+		wsKindQNameID, err := cfg.QNameID(iWorkspace.Descriptor())
+		if err != nil {
+			// notest
+			return err
+		}
+		cfg.AddSeqType(isequencer.WSKind(wsKindQNameID), isequencer.SeqID(istructs.QNameIDRecordIDSequence), isequencer.Number(istructs.FirstUserRecordID))
+		cfg.AddSeqType(isequencer.WSKind(wsKindQNameID), isequencer.SeqID(istructs.QNameIDWLogOffsetSequence), isequencer.Number(istructs.FirstOffset))
 	}
 
 	cfg.prepared = true
@@ -253,6 +269,18 @@ func (cfg *AppConfigType) BuiltingJobs() []BuiltinJob {
 	return cfg.jobs
 }
 
+func (cfg *AppConfigType) AddSeqType(wsKind isequencer.WSKind, seqID isequencer.SeqID, initialNumber isequencer.Number) {
+	wsKindSeqTypes, ok := cfg.seqTypes[wsKind]
+	if !ok {
+		wsKindSeqTypes = map[isequencer.SeqID]isequencer.Number{}
+		cfg.seqTypes[wsKind] = wsKindSeqTypes
+	}
+	if _, ok := wsKindSeqTypes[seqID]; ok {
+		panic(fmt.Sprintf("initial number for SeqID %d in WSKind %d is already set", seqID, wsKind))
+	}
+	wsKindSeqTypes[seqID] = initialNumber
+}
+
 // need to build view.sys.NextBaseWSID and view.sys.projectionOffsets
 // could be called on application build stage only
 //
@@ -275,6 +303,10 @@ func (cfg *AppConfigType) SetNumAppWorkspaces(naw istructs.NumAppWorkspaces) {
 		panic("must not set NumAppWorkspaces after first IAppStructsProvider.AppStructs() call because the app is considered working")
 	}
 	cfg.numAppWorkspaces = naw
+}
+
+func (cfg *AppConfigType) QNameID(qName appdef.QName) (istructs.QNameID, error) {
+	return cfg.qNames.ID(qName)
 }
 
 // Application configuration parameters

@@ -23,7 +23,8 @@ const (
 	goModFileName                 = "go.mod"
 	goSumFileName                 = "go.sum"
 	packagesGenFileName           = "packages_gen.go"
-	minimalRequiredGoVersion      = "1.18"
+	minimalRequiredGoVersion      = "1.24"
+	minimalRequiredTinyGoVersion  = "0.37"
 	unsupportedGoVersionErrFormat = "vpm: unsupported go version %s, minimal required go version is " + minimalRequiredGoVersion
 	goModContentTemplate          = `module %s
 

@@ -9,23 +9,25 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[DataKind_null-0]
-	_ = x[DataKind_int32-1]
-	_ = x[DataKind_int64-2]
-	_ = x[DataKind_float32-3]
-	_ = x[DataKind_float64-4]
-	_ = x[DataKind_bytes-5]
-	_ = x[DataKind_string-6]
-	_ = x[DataKind_QName-7]
-	_ = x[DataKind_bool-8]
-	_ = x[DataKind_RecordID-9]
-	_ = x[DataKind_Record-10]
-	_ = x[DataKind_Event-11]
-	_ = x[DataKind_FakeLast-12]
+	_ = x[DataKind_int8-1]
+	_ = x[DataKind_int16-2]
+	_ = x[DataKind_int32-3]
+	_ = x[DataKind_int64-4]
+	_ = x[DataKind_float32-5]
+	_ = x[DataKind_float64-6]
+	_ = x[DataKind_bytes-7]
+	_ = x[DataKind_string-8]
+	_ = x[DataKind_QName-9]
+	_ = x[DataKind_bool-10]
+	_ = x[DataKind_RecordID-11]
+	_ = x[DataKind_Record-12]
+	_ = x[DataKind_Event-13]
+	_ = x[DataKind_FakeLast-14]
 }
 
-const _DataKind_name = "DataKind_nullDataKind_int32DataKind_int64DataKind_float32DataKind_float64DataKind_bytesDataKind_stringDataKind_QNameDataKind_boolDataKind_RecordIDDataKind_RecordDataKind_EventDataKind_FakeLast"
+const _DataKind_name = "DataKind_nullDataKind_int8DataKind_int16DataKind_int32DataKind_int64DataKind_float32DataKind_float64DataKind_bytesDataKind_stringDataKind_QNameDataKind_boolDataKind_RecordIDDataKind_RecordDataKind_EventDataKind_FakeLast"
 
-var _DataKind_index = [...]uint8{0, 13, 27, 41, 57, 73, 87, 102, 116, 129, 146, 161, 175, 192}
+var _DataKind_index = [...]uint8{0, 13, 26, 40, 54, 68, 84, 100, 114, 129, 143, 156, 173, 188, 202, 219}
 
 func (i DataKind) String() string {
 	if i >= DataKind(len(_DataKind_index)-1) {

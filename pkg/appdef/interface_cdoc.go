@@ -10,7 +10,7 @@ type ICDoc interface {
 	ISingleton
 
 	// Unwanted type assertion stub
-	isCDoc()
+	IsCDoc()
 }
 
 type ICDocBuilder interface {
@@ -22,7 +22,7 @@ type ICRecord interface {
 	IContainedRecord
 
 	// Unwanted type assertion stub
-	isCRecord()
+	IsCRecord()
 }
 
 type ICRecordBuilder interface {

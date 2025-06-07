@@ -6,8 +6,6 @@
 package descr
 
 import (
-	"maps"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -45,8 +43,17 @@ func (e *Extension) read(ex appdef.IExtension) {
 	e.Type.read(ex)
 	e.Name = ex.Name()
 	e.Engine = ex.Engine().TrimString()
-	e.States = maps.Clone(ex.States().Map())
-	e.Intents = maps.Clone(ex.Intents().Map())
+	e.States = e.readStorages(ex.States())
+	e.Intents = e.readStorages(ex.Intents())
+}
+
+func (e Extension) readStorages(storages appdef.IStorages) map[appdef.QName]appdef.QNames {
+	s := make(map[appdef.QName]appdef.QNames)
+	for _, n := range storages.Names() {
+		st := storages.Storage(n)
+		s[n] = appdef.QNamesFrom(st.Names()...)
+	}
+	return s
 }
 
 func (f *Function) read(fn appdef.IFunction) {
@@ -74,23 +81,20 @@ func (f *CommandFunction) read(fn appdef.ICommand) {
 
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	if prj.Events().Len() > 0 {
-		p.Events = make(map[appdef.QName]ProjectorEvent)
-		prj.Events().Enum(func(ev appdef.IProjectorEvent) {
-			e := ProjectorEvent{}
-			e.read(ev)
-			p.Events[e.On] = e
-		})
+	for _, ev := range prj.Events() {
+		e := ProjectorEvent{}
+		e.read(ev)
+		p.Events = append(p.Events, e)
 	}
 	p.WantErrors = prj.WantErrors()
 }
 
 func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
-	e.Comment = ev.Comment()
-	e.On = ev.On().QName()
-	for _, k := range ev.Kind() {
-		e.Kind = append(e.Kind, k.TrimString())
+	for _, o := range ev.Ops() {
+		e.Ops = append(e.Ops, o.TrimString())
 	}
+	e.Filter.read(ev.Filter())
+	e.Comment = ev.Comment()
 }
 
 func (j *Job) read(job appdef.IJob) {

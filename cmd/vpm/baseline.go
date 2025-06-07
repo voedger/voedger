@@ -65,7 +65,7 @@ func saveBaselineInfo(compileRes *compile.Result, dir, targetDir string) error {
 	}
 
 	baselineInfoObj := baselineInfo{
-		BaselinePackageUrl: compileRes.ModulePath,
+		BaselinePackageURL: compileRes.ModulePath,
 		Timestamp:          time.Now().In(time.FixedZone("GMT", 0)).Format(timestampFormat),
 		GitCommitHash:      gitCommitHash,
 	}
@@ -94,11 +94,11 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 		for _, file := range files {
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			if err := coreutils.CopyFile(file, packageDir, coreutils.WithNewName(fileNameExtensionless+parser.VSqlExt)); err != nil {
+			if err := coreutils.CopyFile(file, packageDir, coreutils.WithNewName(fileNameExtensionless+parser.VSQLExt)); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 			if logger.IsVerbose() {
-				filePath := filepath.Join(packageDir, fileNameExtensionless+parser.VSqlExt)
+				filePath := filepath.Join(packageDir, fileNameExtensionless+parser.VSQLExt)
 				logger.Verbose("baseline file created: %s", filePath)
 			}
 		}

@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/dml"
-	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func updateUnlogged(update update) error {
@@ -36,7 +36,7 @@ func updateUnlogged_View(update update) (err error) {
 		if err == nil {
 			return coreutils.NewHTTPErrorf(http.StatusConflict, "view record already exists")
 		}
-		if !errors.Is(err, istructsmem.ErrRecordNotFound) {
+		if !errors.Is(err, istructs.ErrRecordNotFound) {
 			// notest
 			return err
 		}
@@ -45,7 +45,7 @@ func updateUnlogged_View(update update) (err error) {
 		return err
 	}
 
-	existingFields := coreutils.FieldsToMap(existingViewRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
+	existingFields := coreutils.FieldsToMap(existingViewRec, update.appStructs.AppDef())
 
 	mergedFields := coreutils.MergeMaps(existingFields, update.setFields, update.key)
 	mergedFields[appdef.SystemField_QName] = update.QName.String() // missing on unlogged insert
@@ -61,7 +61,7 @@ func updateUnlogged_Record(update update) error {
 	if existingRec.QName() == appdef.NullQName {
 		return fmt.Errorf("record ID %d does not exist", update.id)
 	}
-	existingFields := coreutils.FieldsToMap(existingRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
+	existingFields := coreutils.FieldsToMap(existingRec, update.appStructs.AppDef())
 	mergedFields := coreutils.MergeMaps(existingFields, update.setFields)
 	return update.appStructs.Records().PutJSON(update.wsid, mergedFields)
 }
@@ -85,7 +85,7 @@ func validateQuery_Unlogged(update update) error {
 			return errors.New("full key must be provided on view unlogged update")
 		}
 	case allowedDocsTypeKinds[tp.Kind()]:
-		if containers, ok := tp.(appdef.IContainers); ok {
+		if containers, ok := tp.(appdef.IWithContainers); ok {
 			if containers.ContainerCount() > 0 {
 				// TODO: no design?
 				return fmt.Errorf("impossible to %s a record that has containers", op)

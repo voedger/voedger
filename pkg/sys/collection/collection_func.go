@@ -19,7 +19,7 @@ func collectionResultQName(args istructs.PrepareArgs) appdef.QName {
 	if args.ArgumentObject == nil {
 		return appdef.NullQName
 	}
-	qnameStr := args.ArgumentObject.AsString(field_Schema)
+	qnameStr := args.ArgumentObject.AsString(Field_Schema)
 	qname, err := appdef.ParseQName(qnameStr)
 	if err != nil {
 		return appdef.NullQName // not provided or incorrect
@@ -31,7 +31,7 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 	if args.ArgumentObject == nil {
 		return errors.New("ArgumentObject is not defined in PrepareArgs")
 	}
-	qnameStr := args.ArgumentObject.AsString(field_Schema)
+	qnameStr := args.ArgumentObject.AsString(Field_Schema)
 	resultsQName, err := appdef.ParseQName(qnameStr)
 	if err != nil {
 		return err
@@ -45,16 +45,16 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 	kb.PutQName(Field_DocQName, resultsQName)
 	id := args.ArgumentObject.AsRecordID(field_ID)
 	if id != istructs.NullRecordID {
-		kb.PutRecordID(field_DocID, id)
+		kb.PutRecordID(Field_DocID, id)
 	}
 
 	var lastDoc *collectionObject
 
 	err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 		rec := value.(istructs.IStateViewValue).AsRecord(Field_Record)
-		docId := key.AsRecordID(field_DocID)
+		docID := key.AsRecordID(Field_DocID)
 
-		if lastDoc != nil && lastDoc.ID() == docId {
+		if lastDoc != nil && lastDoc.ID() == docID {
 			lastDoc.addRawRecord(rec)
 		} else {
 			if lastDoc != nil {

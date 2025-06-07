@@ -103,19 +103,19 @@ func TestBasicUsage_Verifier(t *testing.T) {
 				]
 			}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-		vit.PostWS(ws, "c.sys.CUD", body)
+		vit.PostProfile(ws.Owner, "c.sys.CUD", body)
 	})
 
 	t.Run("bug: one token could be used in any wsid", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
 		ws2 := vit.CreateWorkspace(it.SimpleWSParams("testws"+vit.NextName()), userPrincipal)
-		vit.PostWS(ws2, "c.sys.CUD", body)
+		vit.PostProfile(ws2.Owner, "c.sys.CUD", body)
 	})
 
 	t.Run("read the actual verified field value - it should be the value decoded from the token", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields": ["EmailField"]}]}`, it.QNameApp1_TestEmailVerificationDoc)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-		resp := vit.PostWS(ws, "q.sys.Collection", body)
+		resp := vit.PostProfile(ws.Owner, "q.sys.Collection", body)
 		require.Equal(it.TestEmail, resp.SectionRow()[0])
 	})
 }
@@ -126,34 +126,26 @@ func TestVerifierErrors(t *testing.T) {
 
 	// funcs should be called in the user profile
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
-	// ws := vit.DummyWS(istructs.AppQName_test1_app1, userPrincipal.ProfileWSID)
 
 	verificationToken, verificationCode := InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc,
 		"EmailField", it.TestEmail, userPrincipal.ProfileWSID, coreutils.WithAuthorizeBy(userPrincipal.Token))
 
 	t.Run("error 400 on set the raw value instead of verified value token for the verified field", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail)
-		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400()).Println()
+		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400("invalid token")).Println()
 	})
 
-	emailVerifiedValueToken := ""
+	// issue a token for email field
+	body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
+	resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
+	emailVerifiedValueToken := resp.SectionRow()[0].(string)
 	t.Run("error 400 on different verification algorithm", func(t *testing.T) {
-		// issue a token for email field
-		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
-		resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
-		emailVerifiedValueToken = resp.SectionRow()[0].(string)
-
 		// use the email token for the phone field
 		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","PhoneField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400()).Println()
 	})
 
-	t.Run("error 400 on wrong app", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
-		userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
-		// wsApp2 := vit.DummyWS(istructs.AppQName_test1_app2, userPrincipal.ProfileWSID)
-		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400()).Println()
-	})
+	// test usage the token in a diffrerent app is senceless because the target doc does not exists in the different app
 
 	t.Run("error 400 issue token for one WSID but use it in different WSID", func(t *testing.T) {
 		t.Skip("WSID check is not implemented in istructsmem yet")
@@ -165,6 +157,20 @@ func TestVerifierErrors(t *testing.T) {
 		// dws := vit.DummyWS(istructs.AppQName_test1_app1, ws.WSID+1)
 		userPrincipal2 := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
 		vit.PostProfile(userPrincipal2, "c.sys.CUD", body, coreutils.Expect500()).Println()
+	})
+
+	t.Run("wrong email", func(t *testing.T) {
+		wrongEmails := []string{
+			"a",
+			"sdsd@",
+			"@sdsd",
+		}
+		for _, wrongEmail := range wrongEmails {
+			vit.TimeAdd(time.Hour)
+			body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"EmailField","Email":"%s","TargetWSID": %d,"Language":"fr"},"elements":[{"fields":["VerificationToken"]}]}`,
+				it.QNameApp1_TestEmailVerificationDoc, wrongEmail, userPrincipal.ProfileWSID) // targetWSID - is the workspace we're going to use the verified value at
+			vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, coreutils.Expect400()).Println()
+		}
 	})
 }
 

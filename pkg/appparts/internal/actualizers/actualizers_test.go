@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package actualizers
+package actualizers_test
 
 import (
 	"context"
@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -19,14 +22,20 @@ import (
 func TestActualizersWaitTimeout(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 	partID := istructs.PartitionID(1)
+	wsName := appdef.NewQName("test", "workspace")
 	prjNames := appdef.MustParseQNames("test.p1", "test.p2", "test.p3")
 
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb := adb.AddWorkspace(wsName)
+		_ = wsb.AddCommand(appdef.NewQName("test", "command"))
 		for _, name := range prjNames {
-			wsb.AddProjector(name).SetSync(false).Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
+			prj := wsb.AddProjector(name)
+			prj.Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.WSTypes(wsName, appdef.TypeKind_Command))
+			prj.SetSync(false)
 		}
 		return adb.MustBuild()
 	}
@@ -36,7 +45,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 	t.Run("should ok to wait for all actualizers finished", func(t *testing.T) {
 		ctx, stop := context.WithCancel(context.Background())
 
-		actualizers := New(appName, partID)
+		actualizers := actualizers.New(appName, partID)
 
 		app := appDef()
 
@@ -77,7 +86,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 
 		ctx, stop := context.WithCancel(context.Background())
 
-		actualizers := New(appName, partID)
+		actualizers := actualizers.New(appName, partID)
 
 		app := appDef()
 

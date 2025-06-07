@@ -5,8 +5,11 @@
 
 package builtin
 
-import "github.com/voedger/voedger/pkg/istructs"
+import (
+	"github.com/voedger/voedger/pkg/appdef/sys"
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
-func CrackID(id istructs.RecordID) uint64 {
-	return uint64(id >> registryViewBits)
+func CrackID(id istructs.RecordID) int64 {
+	return sys.RecordsRegistryView.Fields.CrackID(id)
 }

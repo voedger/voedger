@@ -67,13 +67,15 @@ func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap blobsMap) {
 }
 
 func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, principalToken string) (blobsMap, error) {
-	res := blobsMap{}
+	blobsMap := blobsMap{}
 	for _, blob := range blobs {
 		logger.Info("workspace build: uploading blob", blob.Name)
 		blobReader := iblobstorage.BLOBReader{
 			DescrType: iblobstorage.DescrType{
-				Name:     blob.Name,
-				MimeType: blob.MimeType,
+				Name:             blob.Name,
+				ContentType:      blob.ContentType,
+				OwnerRecord:      blob.OwnerRecord,
+				OwnerRecordField: blob.OwnerRecordField,
 			},
 			ReadCloser: io.NopCloser(bytes.NewReader(blob.Content)),
 		}
@@ -82,13 +84,14 @@ func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederation,
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}
 
-		fieldBlobID, ok := res[blob.RecordID]
+		// set ownerRawID -> uploaded BLOBID match
+		ownerRawIDs, ok := blobsMap[blob.OwnerRecordRawID]
 		if !ok {
-			fieldBlobID = map[string]istructs.RecordID{}
-			res[blob.RecordID] = fieldBlobID
+			ownerRawIDs = map[string]istructs.RecordID{}
+			blobsMap[blob.OwnerRecordRawID] = ownerRawIDs
 		}
-		fieldBlobID[blob.FieldName] = newBLOBID
-		logger.Info(fmt.Sprintf("workspace build: blob %s uploaded and set: [%d][%s]=%d", blob.Name, blob.RecordID, blob.FieldName, newBLOBID))
+		ownerRawIDs[blob.OwnerRecordField] = newBLOBID
+		logger.Info(fmt.Sprintf("workspace build: blob %s uploaded and set: [%d][%s]=%d", blob.Name, blob.OwnerRecordRawID, blob.OwnerRecordField, newBLOBID))
 	}
-	return res, nil
+	return blobsMap, nil
 }

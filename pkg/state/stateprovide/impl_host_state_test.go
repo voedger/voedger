@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -76,7 +77,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		On("Get", istructs.WSID(1), mock.Anything).Return(nil, nil).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	adb := appdef.New()
+	adb := builder.New()
 
 	wsb := adb.AddWorkspace(testWSQName)
 	wsDesc := wsb.AddCDoc(testWSDescriptorQName)

@@ -11,7 +11,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 // returns ID of the record identified by the the provided unique combination
@@ -30,21 +29,22 @@ func GetRecordIDByUniqueCombination(wsid istructs.WSID, tableQName appdef.QName,
 	matchedUniqueQName := appdef.NullQName
 	matchedUniqueFields := []appdef.IField{}
 	for _, iUnique := range table.Uniques() {
-		if len(values) != len(iUnique.Fields()) {
+		fields := iUnique.Fields()
+		if len(values) != len(fields) {
 			continue
 		}
 		matchedFieldsCount := 0
 		for providedFieldName := range values {
-			for _, uniqueField := range iUnique.Fields() {
+			for _, uniqueField := range fields {
 				if uniqueField.Name() == providedFieldName {
 					matchedFieldsCount++
 					break
 				}
 			}
 		}
-		if matchedFieldsCount == len(iUnique.Fields()) {
+		if matchedFieldsCount == len(fields) {
 			matchedUniqueQName = iUnique.Name()
-			matchedUniqueFields = iUnique.Fields()
+			matchedUniqueFields = fields
 			break
 		}
 	}
@@ -72,7 +72,7 @@ func GetRecordIDByUniqueCombination(wsid istructs.WSID, tableQName appdef.QName,
 	buildUniqueViewKeyByValues(uniqueViewRecordBuilder, matchedUniqueQName, uniqueKeyValues)
 	uniqueViewRecord, err := as.ViewRecords().Get(wsid, uniqueViewRecordBuilder)
 	if err != nil {
-		if errors.Is(err, istructsmem.ErrRecordNotFound) {
+		if errors.Is(err, istructs.ErrRecordNotFound) {
 			return 0, nil
 		}
 		// notest

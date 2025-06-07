@@ -19,9 +19,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -36,13 +38,13 @@ import (
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/verifier"
-	"github.com/voedger/voedger/pkg/vvm"
+	vvmpkg "github.com/voedger/voedger/pkg/vvm"
 )
 
 func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
-		vit = newVit(t, vitCfg, useCas)
+		vit = newVit(t, vitCfg, useCas, false)
 	} else {
 		ok := false
 		if vit, ok = vits[vitCfg]; ok {
@@ -51,7 +53,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 			}
 			vit.isFinalized = false
 		} else {
-			vit = newVit(t, vitCfg, useCas)
+			vit = newVit(t, vitCfg, useCas, false)
 			vits[vitCfg] = vit
 		}
 	}
@@ -72,14 +74,17 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	return vit
 }
 
-func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
-	cfg := vvm.NewVVMDefaultConfig()
+func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *VIT {
+	cfg := vvmpkg.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
 
-	cfg.Time = coreutils.MockTime
+	// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
+	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
+
+	cfg.Time = testingu.MockTime
 	if !coreutils.IsTest() {
 		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
 	}
@@ -95,8 +100,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 
 	if useCas {
 		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-			logger.Info("using istoragecas ", fmt.Sprint(vvm.DefaultCasParams))
-			return cas.Provide(vvm.DefaultCasParams)
+			logger.Info("using istoragecas ", fmt.Sprint(cas.DefaultCasParams))
+			return cas.Provide(cas.DefaultCasParams)
 		}
 	}
 
@@ -113,9 +118,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
 	cfg.RouterWriteTimeout = int(debugTimeout)
-	cfg.BusTimeout = vvm.BusTimeout(debugTimeout)
+	cfg.SendTimeout = bus.SendTimeout(debugTimeout)
 
-	vvm, err := vvm.ProvideVVM(&cfg, 0)
+	vvm, err := vvmpkg.Provide(&cfg)
 	require.NoError(t, err)
 
 	// register workspace templates
@@ -136,7 +141,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
 		emailCaptor:          emailMessagesChan,
-		mockTime:             coreutils.MockTime,
+		mockTime:             testingu.MockTime,
 	}
 	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
 	vit.httpClient = httpClient
@@ -145,7 +150,13 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
 	// launch the server
-	require.NoError(t, vit.Launch())
+	// leadership duration - ten years to avoid leadership expiration when time bumps in tests (including 1 day add on each test)
+	vit.vvmProblemCtx = vit.Launch(10*365*24*60*60, vvmpkg.DefaultLeadershipAcquisitionDuration)
+	vit.checkVVMProblemCtx()
+
+	if vvmLaunchOnly {
+		return vit
+	}
 
 	for _, app := range vitPreConfig.vitApps {
 		// generate verified value tokens if queried
@@ -167,7 +178,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		// create logins and workspaces
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName,
-				WithReqOpt(coreutils.WithExpectedCode(http.StatusOK)),
+				WithReqOpt(coreutils.WithExpectedCode(http.StatusCreated)),
 				WithReqOpt(coreutils.WithExpectedCode(http.StatusConflict)),
 			)
 			prn := vit.SignIn(login)
@@ -177,6 +188,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 				vit.principals[app.name] = appPrincipals
 			}
 			appPrincipals[login.Name] = prn
+
+			createSubjects(vit, prn.Token, login.subjects, login.AppQName, prn.ProfileWSID)
 
 			for doc, dataFactory := range login.docs {
 				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
@@ -215,6 +228,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	if vitPreConfig.postInitFunc != nil {
 		vitPreConfig.postInitFunc(vit)
 	}
+	vit.checkVVMProblemCtx()
 	return vit
 }
 
@@ -232,18 +246,8 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 
 		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(token))
 	}
-	for _, subject := range appWS.subjects {
-		roles := ""
-		for i, role := range subject.roles {
-			if i > 0 {
-				roles += ","
-			}
-			roles += role.String()
-		}
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-			subject.login, roles, subject.subjectKind, vit.principals[appWS.AppQName()][subject.login].ProfileWSID)
-		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
-	}
+
+	createSubjects(vit, token, appWS.subjects, appWS.AppQName(), appWS.WSID)
 
 	for _, childWSParams := range appWS.childs {
 		vit.InitChildWorkspace(childWSParams, appWS)
@@ -259,8 +263,23 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 	}
 }
 
+func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.AppQName, wsid istructs.WSID) {
+	for _, subject := range subjects {
+		roles := ""
+		for i, role := range subject.roles {
+			if i > 0 {
+				roles += ","
+			}
+			roles += role.String()
+		}
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+			subject.login, roles, subject.subjectKind, vit.principals[appQName][subject.login].ProfileWSID)
+		vit.PostApp(appQName, wsid, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
+	}
+}
+
 func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(tb, vitCfg, true)
+	vit = newVit(tb, vitCfg, true, false)
 	for _, opt := range opts {
 		opt(vit)
 	}
@@ -291,11 +310,12 @@ func (vit *VIT) TearDown() {
 		vit.T.Logf("!!! goroutines leak: was %d on VIT setup, now %d after teardown", vit.initialGoroutinesNum, grNum)
 	}
 	vit.emailCaptor.checkEmpty(vit.T)
+	vit.checkVVMProblemCtx()
 	if vit.isOnSharedConfig {
 		return
 	}
 	vit.emailCaptor.shutDown()
-	vit.Shutdown()
+	require.NoError(vit.T, vit.Shutdown())
 }
 
 func (vit *VIT) MetricsServicePort() int {
@@ -313,7 +333,7 @@ func (vit *VIT) GetSystemPrincipal(appQName appdef.AppQName) *Principal {
 	}
 	prn, ok := appPrincipals["___sys"]
 	if !ok {
-		as, err := vit.IAppStructsProvider.BuiltIn(appQName)
+		as, err := vit.BuiltIn(appQName)
 		require.NoError(vit.T, err)
 		sysToken, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 		require.NoError(vit.T, err)
@@ -346,13 +366,13 @@ func (vit *VIT) GetPrincipal(appQName appdef.AppQName, login string) *Principal 
 
 func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithAuthorizeByIfNot(prn.Token))
+	opts = append(opts, coreutils.WithDefaultAuthorize(prn.Token))
 	return vit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
 }
 
 func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithAuthorizeByIfNot(ws.Owner.Token))
+	opts = append(opts, coreutils.WithDefaultAuthorize(ws.Owner.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
@@ -360,31 +380,57 @@ func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...c
 func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	sysPrn := vit.GetSystemPrincipal(ws.Owner.AppQName)
-	opts = append(opts, coreutils.WithAuthorizeByIfNot(sysPrn.Token))
+	opts = append(opts, coreutils.WithDefaultAuthorize(sysPrn.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
-	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
+func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte,
+	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
-	blobSUUID := vit.UploadTempBLOB(appQName, wsid, blobName, blobMimeType, blobContent, 0, opts...)
-	if len(blobSUUID) == 0 {
-		return istructs.NullRecordID
+	blobReader := iblobstorage.BLOBReader{
+		DescrType: iblobstorage.DescrType{
+			Name:             name,
+			ContentType:      contentType,
+			OwnerRecord:      ownerRecord,
+			OwnerRecordField: ownerRecordField,
+		},
+		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	blobIDUint64, err := strconv.ParseUint(string(blobSUUID), utils.DecimalBase, utils.BitSize64)
+
+	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, opts...)
 	require.NoError(vit.T, err)
-	return istructs.RecordID(blobIDUint64)
+	return blobID
 }
 
-func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte, duration iblobstorage.DurationType,
+func (vit *VIT) SqlQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) []map[string]interface{} {
+
+	vit.T.Helper()
+	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	res := []map[string]interface{}{}
+	for _, elem := range resp.Sections[0].Elements {
+		m := map[string]interface{}{}
+		require.NoError(vit.T, json.Unmarshal([]byte(elem[0][0][0].(string)), &m))
+		res = append(res, m)
+	}
+	return res
+}
+
+func (vit *VIT) SqlQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[string]interface{} {
+	vit.T.Helper()
+	return vit.SqlQueryRows(ws, sqlQuery, fmtArgs...)[0]
+}
+
+
+func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte, duration iblobstorage.DurationType,
 	opts ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
-			Name:     blobName,
-			MimeType: blobMimeType,
+			Name:        name,
+			ContentType: contentType,
 		},
-		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
+		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
 	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, opts...)
 	require.NoError(vit.T, err)
@@ -400,9 +446,10 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
-func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
+func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
+	optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
-	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
+	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, optFuncs...)
 	require.NoError(vit.T, err)
 	vit.registerBLOBReaderCleanup(reader)
 	return reader
@@ -437,8 +484,8 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 
 func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithMethod(http.MethodPost))
-	url := vit.IFederation.URLStr() + "/" + relativeURL
+	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
+	url := vit.URLStr() + "/" + relativeURL
 	res, err := vit.httpClient.Req(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
@@ -467,17 +514,17 @@ func (vit *VIT) WaitFor(consumer func() *coreutils.FuncResponse) *coreutils.Func
 	return nil
 }
 
-func (vit *VIT) refreshTokens() {
+func (vit *VIT) RefreshTokens() {
 	vit.T.Helper()
 	for _, appPrns := range vit.principals {
 		for _, prn := range appPrns {
 			// issue principal token
 			principalPayload := payloads.PrincipalPayload{
-				Login:       prn.Login.Name,
+				Login:       prn.Name,
 				SubjectKind: istructs.SubjectKind_User,
 				ProfileWSID: prn.ProfileWSID,
 			}
-			as, err := vit.IAppStructsProvider.BuiltIn(prn.AppQName)
+			as, err := vit.BuiltIn(prn.AppQName)
 			require.NoError(vit.T, err) // notest
 			newToken, err := as.AppTokens().IssueToken(authnz.DefaultPrincipalTokenExpiration, &principalPayload)
 			require.NoError(vit.T, err)
@@ -500,7 +547,7 @@ func (vit *VIT) Now() time.Time {
 
 func (vit *VIT) TimeAdd(dur time.Duration) {
 	vit.mockTime.Add(dur)
-	vit.refreshTokens()
+	vit.RefreshTokens()
 }
 
 func (vit *VIT) NextName() string {
@@ -509,9 +556,9 @@ func (vit *VIT) NextName() string {
 
 // sets `bs` as state of Buckets for `rateLimitName` in `appQName`
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
-func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName string, bs irates.BucketState) {
+func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName, bs irates.BucketState) {
 	vit.T.Helper()
-	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
+	as, err := vit.BuiltIn(appQName)
 	require.NoError(vit.T, err)
 	appBuckets := istructsmem.IBucketsFromIAppStructs(as)
 	initialState, err := appBuckets.GetDefaultBucketsState(rateLimitName)
@@ -539,12 +586,9 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 	return
 }
 
-func (vit *VIT) Restart() {
-	vit.VoedgerVM.Shutdown()
-}
-
 // sets delay on IAppStorage.Get() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
@@ -557,6 +601,7 @@ func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 
 // sets delay on IAppStorage.Put() in mem implementation
 // will be automatically reset to 0 on TearDown
+// need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
@@ -570,7 +615,7 @@ func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySetter)) {
 	vit.T.Helper()
 	for anyAppQName := range vit.VVMAppsBuilder {
-		as, err := vit.IAppStorageProvider.AppStorage(anyAppQName)
+		as, err := vit.AppStorage(anyAppQName)
 		require.NoError(vit.T, err)
 		delaySetter, ok := as.(istorage.IStorageDelaySetter)
 		if !ok {
@@ -600,4 +645,24 @@ func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
 		return val, nil
 	}
 	return sr.underlyingReader.ReadSecret(name)
+}
+
+func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []payloads.RoleType) (enrichedToken string) {
+	vit.T.Helper()
+	var pp payloads.PrincipalPayload
+	_, err := vit.ValidateToken(prn.Token, &pp)
+	require.NoError(vit.T, err)
+	pp.Roles = append(pp.Roles, roles...)
+	enrichedToken, err = vit.ITokens.IssueToken(prn.AppQName, authnz.DefaultPrincipalTokenExpiration, &pp)
+	require.NoError(vit.T, err)
+	return enrichedToken
+}
+
+func (vit *VIT) checkVVMProblemCtx() {
+	select {
+	case <-vit.vvmProblemCtx.Done():
+		require.NoError(vit.T, vit.Shutdown())
+		vit.T.Fatal("vvmProblemCtx is closed but no error on vvm.Shutdown()")
+	default:
+	}
 }

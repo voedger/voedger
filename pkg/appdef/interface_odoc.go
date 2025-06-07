@@ -10,7 +10,7 @@ type IODoc interface {
 	IDoc
 
 	// Unwanted type assertion stub
-	isODoc()
+	IsODoc()
 }
 
 type IODocBuilder interface {
@@ -22,7 +22,7 @@ type IORecord interface {
 	IContainedRecord
 
 	// Unwanted type assertion stub
-	isORecord()
+	IsORecord()
 }
 
 type IORecordBuilder interface {

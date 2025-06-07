@@ -21,7 +21,7 @@ type notFilter struct {
 	f appdef.IFilter
 }
 
-func makeNotFilter(f appdef.IFilter) appdef.IFilter {
+func newNotFilter(f appdef.IFilter) *notFilter {
 	return &notFilter{f: f}
 }
 
@@ -34,5 +34,11 @@ func (f notFilter) Match(t appdef.IType) bool {
 func (f notFilter) Not() appdef.IFilter { return f.f }
 
 func (f notFilter) String() string {
-	return fmt.Sprintf("filter.%s(%v)", f.Kind().TrimString(), f.Not())
+	// NOT TAGS(…)
+	// NOT (QNAMES(…) AND TAGS(…))
+	s := fmt.Sprint(f.Not())
+	if k := f.Not().Kind(); (k == appdef.FilterKind_Or) || (k == appdef.FilterKind_And) {
+		s = fmt.Sprintf("(%s)", s)
+	}
+	return fmt.Sprintf("NOT %s", s)
 }

@@ -9,8 +9,8 @@ package appdef
 type IGDoc interface {
 	IDoc
 
-	// unwanted type assertion stub
-	isGDoc()
+	// Unwanted type assertion stub
+	IsGDoc()
 }
 
 type IGDocBuilder interface {
@@ -21,8 +21,8 @@ type IGDocBuilder interface {
 type IGRecord interface {
 	IContainedRecord
 
-	// unwanted type assertion stub
-	isGRecord()
+	// Unwanted type assertion stub
+	IsGRecord()
 }
 
 type IGRecordBuilder interface {

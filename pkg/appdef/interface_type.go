@@ -6,8 +6,6 @@
 package appdef
 
 import (
-	"iter"
-
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
@@ -81,6 +79,13 @@ const (
 type TypeKindSet = set.Set[TypeKind]
 
 var (
+	// Set of document types.
+	//
+	// # Includes:
+	//	 - GDocs
+	//	 - CDocs
+	//	 - ODocs
+	//	 - WDocs
 	TypeKind_Docs = func() TypeKindSet {
 		s := set.From(
 			TypeKind_GDoc,
@@ -92,6 +97,11 @@ var (
 		return s
 	}()
 
+	// Set of record types.
+	//
+	// # Includes:
+	//	 - Docs
+	//	 - GRecord, CRecord, ORecord and WRecord
 	TypeKind_Records = func() TypeKindSet {
 		s := set.From(TypeKind_Docs.AsArray()...)
 		s.Set(
@@ -104,6 +114,11 @@ var (
 		return s
 	}()
 
+	// Set of structured types.
+	//
+	// # Includes:
+	//	 - Records
+	//	 - Objects
 	TypeKind_Structures = func() TypeKindSet {
 		s := set.From(TypeKind_Records.AsArray()...)
 		s.Set(TypeKind_Object)
@@ -111,6 +126,11 @@ var (
 		return s
 	}()
 
+	// Set of singletonable types.
+	//
+	// # Includes:
+	//	 - CDocs
+	//	 - WDocs
 	TypeKind_Singletons = func() TypeKindSet {
 		s := set.From(
 			TypeKind_CDoc,
@@ -120,6 +140,11 @@ var (
 		return s
 	}()
 
+	// Set of function types.
+	//
+	// # Includes:
+	//	 - Commands
+	//	 - Queries
 	TypeKind_Functions = func() TypeKindSet {
 		s := set.From(
 			TypeKind_Command,
@@ -129,12 +154,48 @@ var (
 		return s
 	}()
 
+	// Set of extension types.
+	//
+	// # Includes:
+	//	 - Functions (Commands and Queries)
+	//	 - Projectors
+	//	 - Jobs
 	TypeKind_Extensions = func() TypeKindSet {
 		s := set.From(TypeKind_Functions.AsArray()...)
 		s.Set(
 			TypeKind_Projector,
 			TypeKind_Job,
 		)
+		s.SetReadOnly()
+		return s
+	}()
+
+	// Set of limitable types.
+	//
+	// # Includes:
+	//	 - Functions (Commands and Queries)
+	//	 - Records (and Documents)
+	//	 - Views
+	TypeKind_Limitables = func() TypeKindSet {
+		s := set.From(TypeKind_Functions.AsArray()...)
+		s.Set(TypeKind_Records.AsArray()...)
+		s.Set(TypeKind_ViewRecord)
+		s.SetReadOnly()
+		return s
+	}()
+
+	// Set of types which can trigger projectors.
+	//
+	// # Includes:
+	//	 - Functions (Commands and Queries)
+	//	 - Records (and Documents)
+	//	 - Views
+	//	 - Objects and ODocs
+	TypeKind_ProjectorTriggers = func() TypeKindSet {
+		s := set.From(TypeKind_Functions.AsArray()...)
+		s.Set(TypeKind_Records.AsArray()...)
+		s.Set(TypeKind_ViewRecord)
+		s.Set(TypeKind_Object, TypeKind_ODoc)
 		s.SetReadOnly()
 		return s
 	}()
@@ -169,8 +230,8 @@ type (
 	// If not found then empty type with TypeKind_null is returned
 	FindType func(QName) IType
 
-	// Types iterator.
-	SeqType = iter.Seq[IType]
+	// Types slice.
+	TypesSlice = []IType
 )
 
 type ITypeBuilder interface {
@@ -180,20 +241,3 @@ type ITypeBuilder interface {
 
 // AnyType is used for return then type is any
 var AnyType = newAnyType(QNameANY)
-
-// Any×××Type are used for substitution, e.g. for rate limits, projector events, etc.
-var (
-	AnyStructureType = newAnyType(QNameAnyStructure)
-	AnyRecordType    = newAnyType(QNameAnyRecord)
-	AnyGDocType      = newAnyType(QNameAnyGDoc)
-	AnyCDocType      = newAnyType(QNameAnyCDoc)
-	AnyWDocType      = newAnyType(QNameAnyWDoc)
-	AnySingletonType = newAnyType(QNameAnySingleton)
-	AnyODocType      = newAnyType(QNameAnyODoc)
-	AnyObjectType    = newAnyType(QNameAnyObject)
-	AnyViewType      = newAnyType(QNameAnyView)
-	AnyExtensionType = newAnyType(QNameAnyExtension)
-	AnyFunctionType  = newAnyType(QNameAnyFunction)
-	AnyCommandType   = newAnyType(QNameAnyCommand)
-	AnyQueryType     = newAnyType(QNameAnyQuery)
-)

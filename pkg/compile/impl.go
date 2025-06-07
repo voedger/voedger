@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/exp/maps"
 	"golang.org/x/tools/go/packages"
@@ -79,7 +80,7 @@ func compile(dir string, checkAppSchema bool) (*Result, error) {
 	}
 	// build app defs from app schema
 	if appAst != nil {
-		builder := appdef.New()
+		builder := builder.New()
 		if err := parser.BuildAppDefs(appAst, builder); err != nil {
 			errs = append(errs, err)
 		}

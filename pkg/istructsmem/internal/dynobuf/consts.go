@@ -12,6 +12,8 @@ import (
 
 var dataKindToDynoFieldType = map[appdef.DataKind]dynobuffers.FieldType{
 	appdef.DataKind_null:     dynobuffers.FieldTypeUnspecified,
+	appdef.DataKind_int8:     dynobuffers.FieldTypeByte,  // #3434 [small integers : int8]
+	appdef.DataKind_int16:    dynobuffers.FieldTypeInt16, // #3434 [small integers : int16]
 	appdef.DataKind_int32:    dynobuffers.FieldTypeInt32,
 	appdef.DataKind_int64:    dynobuffers.FieldTypeInt64,
 	appdef.DataKind_float32:  dynobuffers.FieldTypeFloat32,
@@ -23,17 +25,6 @@ var dataKindToDynoFieldType = map[appdef.DataKind]dynobuffers.FieldType{
 	appdef.DataKind_RecordID: dynobuffers.FieldTypeInt64,
 	appdef.DataKind_Record:   dynobuffers.FieldTypeByte,
 	appdef.DataKind_Event:    dynobuffers.FieldTypeByte,
-}
-
-var dynobufferFieldTypeToStr = map[dynobuffers.FieldType]string{
-	dynobuffers.FieldTypeUnspecified: "null",
-	dynobuffers.FieldTypeInt32:       "int32",
-	dynobuffers.FieldTypeInt64:       "int64",
-	dynobuffers.FieldTypeFloat32:     "float32",
-	dynobuffers.FieldTypeFloat64:     "float64",
-	dynobuffers.FieldTypeString:      "string",
-	dynobuffers.FieldTypeBool:        "bool",
-	dynobuffers.FieldTypeByte:        "[]byte",
 }
 
 const (

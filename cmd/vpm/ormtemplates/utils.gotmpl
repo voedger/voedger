@@ -6,17 +6,14 @@ package orm
 
 import "github.com/voedger/voedger/pkg/exttinygo"
 
+const (
+    FieldNameSysID          = "sys.ID"
+    FieldNameSysQName       = "sys.QName"
+)
+
 type FQName = string
 type ID int64
 type Bytes []byte
-
-const (
-    FieldNameEventUnloggedArgumentObject 	= "UnloggedArgumentObject"
-    FieldNameEventArgumentObject 			= "ArgumentObject"
-    FieldNameSysID               			= "sys.ID"
-    FieldName_IsSingleton					= "IsSingleton"
-    FieldName_ID                            = "ID"
-)
 
 type IFullQName interface {
     PkgPath() string

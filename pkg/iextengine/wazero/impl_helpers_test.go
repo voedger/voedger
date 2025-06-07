@@ -96,7 +96,7 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 		if projectorMode {
 			mv.Data["offs"] = int32(12345)
 			mv.Data["qname"] = "air.UpdateSubscription"
-			mv.Data["arg"] = newJsonValue(`
+			mv.Data["arg"] = newJSONValue(`
 				{
 					"subscription": {
 						"status": "active"
@@ -255,12 +255,16 @@ type mockKeyBuilder struct {
 	data    map[string]interface{}
 }
 
+var _ istructs.IStateKeyBuilder = (*mockKeyBuilder)(nil)
+
 func (kb *mockKeyBuilder) String() string                                   { return "" }
 func (kb *mockKeyBuilder) Storage() appdef.QName                            { return kb.storage }
 func (kb *mockKeyBuilder) Entity() appdef.QName                             { return kb.entity }
 func (kb *mockKeyBuilder) PartitionKey() istructs.IRowWriter                { return nil }
 func (kb *mockKeyBuilder) ClusteringColumns() istructs.IRowWriter           { return nil }
 func (kb *mockKeyBuilder) Equals(src istructs.IKeyBuilder) bool             { return false }
+func (kb *mockKeyBuilder) PutInt8(name string, value int8)                  { kb.data[name] = value }
+func (kb *mockKeyBuilder) PutInt16(name string, value int16)                { kb.data[name] = value }
 func (kb *mockKeyBuilder) PutInt32(name string, value int32)                {}
 func (kb *mockKeyBuilder) PutInt64(name string, value int64)                {}
 func (kb *mockKeyBuilder) PutFloat32(name string, value float32)            {}
@@ -280,7 +284,7 @@ func (kb *mockKeyBuilder) PutChars(name string, value string) {}
 
 func (kb *mockKeyBuilder) PutFromJSON(map[string]any) {}
 
-func newJsonValue(jsonString string) istructs.IStateValue {
+func newJSONValue(jsonString string) istructs.IStateValue {
 	v := mockValue{TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
 	err := json.Unmarshal([]byte(jsonString), &v.Data)
 	if err != nil {
@@ -338,7 +342,7 @@ func (v *mockValue) AsValue(name string) istructs.IStateValue {
 func (v *mockValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
 	return func(func(name string, value istructs.RecordID) bool) {}
 }
-func (v *mockValue) FieldNames(cb func(fieldName string) bool) { v.TestObject.FieldNames(cb) }
+func (v *mockValue) Fields(cb func(iField appdef.IField) bool) { v.TestObject.Fields(cb) }
 
 type intent struct {
 	key   istructs.IStateKeyBuilder
@@ -383,11 +387,15 @@ type mockValueBuilder struct {
 	items map[string]interface{}
 }
 
+var _ istructs.IStateValueBuilder = (*mockValueBuilder)(nil)
+
 func (vb *mockValueBuilder) Equal(src istructs.IStateValueBuilder) bool       { return false }
 func (vb *mockValueBuilder) BuildValue() istructs.IStateValue                 { return nil }
 func (vb *mockValueBuilder) PutRecord(name string, record istructs.IRecord)   {}
 func (vb *mockValueBuilder) PutEvent(name string, event istructs.IDbEvent)    {}
 func (vb *mockValueBuilder) Build() istructs.IValue                           { return nil }
+func (vb *mockValueBuilder) PutInt8(name string, value int8)                  { vb.items[name] = value }
+func (vb *mockValueBuilder) PutInt16(name string, value int16)                { vb.items[name] = value }
 func (vb *mockValueBuilder) PutInt32(name string, value int32)                { vb.items[name] = value }
 func (vb *mockValueBuilder) PutInt64(name string, value int64)                {}
 func (vb *mockValueBuilder) PutFloat32(name string, value float32)            {}

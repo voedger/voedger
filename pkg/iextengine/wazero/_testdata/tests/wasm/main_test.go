@@ -46,12 +46,12 @@ func Test_ActualizerStorages(t *testing.T) {
 		value.PutQName("QNameVal", appdef.NewQName("tstpkg", "dummyCmd"))
 	})
 
-	// Call the extension to test SendMail, Http and Secret
-	test.PutHttpHandler(func(req teststate.HttpRequest) (resp teststate.HttpResponse, err error) {
+	// Call the extension to test SendMail, HTTP and Secret
+	test.PutHTTPHandler(func(req teststate.HTTPRequest) (resp teststate.HTTPResponse, err error) {
 		if req.Method == "GET" {
-			return teststate.HttpResponse{Status: 200, Body: []byte("Ivan")}, nil
+			return teststate.HTTPResponse{Status: 200, Body: []byte("Ivan")}, nil
 		}
-		return teststate.HttpResponse{Status: 404, Body: []byte("Not Found")}, nil
+		return teststate.HTTPResponse{Status: 404, Body: []byte("Not Found")}, nil
 	})
 	ProjectorTestStorages()
 	test.RequireIntent(t, state.SendMail, appdef.NullFullQName, func(email istructs.IStateKeyBuilder) {

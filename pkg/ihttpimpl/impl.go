@@ -23,6 +23,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
@@ -31,15 +32,15 @@ import (
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/istructs"
 	routerpkg "github.com/voedger/voedger/pkg/router"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type appInfo struct {
 	numPartitions istructs.NumAppPartitions
-	handlers      map[istructs.PartitionID]ibus.RequestHandler
+	handlers      map[istructs.PartitionID]bus.RequestHandler
 }
 
 type httpProcessor struct {
+	sync.RWMutex
 	params             ihttp.CLIParams
 	router             *router
 	server             *http.Server
@@ -49,10 +50,9 @@ type httpProcessor struct {
 	acmeDomains        *sync.Map
 	certCache          autocert.Cache
 	certManager        *autocert.Manager
-	bus                ibus.IBus
 	apps               map[appdef.AppQName]*appInfo
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
-	sync.RWMutex
+	requestSender      bus.IRequestSender
 }
 
 type redirectionRoute struct {
@@ -157,7 +157,7 @@ func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
 	p.router.addStaticContent(resource, fs)
 }
 
-func (p *httpProcessor) DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) error {
+func (p *httpProcessor) DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler bus.RequestHandler) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -179,7 +179,7 @@ func (p *httpProcessor) UndeployAppPartition(app appdef.AppQName, partNo istruct
 	return nil
 }
 
-func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istructs.PartitionID) (ibus.RequestHandler, error) {
+func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istructs.PartitionID) (bus.RequestHandler, error) {
 	app, ok := p.apps[appQName]
 	if !ok {
 		return nil, ErrAppIsNotDeployed
@@ -203,7 +203,7 @@ func (p *httpProcessor) DeployApp(app appdef.AppQName, numPartitions istructs.Nu
 	}
 	p.apps[app] = &appInfo{
 		numPartitions: numPartitions,
-		handlers:      make(map[istructs.PartitionID]ibus.RequestHandler),
+		handlers:      make(map[istructs.PartitionID]bus.RequestHandler),
 	}
 	p.numsAppsWorkspaces[app] = numAppWS
 	return nil
@@ -263,28 +263,23 @@ func (p *httpProcessor) registerRoutes() {
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		routerpkg.RequestHandler(p.bus, ibus.DefaultTimeout, p.numsAppsWorkspaces)(w, r)
+		routerpkg.RequestHandler_V1(p.requestSender, p.numsAppsWorkspaces)(w, r)
 	}
 }
 
-func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender, request ibus.Request) {
-	appQName, err := appdef.ParseAppQName(request.AppQName)
-	if err != nil {
-		coreutils.ReplyBadRequest(sender, err.Error())
-		return
-	}
-	app, ok := p.apps[appQName]
+func (p *httpProcessor) requestHandler(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	app, ok := p.apps[request.AppQName]
 	if !ok {
-		coreutils.ReplyBadRequest(sender, ErrAppIsNotDeployed.Error())
+		bus.ReplyBadRequest(responder, ErrAppIsNotDeployed.Error())
 		return
 	}
 	partNo := coreutils.AppPartitionID(request.WSID, app.numPartitions)
-	handler, err := p.getAppPartHandler(appQName, partNo)
+	handler, err := p.getAppPartHandler(request.AppQName, partNo)
 	if err != nil {
-		coreutils.ReplyBadRequest(sender, err.Error())
+		bus.ReplyBadRequest(responder, err.Error())
 		return
 	}
-	handler(ctx, sender, request)
+	handler(requestCtx, request, responder)
 }
 
 type router struct {
@@ -306,10 +301,10 @@ func newRouter() *router {
 
 func (r *router) setUpRoutes(appRequestHandler http.HandlerFunc) {
 	appRequestPath := fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}",
-		routerpkg.URLPlaceholder_AppOwner,
-		routerpkg.URLPlaceholder_AppName,
-		routerpkg.URLPlaceholder_WSID,
-		routerpkg.URLPlaceholder_ResourceName,
+		routerpkg.URLPlaceholder_appOwner,
+		routerpkg.URLPlaceholder_appName,
+		routerpkg.URLPlaceholder_wsid,
+		routerpkg.URLPlaceholder_resourceName,
 	)
 	r.router.HandleFunc(appRequestPath, appRequestHandler).Name("api").Methods("POST", "PATCH", "OPTIONS")
 	r.router.Name("static").PathPrefix(staticPath).MatcherFunc(r.matchStaticContent)

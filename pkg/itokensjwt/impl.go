@@ -10,6 +10,7 @@ import (
 	"crypto/hmac"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -17,9 +18,10 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/voedger/voedger/pkg/itokens"
 )
@@ -50,13 +52,14 @@ func (j *JWTSigner) IssueToken(app appdef.AppQName, duration time.Duration, poin
 		return "", err
 	}
 
+	now := j.iTime.Now()
 	claims := &jwt.MapClaims{
-		"iat":      jwt.TimeFunc().Unix(),
-		"exp":      jwt.TimeFunc().Add(duration).Unix(),
+		"iat":      now.Unix(),
+		"exp":      now.Add(duration).Unix(),
 		"aud":      audience.String(),
 		"Duration": duration,
 		"AppQName": &app,
-		"IssuedAt": jwt.TimeFunc(),
+		"IssuedAt": now,
 	}
 	*claims = mergeClaimsMaps(m, *claims)
 	token, err = j.sign(claims)
@@ -73,7 +76,7 @@ func (j *JWTSigner) ValidateToken(token string, pointerToPayload interface{}) (g
 		jwtToken *jwt.Token
 	)
 	expectedAudience := reflect.TypeOf(pointerToPayload).Elem().String()
-	parser := &jwt.Parser{UseJSONNumber: true}
+	parser := jwt.NewParser(jwt.WithJSONNumber(), jwt.WithTimeFunc(j.iTime.Now))
 	jwtToken, err = parser.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		if !ok {
@@ -184,15 +187,11 @@ func (j *JWTSigner) CryptoHash256(data []byte) (hash [hashLength]byte) {
 
 //nolint:errorlint
 func setErrorDescription(err error) error {
-	if ve, ok := err.(*jwt.ValidationError); ok {
-		if ve.Errors&(jwt.ValidationErrorExpired) != 0 {
-			// Token is expired
-			err = itokens.ErrTokenExpired
-		}
-		if ve.Errors&(jwt.ValidationErrorUnverifiable) != 0 {
-			// Token malformed
-			err = itokens.ErrInvalidToken
-		}
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		err = itokens.ErrTokenExpired
+	}
+	if errors.Is(err, jwt.ErrTokenUnverifiable) {
+		err = itokens.ErrInvalidToken
 	}
 	return err
 }
@@ -210,12 +209,12 @@ func getTokenPayload(token []string) string {
 	return token[1]
 }
 
-func NewJWTSigner(secretKey SecretKeyType) *JWTSigner {
+func NewJWTSigner(secretKey SecretKeyType, iTime timeu.ITime) *JWTSigner {
 	var byteSecretKey []byte = secretKey
 	if len(byteSecretKey) < SecretKeyLength {
 		panic(fmt.Errorf("invalid key length: must be %d chars", SecretKeyLength))
 	}
-	return &JWTSigner{byteSecretKey}
+	return &JWTSigner{byteSecretKey, iTime}
 }
 
 func mergeClaimsMaps(maps ...map[string]interface{}) (result map[string]interface{}) {

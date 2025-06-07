@@ -6,33 +6,25 @@ package queryprocessor
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func TestWrongTypes(t *testing.T) {
 	require := require.New(t)
 	serviceChannel := make(iprocbus.ServiceChannel)
-	errs := make(chan error)
-	resultSenderClosableFactory := func(ctx context.Context, sender ibus.ISender) IResultSenderClosable {
-		return &testResultSenderClosable{
-			startArraySection: func(sectionType string, path []string) { t.Fatal() },
-			sendElement:       func(name string, element interface{}) (err error) { t.Fatal(); return nil },
-			close: func(err error) {
-				errs <- err
-			},
-		}
-	}
 	done := make(chan struct{})
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
-	authz := iauthnzimpl.NewDefaultAuthorizer()
 
 	appParts, cleanAppParts, appTokens, statelessResources := deployTestAppWithSecretToken(require, nil)
 
@@ -40,11 +32,10 @@ func TestWrongTypes(t *testing.T) {
 
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
-		resultSenderClosableFactory,
 		appParts,
 		3, // maxPrepareQueries
 
-		imetrics.Provide(), "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
+		imetrics.Provide(), "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)
@@ -276,9 +267,16 @@ func TestWrongTypes(t *testing.T) {
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			qm := NewQueryMessage(context.Background(), appName, partID, wsID, nil, []byte(test.body), qNameFunction, "", sysToken)
-			serviceChannel <- qm
-			err := <-errs
+			requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+				serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, []byte(test.body), qNameFunction, "", sysToken)
+			})
+			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
+			require.NoError(err)
+			require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+			require.Equal(http.StatusBadRequest, respMeta.StatusCode)
+			for range respCh {
+			}
+			err = *respErr
 			require.Contains(err.Error(), test.err, test.name)
 		})
 	}

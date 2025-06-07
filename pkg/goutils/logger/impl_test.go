@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_MsgFormatter(t *testing.T) {
@@ -51,7 +52,7 @@ func Test_CheckRightPrefix(t *testing.T) {
 
 	// 5. Unexisting level
 	SetLogLevel(7)
-	assert.Equal(t, "", getLevelPrefix(globalLogPrinter.logLevel))
+	require.Empty(t, getLevelPrefix(globalLogPrinter.logLevel))
 
 	SetLogLevel(LogLevelInfo)
 }

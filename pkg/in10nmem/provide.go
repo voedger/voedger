@@ -9,10 +9,10 @@
 package in10nmem
 
 import (
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 )
 
-func ProvideEx2(quotas in10n.Quotas, time coreutils.ITime) (nb in10n.IN10nBroker, cleanup func()) {
+func ProvideEx2(quotas in10n.Quotas, time timeu.ITime) (nb in10n.IN10nBroker, cleanup func()) {
 	return NewN10nBroker(quotas, time)
 }

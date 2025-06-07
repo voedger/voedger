@@ -13,14 +13,14 @@ import (
 	"net/http"
 
 	sysmonitor "github.com/voedger/voedger/cmd/voedger/sys.monitor"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istructs"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
@@ -53,38 +53,35 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 		casParams.Hosts = "db-node-1,db-node-2,db-node-3"
 		casParams.KeyspaceWithReplication = cas3ReplicationStrategy
 	case storageTypeMem:
-		return mem.Provide(), nil
+		return mem.Provide(testingu.MockTime), nil
 	default:
 		return nil, errors.New("unable to define replication strategy")
 	}
 	return cas.Provide(casParams)
 }
 
-func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request ibus.Request) {
+func NewSysRouterRequestHandler(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 	go func() {
 		queryParamsBytes, err := json.Marshal(request.Query)
 		if err != nil {
-			coreutils.ReplyBadRequest(sender, err.Error())
+			bus.ReplyBadRequest(responder, err.Error())
 			return
 		}
 
+		// note: no pseudoWSID->appWSID convertation
+		// that could be taken from vvm.provideRequestHandler()
+
 		switch request.Resource {
 		case "c.EchoCommand":
-			sender.SendResponse(ibus.Response{
-				ContentType: "text/plain",
-				StatusCode:  http.StatusOK,
-				Data:        []byte(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))),
-			})
+			bus.ReplyJSON(responder, http.StatusOK, fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes)))
 		case "q.EchoQuery":
-			rs := sender.SendParallelResponse()
-			rs.StartArraySection("", []string{})
-			err := rs.SendElement("Result", []byte(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))))
-			if err != nil {
+			respWriter := responder.InitResponse(http.StatusOK)
+			if err := respWriter.Write(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))); err != nil {
 				logger.Error(err)
 			}
-			rs.Close(nil)
+			respWriter.Close(nil)
 		default:
-			coreutils.ReplyBadRequest(sender, "unknown func: "+request.Resource)
+			bus.ReplyBadRequest(responder, "unknown func: "+request.Resource)
 		}
 	}()
 }
@@ -94,7 +91,7 @@ func NewAppRequestHandlers() ihttpctl.AppRequestHandlers {
 		{
 			AppQName:      istructs.AppQName_sys_router,
 			NumPartitions: 1,
-			Handlers: map[istructs.PartitionID]ibus.RequestHandler{
+			Handlers: map[istructs.PartitionID]bus.RequestHandler{
 				istructs.PartitionID(0): NewSysRouterRequestHandler,
 			},
 		},

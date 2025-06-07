@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -21,18 +22,6 @@ import (
 type mockCUDRow struct {
 	istructs.ICUDRow
 	mock.Mock
-}
-
-type mockEvents struct {
-	istructs.IEvents
-	mock.Mock
-}
-
-func (e *mockEvents) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) (err error) {
-	return e.Called(ctx, partition, offset, toReadCount, cb).Error(0)
-}
-func (e *mockEvents) ReadWLog(ctx context.Context, workspace istructs.WSID, offset istructs.Offset, toReadCount int, cb istructs.WLogEventsReaderCallback) (err error) {
-	return e.Called(ctx, workspace, offset, toReadCount, cb).Error(0)
 }
 
 type mockWLogEvent struct {
@@ -62,7 +51,7 @@ func TestWLogStorage_Read(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 		touched := false
-		events := &mockEvents{}
+		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -85,7 +74,7 @@ func TestWLogStorage_Read(t *testing.T) {
 	})
 	t.Run("Should return error on read wlog", func(t *testing.T) {
 		require := require.New(t)
-		events := &mockEvents{}
+		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).Return(errTest)
 		eventsFunc := func() istructs.IEvents { return events }
 		storage := NewWLogStorage(context.Background(), eventsFunc, state.SimpleWSIDFunc(istructs.WSID(1)))
@@ -102,7 +91,7 @@ func TestWLogStorage_Get(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 		event := new(mockWLogEvent)
-		events := &mockEvents{}
+		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -129,7 +118,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 			cb := args.Get(0).(func(rec istructs.ICUDRow) bool)
 			cb(new(mockCUDRow))
 		})
-		events := &mockEvents{}
+		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -160,7 +149,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 	})
 	t.Run("Should return error when error occurred on read wlog", func(t *testing.T) {
 		require := require.New(t)
-		events := &mockEvents{}
+		events := &coreutils.MockEvents{}
 		events.
 			On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).

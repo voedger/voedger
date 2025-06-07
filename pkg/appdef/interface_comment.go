@@ -21,13 +21,3 @@ type ICommenter interface {
 	// Sets comment as string with lines, concatenated with LF
 	SetComment(...string)
 }
-
-// ITypeCommenter is interface to set comment for a type.
-type ITypeCommenter interface {
-	// Sets comments for type, specified by name.
-	// For workspace type should be local.
-	//
-	// # Panics:
-	//   - if type with specified name is not found.
-	SetTypeComment(QName, ...string)
-}

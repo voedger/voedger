@@ -28,7 +28,7 @@ func newRestoreCmd() *cobra.Command {
 		RunE: restore,
 	}
 
-	if newCluster().Edition != clusterEditionCE && !addSshKeyFlag(restoreCmd) {
+	if newCluster().Edition != clusterEditionN1 && !addSshKeyFlag(restoreCmd) {
 		return nil
 	}
 
@@ -55,7 +55,7 @@ func restore(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		if err = resoreCeNode(backupName); err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func resoreCeNode(backupName string) error {
 
 func backupExists(cluster *clusterType, backupPath string) error {
 
-	if cluster.Edition == clusterEditionCE {
+	if cluster.Edition == clusterEditionN1 {
 		exists, err := coreutils.Exists(backupPath)
 		if err != nil {
 			return err

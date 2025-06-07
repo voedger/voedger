@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/collection"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -125,6 +126,8 @@ func Test400BadRequests(t *testing.T) {
 		{desc: "unknown app", funcName: "c.sys.CUD", appName: "un/known"},
 	}
 
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			appQName := istructs.AppQName_test1_app1
@@ -132,7 +135,7 @@ func Test400BadRequests(t *testing.T) {
 				appQName, err = appdef.ParseAppQName(c.appName)
 				require.NoError(t, err)
 			}
-			vit.PostApp(appQName, 1, c.funcName, "", coreutils.Expect400()).Println()
+			vit.PostApp(appQName, ws.WSID, c.funcName, "", coreutils.Expect400()).Println()
 		})
 	}
 }
@@ -234,12 +237,12 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
 			// c.app1pkg.TestCmd is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, coreutils.Expect400("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
+			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, coreutils.Expect404("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
 
 			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 			body = "{}"
 			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
-			vit.PostWS(ws, "c.app1pkg.testCmd", body, coreutils.Expect400("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
+			vit.PostWS(ws, "c.app1pkg.testCmd", body, coreutils.Expect404("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
 		})
 
 		t.Run("type", func(t *testing.T) {
@@ -255,23 +258,23 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"args":{"Input":"str"}}`
 			// q.app1pkg.MockQry is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, coreutils.Expect400("query app1pkg.MockQry does not exist in workspace app1pkg.test_wsWS_another"))
+			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, coreutils.Expect400("query app1pkg.MockQry does not exist in Workspace «app1pkg.test_wsWS_another»"))
 		})
 		t.Run("type", func(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
-			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("app1pkg.testCmd is not a query"))
+			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("query app1pkg.testCmd does not exist in Workspace «app1pkg.test_wsWS_another»"))
 		})
 	})
 
 	t.Run("CUDs QNames", func(t *testing.T) {
-		t.Run("CUD in the request", func(t *testing.T) {
+		t.Run("CUD in the request -> 400 bad request", func(t *testing.T) {
+			t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
-			// try to insert a QName that does not exist in the workspace -> 403 foribidden ??? or 400 bad request ???
-			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("app1pkg.options", "does not exist in the workspace app1pkg.test_ws_another"))
+			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
 		})
-		t.Run("CUD produced by a command", func(t *testing.T) {
+		t.Run("CUD produced by a command -> 500 internal server error", func(t *testing.T) {
 			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
 				kb, err := args.State.KeyBuilder(sys.Storage_Record, appdef.NewQName("app1pkg", "docInAnotherWS"))
 				if err != nil {
@@ -298,7 +301,7 @@ func TestVITResetPreservingStorage(t *testing.T) {
 			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 	)
-	categoryID := int64(0)
+	categoryID := istructs.NullRecordID
 	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
@@ -348,6 +351,40 @@ func TestErrorFromResponseIntent(t *testing.T) {
 	})
 }
 
+func TestDeniedResourcesAuthorization(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("command", func(t *testing.T) {
+		body := `{}`
+		vit.PostWS(ws, "c.app1pkg.TestDeniedCmd", body, coreutils.Expect403())
+	})
+
+	t.Run("query", func(t *testing.T) {
+		body := `{}`
+		vit.PostWS(ws, "q.app1pkg.TestDeniedQuery", body, coreutils.Expect403())
+	})
+
+	t.Run("entire cdoc", func(t *testing.T) {
+		t.Skip("wait for ACL in VSQl for Air. Currently SElECT rule chechink is skipped in QP")
+		body := `{"args":{"Schema":"app1pkg.TestDeniedCDoc"},"elements":[{"fields":["sys.ID"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+	})
+
+	t.Run("cerain fields of cdoc", func(t *testing.T) {
+		t.Skip("wait for ACL in VSQL")
+		body := `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["Fld1"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body)
+
+		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+
+		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2","Fld1"]}]}`
+		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+	})
+}
+
 func TestNullability_SetEmptyString(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -365,13 +402,11 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	checked := false
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				if checked {
-					t.Fail()
+			cud.SpecifiedValues(func(field appdef.IField, val interface{}) bool {
+				if field.Name() == "name" {
+					require.EqualValues("test", val)
+					checked = true
 				}
-				checked = true
-				require.Equal("name", fn)
-				require.EqualValues("test", i)
 				return true
 			})
 		}
@@ -387,12 +422,13 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			for fn, fv := range cud.ModifiedFields {
-				switch fn {
+			for iField, fv := range cud.SpecifiedValues {
+				switch iField.Name() {
 				case "name":
-					require.Equal("", fv)
+					require.Empty(fv)
+				case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				default:
-					require.Fail("unexpected modified field", "%v: %v", fn, fv)
+					require.Fail("unexpected modified field", "%v: %v", iField, fv)
 				}
 			}
 		}
@@ -419,14 +455,95 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	expectedNestedDocID := resp.NewIDs["1"]
 	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
-			cud.ModifiedFields(func(fn appdef.FieldName, i interface{}) bool {
-				fields[fn] = i
+			cud.SpecifiedValues(func(f appdef.IField, val interface{}) bool {
+				fields[f.Name()] = val
 				return true
 			})
 		}
 		return nil
 	})
-	require.Len(fields, 2)
+	require.Len(fields, 7) // id_air_table_plan, form, sys.ID, sys,IsActive, sys.QName, sys.ParentID, sys.Container
 	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
 	require.EqualValues(15, fields["form"])
+}
+
+func TestSysFieldsModification(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `
+		{
+			"cuds": [
+				{
+					"fields": {
+						"sys.ID": 2,
+						"sys.QName": "app1pkg.department",
+						"pc_fix_button": 1,
+						"rm_fix_button": 1
+					}
+				},
+				{
+					"fields": {
+						"sys.ID": 3,
+						"sys.QName": "app1pkg.department_options",
+						"id_department": 2,
+						"sys.ParentID": 2,
+						"sys.Container": "department_options"
+					}
+				}
+			]
+		}`
+	resp := vit.PostWS(ws, "c.sys.CUD", body)
+	idDep := resp.NewIDs["2"]
+	idDepOpts := resp.NewIDs["3"]
+
+	t.Run("deny", func(t *testing.T) {
+		t.Run("sys.ID", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"sys.ID": 90000}}]}`, idDep)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ID")).Println()
+		})
+
+		t.Run("sys.ParentID", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.ParentID": 90000}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ParentID")).Println()
+		})
+
+		t.Run("sys.Container", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.Container": "department_options_2"}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.Container")).Println()
+		})
+
+		t.Run("sys.QName", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.QName": "app1pkg.department"}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.QName")).Println()
+		})
+	})
+
+	t.Run("allow", func(t *testing.T) {
+		t.Run("sys.IsActive", func(t *testing.T) {
+			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.IsActive": false}}]}`, idDepOpts)
+			vit.PostWS(ws, "c.sys.CUD", body)
+		})
+	})
+}
+
+func TestStateMaxRelevantOffset(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	collectionViewOffsetsChan := vit.SubscribeForN10n(ws, collection.QNameCollectionView)
+
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	expecteMaxRelevantOffset := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+	for offset := range collectionViewOffsetsChan {
+		if expecteMaxRelevantOffset == offset {
+			break
+		}
+	}
+
+	body = `{"args":{"After":0},"elements":[{"fields":["State", "MaxRelevantOffset"]}]}`
+	resp := vit.PostWS(ws, "q.sys.State", body)
+	actualMaxRelevantOffsetOffset := istructs.Offset(resp.SectionRow()[1].(float64))
+	require.Equal(t, expecteMaxRelevantOffset, actualMaxRelevantOffsetOffset)
 }

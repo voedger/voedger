@@ -11,8 +11,8 @@ type IStorage interface {
 	// Returns storage name.
 	Name() QName
 
-	// Returns names in storage.
-	Names() QNames
+	// Returns names in storage in alphabetical order.
+	Names() []QName
 }
 
 type IStorages interface {
@@ -21,17 +21,8 @@ type IStorages interface {
 	// Returns nil if storage not found.
 	Storage(name QName) IStorage
 
-	// Enums storages.
-	//
-	// Storages enumerated in alphabetical QNames order.
-	// Names slice in every storage is sorted and deduplicated.
-	Enum(func(IStorage) bool)
-
-	// Returns number of storages.
-	Len() int
-
-	// Returns storages as map.
-	Map() map[QName]QNames
+	// Returns storage names in alphabetical order.
+	Names() []QName
 }
 
 type IStoragesBuilder interface {

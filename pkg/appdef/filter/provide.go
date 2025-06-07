@@ -8,45 +8,79 @@ package filter
 import "github.com/voedger/voedger/pkg/appdef"
 
 // QNames is a filter that matches types by their qualified names.
-func QNames(name appdef.QName, names ...appdef.QName) appdef.IFilter {
-	return makeQNamesFilter(name, names...)
+//
+// # Panics:
+//	 - if no names are specified
+func QNames(names ...appdef.QName) appdef.IFilter {
+	return newQNamesFilter(names...)
 }
 
 // Tags is a filter that matches types by their tags.
-func Tags(tag appdef.QName, tags ...appdef.QName) appdef.IFilter {
-	return makeTagsFilter(tag, tags...)
+//
+// # Panics:
+//	 - if no tags are specified
+func Tags(tags ...appdef.QName) appdef.IFilter {
+	return newTagsFilter(tags...)
 }
 
 // Types is a filter that matches types by their kind.
 //
-// If workspace is not empty, then matched types should be located in the specified workspace.
-func Types(ws appdef.QName, t appdef.TypeKind, tt ...appdef.TypeKind) appdef.IFilter {
-	return makeTypesFilter(ws, t, tt...)
+// # Panics:
+//	 - if no type kinds are specified
+func Types(tt ...appdef.TypeKind) appdef.IFilter {
+	return newTypesFilter(tt...)
 }
 
-// And returns a filter that matches types that match all filters.
-func And(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
-	return makeAndFilter(f1, f2, ff...)
+// WSTypes is a filter that matches types by their kind.
+// Matched types should be located in the specified workspace.
+//
+// # Panics:
+//	 - if workspace is not specified (NullQName)
+//	 - if no type kinds are specified
+func WSTypes(ws appdef.QName, tt ...appdef.TypeKind) appdef.IFilter {
+	return newWSTypesFilter(ws, tt...)
 }
 
-// Or returns a filter that matches types that match any filter.
-func Or(f1, f2 appdef.IFilter, ff ...appdef.IFilter) appdef.IFilter {
-	return makeOrFilter(f1, f2, ff...)
+// And returns a filter that matches types that match all children filters.
+//
+// # Panics:
+//	 - if less then two filters are provided
+func And(ff ...appdef.IFilter) appdef.IFilter {
+	return newAndFilter(ff...)
+}
+
+// Or returns a filter that matches types that match any children filter.
+//
+// # Panics:
+//	 - if less then two filters are provided
+func Or(ff ...appdef.IFilter) appdef.IFilter {
+	return newOrFilter(ff...)
 }
 
 // Not returns a filter that invert matches for specified filter.
 func Not(f appdef.IFilter) appdef.IFilter {
-	return makeNotFilter(f)
+	return newNotFilter(f)
 }
 
-// AllTables returns a filter that matches all structured types from workspace, see appdef.TypeKind_Structures
-func AllTables(ws appdef.QName) appdef.IFilter {
-	s := appdef.TypeKind_Structures.AsArray()
-	return makeTypesFilter(ws, s[0], s[1:]...)
+// True returns filter that always matches any type
+func True() appdef.IFilter { return trueFlt }
+
+// AllTables returns a filter that matches all structured types, see appdef.TypeKind_Structures
+func AllTables() appdef.IFilter {
+	return newTypesFilter(appdef.TypeKind_Structures.AsArray()...)
 }
 
-// AllFunctions returns a filter that matches all functions types from workspace, see appdef.TypeKind_Functions
-func AllFunctions(ws appdef.QName) appdef.IFilter {
-	f := appdef.TypeKind_Functions.AsArray()
-	return makeTypesFilter(ws, f[0], f[1:]...)
+// AllWSTables returns a filter that matches all structured types from workspace, see appdef.TypeKind_Structures
+func AllWSTables(ws appdef.QName) appdef.IFilter {
+	return newWSTypesFilter(ws, appdef.TypeKind_Structures.AsArray()...)
+}
+
+// AllFunctions returns a filter that matches all functions types, see appdef.TypeKind_Functions
+func AllFunctions() appdef.IFilter {
+	return newTypesFilter(appdef.TypeKind_Functions.AsArray()...)
+}
+
+// AllWSFunctions returns a filter that matches all functions types from workspace, see appdef.TypeKind_Functions
+func AllWSFunctions(ws appdef.QName) appdef.IFilter {
+	return newWSTypesFilter(ws, appdef.TypeKind_Functions.AsArray()...)
 }

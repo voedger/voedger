@@ -24,9 +24,11 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
@@ -60,15 +62,33 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 			if targetAppQName == appdef.NullAppQName {
 				targetAppQName = args.State.App()
 			}
-			sysTokenForTargetApp, err := payloads.GetSystemPrincipalToken(itokens, targetAppQName)
+			subjKB, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
+			if err != nil {
+				//notest
+				return err
+			}
+			subj, err := args.State.MustExist(subjKB)
 			if err != nil {
 				// notest
 				return err
 			}
+
+			tokenForTargetApp := subj.AsString(sys.Storage_RequestSubject_Field_Token)
+			if targetAppQName != args.State.App() {
+				// query is for a foreign app -> re-issue token for the target app
+				var pp payloads.PrincipalPayload
+				if _, err = itokens.ValidateToken(tokenForTargetApp, &pp); err != nil {
+					// notest: validated already by the processor
+					return err
+				}
+				if tokenForTargetApp, err = itokens.IssueToken(targetAppQName, authnz.DefaultPrincipalTokenExpiration, &pp); err != nil {
+					return err
+				}
+			}
 			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
 			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
 			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
-				body, coreutils.WithAuthorizeBy(sysTokenForTargetApp))
+				body, coreutils.WithAuthorizeBy(tokenForTargetApp))
 			if err != nil {
 				return err
 			}
@@ -80,7 +100,6 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 			}
 			return nil
 		}
-
 		stmt, err := sqlparser.Parse(op.CleanSQL)
 		if err != nil {
 			return err
@@ -111,19 +130,44 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
+		if source.Entity() == "blob" {
+			// FIXME: eliminate this hack
+			// sys.BLOB translates to sys.blob by vitess-sqlparser
+			// https://github.com/voedger/voedger/issues/3708
+			source = appdef.NewQName(appdef.SysPackage, "BLOB")
+		}
 
 		kind := appStructs.AppDef().Type(source).Kind()
+		if _, ok := appStructs.AppDef().Type(source).(appdef.IStructure); ok {
+			// is a structure -> check ACL
+			switch kind {
+			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc:
+				fields := make([]string, 0, len(f.fields))
+				for f := range f.fields {
+					fields = append(fields, f)
+				}
+				apppart := args.Workpiece.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
+				roles := args.Workpiece.(interface{ Roles() []appdef.QName }).Roles()
+				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, source, fields, roles)
+				if err != nil {
+					// notest
+					if errors.Is(err, appdef.ErrNotFoundError) {
+						return coreutils.WrapSysError(err, http.StatusBadRequest)
+					}
+					return err
+				}
+				if !ok {
+					return coreutils.NewHTTPErrorf(http.StatusForbidden)
+				}
+			}
+		}
 		switch kind {
 		case appdef.TypeKind_ViewRecord:
 			if op.EntityID > 0 {
 				return errors.New("ID must not be specified on select from view")
 			}
 			return readViewRecords(ctx, wsID, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
-		case appdef.TypeKind_CDoc:
-			fallthrough
-		case appdef.TypeKind_CRecord:
-			fallthrough
-		case appdef.TypeKind_WDoc:
+		case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
 			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
 				http.StatusBadRequest)
 		default:
@@ -143,7 +187,7 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
 
-		return fmt.Errorf("unsupported source: %s", source)
+		return fmt.Errorf("do not know how to read from the requested %s, %s", source, kind)
 	}
 }
 
@@ -232,7 +276,7 @@ func getFilter(f func(string) bool) coreutils.MapperOpt {
 	})
 }
 
-func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef, offset istructs.Offset) {
+func renderDBEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef, offset istructs.Offset) {
 	defer func() {
 		if r := recover(); r != nil {
 			eventKind := "plog"

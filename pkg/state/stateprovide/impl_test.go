@@ -157,7 +157,7 @@ func (r *mockRecord) AsInt64(name string) int64 { return r.Called(name).Get(0).(
 func (r *mockRecord) AsQName(name string) appdef.QName {
 	return r.Called(name).Get(0).(appdef.QName)
 }
-func (r *mockRecord) FieldNames(cb func(fieldName string) bool) { r.Called(cb) }
+func (r *mockRecord) FieldNames(cb func(iField appdef.IField) bool) { r.Called(cb) }
 
 type mockValue struct {
 	istructs.IValue

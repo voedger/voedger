@@ -6,12 +6,14 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -53,7 +55,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	t.Run("check CDoc<sys.UserProfile> at profileWSID at target app at target cluster", func(t *testing.T) {
 		body := `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
 		resp := vit.PostProfile(prn1, "q.sys.Collection", body)
-		require.Equal("User Name", resp.SectionRow()[1])
+		require.Equal(login1.Name, resp.SectionRow()[1])
 		idOfCDocUserProfile = int64(resp.SectionRow()[0].(float64))
 	})
 
@@ -194,12 +196,17 @@ func TestSignInErrors(t *testing.T) {
 	})
 }
 
-func TestDeviceProfile(t *testing.T) {
+// [~server.devices/it.TestDevicesCreate~impl]
+func TestCreateDevice(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	loginName := vit.NextName()
-	deviceLogin := vit.SignUpDevice(loginName, "123", istructs.AppQName_test1_app2)
+	deviceLogin := vit.SignUpDevice(istructs.AppQName_test1_app2)
+
+	// APIv2 create device returns generated device login and password
+	log.Println(deviceLogin.Name)
+	log.Println(deviceLogin.Pwd)
+
 	devicePrn := vit.SignIn(deviceLogin)
 	as, err := vit.BuiltIn(istructs.AppQName_test1_app2)
 	require.NoError(err)
@@ -221,4 +228,42 @@ func TestDeviceProfile(t *testing.T) {
 		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
 	})
 
+	t.Run("400 bad request on an unexpected body", func(t *testing.T) {
+		vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), "body",
+			coreutils.Expect400()).Println()
+	})
+}
+
+func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// create new login
+	newLoginName := vit.NextName()
+	newLogin := vit.SignUp(newLoginName, "1", istructs.AppQName_test1_app1)
+	newLoginPrn := vit.SignIn(newLogin)
+
+	existingLoginPrn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+
+	// new login can not work in the profile of the existingLogin
+	body := `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
+	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.Expect403(), coreutils.WithAuthorizeBy(newLoginPrn.Token))
+
+	// now enrich the token of the newLogin: make it ProfileOwner in the profile of the existingLogin
+
+	// determine ownerWSID of the existingLogin
+	body = `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["OwnerWSID"]}]}`
+	resp := vit.PostProfile(existingLoginPrn, "q.sys.Collection", body)
+	existingLoginOwnerWSID := istructs.WSID(resp.SectionRow()[0].(float64))
+
+	// enrich the existing token of the newLogin with role.sys.ProfileOwner
+	profileOwnerRole := payloads.RoleType{
+		WSID:  existingLoginOwnerWSID,
+		QName: iauthnz.QNameRoleProfileOwner,
+	}
+	enrichedToken := vit.EnrichPrincipalToken(newLoginPrn, []payloads.RoleType{profileOwnerRole})
+
+	// no newLogin is able to work in the profile of the existingLogin role.sys.ProfileOwner principal is emitted for him there
+	body = `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
+	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.WithAuthorizeBy(enrichedToken))
 }

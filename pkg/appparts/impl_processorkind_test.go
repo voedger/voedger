@@ -3,17 +3,19 @@
  * @author: Nikolay Nikitin
  */
 
-package appparts
+package appparts_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/appparts"
 )
 
-func TestProcessorKind_compatibleWithExtension(t *testing.T) {
+func TestProcessorKind_CompatibleWithExtension(t *testing.T) {
 	cmd := appdef.NewQName("test", "cmd")
 	query := appdef.NewQName("test", "query")
 	syncPrj := appdef.NewQName("test", "syncPrj")
@@ -23,26 +25,27 @@ func TestProcessorKind_compatibleWithExtension(t *testing.T) {
 	names := appdef.QNamesFrom(cmd, query, syncPrj, asyncPrj, job)
 
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.test/test")
 
-		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsName := appdef.NewQName("test", "workspace")
+		wsb := adb.AddWorkspace(wsName)
 
-		wsb.AddCommand(cmd).SetParam(appdef.QNameAnyObject)
+		_ = wsb.AddCommand(cmd)
 
-		wsb.AddQuery(query).SetResult(appdef.QNameAnyView)
+		wsb.AddQuery(query).SetResult(appdef.QNameANY)
 
 		p1 := wsb.AddProjector(syncPrj)
+		p1.Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		p1.SetSync(true)
-		p1.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
-		p1.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
-		p1.Events().Add(cmd)
 
 		p2 := wsb.AddProjector(asyncPrj)
+		p2.Events().Add(
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
 		p2.SetSync(false)
-		p2.States().Add(sys.Storage_Record, appdef.QNameAnyRecord)
-		p2.Intents().Add(sys.Storage_View, appdef.QNameAnyView)
-		p2.Events().Add(cmd)
 
 		wsb.AddJob(job).SetCronSchedule("@every 1m")
 
@@ -50,19 +53,19 @@ func TestProcessorKind_compatibleWithExtension(t *testing.T) {
 	}()
 
 	tests := []struct {
-		proc        ProcessorKind
+		proc        appparts.ProcessorKind
 		compatibles appdef.QNames
 	}{
-		{ProcessorKind_Command, appdef.QNamesFrom(cmd, syncPrj)},
-		{ProcessorKind_Query, appdef.QNamesFrom(query)},
-		{ProcessorKind_Actualizer, appdef.QNamesFrom(asyncPrj)},
-		{ProcessorKind_Scheduler, appdef.QNamesFrom(job)},
+		{appparts.ProcessorKind_Command, appdef.QNamesFrom(cmd, syncPrj)},
+		{appparts.ProcessorKind_Query, appdef.QNamesFrom(query)},
+		{appparts.ProcessorKind_Actualizer, appdef.QNamesFrom(asyncPrj)},
+		{appparts.ProcessorKind_Scheduler, appdef.QNamesFrom(job)},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("compatibles for %v", tt.proc), func(t *testing.T) {
 			for _, n := range names {
 				ext := appdef.Extension(appDef.Type, n)
-				got, _ := tt.proc.compatibleWithExtension(ext)
+				got, _ := tt.proc.CompatibleWithExtension(ext)
 				if want := tt.compatibles.Contains(n); got != want {
 					t.Errorf("%v.compatibleWithExtension(%v) = %v, want %v", tt.proc, ext, got, want)
 				}

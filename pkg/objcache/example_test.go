@@ -28,7 +28,7 @@ func (s *value) Free() {
 // creates new value with RefCounter
 func newValue() *value {
 	v := &value{}
-	v.RefCounter.Value = v
+	v.Value = v
 	v.data = "allocated"
 	return v
 }

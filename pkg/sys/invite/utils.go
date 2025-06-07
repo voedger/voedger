@@ -80,49 +80,32 @@ func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.ISta
 		// notest
 		return nil, err
 	}
-	skbViewSubjectsIdx.PutInt64(Field_LoginHash, coreutils.HashBytes([]byte(login)))
+	skbViewSubjectsIdx.PutInt64(Field_LoginHash, coreutils.LoginHash(login))
 	skbViewSubjectsIdx.PutString(Field_Login, login)
 	return skbViewSubjectsIdx, nil
 }
 
-// checks cdoc.sys.SubjectIdx existence by login as cdoc.sys.Invite.EMail and as token.Login
-func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actualLogin string, existingSubjectID istructs.RecordID, _ error) {
-	subjectExists, exisingSubjectID, err := SubjectExistsByLogin(login, st) // for backward compatibility
-	if err != nil {
-		return false, "", 0, err
-	}
+func LoginFromToken(st istructs.IState) (loginFromToken string, err error) {
 	skbPrincipal, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 	if err != nil {
-		return false, "", 0, err
+		return "", err
 	}
 	svPrincipal, err := st.MustExist(skbPrincipal)
 	if err != nil {
-		return
+		return "", err
 	}
-	actualLogin = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
-	if !subjectExists {
-		subjectExists, exisingSubjectID, err = SubjectExistsByLogin(actualLogin, st)
-		if err != nil {
-			return false, "", 0, err
-		}
-	}
-	return subjectExists, actualLogin, exisingSubjectID, nil
-
+	return svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name), nil
 }
 
-func SubjectExistsByLogin(login string, state istructs.IState) (ok bool, existingSubjectID istructs.RecordID, _ error) {
+func SubjectExistsByLogin(login string, state istructs.IState) (existingSubjectID istructs.RecordID, err error) {
 	skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, state)
 	if err != nil {
 		// notest
-		return false, 0, err
+		return 0, err
 	}
 	val, ok, err := state.CanExist(skbViewSubjectsIdx)
-	if err != nil {
-		// notest
-		return false, 0, err
-	}
 	if ok {
 		existingSubjectID = val.AsRecordID("SubjectID")
 	}
-	return ok, existingSubjectID, nil
+	return existingSubjectID, err
 }

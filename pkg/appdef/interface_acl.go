@@ -5,42 +5,6 @@
 
 package appdef
 
-// Enumeration of ACL operation kinds.
-type OperationKind uint8
-
-//go:generate stringer -type=OperationKind -output=stringer_operationkind.go
-
-const (
-	OperationKind_null OperationKind = iota
-
-	// # Insert records or view records.
-	// 	- Operation applicable on records, view records.
-	// 	- Fields are not applicable.
-	OperationKind_Insert
-
-	// # Update records or view records.
-	// 	- Operation applicable on records, view records.
-	// 	- Fields are applicable and specify fields of records or view records that can be updated.
-	OperationKind_Update
-
-	// # Select records or view records.
-	// 	- Operation applicable on records, view records.
-	// 	- Fields are applicable and specify fields of records or view records that can be selected.
-	OperationKind_Select
-
-	// # Execute functions.
-	// 	- Operation applicable on commands, queries.
-	// 	- Fields are not applicable.
-	OperationKind_Execute
-
-	// # Inherit ACL records from other roles.
-	// 	- Operation applicable on roles only.
-	// 	- Fields are not applicable.
-	OperationKind_Inherits
-
-	OperationKind_count
-)
-
 // Enumeration of ACL operation policy.
 type PolicyKind uint8
 
@@ -56,40 +20,39 @@ const (
 	PolicyKind_count
 )
 
-type IResourcePattern interface {
-	// Returns resource names that match the pattern.
-	//
-	// # insert, update and select:
-	//	- records or view records names
-	//
-	// # execute:
-	//	- commands & queries names
-	//
-	// # inherits:
-	//	- roles names.
-	//
-	// `QNameANY` or `QNameAny×××` patterns are not allowed in resource names
-	On() QNames
+type IACLFilter interface {
+	IFilter
 
-	// Returns fields (of records or views) then insert, update or select operation is described.
+	// Returns fields iterator then insert, update or select operation is described.
 	Fields() []FieldName
+
+	// Resturns true if fields are specified.
+	HasFields() bool
 }
 
 // Represents a ACL rule record (specific rights or permissions) to be granted to role or revoked from.
 type IACLRule interface {
 	IWithComments
 
-	// Returns operations that was granted or revoked.
+	// Returns is this rule describes specified operation.
+	Op(OperationKind) bool
+
+	// Returns operations that was described (granted or revoked).
 	Ops() []OperationKind
 
-	// Returns operations are granted or revoked.
+	// Returns the policy: operations are granted (policy is allow) or revoked (policy is deny).
 	Policy() PolicyKind
 
-	// Returns resource on which rule is applicable.
-	Resources() IResourcePattern
+	// Returns filter of types on which rule is applicable.
+	//
+	// If filter contains FilterKind_Types, then local types from workspace where rule is defined are used.
+	Filter() IACLFilter
 
 	// Returns the role to which the operations was granted or revoked.
 	Principal() IRole
+
+	// Returns workspace where the rule is defined.
+	Workspace() IWorkspace
 }
 
 // IWithACL is an interface for entities that have ACL.
@@ -97,41 +60,38 @@ type IWithACL interface {
 	// Enumerates all ACL rules.
 	//
 	// Rules are enumerated in the order they are added.
-	ACL(func(IACLRule) bool)
+	ACL() []IACLRule
 }
 
 type IACLBuilder interface {
-	// Grants specified operations on specified resources to specified role.
+	// Grants operations on filtered types to role.
 	//
 	// # Panics:
 	//   - if ops is empty,
-	//	 - if resources are empty,
-	//	 - if resources contains unknown names,
-	//	 - if resources are mixed, e.g. records and commands,
-	//	 - if ops are not compatible with resources,
-	//	 - if fields are not applicable for ops,
+	//	 - if ops contains incompatible operations (e.g. INSERT with EXECUTE),
+	//	 - if filtered type is not compatible with operations,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder
+	Grant(ops []OperationKind, flt IFilter, fields []FieldName, toRole QName, comment ...string) IACLBuilder
 
-	// Grants all available operations on specified resources to specified role.
+	// Grants all available operations on filtered types to role.
 	//
-	// If the resources are records or view records, then insert, update, and select are granted.
+	// If the types are records or view records, then insert, update, and select are granted.
 	//
-	// If the resources are commands or queries, their execution is granted.
+	// If the types are commands or queries, their execution is granted.
 	//
-	// If the resources are roles, then all operations from these roles are granted to specified role.
+	// If the types are roles, then all operations from these roles are granted to specified role.
 	//
-	// No mixed resources are allowed.
-	GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder
+	// No mixed types are allowed.
+	GrantAll(flt IFilter, toRole QName, comment ...string) IACLBuilder
 
-	// Revokes specified operations on specified resources from specified role.
+	// Revokes operations on filtered types from role.
 	//
 	// Revoke inherited roles is not supported
-	Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder
+	Revoke(ops []OperationKind, resources IFilter, fields []FieldName, fromRole QName, comment ...string) IACLBuilder
 
-	// Remove all available operations on specified resources from specified role.
+	// Remove all available operations on filtered types from role.
 	//
 	// Revoke inherited roles is not supported
-	RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder
+	RevokeAll(flt IFilter, fromRole QName, comment ...string) IACLBuilder
 }

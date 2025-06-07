@@ -177,7 +177,7 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
-	err = coreutils.CopyDirFS(scriptsFS, filepath.Join("scripts", "drafts"), scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
+	err = coreutils.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
 		coreutils.WithSkipExisting(), coreutils.WithFileMode(coreutils.FileMode_rwxrwxrwx))
 	if err != nil {
 		loggerError(err.Error())

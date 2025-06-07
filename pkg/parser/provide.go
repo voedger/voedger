@@ -52,10 +52,10 @@ func ParsePackageDirCollectingFiles(path string, fs coreutils.IReadFS, subDir st
 }
 
 // Application-level semantic analysis (e.g. cross-package references)
-func BuildAppSchema(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
-	return buildAppSchemaImpl(packages)
+func BuildAppSchema(packages []*PackageSchemaAST, opts ...ParserOption) (*AppSchemaAST, error) {
+	return buildAppSchemaImpl(packages, opts...)
 }
 
-func BuildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder, opts ...BuildAppDefsOption) error {
-	return buildAppDefs(appSchema, builder, opts...)
+func BuildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+	return buildAppDefs(appSchema, builder)
 }

@@ -12,8 +12,9 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts/internal/acl"
+	"github.com/voedger/voedger/pkg/appdef/acl"
 	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
+	"github.com/voedger/voedger/pkg/appparts/internal/limiter"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -108,7 +109,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			}
 			extModule = &iextengine.ExtensionModule{
 				Path:      path,
-				ModuleUrl: moduleURL,
+				ModuleURL: moduleURL,
 			}
 			pathsModules[path] = extModule
 		}
@@ -154,16 +155,19 @@ type appPartitionRT struct {
 	syncActualizer pipeline.ISyncOperator
 	actualizers    *actualizers.PartitionActualizers
 	schedulers     *schedulers.PartitionSchedulers
+	limiter        *limiter.Limiter
 }
 
 func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
 	as := app.lastestVersion.appStructs()
+	buckets := app.apps.bucketsFactory()
 	part := &appPartitionRT{
 		app:            app,
 		id:             id,
 		syncActualizer: app.apps.syncActualizerFactory(as, id),
 		actualizers:    actualizers.New(app.name, id),
 		schedulers:     schedulers.New(app.name, app.partsCount, as.NumAppWorkspaces(), id),
+		limiter:        limiter.New(app.lastestVersion.appDef(), buckets),
 	}
 	return part
 }
@@ -179,14 +183,15 @@ func (p *appPartitionRT) borrow(proc ProcessorKind) (*borrowedPartition, error) 
 	return b, nil
 }
 
-// # Implements IAppPartition
+// # Supports:
+//   - IAppPartition
 type borrowedPartition struct {
 	part       *appPartitionRT
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
-	kind       ProcessorKind
 	pool       *pool.Pool[engines] // pool of borrowed engines
-	engines    engines             // borrowed engines
+	kind       ProcessorKind
+	engines    engines // borrowed engines
 }
 
 var borrowedPartitionsPool = sync.Pool{
@@ -222,7 +227,7 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 		return errUndefinedExtension(name)
 	}
 
-	if compat, err := bp.kind.compatibleWithExtension(e); !compat {
+	if compat, err := bp.kind.CompatibleWithExtension(e); !compat {
 		return fmt.Errorf("%s: %w", bp, err)
 	}
 
@@ -240,8 +245,12 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	return extEngine.Invoke(ctx, extName, io)
 }
 
-func (bp *borrowedPartition) IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {
-	return acl.IsOperationAllowed(bp.appDef, op, res, fld, roles)
+func (bp *borrowedPartition) IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (bool, appdef.QName) {
+	return bp.part.limiter.Exceeded(resource, operation, workspace, remoteAddr)
+}
+
+func (bp *borrowedPartition) IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, error) {
+	return acl.IsOperationAllowed(ws, op, res, fld, roles)
 }
 
 func (bp *borrowedPartition) String() string {

@@ -6,21 +6,24 @@ package vvm
 
 import (
 	"context"
+	"net"
 	"net/url"
+	"sync"
 	"time"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -35,26 +38,32 @@ import (
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
+	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
 type ServicePipeline pipeline.ISyncPipeline
 type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
-type OperatorQueryProcessors pipeline.ISyncOperator
+type OperatorQueryProcessors_V1 pipeline.ISyncOperator
+type OperatorQueryProcessors_V2 pipeline.ISyncOperator
+type OperatorBLOBProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
 	tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx uint) commandprocessor.CommandChannel
-type QueryChannel iprocbus.ServiceChannel
+type QueryChannel_V1 iprocbus.ServiceChannel
+type QueryChannel_V2 iprocbus.ServiceChannel
 type AdminEndpointServiceOperator pipeline.ISyncOperator
 type PublicEndpointServiceOperator pipeline.ISyncOperator
 type BlobberAppClusterID istructs.ClusterAppID
 type BlobStorage iblobstorage.IBLOBStorage
 type BlobberAppStruct istructs.IAppStructs
 type CommandProcessorsChannelGroupIdxType uint
-type QueryProcessorsChannelGroupIdxType uint
+type QueryProcessorsChannelGroupIdxType_V1 uint
+type QueryProcessorsChannelGroupIdxType_V2 uint
+type BLOBProcessorsChannelGroupIdxType uint
 type MaxPrepareQueriesType int
 type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx uint) iprocbus.ServiceChannel
 type AppStorageFactory func(appQName appdef.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
@@ -73,9 +82,7 @@ type BuiltInAppsArtefacts struct {
 	builtInAppPackages []BuiltInAppPackages
 }
 
-type BusTimeout time.Duration
 type FederationURL func() *url.URL
-type VVMIdxType int
 type VVMPortType int
 type ProcessorChannelType int
 type ProcesorChannel struct {
@@ -89,7 +96,6 @@ type RouterServices struct {
 	router.IAdminService
 }
 type MetricsServiceOperator pipeline.ISyncOperator
-type MetricsServicePortInitial int
 type VVMPortSource struct {
 	getter      func() VVMPortType
 	adminGetter func() int
@@ -99,6 +105,8 @@ type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController
 }
 type IAppPartsCtlPipelineService pipeline.IService
+
+type NumVVM = uint32
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
@@ -112,6 +120,7 @@ type PostDocDesc struct {
 }
 
 type VVMAppsBuilder map[appdef.AppQName]builtinapps.Builder
+type LeadershipAcquisitionDuration time.Duration
 
 type VVM struct {
 	ServicePipeline
@@ -120,13 +129,14 @@ type VVM struct {
 	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
+	TTLStorage          ielections.ITTLStorage[storage.TTLStorageImplKey, string]
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map
-	Time                       coreutils.ITime
+	Time                       timeu.ITime
 	RouterWriteTimeout         int
 	RouterReadTimeout          int
 	RouterConnectionsLimit     int
@@ -135,22 +145,22 @@ type VVMConfig struct {
 	Routes                     map[string]string
 	RoutesRewrite              map[string]string
 	RouteDomains               map[string]string
-	BusTimeout                 BusTimeout
+	SendTimeout                bus.SendTimeout
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
-	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
 	Name                       processors.VVMName
 	NumCommandProcessors       istructs.NumCommandProcessors
 	NumQueryProcessors         istructs.NumQueryProcessors
+	NumBLOBProcessors          istructs.NumBLOBProcessors
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
 	ActualizerStateOpts        []state.StateOptFunc
 	SecretsReader              isecrets.ISecretReader
-	SmtpConfig                 smtp.Cfg
+	SMTPConfig                 smtp.Cfg
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
-	MetricsServicePort         MetricsServicePortInitial
+	MetricsServicePort         metrics.MetricsServicePort
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
@@ -163,19 +173,54 @@ type VVMConfig struct {
 	// normally is empty in VIT. coretuils.IsTest -> UUID is added to the keyspace name at istorage/provider/Provide()
 	// need to e.g. test VVM restart preserving storage
 	KeyspaceNameSuffix string
-}
 
-type resultSenderErrorFirst struct {
-	ctx    context.Context
-	sender ibus.ISender
-	rs     ibus.IResultSenderClosable
+	// [~server.design.orch/VVMConfig.Orch~impl]
+	NumVVM NumVVM // amount of VVMs in the cluster. Default 1
+	IP     net.IP // current IP of the VVM. Used as the value for leaderhsip elections
+
+	// [~server.design.sequences/cmp.VVMConfig.SequencesTrustLevel~impl]
+	SequencesTrustLevel isequencer.SequencesTrustLevel
 }
 
 type VoedgerVM struct {
 	*VVM
-	vvmCtxCancel func()
-	vvmCleanup   func()
+	vvmCtxCancel     func()
+	vvmCleanup       func()
+	electionsCleanup func()
+
+	// closed when some problem occurs, VVM terminates itself due to leadership loss or problems with the launching
+	problemCtx       context.Context
+	problemCtxCancel context.CancelFunc
+	problemErrCh     chan error
+
+	// used to ensure we publish the error only once
+	problemCtxErrOnce sync.Once
+
+	// closed when VVM should be stopped outside
+	vvmShutCtx       context.Context
+	vvmShutCtxCancel context.CancelFunc
+
+	// closed when VVM services should be stopped (but LeadershipMonitor)
+	servicesShutCtx       context.Context
+	servicesShutCtxCancel context.CancelFunc
+
+	// closed after all services are stopped and LeadershipMonitor should be stopped
+	monitorShutCtx       context.Context
+	monitorShutCtxCancel context.CancelFunc
+	monitorShutWg        sync.WaitGroup
+
+	// closed after all (services and LeadershipMonitor) is stopped
+	shutdownedCtx       context.Context
+	shutdownedCtxCancel context.CancelFunc
+	numVVM              NumVVM
+	ip                  net.IP
+	leadershipCtx       context.Context
+
+	// used in tests only
+	leadershipAcquisitionTimerArmed chan struct{}
 }
+
+type IVVMElections ielections.IElections[storage.TTLStorageImplKey, string]
 
 type ignition struct{}
 

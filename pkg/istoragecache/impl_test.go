@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -40,7 +42,7 @@ func TestBasicUsage(t *testing.T) {
 			},
 		}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -67,7 +69,7 @@ func TestBasicUsage(t *testing.T) {
 			},
 		}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -94,7 +96,7 @@ func TestBasicUsage(t *testing.T) {
 		}}
 		data := make([]byte, 0, 100)
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -124,7 +126,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		data := make([]byte, 0, 100)
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		require.NoError(storage.Put([]byte("NL"), []byte("Beverage"), []byte("Cola")))
@@ -160,7 +162,7 @@ func TestBasicUsage(t *testing.T) {
 	t.Run("error on app storage get error", func(t *testing.T) {
 		testErr := errors.New("test error")
 		tsp := &testStorageProvider{appStorageGetError: testErr}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.ErrorIs(t, err, testErr)
 		require.Nil(t, storage)
@@ -179,7 +181,7 @@ func TestAppStorage_Put(t *testing.T) {
 		},
 	}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -205,7 +207,7 @@ func TestAppStorage_PutBatch(t *testing.T) {
 		},
 	}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -230,7 +232,7 @@ func TestAppStorage_Get(t *testing.T) {
 		return false, testErr
 	}}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -248,7 +250,7 @@ func TestAppStorage_GetBatch(t *testing.T) {
 			return testErr
 		}}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -277,7 +279,7 @@ func TestAppStorage_GetBatch(t *testing.T) {
 				return err
 			}}
 		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", testingu.MockTime)
 		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -314,12 +316,12 @@ func TestAppStorage_GetBatch(t *testing.T) {
 }
 
 func TestTechnologyCompatibilityKit(t *testing.T) {
-	asf := mem.Provide()
+	asf := mem.Provide(testingu.MockTime)
 	asp := istorageimpl.Provide(asf)
-	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "vvm", asf.Time())
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
-	istorage.TechnologyCompatibilityKit_Storage(t, storage)
+	istorage.TechnologyCompatibilityKit_Storage(t, storage, asf.Time())
 }
 
 func TestCacheNils(t *testing.T) {
@@ -339,7 +341,7 @@ func TestCacheNils(t *testing.T) {
 		},
 	}
 	tsp := &testStorageProvider{storage: ts}
-	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm")
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -396,6 +398,12 @@ type testStorageProvider struct {
 	appStorageGetError error
 }
 
+func (sp *testStorageProvider) Prepare(_ any) error { return nil }
+
+func (sp *testStorageProvider) Run(_ context.Context) {}
+
+func (sp *testStorageProvider) Stop() {}
+
 func (sp *testStorageProvider) AppStorage(appdef.AppQName) (istorage.IAppStorage, error) {
 	if sp.appStorageGetError != nil {
 		return nil, sp.appStorageGetError
@@ -408,10 +416,40 @@ func (sp *testStorageProvider) Init(appQName appdef.AppQName) error {
 }
 
 type testStorage struct {
-	put      func(pKey []byte, cCols []byte, value []byte) (err error)
-	putBatch func(items []istorage.BatchItem) (err error)
-	get      func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
-	getBatch func(pKey []byte, items []istorage.GetBatchItem) (err error)
+	insertIfNotExists func(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error)
+	compareAndSwap    func(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
+	compareAndDelete  func(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
+	ttlGet            func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
+	ttlRead           func(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error)
+	queryTTL          func(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error)
+	put               func(pKey []byte, cCols []byte, value []byte) (err error)
+	putBatch          func(items []istorage.BatchItem) (err error)
+	get               func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
+	getBatch          func(pKey []byte, items []istorage.GetBatchItem) (err error)
+}
+
+func (s *testStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	return s.insertIfNotExists(pKey, cCols, value, ttlSeconds)
+}
+
+func (s *testStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	return s.compareAndSwap(pKey, cCols, oldValue, newValue, ttlSeconds)
+}
+
+func (s *testStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	return s.compareAndDelete(pKey, cCols, expectedValue)
+}
+
+func (s *testStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	return s.ttlGet(pKey, cCols, data)
+}
+
+func (s *testStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	return s.ttlRead(ctx, pKey, startCCols, finishCCols, cb)
+}
+
+func (s *testStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	return s.queryTTL(pKey, cCols)
 }
 
 func (s *testStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {

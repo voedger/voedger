@@ -10,8 +10,11 @@ import (
 	"log"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -36,9 +39,11 @@ func TestBasicUsage(t *testing.T) {
 
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
 		saleSecureParamsName := appdef.NewQName("test", "saleSecureArgs")
@@ -46,7 +51,7 @@ func TestBasicUsage(t *testing.T) {
 		saleParamsDoc := wsb.AddODoc(saleParamsName)
 		saleParamsDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
-			AddField("Age", appdef.DataKind_int32, false).
+			AddField("Age", appdef.DataKind_int8, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
 			AddField("Photo", appdef.DataKind_bytes, false)
@@ -69,7 +74,7 @@ func TestBasicUsage(t *testing.T) {
 		photosDoc := wsb.AddCDoc(appdef.NewQName("test", "photos"))
 		photosDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
-			AddField("Age", appdef.DataKind_int32, false).
+			AddField("Age", appdef.DataKind_int8, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
 			AddField("Photo", appdef.DataKind_bytes, false)
@@ -88,7 +93,7 @@ func TestBasicUsage(t *testing.T) {
 	}()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -114,7 +119,7 @@ func TestBasicUsage(t *testing.T) {
 
 	cmd.PutRecordID(appdef.SystemField_ID, 1)
 	cmd.PutString("Buyer", "Carlson 哇\"呀呀") // to test unicode issues
-	cmd.PutInt32("Age", 33)
+	cmd.PutInt8("Age", 33)
 	cmd.PutFloat32("Height", 1.75)
 	cmd.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
 
@@ -141,7 +146,7 @@ func TestBasicUsage(t *testing.T) {
 	rec := cud.Create(appdef.NewQName("test", "photos"))
 	rec.PutRecordID(appdef.SystemField_ID, 11)
 	rec.PutString("Buyer", "Carlson 哇\"呀呀")
-	rec.PutInt32("Age", 33)
+	rec.PutInt8("Age", 33)
 	rec.PutFloat32("Height", 1.75)
 	rec.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
 
@@ -193,15 +198,17 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		view := wsb.AddView(appdef.NewQName("test", "viewDrinks"))
 		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
 		view.Key().ClustCols().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
 			AddField("clusteringColumn2", appdef.DataKind_bool).
-			AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(100))
+			AddField("clusteringColumn3", appdef.DataKind_string, constraints.MaxLen(100))
 		view.Value().
 			AddField("id", appdef.DataKind_int64, true).
 			AddField("name", appdef.DataKind_string, true).
@@ -214,7 +221,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -295,9 +302,11 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 
 	appStructs := func() istructs.IAppStructs {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 		obj := wsb.AddObject(objName)
 		obj.AddField("int", appdef.DataKind_int64, true)
 		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
@@ -306,7 +315,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
@@ -330,10 +339,10 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		b := appStructs.ObjectBuilder(objName)
 		require.NotNil(b)
 
-		b.FillFromJSON(map[string]interface{}{
+		b.FillFromJSON(map[string]any{
 			"int": int64(1),
-			"child": []interface{}{
-				map[string]interface{}{
+			"child": []any{
+				map[string]any{
 					"int": int64(2),
 				},
 			},
@@ -413,7 +422,7 @@ func TestBasicUsage_Resources(t *testing.T) {
 // Demonstrates basic usage application
 func TestBasicUsage_AppDef(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	app := test.AppStructs
 
@@ -430,7 +439,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		}
 		require.Len(fields, 7) // 2 system {sys.QName, sys.ID} + 5 user
 		require.Equal(appdef.DataKind_string, fields[test.buyerIdent])
-		require.Equal(appdef.DataKind_int32, fields[test.ageIdent])
+		require.Equal(appdef.DataKind_int8, fields[test.ageIdent])
 		require.Equal(appdef.DataKind_float32, fields[test.heightIdent])
 		require.Equal(appdef.DataKind_bool, fields[test.humanIdent])
 		require.Equal(appdef.DataKind_bytes, fields[test.photoIdent])
@@ -475,7 +484,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	app := func() istructs.IAppStructs {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("structs", "test.com/structs")
 		adb.AddPackage("functions", "test.com/functions")
 		adb.AddPackage("workspaces", "test.com/workspace")
@@ -489,6 +498,8 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		argQName := appdef.NewQName("structs", "Arg")
 
 		wsb := adb.AddWorkspace(wsQName)
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		rec := wsb.AddCRecord(recQName)
 		rec.AddField("int", appdef.DataKind_int64, false)
@@ -504,7 +515,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		view := wsb.AddView(viewQName)
 		view.Key().PartKey().AddField("int", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
+		view.Key().ClustCols().AddField("str", appdef.DataKind_string, constraints.MaxLen(100))
 		view.Value().AddField("bool", appdef.DataKind_bool, false)
 
 		arg := wsb.AddObject(argQName)
@@ -533,7 +544,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			MaxAllowedPerDuration: 4,
 		})
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
@@ -557,13 +568,13 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 func Test_Provide(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
+		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil, isequencer.SequencesTrustLevel_0)
 		require.NotNil(p)
 
 		_, err := p.BuiltIn(appdef.NewAppQName("test1", "unknownApp"))
@@ -572,7 +583,7 @@ func Test_Provide(t *testing.T) {
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
-		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
 		app, err := provider.BuiltIn(test.appName)
 		require.NoError(err)

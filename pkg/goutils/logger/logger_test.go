@@ -65,6 +65,25 @@ func Test_BasicUsage(t *testing.T) {
 	}
 }
 
+func Test_BasicUsage_SetLogLevelWithRestore(t *testing.T) {
+
+	// Log level is set to LogLevelTrace and then restored to the previous value
+	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
+
+	logger.Trace("You SHOULD see this trace")
+
+}
+
+func Test_SetLogLevelWithRestore(t *testing.T) {
+
+	trySetLevelWithRestore := func() {
+		defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
+		logger.Trace("You SHOULD see this trace")
+	}
+	trySetLevelWithRestore()
+	logger.Trace("You should NOT see this trace")
+}
+
 func loggerHelperWithSkipStackFrames(skipStackFrames int, msg string) error {
 	logger.Log(skipStackFrames, logger.LogLevelTrace, "myStunningPrefix:", msg)
 	return nil
@@ -105,7 +124,7 @@ func Test_BasicUsage_CustomPrintLine(t *testing.T) {
 			return nil
 		})
 		require.NoError(err)
-		require.Equal("", strStderr)
+		require.Empty(strStderr)
 		require.Contains(strStdout, "myPrintLine")
 	}
 
@@ -124,7 +143,7 @@ func Test_SkipStackFrames(t *testing.T) {
 			return loggerHelperWithSkipStackFrames(0, "hello")
 		})
 		require.NoError(err)
-		require.Equal("", strStderr)
+		require.Empty(strStderr)
 		require.Contains(strStdout, funcNamePattern)
 	}
 
@@ -134,7 +153,7 @@ func Test_SkipStackFrames(t *testing.T) {
 			return loggerHelperWithSkipStackFrames(1, "hello")
 		})
 		require.NoError(err)
-		require.Equal("", strStderr)
+		require.Empty(strStderr)
 		require.NotContains(strStdout, funcNamePattern)
 	}
 
@@ -154,7 +173,7 @@ func Test_StdoutStderr_LogLevel(t *testing.T) {
 		})
 		require.NoError(err)
 		require.Contains(strStderr, "Error arg1 arg2")
-		require.Equal("", strStdout)
+		require.Empty(strStdout)
 	}
 
 	// LogLevelWarning

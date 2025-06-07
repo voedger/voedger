@@ -27,7 +27,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 	bill := fmt.Sprintf(`{
 				"cuds": [{
-				  "fields": {
+				"fields": {
 					"sys.ID": 1,
 					"sys.QName": "app1pkg.bill",
 					"tableno": %d,
@@ -35,7 +35,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 					"table_part": "a",
 					"proforma": 3,
 					"working_day": "20230228"
-				  }
+				}
 				}]
 			}`, tableNum, idUntillUsers)
 	resp := vit.PostWS(ws, "c.sys.CUD", bill)
@@ -54,10 +54,10 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 	require.JSONEq(fmt.Sprintf(`
 	{
-	  "args": {},
-	  "cuds": [
+	"args": {},
+	"cuds": [
 		{
-		  "fields": {
+		"fields": {
 			"id_untill_users": %[4]d,
 			"proforma": 3,
 			"sys.ID": %[1]d,
@@ -66,38 +66,38 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"table_part": "a",
 			"tableno": %[2]d,
 			"working_day": "20230228"
-		  },
-		  "IsNew": true,
-		  "sys.ID": %[1]d,
-		  "sys.QName": "app1pkg.bill"
+		},
+		"IsNew": true,
+		"sys.ID": %[1]d,
+		"sys.QName": "app1pkg.bill"
 		}
-	  ],
-	  "DeviceID": 0,
-	  "RegisteredAt": %[3]d,
-	  "Synced": false,
-	  "SyncedAt": 0,
-	  "sys.QName": "sys.CUD"
+	],
+	"DeviceID": 0,
+	"RegisteredAt": %[3]d,
+	"Synced": false,
+	"SyncedAt": 0,
+	"sys.QName": "sys.CUD"
 	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
 
 	expectedEvent := fmt.Sprintf(`
 		{
 			"args": {},
 			"cuds": [
-			{
-				"fields": {
-				"id_untill_users": %[4]d,
-				"proforma": 3,
-				"sys.ID": %[1]d,
-				"sys.IsActive": true,
-				"sys.QName": "app1pkg.bill",
-				"table_part": "a",
-				"tableno": %[2]d,
-				"working_day": "20230228"
-				},
-				"IsNew": true,
-				"sys.ID": %[1]d,
-				"sys.QName": "app1pkg.bill"
-			}
+				{
+					"fields": {
+						"id_untill_users": %[4]d,
+						"proforma": 3,
+						"sys.ID": %[1]d,
+						"sys.IsActive": true,
+						"sys.QName": "app1pkg.bill",
+						"table_part": "a",
+						"tableno": %[2]d,
+						"working_day": "20230228"
+					},
+					"IsNew": true,
+					"sys.ID": %[1]d,
+					"sys.QName": "app1pkg.bill"
+				}
 			],
 			"DeviceID": 0,
 			"RegisteredAt": %[3]d,
@@ -120,10 +120,10 @@ func TestBasicUsage_Journal(t *testing.T) {
 
 	require.JSONEq(fmt.Sprintf(`
 	{
-	  "args": {},
-	  "cuds": [
+	"args": {},
+	"cuds": [
 		{
-		  "fields": {
+		"fields": {
 			"id_untill_users": %[4]d,
 			"proforma": 3,
 			"sys.ID": %[1]d,
@@ -132,17 +132,17 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"table_part": "a",
 			"tableno": %[2]d,
 			"working_day": "20230228"
-		  },
-		  "IsNew": true,
-		  "sys.ID": %[1]d,
-		  "sys.QName": "app1pkg.bill"
+		},
+		"IsNew": true,
+		"sys.ID": %[1]d,
+		"sys.QName": "app1pkg.bill"
 		}
-	  ],
-	  "DeviceID": 0,
-	  "RegisteredAt": %[3]d,
-	  "Synced": false,
-	  "SyncedAt": 0,
-	  "sys.QName": "sys.CUD"
+	],
+	"DeviceID": 0,
+	"RegisteredAt": %[3]d,
+	"Synced": false,
+	"SyncedAt": 0,
+	"sys.QName": "sys.CUD"
 	}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers), resp.SectionRow()[2].(string))
 
 	expectedEvent = fmt.Sprintf(`

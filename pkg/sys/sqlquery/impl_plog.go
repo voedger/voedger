@@ -39,7 +39,7 @@ func readPlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, c
 			data["WLogOffset"] = event.WLogOffset()
 		}
 
-		renderDbEvent(data, f, event, appDef, event.WLogOffset())
+		renderDBEvent(data, f, event, appDef, event.WLogOffset())
 
 		bb, err := json.Marshal(data)
 		if err != nil {

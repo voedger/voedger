@@ -12,13 +12,19 @@ import (
 
 type Rate struct {
 	Type
-	Count  uint
+	Count  appdef.RateCount
 	Period time.Duration
 	Scopes []string `json:",omitempty"`
 }
 
 type Limit struct {
 	Type
-	On   []appdef.QName
-	Rate appdef.QName
+	Ops    []string
+	Filter LimitFilter
+	Rate   appdef.QName
+}
+
+type LimitFilter struct {
+	Option string // ALL or EACH
+	Filter
 }

@@ -32,7 +32,7 @@ func Test_PassEnvironmentVariable(t *testing.T) {
 		RunToStrings()
 	require.NoError(t, err)
 	require.Equal(t, "MYVALUE", strings.TrimSpace(stdout))
-	assert.Equal(t, "", strings.TrimSpace(stderr))
+	require.Empty(t, strings.TrimSpace(stderr))
 }
 
 func Test_Wd(t *testing.T) {
@@ -147,7 +147,7 @@ func Test_RunToStrings(t *testing.T) {
 			RunToStrings()
 		require.NoError(err)
 		require.Equal("11", strings.TrimSpace(stdouts))
-		require.Equal("", stderrs)
+		require.Empty(stderrs)
 	}
 
 	// 1 > &2
@@ -157,7 +157,7 @@ func Test_RunToStrings(t *testing.T) {
 			RunToStrings()
 		require.NoError(err)
 		require.Equal("11", strings.TrimSpace(stderrs))
-		require.Equal("", stdouts)
+		require.Empty(stdouts)
 	}
 
 	//stdout and stderr
@@ -176,8 +176,8 @@ func Test_RunToStrings(t *testing.T) {
 			Command("itmustbeawrongcommandPipedExecRunToStrings").
 			RunToStrings()
 		require.Error(err)
-		assert.Equal(t, "", stdouts)
-		assert.Equal(t, "", stderrs)
+		require.Empty(stdouts)
+		require.Empty(stderrs)
 	}
 
 }

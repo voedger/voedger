@@ -7,6 +7,7 @@ package iblobstorage
 import (
 	"io"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -39,8 +40,12 @@ type TempBLOBKeyType struct {
 type SUUID string
 
 type DescrType struct {
-	Name     string
-	MimeType string
+	Name        string
+	ContentType string
+
+	// empty for temp blobs
+	OwnerRecord      appdef.QName
+	OwnerRecordField appdef.FieldName
 }
 
 type BLOBStatus uint8
@@ -54,6 +59,7 @@ const (
 type BLOBMaxSizeType uint64
 
 // DurationType^2 - amount of days to store the BLOB
+// use `DurationType.Seconds() int` as well
 type DurationType int
 
 type WLimiterType func(wantToWriteBytes uint64) error

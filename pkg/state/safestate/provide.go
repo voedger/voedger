@@ -12,10 +12,10 @@ import (
 )
 
 // oldApi is optional, to allow re-usage
-func Provide(state state.IState, oldApi safe.IStateSafeAPI) safe.IStateSafeAPI {
-	if oldApi != nil {
+func Provide(state state.IState, oldAPI safe.IStateSafeAPI) safe.IStateSafeAPI {
+	if oldAPI != nil {
 		// reuse
-		ss := oldApi.(*safeState)
+		ss := oldAPI.(*safeState)
 		ss.state = state
 		if len(ss.keys) > 0 {
 			ss.keys = make([]istructs.IKey, 0, keysCapacity)

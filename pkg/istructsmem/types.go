@@ -19,7 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
@@ -34,7 +33,7 @@ import (
 type rowType struct {
 	appCfg           *AppConfigType
 	typ              appdef.IType
-	fields           appdef.IFields
+	fields           appdef.IWithFields
 	id               istructs.RecordID
 	parentID         istructs.RecordID
 	container        string
@@ -92,7 +91,7 @@ func (row *rowType) build() error {
 // Checks is specified field is nullable (string- or []byte- type) and put value is nil or zero length.
 // In this case adds field to nils map, otherwise removes field from nils map.
 // #2785
-func (row *rowType) checkPutNil(field appdef.IField, value interface{}) {
+func (row *rowType) checkPutNil(field appdef.IField, value any) {
 	isNil := false
 
 	switch field.DataKind() {
@@ -137,7 +136,7 @@ func (row *rowType) collectError(err error) {
 	row.err = errors.Join(row.err, err)
 }
 
-func (row *rowType) collectErrorf(format string, a ...interface{}) {
+func (row *rowType) collectErrorf(format string, a ...any) {
 	row.collectError(fmt.Errorf(format, a...))
 }
 
@@ -162,7 +161,7 @@ func (row *rowType) copyFrom(src *rowType) {
 	if src.dyB != nil {
 		row.dyB = dynobuffers.NewBuffer(src.dyB.Scheme)
 		src.dyB.IterateFields(nil,
-			func(name string, data interface{}) bool {
+			func(name string, data any) bool {
 				row.dyB.Set(name, data)
 				return true
 			})
@@ -175,7 +174,7 @@ func (row *rowType) copyFrom(src *rowType) {
 func (row *rowType) empty() bool {
 	userFields := false
 	row.dyB.IterateFields(nil,
-		func(name string, _ interface{}) bool {
+		func(name string, _ any) bool {
 			userFields = true
 			return false
 		})
@@ -214,7 +213,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 
 	var codec byte
 	if codec, err = utils.ReadByte(buf); err != nil {
-		return fmt.Errorf("error read codec version: %w", err)
+		return enrichError(err, "error read codec version")
 	}
 	switch codec {
 	case codec_RawDynoBuffer, codec_RDB_1, codec_RDB_2:
@@ -231,7 +230,7 @@ func (row *rowType) loadFromBytes(in []byte) (err error) {
 // Masks values in row. Digital values are masked by zeros, strings — by star «*». System fields are not masked
 func (row *rowType) maskValues() {
 	row.dyB.IterateFields(nil,
-		func(name string, data interface{}) bool {
+		func(name string, data any) bool {
 			if _, ok := data.(string); ok {
 				row.dyB.Set(name, maskString)
 			} else {
@@ -253,7 +252,7 @@ func (row *rowType) maskValues() {
 // If field has restricts (length, pattern, etc.) then checks value by field restricts.
 //
 // If field must be verified before put then collects error «field must be verified».
-func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, value interface{}) {
+func (row *rowType) putValue(name appdef.FieldName, kind appdef.DataKind, value any) {
 
 	if a, ok := row.typ.(appdef.IWithAbstract); ok {
 		if a.Abstract() {
@@ -301,8 +300,8 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 		}
 	} else {
 		if f, ok := row.dyB.Scheme.FieldsMap[name]; ok {
-			if (kind != dynobuffers.FieldTypeUnspecified) && (f.Ft != kind) {
-				row.collectError(ErrWrongFieldType("can not put %s to %v", dynobuf.FieldTypeToString(kind), fld))
+			if k := dynobuf.DataKindToFieldType(kind); f.Ft != k {
+				row.collectError(ErrWrongFieldType("can not put %s to %v", kind.TrimString(), fld))
 				return
 			}
 		}
@@ -315,14 +314,19 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 
 	row.checkPutNil(fld, fieldValue) // #2785
 
-	row.dyB.Set(name, fieldValue)
+	switch fld.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		row.dyB.Set(name, byte(fieldValue.(int8))) // nolint G115 : dynobuffers uses byte to store int8
+	default:
+		row.dyB.Set(name, fieldValue)
+	}
 }
 
-// qNameID returns storage ID of row QName
-func (row *rowType) qNameID() (qnames.QNameID, error) {
+// QNameID returns storage ID of row QName
+func (row *rowType) QNameID() (istructs.QNameID, error) {
 	name := row.QName()
 	if name == appdef.NullQName {
-		return qnames.NullQNameID, nil
+		return istructs.NullQNameID, nil
 	}
 	return row.appCfg.qNames.ID(name)
 }
@@ -394,8 +398,8 @@ func (row *rowType) setQName(value appdef.QName) {
 }
 
 // Same as setQName, useful from loadFromBytes()
-func (row *rowType) setQNameID(value qnames.QNameID) (err error) {
-	if id, err := row.qNameID(); (err == nil) && (id == value) {
+func (row *rowType) setQNameID(value istructs.QNameID) (err error) {
+	if id, err := row.QNameID(); (err == nil) && (id == value) {
 		return nil
 	}
 
@@ -438,7 +442,7 @@ func (row *rowType) setType(t appdef.IType) {
 			row.fields = v.Value()
 			row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.Scheme(t.QName()))
 		} else {
-			if f, ok := t.(appdef.IFields); ok {
+			if f, ok := t.(appdef.IWithFields); ok {
 				row.fields = f
 				row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.Scheme(t.QName()))
 			} else {
@@ -495,7 +499,7 @@ func (row *rowType) typeDef() appdef.IType {
 }
 
 // verifyToken verifies specified token for specified field and returns successfully verified token payload value or error
-func (row *rowType) verifyToken(fld appdef.IField, token string) (value interface{}, err error) {
+func (row *rowType) verifyToken(fld appdef.IField, token string) (value any, err error) {
 	payload := payloads.VerifiedValuePayload{}
 	tokens := row.appCfg.app.AppTokens()
 	if _, err = tokens.ValidateToken(token, &payload); err != nil {
@@ -523,6 +527,28 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value interfac
 	return value, nil
 }
 
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowReader.AsInt8
+func (row *rowType) AsInt8(name appdef.FieldName) int8 {
+	_ = row.fieldMustExists(name, appdef.DataKind_int8)
+	if value, ok := row.dyB.GetByte(name); ok {
+		return int8(value) // nolint G115 : dynobuffers uses byte to store int8
+	}
+	return 0
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowReader.AsInt16
+func (row *rowType) AsInt16(name appdef.FieldName) int16 {
+	_ = row.fieldMustExists(name, appdef.DataKind_int16)
+	if value, ok := row.dyB.GetInt16(name); ok {
+		return value
+	}
+	return 0
+}
+
 // istructs.IRowReader.AsInt32
 func (row *rowType) AsInt32(name appdef.FieldName) (value int32) {
 	_ = row.fieldMustExists(name, appdef.DataKind_int32)
@@ -539,9 +565,9 @@ func (row *rowType) AsInt64(name appdef.FieldName) (value int64) {
 	if fld.DataKind() == appdef.DataKind_RecordID {
 		switch name {
 		case appdef.SystemField_ID:
-			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
+			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func response
 		case appdef.SystemField_ParentID:
-			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
+			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func response
 		}
 	}
 
@@ -563,8 +589,17 @@ func (row *rowType) AsFloat32(name appdef.FieldName) (value float32) {
 // istructs.IRowReader.AsFloat64
 func (row *rowType) AsFloat64(name appdef.FieldName) (value float64) {
 	fld := row.fieldMustExists(name, appdef.DataKind_float64,
+		appdef.DataKind_int8, appdef.DataKind_int16, // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
 		appdef.DataKind_int32, appdef.DataKind_int64, appdef.DataKind_float32, appdef.DataKind_RecordID)
 	switch fld.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		if value, ok := row.dyB.GetByte(name); ok {
+			return float64(value)
+		}
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		if value, ok := row.dyB.GetInt16(name); ok {
+			return float64(value)
+		}
 	case appdef.DataKind_int32:
 		if value, ok := row.dyB.GetInt32(name); ok {
 			return float64(value)
@@ -709,39 +744,39 @@ func (row *rowType) Container() string {
 	return row.container
 }
 
-// istructs.IRowReader.FieldNames
-func (row *rowType) FieldNames(cb func(appdef.FieldName) bool) {
-	// system fields
-	if row.fieldDef(appdef.SystemField_QName) != nil {
-		if !cb(appdef.SystemField_QName) {
+// istructs.IRowReader.Fields
+func (row *rowType) Fields(cb func(appdef.IField) bool) {
+	qNameField := row.fieldDef(appdef.SystemField_QName)
+	if qNameField != nil {
+		if !cb(qNameField) {
 			return
 		}
 	}
 	if row.id != istructs.NullRecordID {
-		if !cb(appdef.SystemField_ID) {
+		if !cb(row.fieldDef(appdef.SystemField_ID)) {
 			return
 		}
 	}
 	if row.parentID != istructs.NullRecordID {
-		if !cb(appdef.SystemField_ParentID) {
+		if !cb(row.fieldDef(appdef.SystemField_ParentID)) {
 			return
 		}
 	}
 	if row.container != "" {
-		if !cb(appdef.SystemField_Container) {
+		if !cb(row.fieldDef(appdef.SystemField_Container)) {
 			return
 		}
 	}
 	if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
-		if !cb(appdef.SystemField_IsActive) {
+		if !cb(row.fieldDef(appdef.SystemField_IsActive)) {
 			return
 		}
 	}
 
 	// user fields
 	row.dyB.IterateFields(nil,
-		func(name string, _ interface{}) bool {
-			return cb(name)
+		func(name string, _ any) bool {
+			return cb(row.fieldDef(name))
 		})
 }
 
@@ -785,37 +820,54 @@ func (row *rowType) Parent() istructs.RecordID {
 	return row.parentID
 }
 
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowWriter.PutInt8
+func (row *rowType) PutInt8(name appdef.FieldName, value int8) {
+	row.putValue(name, appdef.DataKind_int8, value)
+}
+
+// #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+//
+// istructs.IRowWriter.PutInt16
+func (row *rowType) PutInt16(name appdef.FieldName, value int16) {
+	row.putValue(name, appdef.DataKind_int16, value)
+}
+
 // istructs.IRowWriter.PutInt32
 func (row *rowType) PutInt32(name appdef.FieldName, value int32) {
-	row.putValue(name, dynobuffers.FieldTypeInt32, value)
+	row.putValue(name, appdef.DataKind_int32, value)
 }
 
 // istructs.IRowWriter.PutInt64
 func (row *rowType) PutInt64(name appdef.FieldName, value int64) {
-	row.putValue(name, dynobuffers.FieldTypeInt64, value)
+	row.putValue(name, appdef.DataKind_int64, value)
 }
 
 // istructs.IRowWriter.PutFloat32
 func (row *rowType) PutFloat32(name appdef.FieldName, value float32) {
-	row.putValue(name, dynobuffers.FieldTypeFloat32, value)
+	row.putValue(name, appdef.DataKind_float32, value)
 }
 
 // istructs.IRowWriter.PutFloat64
 func (row *rowType) PutFloat64(name appdef.FieldName, value float64) {
-	row.putValue(name, dynobuffers.FieldTypeFloat64, value)
+	row.putValue(name, appdef.DataKind_float64, value)
 }
 
 // istructs.IRowWriter.PutFromJSON
 func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	if v, ok := j[appdef.SystemField_QName]; ok {
-		if value, ok := v.(string); ok {
-			qName, err := appdef.ParseQName(value)
+		switch qNameFieldValue := v.(type) {
+		case string:
+			qName, err := appdef.ParseQName(qNameFieldValue)
 			if err != nil {
 				row.collectError(enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName))
 				return
 			}
 			row.setQName(qName)
-		} else {
+		case appdef.QName:
+			row.setQName(qNameFieldValue)
+		default:
 			row.collectError(ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName))
 			return
 		}
@@ -830,6 +882,10 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		switch fv := v.(type) {
 		case float64:
 			row.PutFloat64(n, fv)
+		case int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+			row.PutInt8(n, fv)
+		case int16: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+			row.PutInt16(n, fv)
 		case int32:
 			row.PutInt32(n, fv)
 		case int64:
@@ -847,6 +903,11 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		case []byte:
 			// happens e.g. on IRowWriter.PutJSON() after read from the storage
 			row.PutBytes(n, fv)
+		case appdef.QName:
+			// happens if `j` is got from coreutils.FieldsToMap()
+			if n != appdef.SystemField_QName {
+				row.PutQName(n, fv)
+			}
 		default:
 			row.collectError(ErrWrongType(`%#T for field "%s" with value %v`, v, n, v))
 		}
@@ -866,6 +927,10 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 		return
 	}
 	switch fld.DataKind() {
+	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		row.PutInt8(name, clarifiedVal.(int8))
+	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
+		row.PutInt16(name, clarifiedVal.(int16))
 	case appdef.DataKind_int32:
 		row.PutInt32(name, clarifiedVal.(int32))
 	case appdef.DataKind_int64:
@@ -884,7 +949,7 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 
 // istructs.IRowWriter.PutBytes
 func (row *rowType) PutBytes(name appdef.FieldName, value []byte) {
-	row.putValue(name, dynobuffers.FieldTypeByte, value)
+	row.putValue(name, appdef.DataKind_bytes, value)
 }
 
 // istructs.IRowWriter.PutString
@@ -893,7 +958,7 @@ func (row *rowType) PutString(name appdef.FieldName, value string) {
 		row.setContainer(value)
 		return
 	}
-	row.putValue(name, dynobuffers.FieldTypeString, value)
+	row.putValue(name, appdef.DataKind_string, value)
 }
 
 // istructs.IRowWriter.PutQName
@@ -916,7 +981,7 @@ func (row *rowType) PutQName(name appdef.FieldName, value appdef.QName) {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, id)
 
-	row.putValue(name, dynobuffers.FieldTypeByte, b)
+	row.putValue(name, appdef.DataKind_QName, b)
 }
 
 // istructs.IRowWriter.PutChars
@@ -957,19 +1022,19 @@ func (row *rowType) PutBool(name appdef.FieldName, value bool) {
 		return
 	}
 
-	row.putValue(name, dynobuffers.FieldTypeBool, value)
+	row.putValue(name, appdef.DataKind_bool, value)
 }
 
 // istructs.IRowWriter.PutRecordID
 func (row *rowType) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
-	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value)) // nolint G115
+	row.putValue(name, appdef.DataKind_RecordID, int64(value)) // nolint G115
 }
 
 // istructs.IValueBuilder.PutRecord
 func (row *rowType) PutRecord(name appdef.FieldName, record istructs.IRecord) {
 	if rec, ok := record.(*recordType); ok {
 		bytes := rec.storeToBytes()
-		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
+		row.putValue(name, appdef.DataKind_Record, bytes)
 	}
 }
 
@@ -977,7 +1042,7 @@ func (row *rowType) PutRecord(name appdef.FieldName, record istructs.IRecord) {
 func (row *rowType) PutEvent(name appdef.FieldName, event istructs.IDbEvent) {
 	if ev, ok := event.(*eventType); ok {
 		bytes := ev.storeToBytes()
-		row.putValue(name, dynobuffers.FieldTypeByte, bytes)
+		row.putValue(name, appdef.DataKind_Event, bytes)
 	}
 }
 

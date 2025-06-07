@@ -1,0 +1,196 @@
+name: CI changes in pkg/istorage
+
+on:
+  push:
+    paths:
+      - 'pkg/istorage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/elections/**'
+  pull_request_target:
+    paths:
+      - 'pkg/istorage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/vvm/storage/**'
+      - 'pkg/elections/**'
+
+jobs:
+
+  determine_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      cas_changed: ${{ steps.pr_files.outputs.cas_changed }}
+      amazon_changed: ${{ steps.pr_files.outputs.amazon_changed }}
+      others_changed: ${{ steps.pr_files.outputs.others_changed }}
+      ttlstorage_changed: ${{ steps.pr_files.outputs.ttlstorage_changed }}
+      elections_changed: ${{ steps.pr_files.outputs.elections_changed }}
+      cas_changed_push: ${{ steps.push_files.outputs.cas_changed }}
+      amazon_changed_push: ${{ steps.push_files.outputs.amazon_changed }}
+      others_changed_push: ${{ steps.push_files.outputs.others_changed }}
+      ttlstorage_changed_push: ${{ steps.push_files.outputs.ttlstorage_changed }}
+      elections_changed_push: ${{ steps.push_files.outputs.elections_changed }}
+    steps:
+
+      - name: Install GitHub CLI
+        run: sudo apt-get install -y gh
+
+      - name: Get changed files in PR
+        if: github.event_name == 'pull_request_target'
+        id: pr_files
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          CHANGED_FILES=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER/files --jq '.[].filename')
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          CAS_CHANGED=false
+          AMAZON_CHANGED=false
+          OTHERS_CHANGED=false
+          TTLSTORAGE_CHANGED=false
+          ELECTIONS_CHANGED=false
+
+          for FILE in $CHANGED_FILES; do
+            case "$FILE" in
+              pkg/istorage/cas/*)
+                CAS_CHANGED=true
+                ;;
+              pkg/istorage/amazondb/*)
+                AMAZON_CHANGED=true
+                ;;
+              pkg/istorage/*)
+                OTHERS_CHANGED=true
+                ;;
+              pkg/vvm/storage/*)
+                TTLSTORAGE_CHANGED=true
+                ;;
+              pkg/elections/*)
+                ELECTIONS_CHANGED=true
+                ;;
+            esac
+          done
+
+          echo "cas_changed=$CAS_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "amazon_changed=$AMAZON_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "others_changed=$OTHERS_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "ttlstorage_changed=$TTLSTORAGE_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "elections_changed=$ELECTIONS_CHANGED" >> "$GITHUB_OUTPUT"
+
+        env:
+          GH_TOKEN: ${{ secrets.REPOREADING_TOKEN }}
+
+      - name: Checkout repository
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Ensure we have history for comparison
+
+      - name: Check changed files
+        if: github.event_name == 'push'
+        id: push_files
+        run: |
+          CAS_CHANGED=false
+          AMAZON_CHANGED=false
+          TTLSTORAGE_CHANGED=false
+          ELECTIONS_CHANGED=false
+
+          # Ensure we have a valid previous commit
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            BEFORE_COMMIT=HEAD^
+          else
+            BEFORE_COMMIT=HEAD  # In case it's the first commit
+          fi
+
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only $BEFORE_COMMIT HEAD)
+
+          # Check if files were changed in respective folders
+          OTHERS_CHANGED=true
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/cas/"; then
+            CAS_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/amazondb/"; then
+            AMAZON_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/bbolt/"; then
+            OTHERS_CHANGED=false
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/mem/"; then
+            OTHERS_CHANGED=false
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^pkg/istorage/provider/"; then
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/vvm/storage/"; then
+            TTLSTORAGE_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^pkg/elections/"; then
+            ELECTIONS_CHANGED=true
+            OTHERS_CHANGED=false
+          fi
+
+          echo "cas_changed=$CAS_CHANGED" >> $GITHUB_OUTPUT
+          echo "amazon_changed=$AMAZON_CHANGED" >> $GITHUB_OUTPUT
+          echo "others_changed=$OTHERS_CHANGED" >> $GITHUB_OUTPUT
+          echo "ttlstorage_changed=$TTLSTORAGE_CHANGED" >> $GITHUB_OUTPUT
+          echo "elections_changed=$ELECTIONS_CHANGED" >> $GITHUB_OUTPUT
+
+  trigger_cas:
+    needs: determine_changes
+    if: |
+      (
+        (needs.determine_changes.outputs.cas_changed == 'true' ||
+        needs.determine_changes.outputs.cas_changed_push == 'true' ||
+        needs.determine_changes.outputs.ttlstorage_changed == 'true' ||
+        needs.determine_changes.outputs.elections_changed == 'true')
+      ) && (
+        (needs.determine_changes.outputs.amazon_changed == 'false' ||
+        needs.determine_changes.outputs.amazon_changed_push == 'false')
+      ) || (
+        (needs.determine_changes.outputs.others_changed == 'true' ||
+        needs.determine_changes.outputs.others_changed_push == 'true')
+      )
+    uses: ./.github/workflows/ci_cas.yml
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+
+  trigger_amazon:
+    needs: determine_changes
+    if: |
+      (
+        (needs.determine_changes.outputs.amazon_changed == 'true' ||
+        needs.determine_changes.outputs.amazon_changed_push == 'true' ||
+        needs.determine_changes.outputs.ttlstorage_changed == 'true' ||
+        needs.determine_changes.outputs.elections_changed == 'true')
+      ) && (
+        (needs.determine_changes.outputs.cas_changed == 'false' ||
+        needs.determine_changes.outputs.cas_changed_push == 'false')
+      ) || (
+        (needs.determine_changes.outputs.others_changed == 'true' ||
+        needs.determine_changes.outputs.others_changed_push == 'true')
+      )
+    uses: ./.github/workflows/ci_amazon.yml
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+
+  auto-merge-pr:
+    uses: ./.github/workflows/merge.yml
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+    needs:
+      - determine_changes
+      - trigger_cas
+      - trigger_amazon
+    if: always() &&       
+      (
+        (needs.trigger_cas.result == 'success' && (needs.trigger_amazon.result == 'success' || needs.trigger_amazon.result == 'skipped')) ||
+        (needs.trigger_amazon.result == 'success' && (needs.trigger_cas.result == 'success' || needs.trigger_cas.result == 'skipped'))
+      )                                                                                                                               
+

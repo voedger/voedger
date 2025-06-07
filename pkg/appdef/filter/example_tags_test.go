@@ -9,11 +9,13 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 func ExampleTags() {
 	fmt.Println("This example demonstrates how to work with the Tags filter")
+	fmt.Println()
 
 	wsName := appdef.NewQName("test", "workspace")
 	doc1, doc2, doc3 := appdef.NewQName("test", "doc1"), appdef.NewQName("test", "doc2"), appdef.NewQName("test", "doc3")
@@ -21,7 +23,7 @@ func ExampleTags() {
 	tagEven := appdef.NewQName("test", "tagEven")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
@@ -39,16 +41,17 @@ func ExampleTags() {
 	ws := app.Workspace(wsName)
 
 	example := func(flt appdef.IFilter) {
-		fmt.Println()
-		fmt.Println("The", flt, "Tags:")
-		for t := range flt.Tags() {
-			fmt.Println("-", t)
+		fmt.Println(flt)
+		fmt.Println("- kind:", flt.Kind())
+		fmt.Println("- tags:")
+		for _, t := range flt.Tags() {
+			fmt.Println("  *", t)
 		}
-
-		fmt.Println("Testing", flt, "in", ws)
+		fmt.Println("- testing:")
 		for t := range appdef.ODocs(ws.LocalTypes()) {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
+			fmt.Println("  *", t, "is matched:", flt.Match(t))
 		}
+		fmt.Println()
 	}
 
 	example(filter.Tags(tagOdd))
@@ -58,25 +61,31 @@ func ExampleTags() {
 	// Output:
 	// This example demonstrates how to work with the Tags filter
 	//
-	// The filter.Tags(test.tagOdd) Tags:
-	// - test.tagOdd
-	// Testing filter.Tags(test.tagOdd) in Workspace «test.workspace»
-	// - ODoc «test.doc1» is matched: true
-	// - ODoc «test.doc2» is matched: false
-	// - ODoc «test.doc3» is matched: true
+	// TAGS(test.tagOdd)
+	// - kind: FilterKind_Tags
+	// - tags:
+	//   * test.tagOdd
+	// - testing:
+	//   * ODoc «test.doc1» is matched: true
+	//   * ODoc «test.doc2» is matched: false
+	//   * ODoc «test.doc3» is matched: true
 	//
-	// The filter.Tags(test.tagEven) Tags:
-	// - test.tagEven
-	// Testing filter.Tags(test.tagEven) in Workspace «test.workspace»
-	// - ODoc «test.doc1» is matched: false
-	// - ODoc «test.doc2» is matched: true
-	// - ODoc «test.doc3» is matched: false
+	// TAGS(test.tagEven)
+	// - kind: FilterKind_Tags
+	// - tags:
+	//   * test.tagEven
+	// - testing:
+	//   * ODoc «test.doc1» is matched: false
+	//   * ODoc «test.doc2» is matched: true
+	//   * ODoc «test.doc3» is matched: false
 	//
-	// The filter.Tags(test.tagEven, test.tagOdd) Tags:
-	// - test.tagEven
-	// - test.tagOdd
-	// Testing filter.Tags(test.tagEven, test.tagOdd) in Workspace «test.workspace»
-	// - ODoc «test.doc1» is matched: true
-	// - ODoc «test.doc2» is matched: true
-	// - ODoc «test.doc3» is matched: true
+	// TAGS(test.tagEven, test.tagOdd)
+	// - kind: FilterKind_Tags
+	// - tags:
+	//   * test.tagEven
+	//   * test.tagOdd
+	// - testing:
+	//   * ODoc «test.doc1» is matched: true
+	//   * ODoc «test.doc2» is matched: true
+	//   * ODoc «test.doc3» is matched: true
 }

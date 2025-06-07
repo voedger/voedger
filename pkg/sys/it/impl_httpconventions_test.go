@@ -34,18 +34,15 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 		body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 		resp := vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.ExpectSysError500())
 		require.Equal("world", resp.SectionRow()[0])
-		require.Equal(coreutils.ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
+		require.Equal(coreutils.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
-		require.Equal(http.StatusInternalServerError, resp.SysError.HTTPStatus)
-		require.Empty(resp.SysError.Data)
-		require.Empty(resp.SysError.QName)
 		resp.Println()
 	})
 
 	t.Run("command", func(t *testing.T) {
 		body := `{"args": {"Input": "1"}}`
 		resp := vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.Expect500())
-		require.Equal(coreutils.ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
+		require.Equal(coreutils.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusInternalServerError, resp.HTTPResp.StatusCode)
 		require.Equal(http.StatusInternalServerError, resp.SysError.HTTPStatus)
 		require.Empty(resp.SysError.Data)

@@ -33,6 +33,7 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 
 	data := make(map[string]map[istructs.RecordID]map[string]interface{})
 	appDef := args.State.AppStructs().AppDef()
+	maxRelevantOffset := int64(0)
 	if err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 		if value.AsInt64(state.ColOffset) <= after {
 			return
@@ -44,8 +45,11 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 		}
 		recordData := coreutils.FieldsToMap(record, appDef, coreutils.Filter(func(name string, kind appdef.DataKind) bool {
 			return name != appdef.SystemField_QName && name != appdef.SystemField_Container
-		}))
+		}), coreutils.WithAllFields())
 		data[record.QName().String()][record.ID()] = recordData
+		if value.AsInt64(state.ColOffset) > maxRelevantOffset {
+			maxRelevantOffset = value.AsInt64(state.ColOffset)
+		}
 		return err
 	}); err != nil {
 		return
@@ -54,12 +58,15 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 	if err != nil {
 		return
 	}
-	return callback(&stateObject{data: string(bb)})
+	return callback(&stateObject{data: string(bb), maxRelevantOffset: maxRelevantOffset})
 }
 
 type stateObject struct {
 	istructs.NullObject
-	data string
+	data              string
+	maxRelevantOffset int64
 }
 
 func (o stateObject) AsString(string) string { return o.data }
+
+func (o stateObject) AsInt64(string) int64 { return o.maxRelevantOffset }

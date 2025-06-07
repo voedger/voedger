@@ -20,7 +20,7 @@ type ViewValueCallback func(key istructs.IKeyBuilder, value istructs.IValueBuild
 type KeyBuilderCallback func(key istructs.IStateKeyBuilder)
 type ValueBuilderCallback func(value istructs.IStateValueBuilder)
 type IntentAssertionsCallback func(require *require.Assertions, value istructs.IStateValue)
-type HttpHandlerFunc func(req HttpRequest) (resp HttpResponse, err error)
+type HTTPHandlerFunc func(req HTTPRequest) (resp HTTPResponse, err error)
 type QueryArgBuilderCallback func(arg istructs.IObjectBuilder)
 
 type ITestAPI interface {
@@ -29,7 +29,7 @@ type ITestAPI interface {
 	PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID)
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
 	PutSecret(name string, secret []byte)
-	PutHttpHandler(HttpHandlerFunc)
+	PutHTTPHandler(HTTPHandlerFunc)
 	PutFederationCmdHandler(state.FederationCommandHandler)
 	PutFederationBlobHandler(state.FederationBlobHandler)
 	PutUniquesHandler(state.UniquesHandler)

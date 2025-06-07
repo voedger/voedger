@@ -14,15 +14,15 @@ type IWithPackages interface {
 	// Returns package local name by package path.
 	//
 	// Returns empty string if not found
-	PackageLocalName(fullPath string) string
+	PackageLocalName(path string) string
 
 	// Return all local names of packages in alphabetical order
 	PackageLocalNames() []string
 
 	// Enumerates all packages.
 	//
-	// Packages are enumerated in alphabetical order by local name
-	Packages(func(localName, fullPath string) bool)
+	// Returned map key is local name, value is path.
+	Packages() map[string]string
 
 	// Returns full qualified name by qualified name.
 	//
@@ -44,5 +44,5 @@ type IPackagesBuilder interface {
 	//   - if package with local name already exists,
 	//   - if path is empty,
 	//   - if package with path already exists.
-	AddPackage(localName, path string) IAppDefBuilder
+	AddPackage(localName, path string) IPackagesBuilder
 }

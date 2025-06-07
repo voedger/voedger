@@ -11,8 +11,11 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -23,10 +26,12 @@ func Test_ValidEventArgs(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
@@ -56,7 +61,7 @@ func Test_ValidEventArgs(t *testing.T) {
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -320,10 +325,11 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsName := appdef.NewQName("test", "workspace")
+	wsDescName := appdef.NewQName("test", "WSDesc")
 
 	docName := appdef.NewQName("test", "document")
 	rec1Name := appdef.NewQName("test", "record1")
@@ -333,6 +339,8 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	t.Run("should be ok to build test application", func(t *testing.T) {
 		wsb := adb.AddWorkspace(wsName)
+		wsb.AddCDoc(wsDescName)
+		wsb.SetDescriptor(wsDescName)
 		doc := wsb.AddCDoc(docName)
 		doc.
 			AddField("RequiredField", appdef.DataKind_int32, true).
@@ -352,7 +360,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -555,10 +563,12 @@ func Test_ValidCommandEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	cmdName := appdef.NewQName("test", "command")
 	oDocName := appdef.NewQName("test", "ODocument")
@@ -579,7 +589,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	cfg.Resources.Add(NewCommandFunction(cmdName, NullCommandExec))
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -681,10 +691,12 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	docName := appdef.NewQName("test", "document")
 	recName := appdef.NewQName("test", "record")
@@ -700,7 +712,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -760,14 +772,16 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 
 func Test_VerifiedFields(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New()
+	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
 	wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+	wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+	wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 	t.Run("should be ok to build application", func(t *testing.T) {
 		wsb.AddObject(objName).
@@ -785,7 +799,7 @@ func Test_VerifiedFields(t *testing.T) {
 	email := "test@test.io"
 
 	tokens := testTokensFactory().New(test.appName)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 	_, err := asp.BuiltIn(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
 	require.NoError(err)
 
@@ -935,28 +949,30 @@ func Test_VerifiedFields(t *testing.T) {
 
 func Test_CharsFieldRestricts(t *testing.T) {
 	require := require.New(t)
-	test := test()
+	test := newTest()
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New()
+	adb := builder.New()
 
 	t.Run("should be ok to build application", func(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 		wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
+		wsb.AddCDoc(appdef.NewQName("test", "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName("test", "WSDesc"))
 
 		s100Data := appdef.NewQName("test", "s100")
 		emailData := appdef.NewQName("test", "email")
 		mimeData := appdef.NewQName("test", "mime")
 
 		wsb.AddData(s100Data, appdef.DataKind_string, appdef.NullQName,
-			appdef.MinLen(1), appdef.MaxLen(100)).SetComment("string 1..100")
+			constraints.MinLen(1), constraints.MaxLen(100)).SetComment("string 1..100")
 
 		_ = wsb.AddData(emailData, appdef.DataKind_string, s100Data,
-			appdef.MinLen(6), appdef.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
+			constraints.MinLen(6), constraints.Pattern(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`))
 
 		_ = wsb.AddData(mimeData, appdef.DataKind_bytes, appdef.NullQName,
-			appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`))
+			constraints.MinLen(4), constraints.MaxLen(4), constraints.Pattern(`^\w+$`))
 
 		wsb.AddObject(objName).
 			AddDataField("email", emailData, true).
@@ -967,7 +983,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	cfg := cfgs.AddBuiltInAppConfig(test.appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
 	_, err := asp.BuiltIn(test.appName)
 	require.NoError(err)
 

@@ -16,7 +16,7 @@ import (
 const (
 	Field_PartKey          = "PartKey"
 	Field_DocQName         = "DocQName"
-	field_DocID            = "DocID"
+	Field_DocID            = "DocID"
 	field_ElementID        = "ElementID"
 	Field_Record           = "Record"
 	PartitionKeyCollection = 1 // Always put the BO in the fixed partition
@@ -31,7 +31,7 @@ var (
 //
 //	FUNC: sys.Collection
 const (
-	field_Schema = "Schema"
+	Field_Schema = "Schema"
 	field_ID     = "ID"
 )
 

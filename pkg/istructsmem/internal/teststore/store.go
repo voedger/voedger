@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -41,6 +42,13 @@ type (
 	}
 )
 
+//nolint:revive
+func (tsp testStorageProvider) Prepare(_ any) error { return nil }
+
+func (tsp testStorageProvider) Run(_ context.Context) {}
+
+func (tsp testStorageProvider) Stop() {}
+
 func (tsp testStorageProvider) AppStorage(appName appdef.AppQName) (structs istorage.IAppStorage, err error) {
 	if s, ok := tsp.testStorage[appName]; ok {
 		return s, nil
@@ -58,7 +66,7 @@ func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 // Returns new test storage
 func NewStorage(appName appdef.AppQName) *TestMemStorage {
 	s := &TestMemStorage{name: appName, get: scheduleStorageError{}, put: scheduleStorageError{}}
-	asf := mem.Provide()
+	asf := mem.Provide(testingu.MockTime)
 	sp := provider.Provide(asf)
 	var err error
 	if s.storage, err = sp.AppStorage(appName); err != nil {
@@ -150,7 +158,7 @@ func (s *TestMemStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 	err = s.storage.GetBatch(pKey, items)
 
 	if s.damage.dam != nil {
-		for i := 0; i < len(items); i++ {
+		for i := range items {
 			if s.damage.match(pKey, items[i].CCols) {
 				if items[i].Ok {
 					s.damage.dam(items[i].Data)
@@ -161,6 +169,86 @@ func (s *TestMemStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (e
 	}
 
 	return err
+}
+
+func (s *TestMemStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []byte, ttlSeconds int) (ok bool, err error) {
+	if s.put.err != nil {
+		if s.put.match(pKey, cCols) {
+			err = s.put.err
+			s.put.err = nil
+			return false, err
+		}
+	}
+	return s.storage.InsertIfNotExists(pKey, cCols, value, ttlSeconds)
+}
+
+func (s *TestMemStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error) {
+	if s.get.err != nil {
+		if s.get.match(pKey, cCols) {
+			err = s.get.err
+			s.get.err = nil
+			return false, err
+		}
+	}
+	if s.put.err != nil {
+		if s.put.match(pKey, cCols) {
+			err = s.put.err
+			s.put.err = nil
+			return false, err
+		}
+	}
+	return s.storage.CompareAndSwap(pKey, cCols, oldValue, newValue, ttlSeconds)
+}
+
+func (s *TestMemStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error) {
+	if s.get.err != nil {
+		if s.get.match(pKey, cCols) {
+			err = s.get.err
+			s.get.err = nil
+			return false, err
+		}
+	}
+	if s.put.err != nil {
+		if s.put.match(pKey, cCols) {
+			err = s.put.err
+			s.put.err = nil
+			return false, err
+		}
+	}
+	return s.storage.CompareAndDelete(pKey, cCols, expectedValue)
+}
+
+func (s *TestMemStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	if s.get.err != nil {
+		if s.get.match(pKey, cCols) {
+			err = s.get.err
+			s.get.err = nil
+			return false, err
+		}
+	}
+	return s.storage.TTLGet(pKey, cCols, data)
+}
+
+func (s *TestMemStorage) TTLRead(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
+	if s.get.err != nil {
+		if s.get.match(pKey, startCCols) {
+			err = s.get.err
+			s.get.err = nil
+			return err
+		}
+	}
+	return s.storage.TTLRead(ctx, pKey, startCCols, finishCCols, cb)
+}
+
+func (s *TestMemStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
+	if s.get.err != nil {
+		if s.get.match(pKey, cCols) {
+			err = s.get.err
+			s.get.err = nil
+			return 0, false, err
+		}
+	}
+	return s.storage.QueryTTL(pKey, cCols)
 }
 
 func (s *TestMemStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {

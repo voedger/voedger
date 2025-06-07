@@ -21,9 +21,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
@@ -35,56 +34,6 @@ func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
 
 func NewHTTPError(httpStatus int, err error) SysError {
 	return NewHTTPErrorf(httpStatus, err.Error())
-}
-
-func ReplyErrf(sender ibus.ISender, status int, args ...interface{}) {
-	ReplyErrDef(sender, NewHTTPErrorf(status, args...), http.StatusInternalServerError)
-}
-
-//nolint:errorlint
-func ReplyErrDef(sender ibus.ISender, err error, defaultStatusCode int) {
-	res := WrapSysError(err, defaultStatusCode).(SysError)
-	ReplyJSON(sender, res.HTTPStatus, res.ToJSON())
-}
-
-func ReplyErr(sender ibus.ISender, err error) {
-	ReplyErrDef(sender, err, http.StatusInternalServerError)
-}
-
-func ReplyJSON(sender ibus.ISender, httpCode int, body string) {
-	sender.SendResponse(ibus.Response{
-		ContentType: ApplicationJSON,
-		StatusCode:  httpCode,
-		Data:        []byte(body),
-	})
-}
-
-func ReplyBadRequest(sender ibus.ISender, message string) {
-	ReplyErrf(sender, http.StatusBadRequest, message)
-}
-
-func replyAccessDenied(sender ibus.ISender, code int, message string) {
-	msg := "access denied"
-	if len(message) > 0 {
-		msg += ": " + message
-	}
-	ReplyErrf(sender, code, msg)
-}
-
-func ReplyAccessDeniedUnauthorized(sender ibus.ISender, message string) {
-	replyAccessDenied(sender, http.StatusUnauthorized, message)
-}
-
-func ReplyAccessDeniedForbidden(sender ibus.ISender, message string) {
-	replyAccessDenied(sender, http.StatusForbidden, message)
-}
-
-func ReplyUnauthorized(sender ibus.ISender, message string) {
-	ReplyErrf(sender, http.StatusUnauthorized, message)
-}
-
-func ReplyInternalServerError(sender ibus.ISender, message string, err error) {
-	ReplyErrf(sender, http.StatusInternalServerError, message, ": ", err)
 }
 
 // WithResponseHandler, WithLongPolling and WithDiscardResponse are mutual exclusive
@@ -107,7 +56,7 @@ func WithLongPolling() ReqOptFunc {
 			if !slices.Contains(ro.expectedHTTPCodes, resp.StatusCode) {
 				body, err := readBody(resp)
 				if err != nil {
-					panic("failed to read response body in custom response handler: " + err.Error())
+					panic("failed to Read response body in custom response handler: " + err.Error())
 				}
 				panic(fmt.Sprintf("actual status code %d, expected %v. Body: %s", resp.StatusCode, ro.expectedHTTPCodes, body))
 			}
@@ -120,6 +69,12 @@ func WithLongPolling() ReqOptFunc {
 func WithDiscardResponse() ReqOptFunc {
 	return func(opts *reqOpts) {
 		opts.discardResp = true
+	}
+}
+
+func WithoutAuth() ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.withoutAuth = true
 	}
 }
 
@@ -167,7 +122,19 @@ func WithRetryOnAnyError(timeout time.Duration, retryDelay time.Duration) ReqOpt
 	return WithRetryOnCertainError(func(error) bool { return true }, timeout, retryDelay)
 }
 
-func WithAuthorizeByIfNot(principalToken string) ReqOptFunc {
+func WithDeadlineOn503(deadline time.Duration) ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.deadlineOn503 = deadline
+	}
+}
+
+func WithSkipRetryOn503() ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.skipRetryOn503 = true
+	}
+}
+
+func WithDefaultAuthorize(principalToken string) ReqOptFunc {
 	return func(po *reqOpts) {
 		if _, ok := po.headers[Authorization]; !ok {
 			po.headers[Authorization] = BearerPrefix + principalToken
@@ -181,6 +148,14 @@ func WithRelativeURL(relativeURL string) ReqOptFunc {
 	}
 }
 
+func WithDefaultMethod(m string) ReqOptFunc {
+	return func(opts *reqOpts) {
+		if len(opts.method) == 0 {
+			opts.method = m
+		}
+	}
+}
+
 func WithMethod(m string) ReqOptFunc {
 	return func(po *reqOpts) {
 		po.method = m
@@ -191,8 +166,8 @@ func Expect409(expected ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusConflict, expected...)
 }
 
-func Expect404() ReqOptFunc {
-	return WithExpectedCode(http.StatusNotFound)
+func Expect404(expected ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusNotFound, expected...)
 }
 
 func Expect401() ReqOptFunc {
@@ -207,6 +182,14 @@ func Expect400(expectErrorContains ...string) ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, expectErrorContains...)
 }
 
+func Expect405(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusMethodNotAllowed, expectErrorContains...)
+}
+
+func Expect423(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusLocked, expectErrorContains...)
+}
+
 func Expect400RefIntegrity_Existence() ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, "referential integrity violation", "does not exist")
 }
@@ -219,8 +202,8 @@ func Expect429() ReqOptFunc {
 	return WithExpectedCode(http.StatusTooManyRequests)
 }
 
-func Expect500() ReqOptFunc {
-	return WithExpectedCode(http.StatusInternalServerError)
+func Expect500(expectErrorContains ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusInternalServerError, expectErrorContains...)
 }
 
 func Expect503() ReqOptFunc {
@@ -249,6 +232,9 @@ type reqOpts struct {
 	expectedSysErrorCode  int
 	retriersOnErrors      []retrier
 	bodyReader            io.Reader
+	withoutAuth           bool
+	skipRetryOn503        bool
+	deadlineOn503         time.Duration
 }
 
 // body and bodyReader are mutual exclusive
@@ -289,7 +275,6 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 	opts := &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
-		method:  http.MethodGet,
 	}
 	optFuncs = append(optFuncs, WithRetryOnCertainError(func(err error) bool {
 		// https://github.com/voedger/voedger/issues/1694
@@ -297,6 +282,9 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 	}, retryOn_WSAECONNREFUSED_Timeout, retryOn_WSAECONNREFUSED_Delay))
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
+	}
+	if len(opts.method) == 0 {
+		opts.method = http.MethodGet
 	}
 
 	mutualExclusiveOpts := 0
@@ -314,7 +302,7 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 	}
 
 	if len(opts.expectedHTTPCodes) == 0 {
-		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK)
+		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK, http.StatusCreated)
 	}
 	if len(opts.relativeURL) > 0 {
 		netURL, err := url.Parse(urlStr)
@@ -323,6 +311,10 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 		}
 		netURL.Path = opts.relativeURL
 		urlStr = netURL.String()
+	}
+	if opts.withoutAuth {
+		delete(opts.headers, Authorization)
+		delete(opts.cookies, Authorization)
 	}
 	var resp *http.Response
 	var err error
@@ -350,16 +342,20 @@ reqLoop:
 		if opts.responseHandler == nil {
 			defer resp.Body.Close()
 		}
-		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) {
+		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) &&
+			!opts.skipRetryOn503 {
+			if opts.deadlineOn503 > 0 && time.Since(startTime) > opts.deadlineOn503 {
+				break
+			}
 			if err := discardRespBody(resp); err != nil {
 				return nil, err
 			}
+			logger.Verbose("503. retrying...")
 			if tryNum > shortRetriesOn503Amount {
 				time.Sleep(longRetryOn503Delay)
 			} else {
 				time.Sleep(shortRetryOn503Delay)
 			}
-			logger.Verbose("503. retrying...")
 			tryNum++
 			continue
 		}
@@ -375,7 +371,7 @@ reqLoop:
 		expectedSysErrorCode: opts.expectedSysErrorCode,
 		expectedHTTPCodes:    opts.expectedHTTPCodes,
 	}
-	if isCodeExpected && opts.responseHandler != nil {
+	if resp.StatusCode == http.StatusOK && isCodeExpected && opts.responseHandler != nil {
 		opts.responseHandler(resp)
 		return httpResponse, nil
 	}
@@ -389,11 +385,16 @@ reqLoop:
 		statusErr = fmt.Errorf("%w: %d, %s", ErrUnexpectedStatusCode, resp.StatusCode, respBody)
 	}
 	if resp.StatusCode != http.StatusOK && len(opts.expectedErrorContains) > 0 {
-		sysError := map[string]interface{}{}
-		if err := json.Unmarshal([]byte(respBody), &sysError); err != nil {
+		respMap := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(respBody), &respMap); err != nil {
 			return nil, err
 		}
-		actualError := sysError["sys.Error"].(map[string]interface{})["Message"].(string)
+		actualError := ""
+		if strings.Contains(urlStr, "api/v2") {
+			actualError = respMap["message"].(string)
+		} else {
+			actualError = respMap["sys.Error"].(map[string]interface{})["Message"].(string)
+		}
 		if !containsAllMessages(opts.expectedErrorContains, actualError) {
 			return nil, fmt.Errorf(`actual error message "%s" does not contain the expected messages %v`, actualError, opts.expectedErrorContains)
 		}
@@ -424,6 +425,19 @@ func (resp *HTTPResponse) ExpectedHTTPCodes() []int {
 
 func (resp *HTTPResponse) Println() {
 	log.Println(resp.Body)
+}
+
+func (resp *HTTPResponse) PrintJSON() {
+	obj := make(map[string]interface{})
+	err := json.Unmarshal([]byte(resp.Body), &obj)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	bb, err := json.MarshalIndent(obj, "", "	")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("\n", string(bb))
 }
 
 func (resp *HTTPResponse) getError(t *testing.T) map[string]interface{} {
@@ -488,12 +502,12 @@ func (resp *FuncResponse) SectionRow(rowIdx ...int) []interface{} {
 }
 
 // returns a new ID for raw ID 1
-func (resp *FuncResponse) NewID() int64 {
+func (resp *FuncResponse) NewID() istructs.RecordID {
 	return resp.NewIDs["1"]
 }
 
 func (resp *FuncResponse) IsEmpty() bool {
-	return len(resp.Sections) == 0
+	return len(resp.Sections) == 0 && len(resp.QPv2Response) == 0
 }
 
 func (fe FuncError) Error() string {

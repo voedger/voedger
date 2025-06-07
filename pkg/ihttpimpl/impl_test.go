@@ -30,6 +30,7 @@ import (
 	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -113,14 +114,14 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		path := fmt.Sprintf("%s/%s/%d/%s?par1=val1&par2=val2", appOwner, appName, wsid, resource)
 
 		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte("Hello, Test, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}"), body)
+		require.Equal(`Hello, Test, {"par1":"val1","par2":"val2"}`, string(body))
 
 		body = testApp.post("/api/"+path, "application/json", "", map[string]string{"text": testText})
-		require.Equal([]byte(fmt.Sprintf("Hello, {\"text\":\"%s\"}, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
+		require.Equal(fmt.Sprintf(`Hello, {"text":"%s"}, {"par1":"val1","par2":"val2"}`, testText), string(body))
 
 		testText = ""
 		body = testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte(fmt.Sprintf("Hello, %s, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
+		require.Equal(fmt.Sprintf(`Hello, %s, {"par1":"val1","par2":"val2"}`, testText), string(body))
 	})
 
 	t.Run("q.EchoQuery", func(t *testing.T) {
@@ -146,8 +147,8 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		resource := "q.EchoQuery"
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
-		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte(fmt.Sprintf("{\"sections\":[{\"type\":\"\",\"elements\":[Hello, %s, {}]}]}", testText)), body)
+		body := testApp.post("/api/"+path, coreutils.ContentType_ApplicationJSON, testText, nil)
+		require.Equal(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
 	})
 
 	t.Run("call unknown app", func(t *testing.T) {
@@ -379,7 +380,7 @@ func setUp(t *testing.T) *testApp {
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	appStorageProvider := istorageimpl.Provide(mem.Provide())
+	appStorageProvider := istorageimpl.Provide(mem.Provide(testingu.MockTime))
 	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
 	require.NoError(err)
 	processor, pCleanup := NewProcessor(params, routerStorage)

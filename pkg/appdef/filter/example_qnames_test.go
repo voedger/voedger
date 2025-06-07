@@ -9,24 +9,26 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 )
 
 func ExampleQNames() {
 	fmt.Println("This example demonstrates how to work with the QNames filter")
+	fmt.Println()
 
 	wsName := appdef.NewQName("test", "workspace")
-	doc1, doc2, doc3 := appdef.NewQName("test", "doc1"), appdef.NewQName("test", "doc2"), appdef.NewQName("test", "doc3")
+	doc, obj, cmd := appdef.NewQName("test", "doc"), appdef.NewQName("test", "object"), appdef.NewQName("test", "command")
 
 	app := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsb := adb.AddWorkspace(wsName)
 
-		_ = wsb.AddODoc(doc1)
-		_ = wsb.AddODoc(doc2)
-		_ = wsb.AddODoc(doc3)
+		_ = wsb.AddODoc(doc)
+		_ = wsb.AddObject(obj)
+		_ = wsb.AddCommand(cmd)
 
 		return adb.MustBuild()
 	}()
@@ -34,36 +36,41 @@ func ExampleQNames() {
 	ws := app.Workspace(wsName)
 
 	example := func(flt appdef.IFilter) {
+		fmt.Println(flt)
+		fmt.Println("- kind:", flt.Kind())
+		fmt.Println("- QNames:")
+		for _, n := range flt.QNames() {
+			fmt.Println("  *", n)
+		}
+		fmt.Println("- testing:")
+		for _, t := range ws.LocalTypes() {
+			fmt.Println("  *", t, "is matched:", flt.Match(t))
+		}
 		fmt.Println()
-		fmt.Println("The", flt, "QNames:")
-		for n := range flt.QNames() {
-			fmt.Println("-", n)
-		}
-
-		fmt.Println("Testing", flt, "in", ws)
-		for t := range ws.LocalTypes() {
-			fmt.Println("-", t, "is matched:", flt.Match(t))
-		}
 	}
 
-	example(filter.QNames(doc1, doc2))
+	example(filter.QNames(doc, obj))
 	example(filter.QNames(appdef.NewQName("test", "unknown")))
 
 	// Output:
 	// This example demonstrates how to work with the QNames filter
 	//
-	// The filter.QNames(test.doc1, test.doc2) QNames:
-	// - test.doc1
-	// - test.doc2
-	// Testing filter.QNames(test.doc1, test.doc2) in Workspace «test.workspace»
-	// - ODoc «test.doc1» is matched: true
-	// - ODoc «test.doc2» is matched: true
-	// - ODoc «test.doc3» is matched: false
+	// QNAMES(test.doc, test.object)
+	// - kind: FilterKind_QNames
+	// - QNames:
+	//   * test.doc
+	//   * test.object
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: false
+	//   * ODoc «test.doc» is matched: true
+	//   * Object «test.object» is matched: true
 	//
-	// The filter.QNames(test.unknown) QNames:
-	// - test.unknown
-	// Testing filter.QNames(test.unknown) in Workspace «test.workspace»
-	// - ODoc «test.doc1» is matched: false
-	// - ODoc «test.doc2» is matched: false
-	// - ODoc «test.doc3» is matched: false
+	// QNAMES(test.unknown)
+	// - kind: FilterKind_QNames
+	// - QNames:
+	//   * test.unknown
+	// - testing:
+	//   * BuiltIn-Command «test.command» is matched: false
+	//   * ODoc «test.doc» is matched: false
+	//   * Object «test.object» is matched: false
 }
