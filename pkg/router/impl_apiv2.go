@@ -161,8 +161,14 @@ func (s *httpService) registerHandlersV2() {
 	// notifications unsubscribe /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications_unsubscribe(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
 		Methods(http.MethodDelete).Name("notifications unsubscribe")
+
+	// notifications subscribe to an extra view /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
+	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
+		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		Methods(http.MethodPut).Name("notifications subscribe to an extra view")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -321,7 +327,8 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 	})
 }
 
-func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+// handles both unsubscribe and subscribe to an extra view
+func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
 	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(req.Method, data, req)
@@ -351,13 +358,27 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 			WS:         data.wsid,
 		}
 
-		if err := n10n.Unsubscribe(in10n.ChannelID(channelID), projectionKey); err != nil {
-			code := http.StatusInternalServerError
+		code := http.StatusOK
+		switch req.Method {
+		case http.MethodPut:
+			err = n10n.Subscribe(in10n.ChannelID(channelID), projectionKey)
+		case http.MethodDelete:
+			err = n10n.Unsubscribe(in10n.ChannelID(channelID), projectionKey)
+			code = http.StatusNoContent
+		default:
+			// notest: guarded by the rule for the url path
+			panic("unexpected method " + req.Method)
+		}
+
+		if err != nil {
+			code = http.StatusInternalServerError
 			if errors.Is(err, in10n.ErrChannelDoesNotExist) {
 				code = http.StatusNotFound
 			}
 			ReplyCommonError(rw, "failed to unsubscribe: "+err.Error(), code)
+			return
 		}
+		rw.WriteHeader(code)
 	})
 }
 

@@ -392,3 +392,57 @@ func TestChannelExpiration_V1(t *testing.T) {
 	// but let's call for demonstration
 	unsubscribe()
 }
+
+func TestSubscribeToExtraView(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// owning does not matter for notifications, need just a valid token
+	token := ws.Owner.Token
+
+	// subscribe on one view
+	body := fmt.Sprintf(`{
+		"subscriptions": [
+			{
+				"entity":"app1pkg.CategoryIdx",
+				"wsid": %d
+			}
+		],
+		"expiresIn": 42
+	}`, ws.WSID)
+	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithLongPolling(),
+	)
+
+	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+	// subscribe to an extra view
+	body = ""
+	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
+	resp = vit.POST(url, body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithMethod(http.MethodPut),
+	)
+
+	// force projections update
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	resultOffsetOfCategoryCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
+	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+
+	// read events
+	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
+	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
+
+	// close the initial connection
+	// SSE listener channel should be closed after that
+	resp.HTTPResp.Body.Close()
+
+	x, ok := <-offsetsChan
+	require.False(t, ok, x)
+	waitForDone()
+
+}
