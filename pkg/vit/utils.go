@@ -288,7 +288,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
 		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login.Name, login.Pwd)
-		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body, coreutils.Expect409(), coreutils.WithExpectedCode(200))
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body, coreutils.Expect409(), coreutils.WithExpectedCode(http.StatusOK))
 		if resp.HTTPResp.StatusCode == http.StatusConflict {
 			time.Sleep(workspaceQueryDelay)
 			continue
