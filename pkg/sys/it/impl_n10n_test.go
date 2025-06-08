@@ -23,7 +23,12 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestBasicUsage_n10n(t *testing.T) {
+func TestMX(t *testing.T) {
+	TestBasicUsage_n10n_APIv2(t)
+	TestN10NSubscribeToExtraView(t)
+}
+
+func TestBasicUsage_n10n_APIv1(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -111,6 +116,118 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	resp.HTTPResp.Body.Close()
 
 	x, ok := <-offsetsChan
+	require.False(t, ok, x)
+	waitForDone()
+}
+
+func TestBasicUsage_n10n_2(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// owning does not matter for notifications, need just a valid token
+	token := ws.Owner.Token
+
+	// subscribe
+	body := fmt.Sprintf(`{
+		"subscriptions": [
+			{
+				"entity":"app1pkg.CategoryIdx",
+				"wsid": %[1]d
+			},
+			{
+				"entity":"app1pkg.DailyIdx",
+				"wsid": %[1]d
+			}
+		],
+		"expiresIn": 42
+	}`, ws.WSID)
+	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithLongPolling(),
+	)
+
+	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+	// force projections update
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	resultOffsetOfCategoryCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
+	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+
+	// read events
+	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
+	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
+
+	// unsubscribe
+	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
+	vit.POST(url, "",
+		coreutils.WithMethod(http.MethodDelete),
+		coreutils.WithAuthorizeBy(token),
+		coreutils.Expect204(),
+	)
+	url = fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
+	vit.POST(url, "",
+		coreutils.WithMethod(http.MethodDelete),
+		coreutils.WithAuthorizeBy(token),
+		coreutils.Expect204(),
+	)
+
+	// force updates again to check that no new notifications arrived after unsubscribe
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body).Println()
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body).Println()
+
+	// close the initial connection
+	// SSE listener channel should be closed after that
+	resp.HTTPResp.Body.Close()
+
+	x, ok := <-offsetsChan
+	require.False(t, ok, x)
+	waitForDone()
+
+	// subscribe again
+	body = fmt.Sprintf(`{
+		"subscriptions": [
+			{
+				"entity":"app1pkg.CategoryIdx",
+				"wsid": %[1]d
+			},
+			{
+				"entity":"app1pkg.DailyIdx",
+				"wsid": %[1]d
+			}
+		],
+		"expiresIn": 42
+	}`, ws.WSID)
+	resp = vit.POST("api/v2/apps/test1/app1/notifications", body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithLongPolling(),
+	)
+
+	offsetsChan, channelID, waitForDone = federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+
+
+	// force projections update
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	resultOffsetOfCategoryCUD = vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
+	resultOffsetOfDailyCUD = vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+
+
+	// read events
+	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
+	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
+
+
+	// close the initial connection
+	// SSE listener channel should be closed after that
+	resp.HTTPResp.Body.Close()
+
+	x, ok = <-offsetsChan
 	require.False(t, ok, x)
 	waitForDone()
 }
