@@ -361,3 +361,76 @@ func TestChannelExpiration(t *testing.T) {
 	// observe "channel time to live expired: subjectlogin test" message in the log
 	wg.Wait()
 }
+
+func TestSubscribeAgain(t *testing.T) {
+	require := require.New(t)
+	mockTime := testingu.MockTime
+	mockTime.FireNextTimerImmediately()
+
+	quotasExample := in10n.Quotas{
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           1,
+		SubscriptionsPerSubject: 1,
+	}
+
+	broker, cleanup := ProvideEx2(quotasExample, mockTime)
+	defer cleanup()
+
+	subject := istructs.SubjectLogin("test")
+	channelID, err := broker.NewChannel(subject, time.Second)
+	require.NoError(err)
+	projectionKeyExample := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant"),
+		WS:         istructs.WSID(1),
+	}
+	err = broker.Subscribe(channelID, projectionKeyExample)
+	require.NoError(err)
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	eventHandled := make(chan istructs.Offset, 1)
+	go func() {
+		broker.WatchChannel(ctx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+			eventHandled <- offset
+		})
+		wg.Done()
+	}()
+
+	// check the notifications work
+	broker.Update(projectionKeyExample, 42)
+	<-eventHandled
+
+	// unsubscribe
+	err = broker.Unsubscribe(channelID, projectionKeyExample)
+	require.NoError(err)
+	cancel()
+	wg.Wait()
+
+	// emit an event when we're not subscribed
+	broker.Update(projectionKeyExample, 43)
+
+	// subscribe again
+	channelID, err = broker.NewChannel(subject, time.Second)
+	require.NoError(err)
+	err = broker.Subscribe(channelID, projectionKeyExample)
+	require.NoError(err)
+	ctx, cancel = context.WithCancel(context.Background())
+	wg = sync.WaitGroup{}
+	wg.Add(1)
+	eventHandled = make(chan istructs.Offset, 1)
+	go func() {
+		broker.WatchChannel(ctx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+			eventHandled <- offset
+		})
+		wg.Done()
+	}()
+
+	// emit 3rd event
+	broker.Update(projectionKeyExample, 43)
+	require.Equal(istructs.Offset(42), <-eventHandled)
+
+	cancel()
+	wg.Wait()
+}
