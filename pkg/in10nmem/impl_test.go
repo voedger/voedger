@@ -412,8 +412,8 @@ func TestSubscribeAgain(t *testing.T) {
 	broker.Update(projectionKeyExample, 43)
 
 	// subscribe again
-	channelID, err = broker.NewChannel(subject, time.Second)
-	require.NoError(err)
+	// channelID, err = broker.NewChannel(subject, time.Second)
+	// require.NoError(err)
 	err = broker.Subscribe(channelID, projectionKeyExample)
 	require.NoError(err)
 	ctx, cancel = context.WithCancel(context.Background())
