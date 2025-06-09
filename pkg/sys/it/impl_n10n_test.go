@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"testing"
@@ -44,6 +45,66 @@ func TestBasicUsage_n10n(t *testing.T) {
 
 	_, offsetsChanOpened := <-offsetsChan
 	require.False(t, offsetsChanOpened)
+}
+
+func TestX(t *testing.T) {
+	logger.SetLogLevel(logger.LogLevelVerbose)
+	TestProblem(t)
+	TestProblem(t)
+}
+
+func TestProblem(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// owning does not matter for notifications, need just a valid token
+	token := ws.Owner.Token
+
+	// subscribe
+	body := fmt.Sprintf(`{
+		"subscriptions": [
+			{
+				"entity":"app1pkg.CategoryIdx",
+				"wsid": %[1]d
+			},
+			{
+				"entity":"app1pkg.DailyIdx",
+				"wsid": %[1]d
+			}
+		],
+		"expiresIn": 42
+	}`, ws.WSID)
+	logger.Info("!!!!!! subscribe")
+	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithLongPolling(),
+	)
+
+	offsetsChan, _, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+	// force projections update
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	resultOffsetOfCategoryCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
+	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+	logger.Info("!!!!!! new events offsets:", resultOffsetOfCategoryCUD, resultOffsetOfDailyCUD)
+
+	// read events
+	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
+	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
+
+	log.Println("offset Category checked:", resultOffsetOfCategoryCUD)
+	log.Println("offset Daily checked:", resultOffsetOfDailyCUD)
+
+	// close the initial connection
+	// SSE listener channel should be closed after that
+	resp.HTTPResp.Body.Close()
+
+	x, ok := <-offsetsChan
+	require.False(t, ok, x)
+	waitForDone()
 }
 
 func TestBasicUsage_n10n_APIv2(t *testing.T) {

@@ -362,6 +362,64 @@ func TestChannelExpiration(t *testing.T) {
 	wg.Wait()
 }
 
+func TestTwiceProblem(t *testing.T) {
+	quotasExample := in10n.Quotas{
+		Channels:                10,
+		ChannelsPerSubject:      10,
+		Subscriptions:           10,
+		SubscriptionsPerSubject: 10,
+	}
+
+	broker, cleanup := ProvideEx2(quotasExample, testingu.MockTime)
+	defer cleanup()
+
+	testSbscribeAndUnsubscribe(t, broker, 42)
+	testSbscribeAndUnsubscribe(t, broker, 44)
+}
+
+func testSbscribeAndUnsubscribe(t *testing.T, broker in10n.IN10nBroker, offset istructs.Offset) {
+	require := require.New(t)
+	subject := istructs.SubjectLogin("test")
+	channelID, err := broker.NewChannel(subject, time.Hour)
+	require.NoError(err)
+	projectionKey1 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant1"),
+		WS:         istructs.WSID(1),
+	}
+	projectionKey2 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant2"),
+		WS:         istructs.WSID(1),
+	}
+	err = broker.Subscribe(channelID, projectionKey1)
+	require.NoError(err)
+	err = broker.Subscribe(channelID, projectionKey2)
+	require.NoError(err)
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	notifiedOffset := make(chan istructs.Offset)
+	go func() {
+		broker.WatchChannel(ctx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+			notifiedOffset <- offset
+		})
+		wg.Done()
+	}()
+
+	// check the notifications work
+	broker.Update(projectionKey1, offset)
+	broker.Update(projectionKey2, offset+1)
+	require.Equal(offset, <-notifiedOffset)
+	require.Equal(offset+1, <-notifiedOffset)
+
+	// unsubscribe
+	// err = broker.Unsubscribe(channelID, projectionKeyExample)
+	// require.NoError(err)
+	cancel()
+	wg.Wait()
+}
+
 func TestSubscribeAgain(t *testing.T) {
 	require := require.New(t)
 	mockTime := testingu.MockTime
