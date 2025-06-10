@@ -312,14 +312,14 @@ func TestErrorsCPv2(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1", ws.WSID), "{}",
 				coreutils.WithMethod(http.MethodPost),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+				coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 			).Println()
 		})
 		t.Run("insert ORecord", func(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1", ws.WSID), "{}",
 				coreutils.WithMethod(http.MethodPost),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+				coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 			).Println()
 		})
 
@@ -331,14 +331,14 @@ func TestErrorsCPv2(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1/%d", ws.WSID, odocID), "{}",
 					coreutils.WithMethod(http.MethodPatch),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 			t.Run("delete", func(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1/%d", ws.WSID, odocID), "{}",
 					coreutils.WithMethod(http.MethodDelete),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 		})
@@ -351,14 +351,14 @@ func TestErrorsCPv2(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1/%d", ws.WSID, orecordID), "{}",
 					coreutils.WithMethod(http.MethodPatch),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 			t.Run("delete", func(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1/%d", ws.WSID, orecordID), "{}",
 					coreutils.WithMethod(http.MethodDelete),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\Record in any way other than through command arguments"),
+					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 		})
