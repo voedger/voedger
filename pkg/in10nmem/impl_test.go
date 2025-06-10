@@ -15,7 +15,6 @@ package in10nmem
 import (
 	"context"
 	"log"
-	"slices"
 	"strconv"
 	"sync"
 	"testing"
@@ -223,11 +222,11 @@ func Test_Subscribe_NoUpdate_Unsubscribe(t *testing.T) {
 			var ui []UpdateUnit
 			ui = append(ui, <-cb1.data)
 			ui = append(ui, <-cb1.data)
-			slices.Contains(ui, UpdateUnit{
+			req.Contains(ui, UpdateUnit{
 				Offset:     istructs.Offset(100),
 				Projection: projectionKey1,
 			})
-			slices.Contains(ui, UpdateUnit{
+			req.Contains(ui, UpdateUnit{
 				Offset:     istructs.Offset(200),
 				Projection: projectionKey2,
 			})
