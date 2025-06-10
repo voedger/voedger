@@ -373,11 +373,11 @@ func TestTwiceProblem(t *testing.T) {
 	broker, cleanup := ProvideEx2(quotasExample, testingu.MockTime)
 	defer cleanup()
 
-	testSbscribeAndUnsubscribe(t, broker, 42)
-	testSbscribeAndUnsubscribe(t, broker, 44)
+	testSubscribeAndUnsubscribe(t, broker, 42)
+	testSubscribeAndUnsubscribe(t, broker, 44)
 }
 
-func testSbscribeAndUnsubscribe(t *testing.T, broker in10n.IN10nBroker, offset istructs.Offset) {
+func testSubscribeAndUnsubscribe(t *testing.T, broker in10n.IN10nBroker, offset istructs.Offset) {
 	require := require.New(t)
 	subject := istructs.SubjectLogin("test")
 	channelID, err := broker.NewChannel(subject, time.Hour)
@@ -399,23 +399,30 @@ func testSbscribeAndUnsubscribe(t *testing.T, broker in10n.IN10nBroker, offset i
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	notifiedOffset := make(chan istructs.Offset)
+	type notification struct {
+		prj    in10n.ProjectionKey
+		offset istructs.Offset
+	}
+	notificationsCh := make(chan istructs.Offset)
 	go func() {
 		broker.WatchChannel(ctx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
-			notifiedOffset <- offset
+			notificationsCh <- offset
 		})
 		wg.Done()
 	}()
 
 	// check the notifications work
 	broker.Update(projectionKey1, offset)
-	broker.Update(projectionKey2, offset+1)
-	require.Equal(offset, <-notifiedOffset)
-	require.Equal(offset+1, <-notifiedOffset)
+	if offset == 42 {
+		// on 1st run update both projections and only the first one on 2nd run
+		broker.Update(projectionKey2, offset+1)
+	}
+	require.Equal(offset, <-notificationsCh)
 
-	// unsubscribe
-	// err = broker.Unsubscribe(channelID, projectionKeyExample)
-	// require.NoError(err)
+	// fails here on 2nd run because offset from the previous run is sent
+	// must not be sent at all because we're do not update 2nd projection on 2nd run
+	require.Equal(offset+1, <-notificationsCh)
+
 	cancel()
 	wg.Wait()
 }
