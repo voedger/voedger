@@ -337,7 +337,6 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 			}
 		}
 	}
-
 }
 
 func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projectionKey in10n.ProjectionKey) (offsetPointer *istructs.Offset) {
