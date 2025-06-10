@@ -141,26 +141,6 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 		projectionKey = in10n.Heartbeat30ProjectionKey
 	}
 
-	proj1 := in10n.ProjectionKey{
-		App:        appdef.NewAppQName("test1", "app1"),
-		Projection: appdef.NewQName("app1pkg", "CategoryIdx"),
-		WS:         140737488486402,
-	}
-
-	proj2 := in10n.ProjectionKey{
-		App:        appdef.NewAppQName("test1", "app1"),
-		Projection: appdef.NewQName("app1pkg", "DailyIdx"),
-		WS:         140737488486402,
-	}
-
-	if subs, ok := channel.subscriptions[proj1]; ok {
-		logger.Info(subs)
-	}
-
-	if subs, ok := channel.subscriptions[proj2]; ok {
-		logger.Info(subs)
-	}
-
 	subscription := subscription{
 		deliveredOffset: istructs.Offset(0),
 		currentOffset:   guaranteeProjection(nb.projections, projectionKey),
@@ -168,14 +148,6 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 	channel.subscriptions[projectionKey] = &subscription
 	metric.numSubscriptions++
 	nb.numSubscriptions++
-
-	if pr, ok := nb.projections[proj1]; ok {
-		logger.Info(pr)
-	}
-
-	if pr, ok := nb.projections[proj2]; ok {
-		logger.Info(pr)
-	}
 
 	// Non-blocking send to channel.cchan so that all subscriptions are checked
 	{
@@ -360,12 +332,7 @@ func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projec
 // Update @ConcurrentAccess
 // Update projections map with new offset
 func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Offset) {
-	nb.Lock() // nb.projections[projection]
-	if projection.Projection == appdef.NewQName("app1pkg", "CategoryIdx") {
-		logger.Info("!!!!! update CategoryIdx", offset)
-	} else if projection.Projection == appdef.NewQName("app1pkg", "DailyIdx") {
-		logger.Info("!!!!! update DailyIdx", offset)
-	}
+	nb.Lock()
 	*guaranteeProjection(nb.projections, projection) = offset
 	prj := nb.projections[projection]
 	nb.Unlock()
