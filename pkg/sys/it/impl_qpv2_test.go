@@ -28,7 +28,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspace) (resultOffset istructs.Offset, newIDs map[string]istructs.RecordID) {
+func prepareDailyIdx(t *testing.T, vit *it.VIT, ws *it.AppWorkspace) (resultOffset istructs.Offset, newIDs map[string]istructs.RecordID) {
 	testProjectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: it.QNameApp1_ViewCategoryIdx,
@@ -124,11 +124,7 @@ func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspa
 	resp := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON())
 	resultOffsetOfCUD := resp.CurrentWLogOffset
 	// wait for the offset because server could send previos offset. It is guaranteed that the expected offset will eventually arrive
-	for actualOffset := range offsetsChan {
-		if actualOffset == resultOffsetOfCUD {
-			break
-		}
-	}
+	waitForOffset(t, resultOffsetOfCUD, offsetsChan)
 	unsubscribe()
 	return resultOffsetOfCUD, resp.NewIDs
 }
@@ -138,7 +134,7 @@ func TestQueryProcessor2_Views(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	expectedOffset, _ := prepareDailyIdx(require, vit, ws)
+	expectedOffset, _ := prepareDailyIdx(t, vit, ws)
 	t.Run("Read by PK with eq", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.NoError(err)
@@ -261,7 +257,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	prepareDailyIdx(require, vit, ws)
+	prepareDailyIdx(t, vit, ws)
 
 	t.Run("Echo function", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello world"}`)))
@@ -469,7 +465,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 		},
 	}
 	offset := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON()).CurrentWLogOffset
-	require.EqualValues(offset, <-offsetsChan)
+	waitForOffset(t, offset, offsetsChan)
 	unsubscribe()
 
 	cuds = coreutils.CUDs{
@@ -2418,7 +2414,7 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	_, ids := prepareDailyIdx(require, vit, ws)
+	_, ids := prepareDailyIdx(t, vit, ws)
 
 	t.Run("read document", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, ids["1"])
@@ -2510,7 +2506,7 @@ func TestQueryProcessor2_CDocs(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws3")
-	_, ids := prepareDailyIdx(require, vit, ws)
+	_, ids := prepareDailyIdx(t, vit, ws)
 
 	t.Run("Read documents", func(t *testing.T) {
 		resp, err := vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s`, ws.WSID, it.QNameApp1_CDocCategory), coreutils.WithAuthorizeBy(ws.Owner.Token))
