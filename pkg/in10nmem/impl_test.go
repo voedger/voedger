@@ -15,6 +15,7 @@ package in10nmem
 import (
 	"context"
 	"log"
+	"slices"
 	"strconv"
 	"sync"
 	"testing"
@@ -149,6 +150,94 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 		default:
 		}
 	}
+	cancel()
+	wg.Wait()
+
+}
+
+// Test that after subscribing to a channel, the client receives updates for all projections with the current offset
+// even if the projections were not explicitly updated after the subscription.
+func Test_Subscribe_NoUpdate_Unsubscribe(t *testing.T) {
+
+	var wg sync.WaitGroup
+
+	cb1 := new(callbackMock)
+	cb1.data = make(chan UpdateUnit, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	projectionKey1 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant"),
+		WS:         istructs.WSID(8),
+	}
+	projectionKey2 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant2"),
+		WS:         istructs.WSID(9),
+	}
+
+	quotasExample := in10n.Quotas{
+		Channels:                10,
+		ChannelsPerSubject:      10,
+		Subscriptions:           10,
+		SubscriptionsPerSubject: 10,
+	}
+	req := require.New(t)
+
+	nb, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+	defer cleanup()
+
+	nb.Update(projectionKey1, istructs.Offset(100))
+	nb.Update(projectionKey2, istructs.Offset(200))
+
+	// Create channel
+	var channel1ID in10n.ChannelID
+	{
+		var subject istructs.SubjectLogin = "paa"
+		var err error
+		channel1ID, err = nb.NewChannel(subject, 24*time.Hour)
+		req.NoError(err)
+
+		wg.Add(1)
+		go func() {
+			nb.WatchChannel(ctx, channel1ID, cb1.updatesMock)
+			wg.Done()
+		}()
+
+	}
+
+	for range 10 {
+		// Subscribe
+		{
+			err := nb.Subscribe(channel1ID, projectionKey1)
+			req.NoError(err)
+
+			err = nb.Subscribe(channel1ID, projectionKey2)
+			req.NoError(err)
+
+		}
+		// Should see some offsets
+
+		{
+			var ui []UpdateUnit
+			ui = append(ui, <-cb1.data)
+			ui = append(ui, <-cb1.data)
+			slices.Contains(ui, UpdateUnit{
+				Offset:     istructs.Offset(100),
+				Projection: projectionKey1,
+			})
+			slices.Contains(ui, UpdateUnit{
+				Offset:     istructs.Offset(200),
+				Projection: projectionKey2,
+			})
+		}
+		// Unsubscribe
+		nb.Unsubscribe(channel1ID, projectionKey1)
+		nb.Unsubscribe(channel1ID, projectionKey2)
+
+	}
+
 	cancel()
 	wg.Wait()
 

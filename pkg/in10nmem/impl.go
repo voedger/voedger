@@ -177,6 +177,14 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 		logger.Info(pr)
 	}
 
+	// Non-blocking send to channel.cchan so that all subscriptions are checked
+	{
+		select {
+		case channel.cchan <- struct{}{}:
+		default:
+		}
+	}
+
 	{
 		// Must exist because we create it in guaranteeProjection
 		prj := nb.projections[projectionKey]
@@ -239,10 +247,6 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		delete(nb.channels, channelID)
 		nb.Unlock()
 	}()
-
-	if logger.IsTrace() {
-		logger.Trace("notified", channelID, channel.subject)
-	}
 
 	updateUnits := make([]UpdateUnit, 0)
 
