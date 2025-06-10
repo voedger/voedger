@@ -123,7 +123,12 @@ func prepareDailyIdx(require *require.Assertions, vit *it.VIT, ws *it.AppWorkspa
 	// force projection update
 	resp := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON())
 	resultOffsetOfCUD := resp.CurrentWLogOffset
-	require.EqualValues(resultOffsetOfCUD, <-offsetsChan)
+	// wait for the offset because server could send previos offset. It is guaranteed that the expected offset will eventually arrive
+	for actualOffset := range offsetsChan {
+		if actualOffset == resultOffsetOfCUD {
+			break
+		}
+	}
 	unsubscribe()
 	return resultOffsetOfCUD, resp.NewIDs
 }
