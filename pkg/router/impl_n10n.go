@@ -83,10 +83,10 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 func serveN10NChannel(ctx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker,
 	subjectLogin istructs.SubjectLogin) {
 	ch := make(chan in10nmem.UpdateUnit)
-	watchChannelContext, cancel := context.WithCancel(ctx)
+	watchChannelCtx, watchChannelCtxCancel := context.WithCancel(ctx)
 	go func() {
 		defer close(ch)
-		n10n.WatchChannel(watchChannelContext, channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+		n10n.WatchChannel(watchChannelCtx, channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
 			var unit = in10nmem.UpdateUnit{
 				Projection: projection,
 				Offset:     offset,
@@ -94,7 +94,7 @@ func serveN10NChannel(ctx context.Context, rw http.ResponseWriter, flusher http.
 			ch <- unit
 		})
 	}()
-	defer logger.Info("watch done")
+	defer logger.Info("serving n10n channel", channel,"finished")
 	for ctx.Err() == nil {
 		result, ok := <-ch
 		if !ok {
@@ -105,14 +105,14 @@ func serveN10NChannel(ctx context.Context, rw http.ResponseWriter, flusher http.
 			logger.Error("failed to write sse message for subjectLogin", subjectLogin, "to client:", sseMessage, ":", err.Error())
 			break // WatchChannel will be finished on cancel()
 		}
+		flusher.Flush()
 		if logger.IsVerbose() {
 			logger.Verbose(fmt.Sprintf("sse message sent for subjectLogin %s:", subjectLogin), strings.ReplaceAll(sseMessage, "\n", " "))
 		}
-		flusher.Flush()
 	}
 	// graceful client disconnect -> req.Context() closed
 	// failed to write sse message -> need to close watchChannelContext
-	cancel()
+	watchChannelCtxCancel()
 	for range ch {
 	}
 }
