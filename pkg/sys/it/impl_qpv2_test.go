@@ -123,7 +123,7 @@ func prepareDailyIdx(t *testing.T, vit *it.VIT, ws *it.AppWorkspace) (resultOffs
 	// force projection update
 	resp := vit.PostWS(ws, "c.sys.CUD", cuds.MustToJSON())
 	resultOffsetOfCUD := resp.CurrentWLogOffset
-	// wait for the offset because server could send previos offset. It is guaranteed that the expected offset will eventually arrive
+	// wait for the offset because server could send previous offset. It is guaranteed that the expected offset will eventually arrive
 	waitForOffset(t, resultOffsetOfCUD, offsetsChan)
 	unsubscribe()
 	return resultOffsetOfCUD, resp.NewIDs
