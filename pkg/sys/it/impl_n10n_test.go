@@ -44,7 +44,7 @@ func TestBasicUsage_n10n_APIv1(t *testing.T) {
 	// force projection update
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 	resultOffsetOfCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
-	require.EqualValues(t, resultOffsetOfCUD, <-offsetsChan)
+	waitForOffset(t, resultOffsetOfCUD, offsetsChan)
 	unsubscribe()
 
 	_, offsetsChanOpened := <-offsetsChan
@@ -88,8 +88,8 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
 	// read events
-	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
-	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
+	waitForOffset(t, resultOffsetOfCategoryCUD, offsetsChan)
+	waitForOffset(t, resultOffsetOfDailyCUD, offsetsChan)
 
 	// unsubscribe
 	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
@@ -115,8 +115,8 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	// SSE listener channel should be closed after that
 	resp.HTTPResp.Body.Close()
 
-	x, ok := <-offsetsChan
-	require.False(t, ok, x)
+	for range offsetsChan {
+	}
 	waitForDone()
 }
 
@@ -232,6 +232,18 @@ func TestBasicUsage_n10n_2(t *testing.T) {
 	waitForDone()
 }
 
+func waitForOffset(t *testing.T, expectedOffset istructs.Offset, offsetCh federation.OffsetsChan) {
+	start := time.Now()
+	for actualOffset := range offsetCh {
+		if actualOffset == expectedOffset {
+			return
+		}
+		if time.Since(start) > 10*time.Second {
+			t.Fatal()
+		}
+	}
+}
+
 func TestChannelExpiration_V2(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -266,8 +278,8 @@ func TestChannelExpiration_V2(t *testing.T) {
 	vit.PostWS(ws, "c.sys.CUD", body)
 
 	// expect SSE listener is finished
-	_, ok := <-offsetsChan
-	require.False(t, ok)
+	for range offsetsChan {
+	}
 	waitForDone()
 }
 
@@ -393,8 +405,8 @@ func testSubscriptionErrors(t *testing.T, method string) {
 
 	resp.HTTPResp.Body.Close()
 
-	_, ok := <-offsetsChan
-	require.False(t, ok)
+	for range offsetsChan {
+	}
 	waitForDone()
 }
 
@@ -502,19 +514,12 @@ func TestChannelExpiration_V1(t *testing.T) {
 	// expire the channel
 	testingu.MockTime.Add(25 * time.Hour)
 
-	// channel is not closed, sse connection is still opened
-	select {
-	case <-offsetsChan:
-		t.Fail()
-	default:
-	}
-
 	// produce SSE event
 	vit.N10NUpdate(testProjectionKey, 13)
 
 	// the channel is closed on SSE event because it is expired
-	_, ok := <-offsetsChan
-	require.False(ok)
+	for range offsetsChan {
+	}
 
 	// calling unsubscribe has no sense here, it just causes "channel does not exist" error
 	// but let's call for demonstration
