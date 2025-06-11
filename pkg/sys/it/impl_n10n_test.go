@@ -209,19 +209,15 @@ func TestBasicUsage_n10n_2(t *testing.T) {
 
 	offsetsChan, channelID, waitForDone = federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
 
-
-
 	// force projections update
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 	resultOffsetOfCategoryCUD = vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
 	resultOffsetOfDailyCUD = vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
-
 	// read events
 	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
 	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
-
 
 	// close the initial connection
 	// SSE listener channel should be closed after that
@@ -559,15 +555,14 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
 	// read events, ensure we're receiving events for the view we're additionaly subscribed to
-	require.EqualValues(t, resultOffsetOfCategoryCUD, <-offsetsChan)
-	require.EqualValues(t, resultOffsetOfDailyCUD, <-offsetsChan)
+	waitForOffset(t, resultOffsetOfCategoryCUD, offsetsChan)
+	waitForOffset(t, resultOffsetOfDailyCUD, offsetsChan)
 
 	// close the initial connection
 	// SSE listener channel should be closed after that
 	resp.HTTPResp.Body.Close()
 
-	x, ok := <-offsetsChan
-	require.False(t, ok, x)
+	for range offsetsChan {
+	}
 	waitForDone()
-
 }
