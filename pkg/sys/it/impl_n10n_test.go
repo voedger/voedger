@@ -23,7 +23,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestBasicUsage_n10n(t *testing.T) {
+func TestBasicUsage_n10n_APIv1(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -218,7 +218,15 @@ func TestN10NSubscribeErrors(t *testing.T) {
 	})
 }
 
+func TestN10NSubscribeToExtraErrors(t *testing.T) {
+	testSubscriptionErrors(t, http.MethodPut)
+}
+
 func TestN10NUnsubscribeErrors(t *testing.T) {
+	testSubscriptionErrors(t, http.MethodDelete)
+}
+
+func testSubscriptionErrors(t *testing.T, method string) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -238,14 +246,14 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 
 	t.Run("401", func(t *testing.T) {
 		t.Run("no token", func(t *testing.T) {
-			vit.POST(url, "", coreutils.WithMethod(http.MethodDelete), coreutils.Expect401())
+			vit.POST(url, "", coreutils.WithMethod(method), coreutils.Expect401())
 		})
 
 		t.Run("expired token", func(t *testing.T) {
 			testingu.MockTime.Add(24 * time.Hour)
 			vit.POST(url, "",
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithMethod(http.MethodDelete),
+				coreutils.WithMethod(method),
 				coreutils.Expect401(),
 			).Println()
 			vit.RefreshTokens()
@@ -255,7 +263,7 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 	t.Run("404 on an unknown channel", func(t *testing.T) {
 		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/unknownChannelID/workspaces/%d/subscriptions/app1pkg.CategoryIdx", ws.WSID)
 		vit.POST(url, "",
-			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithMethod(method),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect404(),
 		).Println()
@@ -263,7 +271,7 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 
 	t.Run("400 on non-empty body", func(t *testing.T) {
 		vit.POST(url, "some body",
-			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithMethod(method),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400(),
 		).Println()
@@ -272,7 +280,7 @@ func TestN10NUnsubscribeErrors(t *testing.T) {
 	t.Run("400 on malformed view", func(t *testing.T) {
 		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/malformedViewQName", channelID, ws.WSID)
 		vit.POST(url, "",
-			coreutils.WithMethod(http.MethodDelete),
+			coreutils.WithMethod(method),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
 			coreutils.Expect400(),
 		).Println()
@@ -399,4 +407,49 @@ func TestChannelExpiration_V1(t *testing.T) {
 	// calling unsubscribe has no sense here, it just causes "channel does not exist" error
 	// but let's call for demonstration
 	unsubscribe()
+}
+
+func TestN10NSubscribeToExtraView(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// owning does not matter for notifications, need just a valid token
+	token := ws.Owner.Token
+
+	// subscribe to one view
+	body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithLongPolling(),
+	)
+
+	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+	// subscribe to an extra view
+	body = ""
+	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
+	vit.POST(url, body,
+		coreutils.WithAuthorizeBy(token),
+		coreutils.WithMethod(http.MethodPut),
+	)
+
+	// force projections update
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+	resultOffsetOfCategoryCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
+	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
+
+	// read events, ensure we're receiving events for the view we're additionally subscribed to
+	waitForOffset(t, resultOffsetOfCategoryCUD, offsetsChan)
+	waitForOffset(t, resultOffsetOfDailyCUD, offsetsChan)
+
+	// close the initial connection
+	// SSE listener channel should be closed after that
+	resp.HTTPResp.Body.Close()
+
+	for range offsetsChan {
+	}
+	waitForDone()
 }
