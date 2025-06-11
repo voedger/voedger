@@ -202,9 +202,8 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 			return in10n.ErrChannelDoesNotExist
 		}
 
-		if channel.terminated {
-			// Ok we can unsubscribe from terminated channel
-		}
+		// if channel.terminated {
+		// Ok we can unsubscribe from terminated channel
 
 		metric, mOK := nb.metricBySubject[channel.subject]
 		if !mOK {
@@ -300,7 +299,7 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 	}
 }
 
-func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID, metric *metricType) (err error) {
+func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID, metric *metricType) {
 
 	// Mark channel as terminated and unsubscribe from all projections
 	{
@@ -333,8 +332,6 @@ func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID
 	nb.numSubscriptions -= len(channel.subscriptions)
 	delete(nb.channels, channelID)
 	nb.Unlock()
-
-	return err
 }
 
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
