@@ -60,6 +60,9 @@ type IN10nBroker interface {
 	MetricNumSubcriptions() int
 	// @ConcurrentAccess
 	MetricSubject(ctx context.Context, cb func(subject istructs.SubjectLogin, numChannels int, numSubscriptions int))
+
+	// @ConcurrentAccess
+	MetricNumProjectionSubscriptions(projection ProjectionKey) int
 }
 
 type ChannelID string
