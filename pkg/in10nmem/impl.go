@@ -25,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
+	"golang.org/x/exp/maps"
 )
 
 type N10nBroker struct {
@@ -64,6 +65,7 @@ type channel struct {
 	channelDuration time.Duration
 	createTime      time.Time
 	cchan           chan struct{}
+	terminated      bool
 }
 
 type metricType struct {
@@ -114,80 +116,118 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 // [~server.n10n.heartbeats/freq.Interval30Seconds~doc]
 // - Implementation generates a heartbeat every 30 seconds for all channels that are subscribed on QNameHeartbeat30
 func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
-	nb.Lock()
-	defer nb.Unlock()
-	channel, channelOK := nb.channels[channelID]
 
-	if !channelOK {
-		return in10n.ErrChannelDoesNotExist
-	}
+	var prj *projection
+	var channel *channel
+	var channelOK bool
 
-	metric, metricOK := nb.metricBySubject[channel.subject]
-	if !metricOK {
-		return ErrMetricDoesNotExists
-	}
+	// Modify broker structures
+	err = func() error {
+		nb.Lock()
+		defer nb.Unlock()
 
-	if nb.numSubscriptions >= nb.quotas.Subscriptions {
-		return in10n.ErrQuotaExceeded_Subscriptions
-	}
-	if metric.numSubscriptions >= nb.quotas.SubscriptionsPerSubject {
-		return in10n.ErrQuotaExceeded_SubscriptionsPerSubject
-	}
+		channel, channelOK = nb.channels[channelID]
 
-	// [~server.n10n.heartbeats/freq.ZeroKey~impl]
-	// [~server.n10n.heartbeats/freq.SingleNotification~impl]
-	if projectionKey.Projection == in10n.QNameHeartbeat30 {
-		projectionKey = in10n.Heartbeat30ProjectionKey
-	}
-
-	subscription := subscription{
-		deliveredOffset: istructs.Offset(0),
-		currentOffset:   guaranteeProjection(nb.projections, projectionKey),
-	}
-	channel.subscriptions[projectionKey] = &subscription
-	metric.numSubscriptions++
-	nb.numSubscriptions++
-
-	// Non-blocking send to channel.cchan so that all subscriptions are checked
-	{
-		select {
-		case channel.cchan <- struct{}{}:
-		default:
+		if !channelOK {
+			return in10n.ErrChannelDoesNotExist
 		}
+
+		// We cannot subscribe to a channel that is already terminated
+		if channel.terminated {
+			return in10n.ErrChannelTerminated
+		}
+
+		metric, metricOK := nb.metricBySubject[channel.subject]
+		if !metricOK {
+			return ErrMetricDoesNotExists
+		}
+
+		if nb.numSubscriptions >= nb.quotas.Subscriptions {
+			return in10n.ErrQuotaExceeded_Subscriptions
+		}
+		if metric.numSubscriptions >= nb.quotas.SubscriptionsPerSubject {
+			return in10n.ErrQuotaExceeded_SubscriptionsPerSubject
+		}
+
+		// [~server.n10n.heartbeats/freq.ZeroKey~impl]
+		// [~server.n10n.heartbeats/freq.SingleNotification~impl]
+		if projectionKey.Projection == in10n.QNameHeartbeat30 {
+			projectionKey = in10n.Heartbeat30ProjectionKey
+		}
+
+		subscription := subscription{
+			deliveredOffset: istructs.Offset(0),
+			currentOffset:   guaranteeProjection(nb.projections, projectionKey),
+		}
+		channel.subscriptions[projectionKey] = &subscription
+		metric.numSubscriptions++
+		nb.numSubscriptions++
+
+		// Must exist because we create it in guaranteeProjection
+		prj = nb.projections[projectionKey]
+
+		return nil
+	}()
+
+	if err != nil {
+		return err
 	}
 
+	// Trigger notifier
 	{
-		// Must exist because we create it in guaranteeProjection
-		prj := nb.projections[projectionKey]
 		prj.Lock()
-		defer prj.Unlock()
 		prj.toSubscribe[channelID] = channel
+		prj.Unlock()
+		e := event{prj: prj}
+		nb.events <- e
 	}
 
 	return err
 }
 
 func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
-	nb.Lock()
-	defer nb.Unlock()
 
-	channel, cOK := nb.channels[channelID]
-	if !cOK {
-		return in10n.ErrChannelDoesNotExist
-	}
-	metric, mOK := nb.metricBySubject[channel.subject]
-	if !mOK {
-		return ErrMetricDoesNotExists
-	}
-	delete(channel.subscriptions, projectionKey)
-	metric.numSubscriptions--
-	nb.numSubscriptions--
+	var prj *projection
+	var channel *channel
+	var cOK bool
 
-	prj := nb.projections[projectionKey]
+	// Modify broker structures
+	err = func() error {
+
+		nb.Lock()
+		defer nb.Unlock()
+
+		channel, cOK = nb.channels[channelID]
+		if !cOK {
+			return in10n.ErrChannelDoesNotExist
+		}
+
+		// if channel.terminated {
+		// Ok we can unsubscribe from terminated channel
+
+		metric, mOK := nb.metricBySubject[channel.subject]
+		if !mOK {
+			return ErrMetricDoesNotExists
+		}
+		delete(channel.subscriptions, projectionKey)
+		metric.numSubscriptions--
+		nb.numSubscriptions--
+
+		prj = nb.projections[projectionKey]
+		return nil
+	}()
+
+	if err != nil {
+		return err
+	}
+
+	// Trigger notifier
 	if prj != nil {
 		prj.Lock()
-		defer prj.Unlock()
 		prj.toSubscribe[channelID] = nil
+		prj.Unlock()
+		e := event{prj: prj}
+		nb.events <- e
 	}
 
 	return err
@@ -210,14 +250,7 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		return channel, metric
 	}()
 
-	defer func() {
-		nb.Lock()
-		metric.numChannels--
-		metric.numSubscriptions -= len(channel.subscriptions)
-		nb.numSubscriptions -= len(channel.subscriptions)
-		delete(nb.channels, channelID)
-		nb.Unlock()
-	}()
+	defer nb.cleanupChannel(channel, channelID, metric)
 
 	updateUnits := make([]UpdateUnit, 0)
 
@@ -266,6 +299,41 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 	}
 }
 
+func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID, metric *metricType) {
+
+	// Mark channel as terminated and unsubscribe from all projections
+	{
+		if channel.terminated {
+			panic(in10n.ErrChannelTerminated)
+		}
+
+		var clonedSubs map[in10n.ProjectionKey]*subscription
+		{
+			nb.Lock()
+			// Copy channel.subscriptions to a temporary map
+			// to avoid concurrent map access issues when removing subscriptions
+			clonedSubs = maps.Clone(channel.subscriptions)
+			channel.terminated = true
+			nb.Unlock()
+		}
+
+		// Unsubscribe from all subscriptions
+		for projectionKey := range clonedSubs {
+			err := nb.Unsubscribe(channelID, projectionKey)
+			if err != nil {
+				logger.Error(fmt.Sprintf("Unsubscribe error: %v for channelID: %v, projectionKey: %v", err.Error(), channelID, projectionKey))
+			}
+		}
+	}
+
+	nb.Lock()
+	metric.numChannels--
+	metric.numSubscriptions -= len(channel.subscriptions)
+	nb.numSubscriptions -= len(channel.subscriptions)
+	delete(nb.channels, channelID)
+	nb.Unlock()
+}
+
 func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 	defer func() {
 		logger.Info("notifier goroutine stopped")
@@ -291,6 +359,7 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 						delete(prj.subscribedChannels, channelID)
 					}
 				}
+				maps.Clear(prj.toSubscribe)
 				prj.Unlock()
 			}
 
@@ -305,6 +374,7 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 						logger.Trace("notifier goroutine: ch.cchan <- struct{}{}")
 					}
 				default:
+					// Nothing critical, subscribers will be notified because the channel has value
 					if logger.IsVerbose() {
 						logger.Verbose("notifier goroutine: channel full, skipping send")
 					}
@@ -375,6 +445,18 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
+func (nb *N10nBroker) MetricNumProjectionSubscriptions(projection in10n.ProjectionKey) int {
+	nb.RLock()
+	defer nb.RUnlock()
+	prj := nb.projections[projection]
+	if prj == nil {
+		return 0
+	}
+	prj.Lock()
+	defer prj.Unlock()
+	return len(prj.subscribedChannels)
+}
+
 func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
@@ -428,8 +510,6 @@ func (nb *N10nBroker) heartbeat30(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (nb *N10nBroker) validateChannel(channel *channel) error {
-	nb.RLock()
-	defer nb.RUnlock()
 	// if channel lifetime > channelDuration defined in NewChannel when create channel - must exit
 	if nb.time.Now().Sub(channel.createTime) > channel.channelDuration {
 		return ErrChannelExpired

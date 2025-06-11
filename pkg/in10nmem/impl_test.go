@@ -449,3 +449,119 @@ func TestChannelExpiration(t *testing.T) {
 	// observe "channel time to live expired: subjectlogin test" message in the log
 	wg.Wait()
 }
+
+// Flow:
+// - Create a channel
+// - Start watching the channel
+// - Subscribe to the projection1
+// - Wait for metrics to be updated
+// - Subscribe to the projection2
+// - Wait for metrics to be updated
+// - Unsubscribe from the projection1
+// - Wait for metrics to be updated
+// - Close context
+// - Wait for metrics to be updated (zero)
+func Test_MetricNumProjectionSubscriptions(t *testing.T) {
+	req := require.New(t)
+
+	quotasExample := in10n.Quotas{
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           10,
+		SubscriptionsPerSubject: 10,
+	}
+
+	broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+	defer cleanup()
+
+	// Initially, no subscriptions should exist
+	req.Equal(0, broker.MetricNumSubcriptions())
+
+	// Create a channel
+	subject := istructs.SubjectLogin("testuser")
+	channelID, err := broker.NewChannel(subject, 24*time.Hour)
+	req.NoError(err)
+
+	// Setup projection keys
+	projection1 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant1"),
+		WS:         istructs.WSID(1),
+	}
+	projection2 := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "restaurant2"),
+		WS:         istructs.WSID(2),
+	}
+
+	// Setup callback and context for watching
+	cb := new(callbackMock)
+	cb.data = make(chan UpdateUnit, 10)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start watching the channel
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broker.WatchChannel(ctx, channelID, cb.updatesMock)
+	}()
+
+	// Subscribe to projection1
+	err = broker.Subscribe(channelID, projection1)
+	req.NoError(err)
+
+	// Wait for metrics to be updated
+	req.Equal(1, broker.MetricNumSubcriptions())
+	reqEventuallyEqual(t, 1, func() int {
+		return broker.MetricNumProjectionSubscriptions(projection1)
+	})
+
+	// Subscribe to projection2
+	err = broker.Subscribe(channelID, projection2)
+	req.NoError(err)
+
+	// Wait for metrics to be updated
+	req.Equal(2, broker.MetricNumSubcriptions())
+	req.Equal(1, broker.MetricNumProjectionSubscriptions(projection1))
+	reqEventuallyEqual(t, 1, func() int {
+		return broker.MetricNumProjectionSubscriptions(projection2)
+	})
+
+	// Unsubscribe from projection1
+	broker.Unsubscribe(channelID, projection1)
+
+	// Wait for metrics to be updated
+	req.Equal(1, broker.MetricNumSubcriptions())
+	reqEventuallyEqual(t, 0, func() int {
+		return broker.MetricNumProjectionSubscriptions(projection1)
+	})
+
+	// Close context (this should clean up remaining subscriptions)
+	cancel()
+
+	// Wait for WatchChannel to finish
+	wg.Wait()
+
+	// Wait for metrics to be updated
+	req.Equal(0, broker.MetricNumSubcriptions())
+	reqEventuallyEqual(t, 0, func() int {
+		return broker.MetricNumProjectionSubscriptions(projection1)
+	})
+	reqEventuallyEqual(t, 0, func() int {
+		return broker.MetricNumProjectionSubscriptions(projection2)
+	})
+}
+
+// Wait for 1 seconds
+func reqEventuallyEqual(t *testing.T, expected int, fn func() int) {
+	t.Helper()
+	for range 10 {
+		if fn() == expected {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Errorf("In one second, expected %d, got %d", expected, fn())
+}

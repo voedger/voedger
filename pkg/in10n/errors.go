@@ -15,3 +15,4 @@ var ErrQuotaExceeded_Subscriptions = errors.New(quotaExceededPrefix + "subscript
 var ErrQuotaExceeded_SubscriptionsPerSubject = errors.New(quotaExceededPrefix + "subscriptions per subject")
 
 var ErrChannelDoesNotExist = errors.New("channel does not exist")
+var ErrChannelTerminated = errors.New("channel terminated")
