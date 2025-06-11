@@ -441,7 +441,7 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
 	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
-	// read events, ensure we're receiving events for the view we're additionaly subscribed to
+	// read events, ensure we're receiving events for the view we're additionally subscribed to
 	waitForOffset(t, resultOffsetOfCategoryCUD, offsetsChan)
 	waitForOffset(t, resultOffsetOfDailyCUD, offsetsChan)
 
