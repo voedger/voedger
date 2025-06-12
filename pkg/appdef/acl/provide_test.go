@@ -800,7 +800,7 @@ func TestIsOperationAllowedWSInheritances(t *testing.T) {
 
 	require.NotNil(app)
 
-	t.Run("test IsOperationAllowed", func(t *testing.T) {
+	t.Run("test Allowed", func(t *testing.T) {
 		var tests = []struct {
 			ws      appdef.QName
 			allowed map[appdef.QName]appdef.OperationsSet

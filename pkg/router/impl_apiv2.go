@@ -16,11 +16,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -251,18 +253,9 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 	})
 }
 
-func authorize(appTokensFactory payloads.IAppTokensFactory, busRequest bus.Request) (principalPayload payloads.PrincipalPayload, err error) {
-	principalToken, err := bus.GetPrincipalToken(busRequest)
-	if err != nil {
-		return principalPayload, err
-	}
-	appTokens := appTokensFactory.New(busRequest.AppQName)
-	_, err = appTokens.ValidateToken(principalToken, &principalPayload)
-	return principalPayload, err
-}
-
 func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
-	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
+	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory, authnz iauthnz.IAuthenticator,
+	asp istructs.IAppStructsProvider, appParts appparts.IAppPartitions) http.HandlerFunc {
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		flusher, ok := rw.(http.Flusher)
 		if !ok {
@@ -272,7 +265,23 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		busRequest := createBusRequest(req.Method, data, req)
-		principalPayload, err := authorize(appTokensFactory, busRequest)
+		appStructs, err := asp.BuiltIn(busRequest.AppQName)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		principalToken, err := bus.GetPrincipalToken(busRequest)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		appTokens := appTokensFactory.New(busRequest.AppQName)
+		authnzReq := iauthnz.AuthnRequest{
+			Host:        busRequest.Host,
+			RequestWSID: busRequest.WSID,
+			Token:       principalToken,
+		}
+		_, principalPaload, err := authnz.Authenticate(req.Context(), appStructs, appTokens, authnzReq)
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
 			return
@@ -283,6 +292,23 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		partitionID, err := appParts.AppWorkspacePartitionID(busRequest.AppQName, busRequest.WSID)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		appPart, err := appParts.Borrow(busRequest.AppQName, partitionID, appparts.ProcessorKind_Query)
+		if err != nil {
+			code := http.StatusInternalServerError
+			if errors.Is(err, appparts.ErrNotAvailableEngines) {
+				code = http.StatusServiceUnavailable
+			}
+			ReplyCommonError(rw, err.Error(), code)
+			return
+		}
+		iWorkspace
+		authnzEntities(subscriptions, appStructs, appPart)
 
 		subjectLogin := istructs.SubjectLogin(principalPayload.Login)
 		channel, err := n10n.NewChannel(subjectLogin, expiresIn)
@@ -325,6 +351,12 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 
 		serveN10NChannel(req.Context(), rw, flusher, channel, n10n, subjectLogin)
 	})
+}
+
+func authnzEntities(subscriptios []subscription, appStructs istructs.IAppStructs, appPart appparts.IAppPartition) error {
+	for _, s := range subscriptios {
+		appPart.IsOperationAllowed()
+	}
 }
 
 // handles both unsubscribe and subscribe to an extra view
