@@ -353,6 +353,10 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 	})
 }
 
+func borrowAppPart() (appPart appparts.IAppPartition, err error) {
+	
+}
+
 func authnzEntities(subscriptios []subscription, appStructs istructs.IAppStructs, appPart appparts.IAppPartition) error {
 	for _, s := range subscriptios {
 		appPart.IsOperationAllowed()
