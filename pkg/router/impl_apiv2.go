@@ -265,50 +265,16 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		busRequest := createBusRequest(req.Method, data, req)
-		appStructs, err := asp.BuiltIn(busRequest.AppQName)
+		appPart, err := borrowAppPart(asp, busRequest, rw)
 		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			replyErr(rw, err)
 			return
 		}
-		principalToken, err := bus.GetPrincipalToken(busRequest)
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+		defer appPart.Release()
+		if err := authnzEntities(subscriptions, appStructs, appPart); err != nil {
+			replyErr(rw, err)
 			return
 		}
-		appTokens := appTokensFactory.New(busRequest.AppQName)
-		authnzReq := iauthnz.AuthnRequest{
-			Host:        busRequest.Host,
-			RequestWSID: busRequest.WSID,
-			Token:       principalToken,
-		}
-		_, principalPaload, err := authnz.Authenticate(req.Context(), appStructs, appTokens, authnzReq)
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		partitionID, err := appParts.AppWorkspacePartitionID(busRequest.AppQName, busRequest.WSID)
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-		appPart, err := appParts.Borrow(busRequest.AppQName, partitionID, appparts.ProcessorKind_Query)
-		if err != nil {
-			code := http.StatusInternalServerError
-			if errors.Is(err, appparts.ErrNotAvailableEngines) {
-				code = http.StatusServiceUnavailable
-			}
-			ReplyCommonError(rw, err.Error(), code)
-			return
-		}
-		iWorkspace
-		authnzEntities(subscriptions, appStructs, appPart)
 
 		subjectLogin := istructs.SubjectLogin(principalPayload.Login)
 		channel, err := n10n.NewChannel(subjectLogin, expiresIn)
@@ -353,14 +319,58 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 	})
 }
 
-func borrowAppPart() (appPart appparts.IAppPartition, err error) {
-	
+func borrowAppPart(asp istructs.IAppStructsProvider, busRequest bus.Request, rw http.ResponseWriter) (appPart appparts.IAppPartition, err error) {
+	// TODO: sidecar apps are not supported here
+	appStructs, err := asp.BuiltIn(busRequest.AppQName)
+	if err != nil {
+		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+	}
+	principalToken, err := bus.GetPrincipalToken(busRequest)
+	if err != nil {
+		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+	}
+	appTokens := appTokensFactory.New(busRequest.AppQName)
+	authnzReq := iauthnz.AuthnRequest{
+		Host:        busRequest.Host,
+		RequestWSID: busRequest.WSID,
+		Token:       principalToken,
+	}
+	_, principalPaload, err := authnz.Authenticate(req.Context(), appStructs, appTokens, authnzReq)
+	if err != nil {
+		return nil, coreutils.NewHTTPError(http.StatusUnauthorized, err)
+	}
+
+	subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
+	if err != nil {
+		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+	}
+
+	partitionID, err := appParts.AppWorkspacePartitionID(busRequest.AppQName, busRequest.WSID)
+	if err != nil {
+		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+	}
+	appPart, err := appParts.Borrow(busRequest.AppQName, partitionID, appparts.ProcessorKind_Query)
+	if err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, appparts.ErrNotAvailableEngines) {
+			code = http.StatusServiceUnavailable
+		}
+		return nil, coreutils.NewHTTPError(code, err)
+	}
+	return appPart, nil
 }
 
-func authnzEntities(subscriptios []subscription, appStructs istructs.IAppStructs, appPart appparts.IAppPartition) error {
+func authnzEntities(subscriptios []subscription, appPart appparts.IAppPartition, ws appdef.IWorkspace, roles []appdef.QName) error {
 	for _, s := range subscriptios {
-		appPart.IsOperationAllowed()
+		ok, err := appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, s.entity, nil, roles)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return coreutils.NewHTTPErrorf(http.StatusForbidden)
+		}
 	}
+	return nil
 }
 
 // handles both unsubscribe and subscribe to an extra view
