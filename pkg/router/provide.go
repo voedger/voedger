@@ -10,9 +10,11 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
@@ -26,18 +28,40 @@ import (
 // where is VVM RequestHandler? bus.RequestHandler
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
-	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHTTPService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
-		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
+	federation federation.IFederation, appParts appparts.IAppPartitions, authnz iauthnz.IAuthenticator, asp istructs.IAppStructsProvider,
+	appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
+	httpServ := &httpService{
+		RouterParams:       rp,
+		n10n:               broker,
+		requestSender:      requestSender,
+		numsAppsWorkspaces: numsAppsWorkspaces,
+		listenAddress:      coreutils.ServerAddress(rp.Port),
+		name:               "HTTP server",
+		blobRequestHandler: blobRequestHandler,
+		iTokens:            iTokens,
+		federation:         federation,
+		appParts:           appParts,
+		asp:                asp,
+		authnz:             authnz,
+		appTokensFactory:   appTokensFactory,
+	}
 
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
 	}
-	adminSrv = getHTTPService("Admin HTTP server", adminEndpoint, RouterParams{
-		WriteTimeout:     rp.WriteTimeout,
-		ReadTimeout:      rp.ReadTimeout,
-		ConnectionsLimit: rp.ConnectionsLimit,
-	}, broker, nil, requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
+	adminSrv = &httpService{
+		RouterParams: RouterParams{
+			WriteTimeout:     rp.WriteTimeout,
+			ReadTimeout:      rp.ReadTimeout,
+			ConnectionsLimit: rp.ConnectionsLimit,
+		},
+		n10n:               broker,
+		requestSender:      requestSender,
+		numsAppsWorkspaces: numsAppsWorkspaces,
+		listenAddress:      adminEndpoint,
+		name:               "Admin HTTP server",
+		federation:         federation,
+	}
 
 	if rp.Port != HTTPSPort {
 		return httpServ, nil, adminSrv
@@ -77,24 +101,4 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 		},
 	}
 	return httpsService, acmeService, adminSrv
-}
-
-func getHTTPService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
-	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
-	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
-	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) *httpService {
-	httpServ := &httpService{
-		RouterParams:       rp,
-		n10n:               broker,
-		requestSender:      requestSender,
-		numsAppsWorkspaces: numsAppsWorkspaces,
-		listenAddress:      listenAddress,
-		name:               name,
-		blobRequestHandler: blobRequestHandler,
-		iTokens:            iTokens,
-		federation:         federation,
-		appTokensFactory:   appTokensFactory,
-	}
-
-	return httpServ
 }

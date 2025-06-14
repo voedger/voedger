@@ -30,6 +30,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func (s *httpService) registerHandlersV2() {
@@ -157,19 +158,20 @@ func (s *httpService) registerHandlersV2() {
 	// notifications subscribe+watch /api/v2/apps/{owner}/{app}/notifications
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory, s.authnz,
+			s.asp, s.appParts))).
 		Methods(http.MethodPost).Name("notifications subscribe + watch")
 
 	// notifications unsubscribe /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory, s.asp, s.authnz, s.appParts))).
 		Methods(http.MethodDelete).Name("notifications unsubscribe")
 
 	// notifications subscribe to an extra view /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory, s.asp, s.authnz, s.appParts))).
 		Methods(http.MethodPut).Name("notifications subscribe to an extra view")
 }
 
@@ -254,7 +256,7 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 }
 
 func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
-	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory, authnz iauthnz.IAuthenticator,
+	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory, iauthnz iauthnz.IAuthenticator,
 	asp istructs.IAppStructsProvider, appParts appparts.IAppPartitions) http.HandlerFunc {
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		flusher, ok := rw.(http.Flusher)
@@ -265,13 +267,26 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		busRequest := createBusRequest(req.Method, data, req)
-		appPart, err := borrowAppPart(asp, busRequest, rw)
+		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		appPart, principalPayload, appStructs, principals, err := borrowAppPart(req, asp, busRequest, rw, appTokensFactory,
+			iauthnz, appParts)
 		if err != nil {
 			replyErr(rw, err)
 			return
 		}
 		defer appPart.Release()
-		if err := authnzEntities(subscriptions, appStructs, appPart); err != nil {
+		wsDesc, err := appStructs.Records().GetSingleton(busRequest.WSID, authnz.QNameCDocWorkspaceDescriptor)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		iWorkspace := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.QName())
+		roles := getRoles(principals)
+		if err := authnzEntities(subscriptions, appPart, iWorkspace, roles); err != nil {
 			replyErr(rw, err)
 			return
 		}
@@ -319,15 +334,26 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 	})
 }
 
-func borrowAppPart(asp istructs.IAppStructsProvider, busRequest bus.Request, rw http.ResponseWriter) (appPart appparts.IAppPartition, err error) {
+func getRoles(prns []iauthnz.Principal) (res []appdef.QName) {
+	for _, prn := range prns {
+		if prn.Kind != iauthnz.PrincipalKind_Role {
+			continue
+		}
+		res = append(res, prn.QName)
+	}
+	return res
+}
+
+func borrowAppPart(req *http.Request, asp istructs.IAppStructsProvider, busRequest bus.Request, rw http.ResponseWriter,
+	appTokensFactory payloads.IAppTokensFactory, authnz iauthnz.IAuthenticator, appParts appparts.IAppPartitions) (appPart appparts.IAppPartition, principalPayload payloads.PrincipalPayload, appStructs istructs.IAppStructs, principals []iauthnz.Principal, err error) {
 	// TODO: sidecar apps are not supported here
-	appStructs, err := asp.BuiltIn(busRequest.AppQName)
+	appStructs, err = asp.BuiltIn(busRequest.AppQName)
 	if err != nil {
-		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+		return nil, principalPayload, nil, nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
 	}
 	principalToken, err := bus.GetPrincipalToken(busRequest)
 	if err != nil {
-		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+		return nil, principalPayload, nil, nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
 	}
 	appTokens := appTokensFactory.New(busRequest.AppQName)
 	authnzReq := iauthnz.AuthnRequest{
@@ -335,29 +361,24 @@ func borrowAppPart(asp istructs.IAppStructsProvider, busRequest bus.Request, rw 
 		RequestWSID: busRequest.WSID,
 		Token:       principalToken,
 	}
-	_, principalPaload, err := authnz.Authenticate(req.Context(), appStructs, appTokens, authnzReq)
+	principals, principalPayload, err = authnz.Authenticate(req.Context(), appStructs, appTokens, authnzReq)
 	if err != nil {
-		return nil, coreutils.NewHTTPError(http.StatusUnauthorized, err)
-	}
-
-	subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
-	if err != nil {
-		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+		return nil, principalPayload, nil, nil, coreutils.NewHTTPError(http.StatusUnauthorized, err)
 	}
 
 	partitionID, err := appParts.AppWorkspacePartitionID(busRequest.AppQName, busRequest.WSID)
 	if err != nil {
-		return nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
+		return nil, principalPayload, nil, nil, coreutils.NewHTTPError(http.StatusBadRequest, err)
 	}
-	appPart, err := appParts.Borrow(busRequest.AppQName, partitionID, appparts.ProcessorKind_Query)
+	appPart, err = appParts.Borrow(busRequest.AppQName, partitionID, appparts.ProcessorKind_Query)
 	if err != nil {
 		code := http.StatusInternalServerError
 		if errors.Is(err, appparts.ErrNotAvailableEngines) {
 			code = http.StatusServiceUnavailable
 		}
-		return nil, coreutils.NewHTTPError(code, err)
+		return nil, principalPayload, nil, nil, coreutils.NewHTTPError(code, err)
 	}
-	return appPart, nil
+	return appPart, principalPayload, appStructs, principals, nil
 }
 
 func authnzEntities(subscriptios []subscription, appPart appparts.IAppPartition, ws appdef.IWorkspace, roles []appdef.QName) error {
@@ -375,14 +396,18 @@ func authnzEntities(subscriptios []subscription, appPart appparts.IAppPartition,
 
 // handles both unsubscribe and subscribe to an extra view
 func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
-	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
+	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory, asp istructs.IAppStructsProvider,
+	iauthnz iauthnz.IAuthenticator, appParts appparts.IAppPartitions) http.HandlerFunc {
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(req.Method, data, req)
 
-		if _, err := authorize(appTokensFactory, busRequest); err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
+		appPart, _, appStructs, principals, err := borrowAppPart(req, asp, busRequest, rw, appTokensFactory,
+			iauthnz, appParts)
+		if err != nil {
+			replyErr(rw, err)
 			return
 		}
+		defer appPart.Release()
 
 		if len(busRequest.Body) > 0 {
 			ReplyCommonError(rw, "unexpected body on n10n unsubscribe", http.StatusBadRequest)
@@ -395,6 +420,19 @@ func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istru
 		entity, err := appdef.ParseQName(vars[URLPlaceholder_view])
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		wsDesc, err := appStructs.Records().GetSingleton(busRequest.WSID, authnz.QNameCDocWorkspaceDescriptor)
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		iWorkspace := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.QName())
+		roles := getRoles(principals)
+		subscriptions := []subscription{{entity, busRequest.WSID}}
+		if err := authnzEntities(subscriptions, appPart, iWorkspace, roles); err != nil {
+			replyErr(rw, err)
 			return
 		}
 

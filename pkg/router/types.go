@@ -17,8 +17,10 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -54,6 +56,9 @@ type httpService struct {
 	blobRequestHandler blobprocessor.IRequestHandler
 	iTokens            itokens.ITokens
 	federation         federation.IFederation
+	appParts           appparts.IAppPartitions
+	asp                istructs.IAppStructsProvider
+	authnz             iauthnz.IAuthenticator
 	appTokensFactory   payloads.IAppTokensFactory
 }
 
