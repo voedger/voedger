@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -28,7 +27,7 @@ import (
 // where is VVM RequestHandler? bus.RequestHandler
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
-	federation federation.IFederation, appParts appparts.IAppPartitions, authnz iauthnz.IAuthenticator, asp istructs.IAppStructsProvider,
+	federation federation.IFederation, authnz iauthnz.IAuthenticator, asp istructs.IAppStructsProvider,
 	appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
 	httpServ := &httpService{
 		RouterParams:       rp,
@@ -40,7 +39,6 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 		blobRequestHandler: blobRequestHandler,
 		iTokens:            iTokens,
 		federation:         federation,
-		appParts:           appParts,
 		asp:                asp,
 		authnz:             authnz,
 		appTokensFactory:   appTokensFactory,

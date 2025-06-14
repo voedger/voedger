@@ -743,9 +743,9 @@ func provideRouterServices(rp router.RouterParams, sendTimeout bus.SendTimeout, 
 	autocertCache autocert.Cache, requestSender bus.IRequestSender, vvmPortSource *VVMPortSource,
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory, authnz iauthnz.IAuthenticator,
-	asp istructs.IAppStructsProvider, appParts appparts.IAppPartitions) RouterServices {
+	asp istructs.IAppStructsProvider) RouterServices {
 	httpSrv, acmeSrv, adminSrv := router.Provide(rp, broker, blobRequestHandler, autocertCache, requestSender, numsAppsWorkspaces,
-		iTokens, federation, appParts, authnz, asp, appTokensFactory)
+		iTokens, federation, authnz, asp, appTokensFactory)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}

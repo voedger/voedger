@@ -214,7 +214,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(routerParams, sendTimeout, in10nBroker, iRequestHandler, quotas, wLimiterFactory, blobStorage, cache, iRequestSender, vvmPortSource, v8, iTokens, iFederation, iAppTokensFactory, iAuthenticator, iAppStructsProvider, iAppPartitions)
+	routerServices := provideRouterServices(routerParams, sendTimeout, in10nBroker, iRequestHandler, quotas, wLimiterFactory, blobStorage, cache, iRequestSender, vvmPortSource, v8, iTokens, iFederation, iAppTokensFactory, iAuthenticator, iAppStructsProvider)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
 	metricsServicePort := vvmConfig.MetricsServicePort
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
@@ -801,9 +801,9 @@ func provideRouterServices(rp router.RouterParams, sendTimeout bus.SendTimeout, 
 	autocertCache autocert.Cache, requestSender bus.IRequestSender, vvmPortSource *VVMPortSource,
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens, federation2 federation.IFederation,
 	appTokensFactory payloads.IAppTokensFactory, authnz iauthnz.IAuthenticator,
-	asp istructs.IAppStructsProvider, appParts appparts.IAppPartitions) RouterServices {
+	asp istructs.IAppStructsProvider) RouterServices {
 	httpSrv, acmeSrv, adminSrv := router.Provide(rp, broker, blobRequestHandler, autocertCache, requestSender, numsAppsWorkspaces,
-		iTokens, federation2, appParts, authnz, asp, appTokensFactory)
+		iTokens, federation2, authnz, asp, appTokensFactory)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}
