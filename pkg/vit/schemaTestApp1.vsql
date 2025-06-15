@@ -555,6 +555,12 @@ ALTERABLE WORKSPACE test_wsWS (
     	PRIMARY KEY ((Year), Month, Day)
     ) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
 
+	-- SELECT is not granted
+	VIEW CategoryIdxDenided (
+		Name varchar,
+		PRIMARY KEY ((Name))
+	) AS RESULT OF ApplyCategoryIdx;
+
     TABLE Daily INHERITS sys.CDoc (
     	Year int32,
     	Month int32,

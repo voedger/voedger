@@ -453,3 +453,11 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	}
 	waitForDone()
 }
+
+func TestSubscribeDeny(t *testing.T) {
+	t.Run("subscribe and watch", func(t *testing.T) {
+		t.Run("403 if SELECT is not granted", func(t *testing.T) {
+			
+		})
+	})
+}
