@@ -272,8 +272,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		principalPayload, appStructs, principals, err := getWSDesc(req, asp, busRequest, rw, appTokensFactory,
-			iauthnz)
+		principalPayload, appStructs, principals, err := authnzRequest(req, asp, busRequest, appTokensFactory, iauthnz)
 		if err != nil {
 			replyErr(rw, err)
 			return
@@ -281,6 +280,10 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		wsDesc, err := appStructs.Records().GetSingleton(busRequest.WSID, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if wsDesc.QName() == appdef.NullQName {
+			replyErr(rw, processors.ErrWSNotInited)
 			return
 		}
 		iWorkspace := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.QName())
@@ -343,7 +346,7 @@ func getRoles(prns []iauthnz.Principal) (res []appdef.QName) {
 	return res
 }
 
-func getWSDesc(req *http.Request, asp istructs.IAppStructsProvider, busRequest bus.Request, rw http.ResponseWriter,
+func authnzRequest(req *http.Request, asp istructs.IAppStructsProvider, busRequest bus.Request,
 	appTokensFactory payloads.IAppTokensFactory, authnz iauthnz.IAuthenticator) (principalPayload payloads.PrincipalPayload, appStructs istructs.IAppStructs, principals []iauthnz.Principal, err error) {
 	// TODO: sidecar apps are not supported here
 	appStructs, err = asp.BuiltIn(busRequest.AppQName)
@@ -388,7 +391,7 @@ func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istru
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(req.Method, data, req)
 
-		_, appStructs, principals, err := getWSDesc(req, asp, busRequest, rw, appTokensFactory,
+		_, appStructs, principals, err := authnzRequest(req, asp, busRequest, appTokensFactory,
 			iauthnz)
 		if err != nil {
 			replyErr(rw, err)
