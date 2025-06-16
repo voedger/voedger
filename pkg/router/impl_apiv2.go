@@ -273,12 +273,6 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		var principalPayload payloads.PrincipalPayload
-		if _, err = appTokens.ValidateToken(principalToken, &principalPayload); err != nil {
-			// notest: validated already on authnzEntities()
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
-			return
-		}
 		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
@@ -289,7 +283,8 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, appStructs, appTokens); err != nil {
+		principalPayload, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, appStructs, appTokens)
+		if err != nil {
 			replyErr(rw, err)
 			return
 		}
@@ -347,15 +342,15 @@ func getRoles(prns []iauthnz.Principal) (res []appdef.QName) {
 	return res
 }
 
-func authnzEntities(ctx context.Context, subscriptios []subscription, requestToHost string,
-	principalToken string, iauth iauthnz.IAuthenticator, appStructs istructs.IAppStructs, appTokens istructs.IAppTokens) error {
-	for _, s := range subscriptios {
+func authnzEntities(ctx context.Context, subscriptions []subscription, requestToHost string,
+	principalToken string, iauth iauthnz.IAuthenticator, appStructs istructs.IAppStructs, appTokens istructs.IAppTokens) (principalPayload payloads.PrincipalPayload, err error) {
+	for i, s := range subscriptions {
 		wsDesc, err := appStructs.Records().GetSingleton(s.wsid, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
-			return err
+			return principalPayload, err
 		}
 		if wsDesc.QName() == appdef.NullQName {
-			return fmt.Errorf("%d: %w", s.wsid, processors.ErrWSNotInited)
+			return principalPayload, fmt.Errorf("%d: %w", s.wsid, processors.ErrWSNotInited)
 		}
 		iWorkspace := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.AsQName(authnz.Field_WSKind))
 		authnzReq := iauthnz.AuthnRequest{
@@ -363,20 +358,24 @@ func authnzEntities(ctx context.Context, subscriptios []subscription, requestToH
 			RequestWSID: s.wsid,
 			Token:       principalToken,
 		}
-		principals, _, err := iauth.Authenticate(ctx, appStructs, appTokens, authnzReq)
+		principals, principalPayloadCurrent, err := iauth.Authenticate(ctx, appStructs, appTokens, authnzReq)
+		if i == 0 {
+			// principalPayloadCurrent is always the same
+			principalPayload = principalPayloadCurrent
+		}
 		roles := getRoles(principals)
 		if err != nil {
-			return coreutils.NewHTTPError(http.StatusUnauthorized, err)
+			return principalPayload, coreutils.NewHTTPError(http.StatusUnauthorized, err)
 		}
 		ok, err := acl.IsOperationAllowed(iWorkspace, appdef.OperationKind_Select, s.entity, nil, roles)
 		if err != nil {
-			return err
+			return principalPayload, err
 		}
 		if !ok {
-			return coreutils.NewHTTPErrorf(http.StatusForbidden)
+			return principalPayload, coreutils.NewHTTPErrorf(http.StatusForbidden)
 		}
 	}
-	return nil
+	return principalPayload, nil
 }
 
 func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
@@ -441,12 +440,6 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		var principalPayload payloads.PrincipalPayload
-		if _, err = appTokens.ValidateToken(principalToken, &principalPayload); err != nil {
-			// notest: validated already on authnzEntities()
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
-			return
-		}
 
 		if len(busRequest.Body) > 0 {
 			ReplyCommonError(rw, "unexpected body on n10n unsubscribe", http.StatusBadRequest)
@@ -467,7 +460,7 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 			return
 		}
 		subscriptions := []subscription{{entity, busRequest.WSID}}
-		if err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, appStructs, appTokens); err != nil {
+		if _, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, appStructs, appTokens); err != nil {
 			replyErr(rw, err)
 			return
 		}
