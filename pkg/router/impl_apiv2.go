@@ -153,18 +153,21 @@ func (s *httpService) registerHandlersV2() {
 		Methods(http.MethodGet).Name("temp blobs read")
 
 	// notifications subscribe+watch /api/v2/apps/{owner}/{app}/notifications
+	// [~server.n10n/cmp.routerCreateChannelHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
 		Methods(http.MethodPost).Name("notifications subscribe + watch")
 
 	// notifications unsubscribe /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
+	// [~server.n10n/cmp.routerUnsubscribeHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
 		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
 		Methods(http.MethodDelete).Name("notifications unsubscribe")
 
 	// notifications subscribe to an extra view /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
+	// [~server.n10n/cmp.routerAddSubscriptionHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
 		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
@@ -274,6 +277,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		busRequest := createBusRequest(req.Method, data, req)
 		principalPayload, err := authorize(appTokensFactory, busRequest)
 		if err != nil {
+			// [~server.n10n/err.routerCreateChannelInvalidToken~impl]
 			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -334,6 +338,8 @@ func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istru
 		busRequest := createBusRequest(req.Method, data, req)
 
 		if _, err := authorize(appTokensFactory, busRequest); err != nil {
+			// [~server.n10n/err.routerAddSubscriptionInvalidToken~impl]
+			// [~server.n10n/err.routerUnsubscribeInvalidToken~impl]
 			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
 			return
 		}

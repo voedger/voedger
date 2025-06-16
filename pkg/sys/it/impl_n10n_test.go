@@ -46,6 +46,7 @@ func TestBasicUsage_n10n_APIv1(t *testing.T) {
 	require.False(t, offsetsChanOpened)
 }
 
+// [~server.n10n/it.CreateChannelSubscribeAndWatch~impl]
 func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -87,6 +88,7 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	waitForOffset(t, resultOffsetOfDailyCUD, offsetsChan)
 
 	// unsubscribe
+	// [~server.n10n/it.Unsubscribe~impl]
 	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
 	vit.POST(url, "",
 		coreutils.WithMethod(http.MethodDelete),
@@ -409,6 +411,7 @@ func TestChannelExpiration_V1(t *testing.T) {
 	unsubscribe()
 }
 
+// [~server.n10n/it.AddSubscription~impl]
 func TestN10NSubscribeToExtraView(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
