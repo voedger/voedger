@@ -149,11 +149,7 @@ func (s *implIAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedVa
 			},
 		},
 	})
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return err == nil, err
 }
 
 func (s *implIAppStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
