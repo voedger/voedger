@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -301,6 +302,7 @@ func (vit *VIT) WS(appQName appdef.AppQName, wsName string) *AppWorkspace {
 func (vit *VIT) TearDown() {
 	vit.T.Helper()
 	vit.isFinalized = true
+	log.Println("goroutines num before cleanup:", runtime.NumGoroutine())
 	for _, cleanup := range vit.cleanups {
 		cleanup(vit)
 	}
@@ -420,7 +422,6 @@ func (vit *VIT) SqlQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[
 	vit.T.Helper()
 	return vit.SqlQueryRows(ws, sqlQuery, fmtArgs...)[0]
 }
-
 
 func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte, duration iblobstorage.DurationType,
 	opts ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
