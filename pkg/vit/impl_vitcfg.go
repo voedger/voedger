@@ -23,7 +23,7 @@ import (
 func NewOwnVITConfig(opts ...VITConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
-		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, vvm.DefaultNumCommandProcessors)),
+		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, testRegistryPartsNum)),
 		WithApp(istructs.AppQName_sys_cluster, clusterapp.Provide()),
 	)
 	return VITConfig{opts: opts}

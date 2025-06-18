@@ -523,7 +523,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"update corrupted test1.app1.1.sys.PLog.1 set name = 42 where x = 1":  "any params of update corrupted are not allowed",
 		"update corrupted test1.app1.1.sys.PLog.1 where x = 1":                "syntax error",
 		"update corrupted test1.app1.0.sys.WLog.44":                           "wsid must be provided",
-		"update corrupted test1.app1.1000.sys.PLog.44":                        "provided partno 1000 is out of 10 declared by app test1/app1",
+		"update corrupted test1.app1.1000.sys.PLog.44":                        "provided partno 1000 is out of 4 declared by app test1/app1",
 		"update corrupted test1.app1.1.sys.PLog.-44":                          "invalid query format",
 		"update corrupted test1.app1.1.sys.PLog.0":                            "provided offset or ID must not be 0",
 		"update corrupted test1.app1.1.sys.PLog":                              "offset must be provided",
