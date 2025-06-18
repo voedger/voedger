@@ -302,7 +302,7 @@ func (vit *VIT) WS(appQName appdef.AppQName, wsName string) *AppWorkspace {
 func (vit *VIT) TearDown() {
 	vit.T.Helper()
 	vit.isFinalized = true
-	log.Println("goroutines num before cleanup:", runtime.NumGoroutine())
+	vit.T.Log("goroutines num before cleanup:", runtime.NumGoroutine())
 	for _, cleanup := range vit.cleanups {
 		cleanup(vit)
 	}
