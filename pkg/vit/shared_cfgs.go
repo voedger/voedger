@@ -61,6 +61,7 @@ const (
 	Field_GroupB         = "GroupB"
 	Field_Blob           = "Blob"
 	Field_BlobReadDenied = "BlobReadDenied"
+	testSMTPPwdSecretName = "smtp-pwd-secret-name"
 )
 
 var (
@@ -90,9 +91,10 @@ var (
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
 	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
 	TestSMTPCfg                              = smtp.Cfg{
-		Host:     "smtp.testserver.com",
-		Port:     1,
-		Username: "username@gmail.com",
+		Host:      "smtp.testserver.com",
+		Port:      1,
+		Username:  "username@gmail.com",
+		PwdSecret: testSMTPPwdSecretName,
 	}
 	QNameDocWithBLOB  = appdef.NewQName(app1PkgName, "DocWithBLOB")
 	QNameODocWithBLOB = appdef.NewQName(app1PkgName, "ODocWithBLOB")
@@ -124,6 +126,7 @@ var (
 
 			cfg.SMTPConfig = TestSMTPCfg
 		}),
+		WithSecret(testSMTPPwdSecretName, []byte("smtpPassword")),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string, args istructs.ExecCommandArgs) error { panic("") }
 			MockQryExec = func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error { panic("") }

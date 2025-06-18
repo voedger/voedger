@@ -91,19 +91,17 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 		skbSendMail.PutInt32(sys.Storage_SendMail_Field_Port, smtpCfg.Port)
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Username, smtpCfg.Username)
 
-		pwd := ""
-		if !coreutils.IsTest() {
-			skbAppSecretsStorage, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
-			if err != nil {
-				return err
-			}
-			skbAppSecretsStorage.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
-			svAppSecretsStorage, err := s.MustExist(skbAppSecretsStorage)
-			if err != nil {
-				return err
-			}
-			pwd = svAppSecretsStorage.AsString("")
+		skbAppSecretsStorage, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
+		if err != nil {
+			return err
 		}
+		skbAppSecretsStorage.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
+		svAppSecretsStorage, err := s.MustExist(skbAppSecretsStorage)
+		if err != nil {
+			return err
+		}
+		
+		pwd := svAppSecretsStorage.AsString("")
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
 		_, err = intents.NewValue(skbSendMail)

@@ -18,12 +18,12 @@ import (
 )
 
 type sendMailStorage struct {
-	messages chan smtptest.Message // not nil in tests only
+	messagesSenderOverride chan smtptest.Message // not nil in tests only
 }
 
 func NewSendMailStorage(messages chan smtptest.Message) state.IStateStorage {
 	return &sendMailStorage{
-		messages: messages,
+		messagesSenderOverride: messages,
 	}
 }
 
@@ -206,7 +206,7 @@ func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
 
 		logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
 
-		if s.messages != nil {
+		if s.messagesSenderOverride != nil {
 			// happens in tests only
 			m := smtptest.Message{
 				Subject: stringOrEmpty(k.subject),
@@ -216,7 +216,7 @@ func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
 				BCC:     k.bcc,
 				Body:    stringOrEmpty(k.body),
 			}
-			s.messages <- m
+			s.messagesSenderOverride <- m
 		} else {
 			c, e := mail.NewClient(k.host, opts...)
 			if e != nil {

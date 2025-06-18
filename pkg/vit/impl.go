@@ -33,7 +33,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -85,12 +84,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
 
 	cfg.Time = testingu.MockTime
-	if !coreutils.IsTest() {
-		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
-	}
 
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
-	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
+	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailSenderOverride(emailMessagesChan))
 
 	vitPreConfig := &vitPreConfig{
 		vvmCfg:  &cfg,
