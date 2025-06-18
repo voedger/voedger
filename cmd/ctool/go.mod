@@ -1,6 +1,6 @@
 module github.com/voedger/voedger/cmd/ctool
 
-go 1.24
+go 1.24.4
 
 require (
 	github.com/fatih/color v1.18.0
