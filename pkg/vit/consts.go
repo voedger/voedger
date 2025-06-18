@@ -23,7 +23,7 @@ const (
 	testEmailsAwaitingTimeout    = 5 * time.Second
 	testTimeMillis               = 1649667286774
 	testRegistryPartsNum         = 2
-	testAppPartsNum              = 4
+	testAppPartsNum              = 5
 )
 
 var (
