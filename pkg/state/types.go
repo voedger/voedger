@@ -59,16 +59,18 @@ type IHTTPClient interface {
 }
 
 type StateOpts struct {
-	Messages                 chan smtptest.Message
+	MessagesSenderOverride   chan smtptest.Message
 	FederationCommandHandler FederationCommandHandler
 	FederationBlobHandler    FederationBlobHandler
 	CustomHTTPClient         IHTTPClient
 	UniquesHandler           UniquesHandler
 }
 
-func WithEmailMessagesChan(messages chan smtptest.Message) StateOptFunc {
+// if specified then the email message will be written to the provided chan instead of actual sending
+// should be used in tests only
+func WithEmailSenderOverride(messages chan smtptest.Message) StateOptFunc {
 	return func(opts *StateOpts) {
-		opts.Messages = messages
+		opts.MessagesSenderOverride = messages
 	}
 }
 
