@@ -1,6 +1,6 @@
 module github.com/voedger/voedger
 
-go 1.24.0
+go 1.24.4
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.5
