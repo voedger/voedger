@@ -147,7 +147,7 @@ func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, exp
 		m := map[string]interface{}{}
 		require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 		lastValue = int(m["Counter"].(float64))
-		if lastValue == expectedMinimalCouterValue {
+		if lastValue == expectedMinimalCounterValue {
 			return
 		}
 	}
