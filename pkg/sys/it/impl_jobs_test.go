@@ -21,6 +21,8 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
+const testJobFireInterval = time.Minute
+
 func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 	cfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJob, it.WithUserLogin("login", "1")),
@@ -40,7 +42,7 @@ func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app2).Token
 
 	// need to wait for the job to fire for the first time beause of day++ on NewVIT()
-	require.True(t, isJobFiredForCurrentInstant_builtin(vit, anyAppWSID, sysToken, vit.Now().UnixMilli()))
+	require.True(t, isJobFiredForCurrentInstant_builtin(vit, anyAppWSID, sysToken, vit.Now().UnixMilli(), true))
 
 	// proceed to the next minute second by second
 	// collect instants on each second to check later that the job has not fired until the next minute
@@ -69,7 +71,7 @@ func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 
 	// check that there are no firings during previous seconds
 	for _, currentInstant := range instantsToCheck {
-		require.False(t, isJobFiredForCurrentInstant_builtin(vit, anyAppWSID, sysToken, currentInstant))
+		require.False(t, isJobFiredForCurrentInstant_builtin(vit, anyAppWSID, sysToken, currentInstant, false))
 	}
 }
 
@@ -111,25 +113,41 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 	waitForSidecarJobCounter(vit, anyAppWSID, sysToken, 2)
 }
 
-func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token string, instant int64) bool {
-	body := fmt.Sprintf(`{"args":{"Query":"select * from a1.app2pkg.Jobs where RunUnixMilli = %d"},"elements":[{"fields":["Result"]}]}`, instant)
-	resp := vit.PostApp(istructs.AppQName_test1_app2, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
-	return !resp.IsEmpty()
+func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token string, instant int64, waitForFire bool) bool {
+	start := time.Now()
+	currentInstant := instant
+	for time.Since(start) < 5*time.Second {
+		body := fmt.Sprintf(`{"args":{"Query":"select * from a1.app2pkg.Jobs where RunUnixMilli = %d"},"elements":[{"fields":["Result"]}]}`, currentInstant)
+		resp := vit.PostApp(istructs.AppQName_test1_app2, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
+		if waitForFire {
+			if !resp.IsEmpty() {
+				return true
+			}
+			time.Sleep(100 * time.Millisecond)
+			vit.TimeAdd(testJobFireInterval) // force job to fire
+			currentInstant += testJobFireInterval.Milliseconds()
+		} else {
+			return !resp.IsEmpty()
+		}
+	}
+	return false
 }
 
-func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedCouterValue int) {
+func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedMinimalCounterValue int) {
 	start := time.Now()
 	lastValue := 0
 	for time.Since(start) < 5*time.Second {
 		body := `{"args":{"Query":"select * from a0.sidecartestapp.JobStateView where Pk = 1 and Cc = 1"},"elements":[{"fields":["Result"]}]}`
 		resp := vit.PostApp(istructs.AppQName_test2_app1, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
 		if resp.IsEmpty() {
+			time.Sleep(100 * time.Millisecond)
+			vit.TimeAdd(testJobFireInterval) // force job to fire
 			continue
 		}
 		m := map[string]interface{}{}
 		require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 		lastValue = int(m["Counter"].(float64))
-		if lastValue == expectedCouterValue {
+		if lastValue == expectedMinimalCouterValue {
 			return
 		}
 	}
