@@ -133,7 +133,7 @@ func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token 
 	return false
 }
 
-func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedMinimalCouterValue int) {
+func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedMinimalCounterValue int) {
 	start := time.Now()
 	lastValue := 0
 	for time.Since(start) < 5*time.Second {
