@@ -125,7 +125,7 @@ func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token 
 			}
 			time.Sleep(100 * time.Millisecond)
 			vit.TimeAdd(testJobFireInterval) // force job to fire
-			currentInstant += int64(testJobFireInterval)
+			currentInstant += testJobFireInterval.Milliseconds()
 		} else {
 			return !resp.IsEmpty()
 		}
