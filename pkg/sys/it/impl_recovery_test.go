@@ -68,6 +68,7 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 	// 2nd launch - check if new ids issued correctly
 	counter++
 	vit = it.NewVIT(t, &cfg)
+	defer vit.TearDown()
 	ws = vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body = `{"cuds": [
 		{"fields":{"sys.ID": 1,"sys.QName": "app1pkg.Root", "FldRoot": 2}},

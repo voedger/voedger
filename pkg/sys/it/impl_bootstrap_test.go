@@ -42,6 +42,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 	numAppWS := istructs.NumAppWorkspaces(43)
 	cfg := getTestCfg(numParts, numAppWS, memStorage)
 	vit := it.NewVIT(t, &cfg)
+	defer vit.TearDown()
 
 	var clusterApp btstrp.ClusterBuiltInApp
 	otherApps := []appparts.BuiltInApp{}
