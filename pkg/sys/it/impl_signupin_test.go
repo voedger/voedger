@@ -267,3 +267,28 @@ func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
 	body = `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
 	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.WithAuthorizeBy(enrichedToken))
 }
+
+func TestGlobalRoles(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	loginName := vit.NextName()
+	login := vit.SignUp(loginName, "pwd1", istructs.AppQName_test1_app1)
+
+	prn := vit.SignIn(login)
+	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
+
+	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"role1,role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.WithAuthorizeBy(sysRegistryToken))
+	body = `{"args":{"Schema":"registry.Login"},"elements":[{"fields":["sys.ID", "GlobalRoles"]}]}`
+
+	t.Run("403 for non-system principal", func(t *testing.T) {
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.sys.Collection", body, coreutils.Expect403())
+	})
+
+	t.Run("check global roles for the login", func(t *testing.T) {
+		resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.sys.Collection", body, coreutils.WithAuthorizeBy(sysRegistryToken))
+		require.Equal("role1,role2", resp.SectionRow()[1])
+	})
+}
