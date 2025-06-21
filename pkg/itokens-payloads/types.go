@@ -20,6 +20,7 @@ type PrincipalPayload struct {
 	SubjectKind istructs.SubjectKindType
 	ProfileWSID istructs.WSID
 	Roles       []RoleType
+	GlobalRoles []appdef.QName
 	IsAPIToken  bool
 }
 

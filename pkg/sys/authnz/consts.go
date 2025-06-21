@@ -21,6 +21,7 @@ const (
 	Field_ProfileCluster            = "ProfileCluster"
 	Field_LoginHash                 = "LoginHash"
 	Field_Login                     = "Login"
+	Field_GlobalRoles               = "GlobalRoles"
 	Field_CreatedAtMs               = "CreatedAtMs"
 	Field_WSName                    = "WSName"
 	Field_WSKind                    = "WSKind"
