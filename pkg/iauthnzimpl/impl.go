@@ -73,6 +73,21 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		return
 	}
 
+	// apply global roles
+	// [~server.authnz.groles/tuc.UseGlobalRolesInAuthz~impl]
+	if len(principalPayload.GlobalRoles) > 0 {
+		for _, role := range principalPayload.GlobalRoles {
+			prn := iauthnz.Principal{
+				Kind:  iauthnz.PrincipalKind_Role,
+				WSID:  req.RequestWSID,
+				QName: role,
+			}
+			if !slices.Contains(principals, prn) {
+				principals = append(principals, prn)
+			}
+		}
+	}
+
 	// read roles from cdoc.sys.Subjects from the current workspace
 	rolesFromSubjects, err := i.rolesFromSubjects(requestContext, principalPayload.Login, as, req.RequestWSID)
 	if err != nil {

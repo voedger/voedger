@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -268,14 +270,48 @@ func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
 	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.WithAuthorizeBy(enrichedToken))
 }
 
+// [~server.authnz.groles/it.TestGlobalRoles~impl]
 func TestGlobalRoles(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
 	loginName := vit.NextName()
 	login := vit.SignUp(loginName, "pwd1", istructs.AppQName_test1_app1)
 	prn := vit.SignIn(login)
-	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
-	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"role1,role2"},"elements":[]}`, login.Name, login.AppQName.String())
+
+	// no global roles in the old token
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	payload1 := payloads.PrincipalPayload{}
+	_, err = as.AppTokens().ValidateToken(prn.Token, &payload1)
+	require.NoError(err)
+	require.Equal(0, len(payload1.GlobalRoles))
+
+	// view is not available for the user without global roles
+	vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
+		coreutils.WithAuthorizeBy(prn.Token), coreutils.Expect403())
+
+	// update global roles not allowed by default
+	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.Expect403())
+
+	// update global roles allowed for the System principal
+	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.WithAuthorizeBy(sysRegistryToken))
+
+	// now global roles are in the new token
+	prn2 := vit.SignIn(login)
+	payload2 := payloads.PrincipalPayload{}
+	_, err = as.AppTokens().ValidateToken(prn2.Token, &payload2)
+	require.NoError(err)
+	require.Equal(2, len(payload2.GlobalRoles))
+	require.True(slices.Contains(payload2.GlobalRoles, appdef.NewQName("app1pkg", "LimitedAccessRole")))
+	require.True(slices.Contains(payload2.GlobalRoles, appdef.NewQName("sys", "role2")))
+
+	// now user can work with the view
+	vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
+		coreutils.WithAuthorizeBy(prn2.Token))
+
 }

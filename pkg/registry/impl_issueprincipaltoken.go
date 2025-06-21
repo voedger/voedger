@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -75,11 +76,26 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 			return callback(result)
 		}
 
+		// read global globalRoles
+		globarRolesStr := cdocLogin.AsString(authnz.Field_GlobalRoles)
+		var globalRoles []appdef.QName
+		if len(globarRolesStr) > 0 {
+			globalRolesStr := strings.Split(cdocLogin.AsString(authnz.Field_GlobalRoles), ",")
+			for _, role := range globalRolesStr {
+				roleQName, err := appdef.ParseQName(role)
+				if err != nil {
+					return err
+				}
+				globalRoles = append(globalRoles, roleQName)
+			}
+		}
+
 		// issue principal token
 		principalPayload := payloads.PrincipalPayload{
 			Login:       args.ArgumentObject.AsString(authnz.Field_Login),
 			SubjectKind: istructs.SubjectKindType(cdocLogin.AsInt32(authnz.Field_SubjectKind)),
 			ProfileWSID: istructs.WSID(result.profileWSID), //nolint G115 since WSID is created by NewWSID()
+			GlobalRoles: globalRoles,                       // [~server.authnz.groles/cmp.c.registry.IssuePrincipalToken~impl]
 		}
 		ttl := time.Duration(args.ArgumentObject.AsInt32(field_TTLHours)) * time.Hour
 		if ttl == 0 {

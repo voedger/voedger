@@ -18,6 +18,7 @@ func provideUpdateGlobalRoles(cfgRegistry *istructsmem.AppConfigType) {
 
 // sys/registry/pseudoWSID
 // auth: System
+// [~server.authnz.groles/cmp.c.sys.UpdateGlobalRoles~impl]
 func cmdCommandUpdateGlobalRolesExec(args istructs.ExecCommandArgs) (err error) {
 	login := args.ArgumentObject.AsString(field_Login)
 	appName := args.ArgumentObject.AsString(field_AppName)
