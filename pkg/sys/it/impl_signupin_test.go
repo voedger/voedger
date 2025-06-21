@@ -287,7 +287,7 @@ func TestGlobalRoles(t *testing.T) {
 	payload1 := payloads.PrincipalPayload{}
 	_, err = as.AppTokens().ValidateToken(prn.Token, &payload1)
 	require.NoError(err)
-	require.Equal(0, len(payload1.GlobalRoles))
+	require.Empty(payload1.GlobalRoles)
 
 	// view is not available for the user without global roles
 	vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
@@ -306,7 +306,7 @@ func TestGlobalRoles(t *testing.T) {
 	payload2 := payloads.PrincipalPayload{}
 	_, err = as.AppTokens().ValidateToken(prn2.Token, &payload2)
 	require.NoError(err)
-	require.Equal(2, len(payload2.GlobalRoles))
+	require.Len(payload2.GlobalRoles, 2)
 	require.True(slices.Contains(payload2.GlobalRoles, appdef.NewQName("app1pkg", "LimitedAccessRole")))
 	require.True(slices.Contains(payload2.GlobalRoles, appdef.NewQName("sys", "role2")))
 
