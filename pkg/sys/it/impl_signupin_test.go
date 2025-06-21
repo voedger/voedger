@@ -267,3 +267,15 @@ func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
 	body = `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
 	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.WithAuthorizeBy(enrichedToken))
 }
+
+func TestGlobalRoles(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	loginName := vit.NextName()
+	login := vit.SignUp(loginName, "pwd1", istructs.AppQName_test1_app1)
+	prn := vit.SignIn(login)
+	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
+	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"role1,role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.Expect403())
+	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.WithAuthorizeBy(sysRegistryToken))
+}

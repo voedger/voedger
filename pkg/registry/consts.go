@@ -33,6 +33,7 @@ const (
 	field_AppName           = "AppName"
 	field_Login             = "Login"
 	field_TTLHours          = "TTLHours"
+	field_GlobalRoles       = "GlobalRoles"
 	maxTokenTTLHours        = 168 // 1 week
 )
 
@@ -44,6 +45,7 @@ var (
 	QNameCommandCreateLogin                           = appdef.NewQName(RegistryPackage, "CreateLogin")
 	QNameCommandCreateEmailLogin                      = appdef.NewQName(RegistryPackage, "CreateEmailLogin")
 	QNameCommandResetPasswordByEmail                  = appdef.NewQName(RegistryPackage, "ResetPasswordByEmail")
+	QNameCommandUpdateGlobalRoles                     = appdef.NewQName(RegistryPackage, "UpdateGlobalRoles")
 	QNameCommandResetPasswordByEmailUnloggedParams    = appdef.NewQName(RegistryPackage, "ResetPasswordByEmailUnloggedParams")
 	QNameQueryInitiateResetPasswordByEmail            = appdef.NewQName(RegistryPackage, "InitiateResetPasswordByEmail")
 	QNameQueryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(RegistryPackage, "IssueVerifiedValueTokenForResetPassword")
