@@ -297,8 +297,13 @@ func TestGlobalRoles(t *testing.T) {
 	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.Expect403())
 
-	// update global roles allowed for the System principal
 	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
+	// incorrect role name
+	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.WithAuthorizeBy(sysRegistryToken), coreutils.Expect400())
+
+	// update global roles allowed for the System principal
+	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.WithAuthorizeBy(sysRegistryToken))
 
 	// now global roles are in the new token
