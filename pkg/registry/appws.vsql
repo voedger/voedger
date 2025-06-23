@@ -103,7 +103,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		Password text NOT NULL
 	);
 
-	-- [~server.authnz.groles/cmp.c.sys.UpdateGlobalRoles~impl]
+	-- [~server.authnz.groles/cmp.c.registry.UpdateGlobalRoles~impl]
 	TYPE UpdateGlobalRolesParams (
 		Login text NOT NULL,
 		AppName text NOT NULL,
@@ -115,7 +115,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
 		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~server.users/cmp.registry.CreateEmailLogin.vsql~impl]
-		COMMAND UpdateGlobalRoles (UpdateGlobalRolesParams); -- [~server.authnz.groles/cmp.c.sys.UpdateGlobalRoles~impl]
+		COMMAND UpdateGlobalRoles (UpdateGlobalRolesParams); -- [~server.authnz.groles/cmp.c.registry.UpdateGlobalRoles~impl]
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
