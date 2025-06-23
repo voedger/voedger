@@ -14,7 +14,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		WSKindInitializationData varchar(1024) NOT NULL,
 			
 		-- Comma-separated list of global roles
-		-- [~server.authnz.groles/cmp.c.sys.UpdateGlobalRoles~impl]
+		-- [~server.authnz.groles/cmp.cdoc.registry.Login.GlobalRoles~impl]
 		GlobalRoles varchar(1024)   
 	);
 
@@ -103,6 +103,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		Password text NOT NULL
 	);
 
+	-- [~server.authnz.groles/cmp.c.sys.UpdateGlobalRoles~impl]
 	TYPE UpdateGlobalRolesParams (
 		Login text NOT NULL,
 		AppName text NOT NULL,

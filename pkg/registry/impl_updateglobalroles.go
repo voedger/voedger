@@ -5,12 +5,17 @@
 package registry
 
 import (
+	"net/http"
+	"strings"
+
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideUpdateGlobalRoles(cfgRegistry *istructsmem.AppConfigType) {
-	cfgRegistry.Resources.Add(istructsmem.NewCommandFunction(
+func provideUpdateGlobalRoles(cfg *istructsmem.AppConfigType) {
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandUpdateGlobalRoles,
 		cmdCommandUpdateGlobalRolesExec,
 	))
@@ -18,9 +23,19 @@ func provideUpdateGlobalRoles(cfgRegistry *istructsmem.AppConfigType) {
 
 // sys/registry/pseudoWSID
 // auth: System
-func cmdCommandUpdateGlobalRolesExec(args istructs.ExecCommandArgs) (err error) {
+// [~server.authnz.groles/cmp.c.sys.UpdateGlobalRoles~impl]
+func cmdCommandUpdateGlobalRolesExec(args istructs.ExecCommandArgs) error {
 	login := args.ArgumentObject.AsString(field_Login)
 	appName := args.ArgumentObject.AsString(field_AppName)
 	globalRoles := args.ArgumentObject.AsString(field_GlobalRoles)
+	if len(globalRoles) > 0 {
+		globalRolesStr := strings.Split(globalRoles, ",")
+		for _, role := range globalRolesStr {
+			_, err := appdef.ParseQName(role)
+			if err != nil {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, err)
+			}
+		}
+	}
 	return UpdateGlobalRoles(login, args.State, args.Intents, args.WSID, appName, globalRoles)
 }
