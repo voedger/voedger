@@ -52,7 +52,12 @@ func TestBasicUsage_SysError(t *testing.T) {
 			Message:    "test",
 			Data:       "data",
 		}
-		require.Equal(`{"sys.Error":{"HTTPStatus":200,"Message":"test","QName":"my.test","Data":"data"}}`, err.ToJSON_APIV1())
+		t.Run("APIv1", func(t *testing.T) {
+			require.Equal(`{"sys.Error":{"HTTPStatus":200,"Message":"test","QName":"my.test","Data":"data"}}`, err.ToJSON_APIV1())
+		})
+		t.Run("APIv2", func(t *testing.T) {
+			require.Equal(`{"status":200,"message":"test","qname":"my.test","data":"data"}`, err.ToJSON_APIV2())
+		})
 	})
 
 	t.Run("NewSysError", func(t *testing.T) {
