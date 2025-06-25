@@ -72,10 +72,11 @@ func TestHTTP(t *testing.T) {
 	defer cleanup()
 
 	testCases := []struct {
-		name   string
-		opts   []ReqOptFunc
-		setup  func()
-		verify func(t *testing.T, resp *HTTPResponse, req *http.Request)
+		name      string
+		opts      []ReqOptFunc
+		setup     func()
+		verify    func(t *testing.T, resp *HTTPResponse, req *http.Request)
+		customURL string
 	}{
 		{
 			"basic",
@@ -91,6 +92,7 @@ func TestHTTP(t *testing.T) {
 				require.Equal("hello, world", resp.Body)
 				require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
 			},
+			"",
 		},
 		{
 			"headers & cookies & auth",
@@ -112,6 +114,7 @@ func TestHTTP(t *testing.T) {
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
 				require.Equal("ok", resp.Body)
 			},
+			"",
 		},
 		{
 			"custom method",
@@ -125,6 +128,7 @@ func TestHTTP(t *testing.T) {
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
 				require.Equal("patched", resp.Body)
 			},
+			"",
 		},
 		{
 			"error status",
@@ -139,6 +143,7 @@ func TestHTTP(t *testing.T) {
 				require.Equal(http.StatusTeapot, resp.HTTPResp.StatusCode)
 				require.Equal("i am a teapot", resp.Body)
 			},
+			"",
 		},
 		{
 			"relative url",
@@ -152,6 +157,7 @@ func TestHTTP(t *testing.T) {
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
 				require.Equal("relurl", resp.Body)
 			},
+			"/orig",
 		},
 		{
 			"discard response",
@@ -164,6 +170,7 @@ func TestHTTP(t *testing.T) {
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
 				require.Nil(resp)
 			},
+			"",
 		},
 	}
 
@@ -171,8 +178,8 @@ func TestHTTP(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setup()
 			url := federationURL.String() + "/test"
-			if tc.name == "relative url" {
-				url = federationURL.String() + "/orig"
+			if tc.customURL != "" {
+				url = federationURL.String() + tc.customURL
 			}
 			resp, _ := httpClient.Req(url, "world", tc.opts...)
 			req := &http.Request{}
