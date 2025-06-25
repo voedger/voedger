@@ -7,6 +7,7 @@ package coreutils
 import (
 	"errors"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,6 +32,9 @@ func TestBasicUsage_SysError(t *testing.T) {
 	})
 
 	t.Run("nil on nil", func(t *testing.T) {
+		var expectedEmpty SysError
+		actualEmpty := WrapSysErrorToExact(nil, http.StatusInternalServerError)
+		require.True(reflect.DeepEqual(expectedEmpty, actualEmpty))
 		require.NoError(WrapSysError(nil, http.StatusInternalServerError))
 	})
 
