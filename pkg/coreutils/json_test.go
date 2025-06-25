@@ -107,7 +107,9 @@ func TestJSONUnmarshalDisallowUnknownFields(t *testing.T) {
 	})
 
 	t.Run("error on unknown field", func(t *testing.T) {
-		require.Error(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x","c":2}`), &p))
+		err := JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x","c":2}`), &p)
+		require.Error(err)
+		require.Contains(err.Error(), `unknown field "c"`)
 	})
 
 	t.Run("error on invalid JSON", func(t *testing.T) {
