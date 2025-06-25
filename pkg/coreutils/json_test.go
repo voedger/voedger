@@ -90,3 +90,55 @@ func TestClarifyJSONNumberErrors(t *testing.T) {
 		ClarifyJSONNumber(json.Number("1"), appdef.DataKind_string)
 	})
 }
+
+func TestJSONUnmarshalDisallowUnknownFields(t *testing.T) {
+	require := require.New(t)
+	type payload struct {
+		A int    `json:"a"`
+		B string `json:"b"`
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		var p payload
+		require.NoError(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"}`), &p))
+		require.Equal(1, p.A)
+		require.Equal("x", p.B)
+	})
+
+	t.Run("error on unknown field", func(t *testing.T) {
+		var p payload
+		err := JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x","c":2}`), &p)
+		require.Error(err)
+		require.Contains(err.Error(), `unknown field "c"`)
+	})
+
+	t.Run("error on invalid JSON", func(t *testing.T) {
+		var p payload
+		require.Error(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"`), &p))
+	})
+}
+
+func TestClarifyJSONWSID(t *testing.T) {
+	testCases := []struct {
+		name    string
+		input   string
+		expects istructs.WSID
+		wantErr bool
+	}{
+		{"valid", "123", 123, false},
+		{"negative", "-1", 0, true},
+		{"above_max", strconv.FormatUint(istructs.MaxAllowedWSID+1, 10), 0, true},
+		{"invalid", "notanumber", 0, true},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			wsid, err := ClarifyJSONWSID(json.Number(tc.input))
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expects, wsid)
+			}
+		})
+	}
+}
