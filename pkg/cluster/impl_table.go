@@ -68,7 +68,7 @@ func insertTable(update update, federation federation.IFederation, itokens itoke
 		return err
 	}
 
-	result.PutRecordID(field_NewID, istructs.RecordID(resp.NewID())) // nolint G115
+	result.PutRecordID(field_NewID, resp.NewID())
 	return nil
 }
 
