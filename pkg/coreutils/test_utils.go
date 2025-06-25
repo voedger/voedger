@@ -108,6 +108,16 @@ func (o *TestObject) AsEvent(appdef.FieldName) istructs.IDbEvent { panic("not im
 
 func (o *TestObject) AsInt8(name string) int8 {
 	if resIntf, ok := o.Data[name]; ok {
+		switch v := resIntf.(type) {
+		case int8:
+			return v
+		case json.Number:
+			val, err := ClarifyJSONNumber(v, appdef.DataKind_int8)
+			if err != nil {
+				panic(err)
+			}
+			return val.(int8)
+		}
 		return resIntf.(int8)
 	}
 	return 0
@@ -115,6 +125,16 @@ func (o *TestObject) AsInt8(name string) int8 {
 
 func (o *TestObject) AsInt16(name string) int16 {
 	if resIntf, ok := o.Data[name]; ok {
+		switch v := resIntf.(type) {
+		case int16:
+			return v
+		case json.Number:
+			val, err := ClarifyJSONNumber(v, appdef.DataKind_int16)
+			if err != nil {
+				panic(err)
+			}
+			return val.(int16)
+		}
 		return resIntf.(int16)
 	}
 	return 0
@@ -122,28 +142,72 @@ func (o *TestObject) AsInt16(name string) int16 {
 
 func (o *TestObject) AsInt32(name string) int32 {
 	if resIntf, ok := o.Data[name]; ok {
+		switch v := resIntf.(type) {
+		case int32:
+			return v
+		case json.Number:
+			val, err := ClarifyJSONNumber(v, appdef.DataKind_int32)
+			if err != nil {
+				panic(err)
+			}
+			return val.(int32)
+		}
 		return resIntf.(int32)
 	}
 	return 0
 }
+
 func (o *TestObject) AsInt64(name string) int64 {
 	if resIntf, ok := o.Data[name]; ok {
+		switch v := resIntf.(type) {
+		case int64:
+			return v
+		case json.Number:
+			val, err := ClarifyJSONNumber(v, appdef.DataKind_int64)
+			if err != nil {
+				panic(err)
+			}
+			return val.(int64)
+		}
 		return resIntf.(int64)
 	}
 	return 0
 }
+
 func (o *TestObject) AsFloat32(name string) float32 {
 	if resIntf, ok := o.Data[name]; ok {
+		switch v := resIntf.(type) {
+		case float32:
+			return v
+		case json.Number:
+			val, err := ClarifyJSONNumber(v, appdef.DataKind_float32)
+			if err != nil {
+				panic(err)
+			}
+			return val.(float32)
+		}
 		return resIntf.(float32)
 	}
 	return 0
 }
+
 func (o *TestObject) AsFloat64(name string) float64 {
 	if resIntf, ok := o.Data[name]; ok {
+		switch v := resIntf.(type) {
+		case float64:
+			return v
+		case json.Number:
+			val, err := ClarifyJSONNumber(v, appdef.DataKind_float64)
+			if err != nil {
+				panic(err)
+			}
+			return val.(float64)
+		}
 		return resIntf.(float64)
 	}
 	return 0
 }
+
 func (o *TestObject) AsBytes(name string) []byte {
 	if resIntf, ok := o.Data[name]; ok {
 		return resIntf.([]byte)
