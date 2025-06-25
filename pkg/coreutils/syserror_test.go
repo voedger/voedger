@@ -57,10 +57,10 @@ func TestBasicUsage_SysError(t *testing.T) {
 			Data:       "data",
 		}
 		t.Run("APIv1", func(t *testing.T) {
-			require.Equal(`{"sys.Error":{"HTTPStatus":200,"Message":"test","QName":"my.test","Data":"data"}}`, err.ToJSON_APIV1())
+			require.JSONEq(`{"sys.Error":{"HTTPStatus":200,"Message":"test","QName":"my.test","Data":"data"}}`, err.ToJSON_APIV1())
 		})
 		t.Run("APIv2", func(t *testing.T) {
-			require.Equal(`{"status":200,"message":"test","qname":"my.test","data":"data"}`, err.ToJSON_APIV2())
+			require.JSONEq(`{"status":200,"message":"test","qname":"my.test","data":"data"}`, err.ToJSON_APIV2())
 		})
 	})
 
