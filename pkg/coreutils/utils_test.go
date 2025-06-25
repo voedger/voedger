@@ -33,7 +33,6 @@ func TestIsBlank(t *testing.T) {
 }
 
 func TestIsDebug(t *testing.T) {
-	t.Parallel()
 	withArgs([]string{"/tmp/__debug_bin"}, func() {
 		require.True(t, IsDebug())
 	})
@@ -53,23 +52,8 @@ func TestIsDynamoDBStorage(t *testing.T) {
 }
 
 func TestServerAddress(t *testing.T) {
-	cases := []struct {
-		name string
-		args []string
-		port int
-		want string
-	}{
-		{"debug", []string{"/tmp/__debug_bin"}, 8080, "127.0.0.1:8080"},
-		{"normal", []string{"/tmp/normal_bin"}, 8081, ":8081"},
-	}
-	for _, c := range cases {
-		c := c
-		t.Run(c.name, func(t *testing.T) {
-			withArgs(c.args, func() {
-				require.Contains(t, ServerAddress(c.port), c.want)
-			})
-		})
-	}
+	require.Equal(t, "127.0.0.1:0", ServerAddress(0))
+	require.Equal(t, "127.0.0.1:8080", ServerAddress(8080))
 }
 
 type errUnwrapper struct{ errs []error }
