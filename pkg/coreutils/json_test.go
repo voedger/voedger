@@ -96,23 +96,24 @@ func TestJSONUnmarshalDisallowUnknownFields(t *testing.T) {
 	type payload struct {
 		A int    `json:"a"`
 		B string `json:"b"`
-
 	}
-	var p payload
 
 	t.Run("basic", func(t *testing.T) {
+		var p payload
 		require.NoError(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"}`), &p))
 		require.Equal(1, p.A)
 		require.Equal("x", p.B)
 	})
 
 	t.Run("error on unknown field", func(t *testing.T) {
+		var p payload
 		err := JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x","c":2}`), &p)
 		require.Error(err)
 		require.Contains(err.Error(), `unknown field "c"`)
 	})
 
 	t.Run("error on invalid JSON", func(t *testing.T) {
+		var p payload
 		require.Error(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"`), &p))
 	})
 }
