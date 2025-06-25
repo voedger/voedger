@@ -96,16 +96,23 @@ func TestJSONUnmarshalDisallowUnknownFields(t *testing.T) {
 	type payload struct {
 		A int    `json:"a"`
 		B string `json:"b"`
+
 	}
-	// valid
 	var p payload
-	require.NoError(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"}`), &p))
-	require.Equal(1, p.A)
-	require.Equal("x", p.B)
-	// unknown field
-	require.Error(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x","c":2}`), &p))
-	// invalid JSON
-	require.Error(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"`), &p))
+
+	t.Run("basic", func(t *testing.T) {
+		require.NoError(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"}`), &p))
+		require.Equal(1, p.A)
+		require.Equal("x", p.B)
+	})
+
+	t.Run("error on unknown field", func(t *testing.T) {
+		require.Error(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x","c":2}`), &p))
+	})
+
+	t.Run("error on invalid JSON", func(t *testing.T) {
+		require.Error(JSONUnmarshalDisallowUnknownFields([]byte(`{"a":1,"b":"x"`), &p))
+	})
 }
 
 func TestClarifyJSONWSID(t *testing.T) {
