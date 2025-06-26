@@ -269,10 +269,9 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 
 	t.Run("CUDs QNames", func(t *testing.T) {
 		t.Run("CUD in the request -> 400 bad request", func(t *testing.T) {
-			t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
-			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
+			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect500("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
 		})
 		t.Run("CUD produced by a command -> 500 internal server error", func(t *testing.T) {
 			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
@@ -367,13 +366,13 @@ func TestDeniedResourcesAuthorization(t *testing.T) {
 	})
 
 	t.Run("entire cdoc", func(t *testing.T) {
-		t.Skip("wait for ACL in VSQl for Air. Currently SElECT rule chechink is skipped in QP")
+		t.Skip("wait for ACL in VSQl for Air. Currently SElECT rule chechink is skipped in QP. See https://github.com/voedger/voedger/issues/3223")
 		body := `{"args":{"Schema":"app1pkg.TestDeniedCDoc"},"elements":[{"fields":["sys.ID"]}]}`
 		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
 	})
 
 	t.Run("cerain fields of cdoc", func(t *testing.T) {
-		t.Skip("wait for ACL in VSQL")
+		t.Skip("wait for ACL in VSQL. See https://github.com/voedger/voedger/issues/3223")
 		body := `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["Fld1"]}]}`
 		vit.PostWS(ws, "q.sys.Collection", body)
 
