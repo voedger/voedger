@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
-	"testing"
 	"time"
 
 	"golang.org/x/exp/slices"
@@ -131,20 +130,5 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitin
 		roles:                 resp.SectionRow()[2].(string),
 		invitingWorkspaceWSID: istructs.WSID(resp.SectionRow()[3].(float64)),
 		wsName:                resp.SectionRow()[wsNameIdx].(string),
-	}
-}
-
-func DenyCreateCDocWSKind_Test(t *testing.T, cdocWSKinds []appdef.QName) {
-	t.Skip("wait for ACL in VSQL")
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
-	for _, cdocWSkind := range cdocWSKinds {
-		t.Run("deny to create manually cdoc.sys."+cdocWSkind.String(), func(t *testing.T) {
-			body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s"}}]}`, cdocWSkind.String())
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
-		})
 	}
 }

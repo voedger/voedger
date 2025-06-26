@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -178,14 +177,6 @@ func TestWorkspaceAuthorization(t *testing.T) {
 			newPrn := vit.SignIn(login)
 			vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect401()).Println()
 		})
-	})
-}
-
-func TestDenyCreateCDocWSKind(t *testing.T) {
-	DenyCreateCDocWSKind_Test(t, []appdef.QName{
-		authnz.QNameCDoc_WorkspaceKind_UserProfile,
-		authnz.QNameCDoc_WorkspaceKind_DeviceProfile,
-		authnz.QNameCDoc_WorkspaceKind_AppWorkspace,
 	})
 }
 
