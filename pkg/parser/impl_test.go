@@ -1040,7 +1040,7 @@ func Test_Queries(t *testing.T) {
 
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
-	WORKSPACE Workspace (		
+	WORKSPACE Workspace (
 		EXTENSION ENGINE BUILTIN (
 			QUERY Qry();
 		);
@@ -2413,7 +2413,7 @@ func Test_Grants(t *testing.T) {
 					number int32,
 					name varchar
 				);
-				GRANT 
+				GRANT
 					SELECT(sys.ID, number, name),
 					UPDATE(number, name)
 				ON TABLE t TO role;
@@ -2830,57 +2830,16 @@ func Test_RefsWorkspaces(t *testing.T) {
 	);`)
 }
 
-func Test_ScheduledProjectors(t *testing.T) {
-
-	t.Run("should be deprecated", func(t *testing.T) {
-		require := assertions(t)
-		require.AppSchemaError(
-			`APPLICATION test();
+func Test_ScheduledProjectorsDeprecated(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(
+		`APPLICATION test();
 				ALTER WORKSPACE sys.AppWorkspaceWS (
 					EXTENSION ENGINE BUILTIN (
 						PROJECTOR ScheduledProjector CRON '1 0 * * *';
 					);
 				);`,
-			"file.vsql:4:7: scheduled projector deprecated; use jobs instead")
-	})
-
-	t.Run("bad workspace", func(t *testing.T) {
-		t.Skip()
-		require := assertions(t)
-		require.AppSchemaError(`APPLICATION test();
-			WORKSPACE w2 (
-				EXTENSION ENGINE BUILTIN (
-					PROJECTOR Proj1 CRON '1 0 * * *';
-				);
-			);`, "file.vsql:4:6: scheduled projector must be in app workspace")
-	})
-
-	t.Run("bad cron and intents", func(t *testing.T) {
-		t.Skip()
-		require := assertions(t)
-		require.AppSchemaError(`APPLICATION test();
-			ALTER WORKSPACE AppWorkspaceWS (
-				VIEW test(
-					i int32,
-					PRIMARY KEY(i)
-				) AS RESULT OF Proj1;
-
-				EXTENSION ENGINE BUILTIN (
-					PROJECTOR Proj1 CRON 'blah' INTENTS (sys.View(test));
-				);
-			);`, "file.vsql:9:6: invalid cron schedule: blah", "file.vsql:9:6: scheduled projector cannot have intents")
-	})
-
-	t.Run("good cron", func(t *testing.T) {
-		t.Skip()
-		require := assertions(t)
-		require.NoAppSchemaError(`APPLICATION test();
-ALTER WORKSPACE sys.AppWorkspaceWS (
-	EXTENSION ENGINE BUILTIN (
-		PROJECTOR ScheduledProjector CRON '1 0 * * *';
-	);
-);`)
-	})
+		"file.vsql:4:7: scheduled projector deprecated; use jobs instead")
 }
 
 func Test_UseWorkspace(t *testing.T) {
@@ -2896,14 +2855,13 @@ func Test_UseWorkspace(t *testing.T) {
 func Test_Jobs(t *testing.T) {
 
 	t.Run("bad workspace", func(t *testing.T) {
-		t.Skip()
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE w2 (
 				EXTENSION ENGINE BUILTIN (
 					JOB Job1 '1 0 * * *';
 				);
-			);`, "file.vsql:4:6: job must be in app workspace")
+			);`, "file.vsql:4:6: JOB is only allowed in AppWorkspaceWS")
 	})
 
 	t.Run("bad cron", func(t *testing.T) {
