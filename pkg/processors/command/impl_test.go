@@ -507,7 +507,6 @@ func TestErrors(t *testing.T) {
 }
 
 func TestAuthnz(t *testing.T) {
-	t.Skip("temporarily skipped. To be rolled back in https://github.com/voedger/voedger/issues/3199")
 	require := require.New(t)
 
 	qNameTestDeniedCDoc := appdef.NewQName("app1pkg", "TestDeniedCDoc") // the same in core/iauthnzimpl
