@@ -140,98 +140,141 @@ func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder)
 		bcc:            make([]string, 0),
 	}
 }
+func (s *sendMailStorage) validateKey(k *mailKeyBuilder) (err error) {
+	if k.host == "" {
+		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_Host, ErrNotFound)
+	}
+	if k.port == 0 {
+		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_Port, ErrNotFound)
+	}
+	if k.from == "" {
+		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_From, ErrNotFound)
+	}
+	if len(k.to) == 0 {
+		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_To, ErrNotFound)
+	}
+	return nil
+}
 func (s *sendMailStorage) Validate(items []state.ApplyBatchItem) (err error) {
 	for _, item := range items {
-		k := item.Key.(*mailKeyBuilder)
-
-		notExists := func(field string) (err error) {
-			return fmt.Errorf("'%s': %w", field, ErrNotFound)
-		}
-		if k.host == "" {
-			return notExists(sys.Storage_SendMail_Field_Host)
-		}
-		if k.port == 0 {
-			return notExists(sys.Storage_SendMail_Field_Port)
-		}
-		if k.from == "" {
-			return notExists(sys.Storage_SendMail_Field_From)
-		}
-		if len(item.Key.(*mailKeyBuilder).to) == 0 {
-			return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_To, ErrNotFound)
+		if err := s.validateKey(item.Key.(*mailKeyBuilder)); err != nil {
+			return err
 		}
 	}
 	return nil
 }
-func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
+func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
 	stringOrEmpty := func(value string) string {
 		if value != "" {
 			return value
 		}
 		return ""
 	}
+	msg := mail.NewMsg()
+	msg.Subject(stringOrEmpty(k.subject))
+	err := msg.From(k.from)
+	if err != nil {
+		return err
+	}
+	err = msg.To(k.to...)
+	if err != nil {
+		return err
+	}
+	err = msg.Cc(k.cc...)
+	if err != nil {
+		return err
+	}
+	err = msg.Bcc(k.bcc...)
+	if err != nil {
+		return err
+	}
+	msg.SetBodyString(mail.TypeTextHTML, stringOrEmpty(k.body))
+	msg.SetCharset(mail.CharsetUTF8)
+
+	opts := []mail.Option{
+		mail.WithPort(int(k.port)),
+		mail.WithUsername(k.username),
+		mail.WithPassword(k.password),
+		mail.WithSMTPAuth(mail.SMTPAuthPlain),
+	}
+
+	if coreutils.IsTest() {
+		opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
+	}
+
+	logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
+
+	if s.messagesSenderOverride != nil {
+		// happens in tests only
+		m := smtptest.Message{
+			Subject: stringOrEmpty(k.subject),
+			From:    k.from,
+			To:      k.to,
+			CC:      k.cc,
+			BCC:     k.bcc,
+			Body:    stringOrEmpty(k.body),
+		}
+		s.messagesSenderOverride <- m
+	} else {
+		c, e := mail.NewClient(k.host, opts...)
+		if e != nil {
+			return e
+		}
+		err = c.DialAndSend(msg)
+		if err != nil {
+			return err
+		}
+	}
+	logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
+	return nil
+}
+func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
 	for _, item := range items {
-		k := item.Key.(*mailKeyBuilder)
-
-		msg := mail.NewMsg()
-		msg.Subject(stringOrEmpty(k.subject))
-		err = msg.From(k.from)
+		err = s.sendMail(item.Key.(*mailKeyBuilder))
 		if err != nil {
-			return
+			return err
 		}
-		err = msg.To(k.to...)
-		if err != nil {
-			return
-		}
-		err = msg.Cc(k.cc...)
-		if err != nil {
-			return
-		}
-		err = msg.Bcc(k.bcc...)
-		if err != nil {
-			return
-		}
-		msg.SetBodyString(mail.TypeTextHTML, stringOrEmpty(k.body))
-		msg.SetCharset(mail.CharsetUTF8)
-
-		opts := []mail.Option{
-			mail.WithPort(int(k.port)),
-			mail.WithUsername(k.username),
-			mail.WithPassword(k.password),
-			mail.WithSMTPAuth(mail.SMTPAuthPlain),
-		}
-
-		if coreutils.IsTest() {
-			opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
-		}
-
-		logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
-
-		if s.messagesSenderOverride != nil {
-			// happens in tests only
-			m := smtptest.Message{
-				Subject: stringOrEmpty(k.subject),
-				From:    k.from,
-				To:      k.to,
-				CC:      k.cc,
-				BCC:     k.bcc,
-				Body:    stringOrEmpty(k.body),
-			}
-			s.messagesSenderOverride <- m
-		} else {
-			c, e := mail.NewClient(k.host, opts...)
-			if e != nil {
-				return e
-			}
-			err = c.DialAndSend(msg)
-			if err != nil {
-				return err
-			}
-		}
-
-		logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
 	}
 	return nil
 }
 func (s *sendMailStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	return &sendMailValueBuilder{}, nil
+}
+
+type sendMailValue struct {
+	baseStateValue
+	success bool
+	error   string
+}
+
+func (v *sendMailValue) AsBool(name string) bool {
+	switch name {
+	case sys.Storage_SendMail_Field_Success:
+		return v.success
+	default:
+		return v.baseStateValue.AsBool(name)
+	}
+}
+
+func (v *sendMailValue) AsString(name string) string {
+	switch name {
+	case sys.Storage_SendMail_Field_ErrorMessage:
+		return v.error
+	default:
+		return v.baseStateValue.AsString(name)
+	}
+}
+
+func (s *sendMailStorage) Get(key istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
+	err := s.validateKey(key.(*mailKeyBuilder))
+	if err == nil {
+		err = s.sendMail(key.(*mailKeyBuilder))
+	}
+	if err != nil {
+		return &sendMailValue{
+			success: false,
+			error:   err.Error(),
+		}, nil
+	}
+	return &sendMailValue{success: true}, nil
 }
