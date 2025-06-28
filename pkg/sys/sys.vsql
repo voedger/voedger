@@ -667,7 +667,7 @@ EXTENSION ENGINE BUILTIN (
 
 
 		/*
-  	@Deprecated: INSERT is use GET instead, see https://github.com/voedger/voedger/issues/3560
+  	@Deprecated: Use GET instead of INSERT. See https://github.com/voedger/voedger/issues/3560
 
 		Key:
 			From text
