@@ -141,17 +141,18 @@ func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder)
 	}
 }
 func (s *sendMailStorage) validateKey(k *mailKeyBuilder) (err error) {
+	const errMsg = "'%s': %w"
 	if k.host == "" {
-		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_Host, ErrNotFound)
+		return fmt.Errorf(errMsg, sys.Storage_SendMail_Field_Host, ErrNotFound)
 	}
 	if k.port == 0 {
-		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_Port, ErrNotFound)
+		return fmt.Errorf(errMsg, sys.Storage_SendMail_Field_Port, ErrNotFound)
 	}
 	if k.from == "" {
-		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_From, ErrNotFound)
+		return fmt.Errorf(errMsg, sys.Storage_SendMail_Field_From, ErrNotFound)
 	}
 	if len(k.to) == 0 {
-		return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_To, ErrNotFound)
+		return fmt.Errorf(errMsg, sys.Storage_SendMail_Field_To, ErrNotFound)
 	}
 	return nil
 }
