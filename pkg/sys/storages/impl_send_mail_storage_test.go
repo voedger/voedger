@@ -38,21 +38,36 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc1@email.com")
 	k.PutString(sys.Storage_SendMail_Field_Body, "Hello world")
 
-	v, err := storage.(state.IWithInsert).ProvideValueBuilder(k, nil)
-	require.NoError(err)
-	require.NotNil(v)
+	verifyMsg := func(msg smtptest.Message) {
+		require.Equal("Greeting", msg.Subject)
+		require.Equal("from@email.com", msg.From)
+		require.Equal([]string{"to0@email.com", "to1@email.com"}, msg.To)
+		require.Equal([]string{"cc0@email.com", "cc1@email.com"}, msg.CC)
+		require.Equal([]string{"bcc0@email.com", "bcc1@email.com"}, msg.BCC)
+		require.Equal("Hello world", msg.Body)
+	}
 
-	err = storage.(state.IWithInsert).ApplyBatch([]state.ApplyBatchItem{{Key: k, Value: v}})
-	require.NoError(err)
+	t.Run("Sending with Intent", func(t *testing.T) {
+		v, err := storage.(state.IWithInsert).ProvideValueBuilder(k, nil)
+		require.NoError(err)
+		require.NotNil(v)
+		err = storage.(state.IWithInsert).ApplyBatch([]state.ApplyBatchItem{{Key: k, Value: v}})
+		require.NoError(err)
+		msg := <-ts.Messages("user", "pwd")
+		require.NotNil(msg)
+		verifyMsg(msg)
+	})
 
-	msg := <-ts.Messages("user", "pwd")
-
-	require.Equal("Greeting", msg.Subject)
-	require.Equal("from@email.com", msg.From)
-	require.Equal([]string{"to0@email.com", "to1@email.com"}, msg.To)
-	require.Equal([]string{"cc0@email.com", "cc1@email.com"}, msg.CC)
-	require.Equal([]string{"bcc0@email.com", "bcc1@email.com"}, msg.BCC)
-	require.Equal("Hello world", msg.Body)
+	t.Run("Sending with Get", func(t *testing.T) {
+		v, err := storage.(state.IWithGet).Get(k)
+		require.NoError(err)
+		require.NotNil(v)
+		require.True(v.AsBool(sys.Storage_SendMail_Field_Success))
+		require.Empty(v.AsString(sys.Storage_SendMail_Field_ErrorMessage))
+		msg := <-ts.Messages("user", "pwd")
+		require.NotNil(msg)
+		verifyMsg(msg)
+	})
 }
 
 func TestSendMailStorage_Validate(t *testing.T) {
@@ -90,10 +105,10 @@ func TestSendMailStorage_Validate(t *testing.T) {
 			},
 		},
 	}
+	storage := NewSendMailStorage(nil)
 	for _, test := range tests {
-		t.Run(fmt.Sprintf("Should return error when mandatory field '%s' not found", test.mandatoryField), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Send with intents: error when mandatory field '%s' not found", test.mandatoryField), func(t *testing.T) {
 			require := require.New(t)
-			storage := NewSendMailStorage(nil)
 			k := storage.NewKeyBuilder(appdef.NullQName, nil)
 			test.kbFiller(k)
 			_, err := storage.(state.IWithInsert).ProvideValueBuilder(k, nil)
@@ -101,6 +116,16 @@ func TestSendMailStorage_Validate(t *testing.T) {
 			err = storage.(state.IWithInsert).Validate([]state.ApplyBatchItem{{Key: k, Value: nil}})
 			require.ErrorIs(err, ErrNotFound)
 			require.Contains(err.Error(), test.mandatoryField)
+		})
+		t.Run(fmt.Sprintf("Send with Get: error when mandatory field '%s' not found", test.mandatoryField), func(t *testing.T) {
+			require := require.New(t)
+			k := storage.NewKeyBuilder(appdef.NullQName, nil)
+			test.kbFiller(k)
+			v, err := storage.(state.IWithGet).Get(k)
+			require.NoError(err)
+			require.NotNil(v)
+			require.False(v.AsBool(sys.Storage_SendMail_Field_Success))
+			require.Contains(v.AsString(sys.Storage_SendMail_Field_ErrorMessage), test.mandatoryField)
 		})
 	}
 }
