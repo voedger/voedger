@@ -8,6 +8,7 @@ package dml
 import "regexp"
 
 const (
+	// +"`"+ means just ` sign
 	opRegexpStr = `^` +
 		`\s*((\w*\s*update\s*\w*)|(\w*\s*insert)|(select\s+.+\s+from))\s+` +
 		`(?P<appQName>[^\d][a-zA-Z0-9_-`+"`"+`]+\.[^\d][a-zA-Z0-9_-`+"`"+`]+\.)?` +
