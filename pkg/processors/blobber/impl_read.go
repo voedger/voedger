@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 )
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBKeyRead~impl]
 func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if bw.isPersistent() {
@@ -50,6 +51,7 @@ func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return nil
 }
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_initResponse~impl]
 func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	bw.writer = bw.blobMessageRead.okResponseIniter(
@@ -59,6 +61,7 @@ func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return nil
 }
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_queryBLOBState~impl]
 func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		bw := work.(*blobWorkpiece)
@@ -79,6 +82,7 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 	}
 }
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_downloadBLOBHelper~impl]
 func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if !bw.blobMessageRead.isAPIv2 {
@@ -102,6 +106,7 @@ func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err erro
 	return nil
 }
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_readBLOB~impl]
 func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		bw := work.(*blobWorkpiece)
@@ -114,6 +119,7 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 	}
 }
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBIDFromOwner~impl]
 func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	if !bw.blobMessageRead.isAPIv2 || !bw.isPersistent() {
@@ -155,6 +161,7 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error)
 	return nil
 }
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBMessageRead~impl]
 func getBLOBMessageRead(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
 	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read)
