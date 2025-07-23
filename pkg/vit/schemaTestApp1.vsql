@@ -530,6 +530,12 @@ ALTERABLE WORKSPACE test_wsWS (
 		Str text
 	);
 
+	VIEW ViewWithQName (
+		QName qname,
+		IntFld int32,
+		PRIMARY KEY ((IntFld), QName)
+	) AS RESULT OF ProjDummyQName WITH Tags=(WorkspaceOwnerTableTag);
+
 	VIEW View (
 		ViewIntFld int32 NOT NULL,
 		ViewStrFld text NOT NULL,
@@ -735,6 +741,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND TestCmdRawArg(sys.Raw) WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
+		PROJECTOR ProjDummyQName AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(ViewWithQName)); -- does nothing, only to define view.app1pkg.ViewQName
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx));
 		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
 		PROJECTOR ApplyClient AFTER INSERT ON (Client) INTENTS(sys.View(Clients));
