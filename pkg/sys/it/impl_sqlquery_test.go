@@ -668,7 +668,7 @@ func TestValuesFieldConditions(t *testing.T) {
 
 	valuesHash := coreutils.HashBytes([]byte(istructs.AppQName_test1_app1.String()))
 
-	// Values istead of `Values` -> syntax error at position 116. Vitess sql parser bug?
+	// Values instead of `Values` -> syntax error at position 116. Vitess sql parser bug?
 	body := fmt.Sprintf("{\"args\":{\"Query\":\"select * from sys.Uniques where QName = 'cluster.App$uniques$01' and ValuesHash = %d and `Values` = '%s'\"},\"elements\":[{\"fields\":[\"Result\"]}]}",
 		valuesHash, base64.URLEncoding.EncodeToString([]byte(istructs.AppQName_test1_app1.String())))
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
