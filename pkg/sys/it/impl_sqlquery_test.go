@@ -5,6 +5,7 @@
 package sys_it
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -21,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	it "github.com/voedger/voedger/pkg/vit"
+	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 )
 
 func TestBasicUsage_SqlQuery(t *testing.T) {
@@ -657,4 +659,20 @@ func TestQNameFieldConditions(t *testing.T) {
 	// just expecting no errors on condition on field with qname type
 	body := `{"args":{"Query":"select * from app1pkg.ViewWithQName where IntFld = 42 and QName = 'app1pkg.category'"},"elements":[{"fields":["Result"]}]}`
 	vit.PostWS(ws, "q.sys.SqlQuery", body)
+}
+
+// https://github.com/voedger/voedger/issues/3916
+func TestValuesFieldConditions(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	valuesHash := coreutils.HashBytes([]byte(istructs.AppQName_test1_app1.String()))
+
+	// Values istead of `Values` -> syntax error at position 116. Vitess sql parser bug?
+	body := fmt.Sprintf("{\"args\":{\"Query\":\"select * from sys.Uniques where QName = 'cluster.App$uniques$01' and ValuesHash = %d and `Values` = '%s'\"},\"elements\":[{\"fields\":[\"Result\"]}]}",
+		valuesHash, base64.URLEncoding.EncodeToString([]byte(istructs.AppQName_test1_app1.String())))
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+	// just expecting no errors here
+	resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+	resp.Println()
 }
