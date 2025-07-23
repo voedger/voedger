@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// [~server.apiv2.blobber/cmp.blob.IRequestHandler~impl]
 type IRequestHandler interface {
 	// false -> service unavailable
 	HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,

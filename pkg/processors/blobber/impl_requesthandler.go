@@ -35,6 +35,7 @@ func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs
 	}, doneCh)
 }
 
+// [~server.apiv2.blobs/cmp.blobber.implIRequestHandler_Read2~impl]
 func (r *implIRequestHandler) HandleRead_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
 	okResponseIniter func(headersKeyValue ...string) io.Writer,
 	errorResponder ErrorResponder, ownerRecord appdef.QName, ownerRecordField string, ownerID istructs.RecordID,
