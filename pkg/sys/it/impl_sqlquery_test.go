@@ -647,3 +647,14 @@ func TestReadODocs(t *testing.T) {
 		require.EqualValues(45, res[1]["orecord1IntFld"])
 	})
 }
+
+// https://github.com/voedger/voedger/issues/3913
+func TestQNameFieldConditions(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// just expecting no errors on condition on field with qname type
+	body := `{"args":{"Query":"select * from app1pkg.ViewWithQName where IntFld = 42 and QName = 'app1pkg.category'"},"elements":[{"fields":["Result"]}]}`
+	vit.PostWS(ws, "q.sys.SqlQuery", body)
+}

@@ -473,7 +473,11 @@ func (key *keyType) PutBytes(name appdef.FieldName, value []byte) {
 
 // istructs.IRowWriter.PutChars
 func (key *keyType) PutChars(name appdef.FieldName, value string) {
-	key.ccolsRow.PutChars(name, value)
+	if key.partRow.fieldDef(name) != nil {
+		key.partRow.PutChars(name, value)
+	} else {
+		key.ccolsRow.PutChars(name, value)
+	}
 }
 
 // istructs.IRowWriter.PutFloat32

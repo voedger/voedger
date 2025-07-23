@@ -270,6 +270,10 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 
 	cfg.AddAsyncProjectors(
 		istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ProjDummyQName"),
+			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) (err error) { return nil },
+		},
+		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ProjDummy"),
 			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) (err error) { return nil },
 		},
