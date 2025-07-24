@@ -210,20 +210,14 @@ func TestFederationFunc(t *testing.T) {
 		require.Equal("next", resp.SectionRow(1)[0].(string))
 	})
 
-	t.Run("automatic retry on 503", func(t *testing.T) {
-		statusCode := http.StatusServiceUnavailable
+	t.Run("no automatic retry on 503", func(t *testing.T) {
 		handler = func(w http.ResponseWriter, r *http.Request) {
 			_, err := io.ReadAll(r.Body)
 			require.NoError(err)
-			w.WriteHeader(statusCode)
-			if statusCode == http.StatusOK {
-				w.Write([]byte(`{"sections":[{"type":"","elements":[[[["Hello", "world"]]],[[["next"]]]]}]}`))
-			}
-			statusCode = http.StatusOK
+			w.WriteHeader(http.StatusServiceUnavailable)
 		}
-		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`)
+		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.Expect503())
 		require.NoError(err)
-		resp.Println()
 	})
 
 	t.Run("discard response", func(t *testing.T) {
