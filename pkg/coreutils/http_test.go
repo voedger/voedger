@@ -302,13 +302,13 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		require.True(handlerCalled)
 	})
 
-	t.Run("WithDeadlineOn503 and WithSkipRetryOn503", func(t *testing.T) {
+	t.Run("WithDeadlineOn503 and default WithSkipRetryOn503", func(t *testing.T) {
 		var callCount int
 		handler = func(w http.ResponseWriter, r *http.Request) {
 			callCount++
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
-		_, err := httpClient.Req(url, "body", WithDeadlineOn503(50*time.Millisecond), WithSkipRetryOn503())
+		_, err := httpClient.Req(url, "body", WithDeadlineOn503(50*time.Millisecond))
 		require.Error(err)
 		require.GreaterOrEqual(callCount, 1)
 	})

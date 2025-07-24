@@ -8,6 +8,8 @@ package federation
 import (
 	"bufio"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -69,4 +71,48 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 
 	<-subscribed
 	return offsetsChan, channelID, func() { wg.Wait() }
+}
+
+func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (res *coreutils.FuncResponse, err error) {
+	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
+	if httpRespErr != nil && !isUnexpectedCode {
+		return nil, httpRespErr
+	}
+	if httpResp == nil {
+		return nil, nil
+	}
+	if isUnexpectedCode {
+		funcError, err := getFuncError(httpResp)
+		if err != nil {
+			return nil, err
+		}
+		return nil, funcError
+	}
+	res = &coreutils.FuncResponse{
+		CommandResponse: coreutils.CommandResponse{
+			NewIDs:    map[string]istructs.RecordID{},
+			CmdResult: map[string]interface{}{},
+		},
+		HTTPResponse: httpResp,
+	}
+	if len(httpResp.Body) == 0 {
+		return res, nil
+	}
+	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
+		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
+		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ContentType_ApplicationJSON {
+			if err = json.Unmarshal([]byte(httpResp.Body), &res.QPv2Response); err == nil {
+				err = json.Unmarshal([]byte(httpResp.Body), &res.CommandResponse)
+			}
+		}
+	} else {
+		err = json.Unmarshal([]byte(httpResp.Body), &res)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("IFederation: failed to unmarshal response body to FuncResponse: %w. Body:\n%s", err, httpResp.Body)
+	}
+	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {
+		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.ExpectedSysErrorCode(), res.SysError.Message)
+	}
+	return res, nil
 }

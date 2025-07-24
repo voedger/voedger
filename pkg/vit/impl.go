@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -435,9 +436,12 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 
 func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	res, err := vit.IFederation.Func(url, body, opts...)
+	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
+	httpResp, err := vit.httpClient.Req(vit.URLStr()+"/"+url, body, opts...)
 	require.NoError(vit.T, err)
-	return res
+	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
+	require.NoError(vit.T, err)
+	return funcResp
 }
 
 // blob ReadCloser must be read out by the test
@@ -489,10 +493,13 @@ func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFu
 
 func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := vit.IFederation.Func(url, body, opts...)
+	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
+	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
+	res, err := vit.httpClient.Req(url, body, opts...)
 	require.NoError(vit.T, err)
-	return res
+	funcResp, err := federation.HTTPRespToFuncResp(res, err)
+	require.NoError(vit.T, err)
+	return funcResp
 }
 
 func (vit *VIT) WaitFor(consumer func() *coreutils.FuncResponse) *coreutils.FuncResponse {
