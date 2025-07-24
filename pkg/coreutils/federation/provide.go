@@ -12,7 +12,7 @@ import (
 )
 
 func New(federationURL func() *url.URL, adminPortGetter func() int) (federation IFederation, cleanup func()) {
-	httpClient, cln := coreutils.NewIHTTPClient()
+	httpClient, cln := coreutils.NewIHTTPClient(coreutils.WithSkipRetryOn503())
 	fed := &implIFederation{
 		httpClient:      httpClient,
 		federationURL:   federationURL,

@@ -14,7 +14,6 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -176,19 +175,19 @@ func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...coreu
 
 func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	httpResp, err := f.post(relativeURL, body, optFuncs...)
-	return f.httpRespToFuncResp(httpResp, err)
+	return HTTPRespToFuncResp(httpResp, err)
 }
 
 func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	httpResp, err := f.get(relativeURL, optFuncs...)
-	return f.httpRespToFuncResp(httpResp, err)
+	return HTTPRespToFuncResp(httpResp, err)
 }
 
 func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
 	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
-	return f.httpRespToFuncResp(httpResp, err)
+	return HTTPRespToFuncResp(httpResp, err)
 }
 
 func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncError, err error) {
@@ -231,50 +230,6 @@ func getFuncError(httpResp *coreutils.HTTPResponse) (funcError coreutils.FuncErr
 		}
 	}
 	return funcError, nil
-}
-
-func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (res *coreutils.FuncResponse, err error) {
-	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
-	if httpRespErr != nil && !isUnexpectedCode {
-		return nil, httpRespErr
-	}
-	if httpResp == nil {
-		return nil, nil
-	}
-	if isUnexpectedCode {
-		funcError, err := getFuncError(httpResp)
-		if err != nil {
-			return nil, err
-		}
-		return nil, funcError
-	}
-	res = &coreutils.FuncResponse{
-		CommandResponse: coreutils.CommandResponse{
-			NewIDs:    map[string]istructs.RecordID{},
-			CmdResult: map[string]interface{}{},
-		},
-		HTTPResponse: httpResp,
-	}
-	if len(httpResp.Body) == 0 {
-		return res, nil
-	}
-	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
-		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
-		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ContentType_ApplicationJSON {
-			if err = json.Unmarshal([]byte(httpResp.Body), &res.QPv2Response); err == nil {
-				err = json.Unmarshal([]byte(httpResp.Body), &res.CommandResponse)
-			}
-		}
-	} else {
-		err = json.Unmarshal([]byte(httpResp.Body), &res)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("IFederation: failed to unmarshal response body to FuncResponse: %w. Body:\n%s", err, httpResp.Body)
-	}
-	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {
-		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.ExpectedSysErrorCode(), res.SysError.Message)
-	}
-	return res, nil
 }
 
 func (f *implIFederation) URLStr() string {

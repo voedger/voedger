@@ -284,6 +284,9 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 		// https://github.com/voedger/voedger/issues/1694
 		return IsWSAEError(err, WSAECONNREFUSED)
 	}, retryOn_WSAECONNREFUSED_Timeout, retryOn_WSAECONNREFUSED_Delay))
+	for _, defaultOptFunc := range c.defaultOps {
+		defaultOptFunc(opts)
+	}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
@@ -526,10 +529,11 @@ func (fe FuncError) Unwrap() error {
 }
 
 type implIHTTPClient struct {
-	client *http.Client
+	client     *http.Client
+	defaultOps []ReqOptFunc
 }
 
-func NewIHTTPClient() (client IHTTPClient, clenup func()) {
+func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func()) {
 	// set linger - see https://github.com/voedger/voedger/issues/415
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -542,6 +546,9 @@ func NewIHTTPClient() (client IHTTPClient, clenup func()) {
 		err = conn.(*net.TCPConn).SetLinger(0)
 		return conn, err
 	}
-	client = &implIHTTPClient{client: &http.Client{Transport: tr}}
+	client = &implIHTTPClient{
+		client:     &http.Client{Transport: tr},
+		defaultOps: defaultOpts,
+	}
 	return client, client.CloseIdleConnections
 }
