@@ -320,7 +320,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		Broker: broker,
 
 		AfterError: func(d time.Duration) <-chan time.Time {
-			if d.Seconds() != 30.0 {
+			if d != testActualizerErrorDelay {
 				panic("unexpected pause")
 			}
 			return chanAfterError
