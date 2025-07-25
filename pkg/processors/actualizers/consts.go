@@ -27,6 +27,7 @@ const (
 	defaultFlushInterval         = time.Millisecond * 100
 	defaultFlushPositionInterval = time.Minute
 	defaultActualizerErrorDelay  = time.Second * 30
+	testActualizerErrorDelay     = 100 * time.Millisecond
 	n10nChannelDuration          = 100 * 365 * 24 * time.Hour
 	borrowRetryDelay             = 50 * time.Millisecond
 	initFailureErrorLogInterval  = 30 * time.Second
@@ -35,7 +36,7 @@ const (
 
 func init() {
 	if coreutils.IsTest() {
-		actualizerErrorDelay = 100 * time.Millisecond
+		actualizerErrorDelay = testActualizerErrorDelay
 	}
 }
 
