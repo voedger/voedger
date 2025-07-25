@@ -53,15 +53,16 @@ type (
 
 // 1 asyncActualizer per each projector per each partition
 type asyncActualizer struct {
-	conf           AsyncActualizerConf
-	projectorQName appdef.QName
-	pipeline       pipeline.IAsyncPipeline
-	offset         istructs.Offset
-	name           string
-	readCtx        *asyncActualizerContextState
-	projErrState   int32 // 0 - no error, 1 - error
-	plogBatch            // [50]plogEvent
-	appParts       appparts.IAppPartitions
+	conf                 AsyncActualizerConf
+	projectorQName       appdef.QName
+	pipeline             pipeline.IAsyncPipeline
+	offset               istructs.Offset
+	name                 string
+	readCtx              *asyncActualizerContextState
+	projErrState         int32 // 0 - no error, 1 - error
+	plogBatch                  // [50]plogEvent
+	appParts             appparts.IAppPartitions
+	actualizerErrorDelay time.Duration // 30 seconds in production, 100ms in tests
 }
 
 func (a *asyncActualizer) Prepare() {
@@ -103,7 +104,7 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 			a.conf.LogError(a.name, err)
 			select {
 			case <-ctx.Done():
-			case <-a.conf.AfterError(defaultActualizerErrorDelay):
+			case <-a.conf.AfterError(a.actualizerErrorDelay):
 			}
 		}
 	}
