@@ -103,7 +103,7 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 			a.conf.LogError(a.name, err)
 			select {
 			case <-ctx.Done():
-			case <-a.conf.AfterError(actualizerErrorDelay):
+			case <-a.conf.AfterError(defaultActualizerErrorDelay):
 			}
 		}
 	}

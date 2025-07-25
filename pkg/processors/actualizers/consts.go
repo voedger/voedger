@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/sys"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
@@ -17,6 +18,7 @@ var (
 	partitionFld           = sys.ProjectionOffsetsView.Fields.Partition
 	projectorNameFld       = sys.ProjectionOffsetsView.Fields.Projector
 	offsetFld              = sys.ProjectionOffsetsView.Fields.Offset
+	actualizerErrorDelay   = defaultActualizerErrorDelay // 30 seconds in production, 100ms in tests
 )
 
 const (
@@ -24,12 +26,18 @@ const (
 	defaultBundlesLimit          = 100
 	defaultFlushInterval         = time.Millisecond * 100
 	defaultFlushPositionInterval = time.Minute
-	actualizerErrorDelay         = time.Second * 30
+	defaultActualizerErrorDelay  = time.Second * 30
 	n10nChannelDuration          = 100 * 365 * 24 * time.Hour
 	borrowRetryDelay             = 50 * time.Millisecond
 	initFailureErrorLogInterval  = 30 * time.Second
 	DefaultIntentsLimit          = builtin.MaxCUDs * 10
 )
+
+func init() {
+	if coreutils.IsTest() {
+		actualizerErrorDelay = 100 * time.Millisecond
+	}
+}
 
 var PLogUpdatesQName = appdef.NewQName(appdef.SysPackage, "PLogUpdates")
 
