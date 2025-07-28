@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -46,7 +47,11 @@ func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part i
 			AppQName:                   app,
 			PartitionID:                part,
 		},
-		appParts: a.appParts,
+		appParts:             a.appParts,
+		actualizerErrorDelay: defaultActualizerErrorDelay,
+	}
+	if coreutils.IsTest() {
+		act.actualizerErrorDelay = testActualizerErrorDelay
 	}
 	act.Prepare()
 
