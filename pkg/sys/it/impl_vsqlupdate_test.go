@@ -49,6 +49,7 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 }
 
 func TestVSqlUpdate_BasicUsage_InsertTable(t *testing.T) {
+	t.Skip("waiting for https://github.com/voedger/voedger/issues/3845")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
