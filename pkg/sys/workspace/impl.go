@@ -90,7 +90,7 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 		coreutils.WithExpectedCode(http.StatusOK),
 		coreutils.WithExpectedCode(http.StatusConflict),
 	); createWSIDCmdErr != nil {
-		if retryOnErr(err) {
+		if retryOnErr(createWSIDCmdErr) {
 			return createWSIDCmdErr
 		}
 		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr.Error(), body))
@@ -102,7 +102,7 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 func retryOnErr(err error) bool {
 	var sysErr coreutils.SysError
 	if errors.As(err, &sysErr) {
-		if sysErr.HTTPStatus > http.StatusInternalServerError {
+		if sysErr.HTTPStatus >= http.StatusInternalServerError {
 			return true
 		}
 	}
