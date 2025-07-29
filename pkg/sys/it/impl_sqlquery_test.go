@@ -600,7 +600,8 @@ func TestReadODocs(t *testing.T) {
 			{"sys.ID":4,"sys.ParentID":1, "orecord1IntFld": 45, "orecord2": [
 				{"sys.ID":5, "sys.ParentID":4, "orecord2IntFld": 46}
 			]}
-		]}
+		]},
+		"unloggedArgs":{"sys.ID":6}
 	}`
 	resp := vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
 		coreutils.WithMethod(http.MethodPost),
@@ -610,7 +611,7 @@ func TestReadODocs(t *testing.T) {
 	odoc1ORec11ID := resp.NewIDs["2"]
 	odoc1ORec12ID := resp.NewIDs["4"]
 
-	body = `{"args":{"sys.ID": 1,"odocIntFld": 47}}`
+	body = `{"args":{"sys.ID": 1,"odocIntFld": 47},"unloggedArgs":{"sys.ID":2}}`
 	resp = vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
 		coreutils.WithMethod(http.MethodPost),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
