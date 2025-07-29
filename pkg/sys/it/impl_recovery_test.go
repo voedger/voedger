@@ -51,7 +51,7 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 	vit := it.NewVIT(t, &cfg)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]}}`
+	body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]},"unloggedArgs":{"sys.ID":4}}`
 	resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
 	resp.Println()
 

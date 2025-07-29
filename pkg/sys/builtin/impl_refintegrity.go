@@ -31,30 +31,45 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	fields := appDef.Type(objQName).(appdef.IWithFields)
 
 	for _, refField := range fields.RefFields() {
-		targetID := obj.AsRecordID(refField.Name())
-		if targetID == istructs.NullRecordID || targetID.IsRaw() {
-			continue
-		}
-		allowedTargetQNames := appdef.QNamesFrom(refField.Refs()...)
-		kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
-		idHi := CrackID(targetID)
-		kb.PutInt64(Field_IDHi, idHi)
-		kb.PutRecordID(Field_ID, targetID)
-		registryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
-		if err == nil {
-			if len(allowedTargetQNames) > 0 && !allowedTargetQNames.Contains(registryRecord.AsQName(field_QName)) {
-				return wrongQName(targetID, objQName, refField.Name(), registryRecord.AsQName(field_QName), allowedTargetQNames)
-			}
-			continue
-		}
-		if !errors.Is(err, istructs.ErrRecordNotFound) {
-			// notest
+		if err := checkRefFieldRefIntegrity(refField, obj, appStructs, wsid); err != nil {
 			return err
 		}
-		return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, targetID, objQName, refField.Name())
+	}
+
+	if iObj, ok := obj.(istructs.IObject); ok {
+		for child := range iObj.Children() {
+			if err := CheckRefIntegrity(child, appStructs, wsid); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
+}
+
+func checkRefFieldRefIntegrity(refField appdef.IRefField, obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
+	targetID := obj.AsRecordID(refField.Name())
+	if targetID == istructs.NullRecordID || targetID.IsRaw() {
+		return nil
+	}
+	objQName := obj.AsQName(appdef.SystemField_QName)
+	allowedTargetQNames := appdef.QNamesFrom(refField.Refs()...)
+	kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
+	idHi := CrackID(targetID)
+	kb.PutInt64(Field_IDHi, idHi)
+	kb.PutRecordID(Field_ID, targetID)
+	registryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
+	if err == nil {
+		if len(allowedTargetQNames) > 0 && !allowedTargetQNames.Contains(registryRecord.AsQName(field_QName)) {
+			return wrongQName(targetID, objQName, refField.Name(), registryRecord.AsQName(field_QName), allowedTargetQNames)
+		}
+		return nil
+	}
+	if !errors.Is(err, istructs.ErrRecordNotFound) {
+		// notest
+		return err
+	}
+	return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, targetID, objQName, refField.Name())
 }
 
 func wrongQName(targetID istructs.RecordID, srcQName appdef.QName, srcField string, actualQName appdef.QName, allowedQNames appdef.QNames) error {

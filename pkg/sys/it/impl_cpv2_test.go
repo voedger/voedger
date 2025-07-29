@@ -324,7 +324,7 @@ func TestErrorsCPv2(t *testing.T) {
 		})
 
 		t.Run("ODoc", func(t *testing.T) {
-			body := `{"args":{"sys.ID": 1}}`
+			body := `{"args":{"sys.ID": 1},"unloggedArgs":{"sys.ID":2}}`
 			resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
 			odocID := resp.NewID()
 			t.Run("update", func(t *testing.T) {
@@ -344,7 +344,7 @@ func TestErrorsCPv2(t *testing.T) {
 		})
 
 		t.Run("ORecord", func(t *testing.T) {
-			body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1}]}}`
+			body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1}]},"unloggedArgs":{"sys.ID":3}}`
 			resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
 			orecordID := resp.NewIDs["2"]
 			t.Run("update", func(t *testing.T) {

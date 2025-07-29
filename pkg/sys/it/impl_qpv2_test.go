@@ -2424,7 +2424,7 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 	})
 
 	t.Run("odocs", func(t *testing.T) {
-		body := `{"args":{"sys.ID": 1,"odocIntFld":42, "orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord1IntFld":43}]}}`
+		body := `{"args":{"sys.ID": 1,"odocIntFld":42, "orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord1IntFld":43}]},"unloggedArgs":{"sys.ID":3}}`
 		resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
 		odocID := resp.NewIDs["1"]
 		orecordID := resp.NewIDs["2"]
