@@ -33,7 +33,7 @@ import (
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> (not a singleton)
 // targetApp/userProfileWSID
-func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {
 			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
@@ -60,7 +60,7 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensA
 // triggered by cdoc.registry.Login or by cdoc.sys.ChildWorkspace
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
 // sys/registry app
-func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName appdef.AppQName, tokensAPI itokens.ITokens,
+func ApplyInvokeCreateWorkspaceID(federation federation.IFederationWithRetry, appQName appdef.AppQName, tokensAPI itokens.ITokens,
 	wsName string, wsKind appdef.QName, wsidToCallCreateWSIDAt istructs.WSID, targetApp string, templateName string, templateParams string,
 	ownerDoc istructs.ICUDRow, ownerWSID istructs.WSID) error {
 	// Call WS[$PseudoWSID].c.CreateWorkspaceID()
@@ -90,23 +90,10 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 		coreutils.WithExpectedCode(http.StatusOK),
 		coreutils.WithExpectedCode(http.StatusConflict),
 	); createWSIDCmdErr != nil {
-		if retryOnErr(createWSIDCmdErr) {
-			return createWSIDCmdErr
-		}
 		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr.Error(), body))
 		return updateOwner(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, tokensAPI, federation)
 	}
 	return nil
-}
-
-func retryOnErr(err error) bool {
-	var sysErr coreutils.SysError
-	if errors.As(err, &sysErr) {
-		if sysErr.HTTPStatus >= http.StatusInternalServerError {
-			return true
-		}
-	}
-	return false
 }
 
 // c.sys.CreateWorkspaceID
@@ -195,7 +182,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 // Projector<A, InvokeCreateWorkspace>
 // triggered by CDoc<WorkspaceID>
 // targetApp/appWS
-func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceProjector(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {
 			if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
@@ -223,9 +210,6 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 				return fmt.Errorf("aproj.sys.InvokeCreateWorkspace: %w", err)
 			}
 			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
-				if retryOnErr(err) {
-					return err
-				}
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
 				// nolint G115 ownerWSID came from WSID so its highest bit is always 0 -> no data loss possible
 				if err := updateOwner(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, tokensAPI, federation); err != nil {
@@ -312,7 +296,7 @@ func execCmdCreateWorkspace(time timeu.ITime) istructsmem.ExecCommandClosure {
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
+func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFederationWithRetry, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {
@@ -371,9 +355,6 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				// nolint G115: highest bit of newWSID is always 0 -> safe to cast to WSID
 				updateOwnerErr = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
 					istructs.WSID(newWSID), wsError, tokensAPI, federation)
-				if retryOnErr(updateOwnerErr) {
-					return updateOwnerErr
-				}
 				continue
 			}
 
@@ -387,9 +368,6 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				info("updating initStartedAtMs:", updateWSDescrURL)
 
 				if _, err := federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
-					if retryOnErr(err) {
-						return err
-					}
 					er("failed to update initStartedAtMs:", err)
 					continue
 				}
@@ -408,9 +386,6 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
 					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
-					if retryOnErr(err) {
-						return err
-					}
 					er("failed to update initError+initCompletedAtMs:", err)
 					continue
 				}
@@ -420,9 +395,6 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
 					authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
-					if retryOnErr(err) {
-						return err
-					}
 					er("failed to update initError+initCompletedAtMs:", err)
 					continue
 				}
@@ -436,9 +408,6 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 			if wsError == nil && wsPostInitFunc != nil {
 				// nolint G115
 				wsError = wsPostInitFunc(targetAppQName, wsDescr.AsQName(authnz.Field_WSKind), istructs.WSID(newWSID), federation, systemPrincipalToken_TargetApp)
-				if retryOnErr(wsError) {
-					return wsError
-				}
 			}
 
 			// nolint G115
@@ -450,7 +419,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 }
 
 func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp string, ownerQNameStr string, newWSID istructs.WSID, err error,
-	iTokens itokens.ITokens, federation federation.IFederation) error {
+	iTokens itokens.ITokens, federation federation.IFederationWithRetry) error {
 	errStr := ""
 	if err != nil {
 		errStr = err.Error()

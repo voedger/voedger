@@ -13,9 +13,10 @@ import (
 )
 
 type implIFederation struct {
-	httpClient      coreutils.IHTTPClient
-	federationURL   func() *url.URL
-	adminPortGetter func() int
+	httpClient         coreutils.IHTTPClient
+	federationURL      func() *url.URL
+	adminPortGetter    func() int
+	defaultReqOptFuncs []coreutils.ReqOptFunc
 }
 
 type implIFederationForQP struct {

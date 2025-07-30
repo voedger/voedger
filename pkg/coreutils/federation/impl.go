@@ -32,22 +32,24 @@ func (f *implIFederation) post(relativeURL string, body string, optFuncs ...core
 }
 
 func (f *implIFederation) postReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
+	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodPost))
 	return f.reqReader(relativeURL, bodyReader, optFuncs...)
 }
 
 func (f *implIFederation) get(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodGet))
+	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodGet))
 	return f.req(relativeURL, "", optFuncs...)
 }
 
 func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
+	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
 	return f.httpClient.ReqReader(url, bodyReader, optFuncs...)
 }
 
 func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
+	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
@@ -171,6 +173,7 @@ func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFunc
 func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodGet))
 	url := f.federationURL().String() + "/" + relativeURL
+	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
@@ -187,6 +190,7 @@ func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOpt
 func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
+	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
 	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
 	return f.httpRespToFuncResp(httpResp, err)
 }
@@ -336,6 +340,17 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		waitForDone()
 	}
 	return
+}
+
+func (f *implIFederation) dummy() {}
+
+func (f *implIFederation) WithRetry() IFederationWithRetry {
+	return &implIFederation{
+		httpClient:         f.httpClient,
+		federationURL:      f.federationURL,
+		adminPortGetter:    f.adminPortGetter,
+		defaultReqOptFuncs: []coreutils.ReqOptFunc{coreutils.WithRetryOn503()},
+	}
 }
 
 func (f *implIFederationForQP) QueryNoRetry(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {

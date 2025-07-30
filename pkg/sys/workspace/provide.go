@@ -19,6 +19,8 @@ func Provide(sr istructsmem.IStatelessResources, time timeu.ITime, tokensAPI ito
 	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
 	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
 
+	federationWithRetry := federation.WithRetry()
+
 	sr.AddCommands(appdef.SysPackagePath,
 		// c.sys.InitChildWorkspac
 		istructsmem.NewCommandFunction(
@@ -52,9 +54,9 @@ func Provide(sr istructsmem.IStatelessResources, time timeu.ITime, tokensAPI ito
 	provideDeactivateWorkspace(sr, tokensAPI, federation)
 
 	sr.AddProjectors(appdef.SysPackagePath,
-		asyncProjectorInvokeCreateWorkspace(federation, itokens),
-		asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
-		asyncProjectorInitializeWorkspace(federation, time, itokens, wsPostInitFunc, eps),
+		asyncProjectorInvokeCreateWorkspace(federationWithRetry, itokens),
+		asyncProjectorInvokeCreateWorkspaceID(federationWithRetry, itokens),
+		asyncProjectorInitializeWorkspace(federationWithRetry, time, itokens, wsPostInitFunc, eps),
 		syncProjectorChildWorkspaceIdx(),
 		syncProjectorWorkspaceIDIdx(),
 	)
@@ -71,7 +73,7 @@ func syncProjectorChildWorkspaceIdx() istructs.Projector {
 }
 
 // Projector<A, InitializeWorkspace>
-func asyncProjectorInitializeWorkspace(federation federation.IFederation, time timeu.ITime,
+func asyncProjectorInitializeWorkspace(federation federation.IFederationWithRetry, time timeu.ITime,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInitializeWorkspace,
@@ -80,7 +82,7 @@ func asyncProjectorInitializeWorkspace(federation federation.IFederation, time t
 }
 
 // Projector<A, InvokeCreateWorkspaceID>
-func asyncProjectorInvokeCreateWorkspaceID(federation federation.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
+func asyncProjectorInvokeCreateWorkspaceID(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInvokeCreateWorkspaceID,
 		Func: invokeCreateWorkspaceIDProjector(federation, tokensAPI),
@@ -88,7 +90,7 @@ func asyncProjectorInvokeCreateWorkspaceID(federation federation.IFederation, to
 }
 
 // Projector<A, InvokeCreateWorkspace>
-func asyncProjectorInvokeCreateWorkspace(federation federation.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
+func asyncProjectorInvokeCreateWorkspace(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInvokeCreateWorkspace,
 		Func: invokeCreateWorkspaceProjector(federation, tokensAPI),

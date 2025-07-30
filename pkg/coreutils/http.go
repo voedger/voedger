@@ -128,6 +128,12 @@ func WithDeadlineOn503(deadline time.Duration) ReqOptFunc {
 	}
 }
 
+func WithRetryOn503() ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.skipRetryOn503 = false
+	}
+}
+
 func WithSkipRetryOn503() ReqOptFunc {
 	return func(opts *reqOpts) {
 		opts.skipRetryOn503 = true
