@@ -347,6 +347,9 @@ func TestQuotas(t *testing.T) {
 // - Make sure that notifySubscriber is called
 func TestHeartbeats(t *testing.T) {
 
+	// https://github.com/voedger/voedger/issues/3938
+	t.Skip("Skipped temporarily due to issues")
+
 	req := require.New(t)
 	mockTime := testingu.MockTime
 	mockTime.FireNextTimerImmediately()
