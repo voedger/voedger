@@ -17,8 +17,8 @@ import (
 
 func NewDefaultConfig() Config {
 	return Config{
-		JitterFactor: 0.5,
-		Multiplier:   2,
+		JitterFactor: DefaultJitterFactor,
+		Multiplier:   DefaultMuliplier,
 	}
 }
 
@@ -50,13 +50,13 @@ func (r *Retrier) NextDelay() time.Duration {
 	base := r.currentInterval
 	// prepare next interval for future
 
-	next := min(time.Duration(float64(base) * r.cfg.Multiplier), r.cfg.MaxInterval)
+	next := min(time.Duration(float64(base)*r.cfg.Multiplier), r.cfg.MaxInterval)
 	r.currentInterval = next
 
 	// apply FullJitter: random offset around base
 	// offset in [-JitterFactor*base, +JitterFactor*base]
 	offset := (secureFloat64()*2 - 1) * r.cfg.JitterFactor * float64(base)
-	delay := max(base + time.Duration(offset), 0)
+	delay := max(base+time.Duration(offset), 0)
 	return delay
 }
 
