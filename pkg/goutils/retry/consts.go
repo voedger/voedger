@@ -9,5 +9,5 @@ package retrier
 
 const (
 	DefaultJitterFactor = 0.5
-	DefaultMuliplier    = 2
+	DefaultMultiplier   = 2
 )

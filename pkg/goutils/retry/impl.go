@@ -18,7 +18,7 @@ import (
 func NewDefaultConfig() Config {
 	return Config{
 		JitterFactor: DefaultJitterFactor,
-		Multiplier:   DefaultMuliplier,
+		Multiplier:   DefaultMultiplier,
 	}
 }
 
@@ -63,12 +63,8 @@ func (r *Retrier) NextDelay() time.Duration {
 // Run retries operation until success or context cancellation.
 func (r *Retrier) Run(ctx context.Context, operation func() error) error {
 	attempt := 0
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		err := operation()
-		if err == nil {
+	for ctx.Err() == nil {
+		if err := operation(); err == nil {
 			return nil
 		}
 		attempt++
@@ -85,6 +81,7 @@ func (r *Retrier) Run(ctx context.Context, operation func() error) error {
 		case <-time.After(d):
 		}
 	}
+	return ctx.Err()
 }
 
 // Retry executes fn with retry logic and returns its result or an error.
