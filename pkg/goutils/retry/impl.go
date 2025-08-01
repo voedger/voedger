@@ -88,7 +88,7 @@ func (r *Retrier) Run(ctx context.Context, operation func() error) error {
 }
 
 // Retry executes fn with retry logic and returns its result or an error.
-func Retry[T any](ctx context.Context, cfg Config, fn func() (T, error)) (T, error) {
+func Retry[T any](ctx context.Context, cfg Config, op func() (T, error)) (T, error) {
 	r, err := New(cfg)
 	var zero T
 	if err != nil {
@@ -97,10 +97,17 @@ func Retry[T any](ctx context.Context, cfg Config, fn func() (T, error)) (T, err
 	var result T
 	err = r.Run(ctx, func() error {
 		var fnErr error
-		result, fnErr = fn()
+		result, fnErr = op()
 		return fnErr
 	})
 	return result, err
+}
+
+func RetryErr(ctx context.Context, cfg Config, op func() error) error {
+	_, err := Retry(ctx, cfg, func() (any, error) {
+		return nil, op()
+	})
+	return err
 }
 
 // secureFloat64 returns a cryptographically secure random float64 in the range [0, 1).

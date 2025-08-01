@@ -42,3 +42,27 @@ func ExampleRetry() {
 	// Error: <nil>
 	// Attempts: 3
 }
+
+func ExampleRetryErr() {
+	cfg := retrier.Config{
+		InitialInterval: 10 * time.Millisecond,
+		MaxInterval:     100 * time.Millisecond,
+		Multiplier:      2.0,
+		JitterFactor:    0.5,
+	}
+
+	attempts := 0
+	err := retrier.RetryErr(context.Background(), cfg, func() error {
+		attempts++
+		if attempts < 3 {
+			return errors.New("temporary error")
+		}
+		return nil
+	})
+
+	fmt.Printf("Error: %v\n", err)
+	fmt.Printf("Attempts: %d\n", attempts)
+	// Output:
+	// Error: <nil>
+	// Attempts: 3
+}
