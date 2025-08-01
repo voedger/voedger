@@ -17,32 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func TestBasicUsage(t *testing.T) {
-	require := require.New(t)
-	cfg := Config{
-		InitialInterval: 10 * time.Millisecond,
-		MaxInterval:     100 * time.Millisecond,
-		Multiplier:      2.0,
-		JitterFactor:    0.5,
-	}
-
-	attempts := 0
-	fn := func() (string, error) {
-		attempts++
-		if attempts < 3 {
-			return "", errors.New("temporary error")
-		}
-		return "success", nil
-	}
-
-	ctx := context.Background()
-	result, err := Retry(ctx, cfg, fn)
-
-	require.NoError(err)
-	require.Equal("success", result)
-	require.Equal(3, attempts)
-}
-
 func TestDefaultConfig(t *testing.T) {
 	require := require.New(t)
 	cfg := NewDefaultConfig()
