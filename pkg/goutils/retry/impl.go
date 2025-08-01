@@ -10,10 +10,10 @@ package retrier
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
+	"encoding/binary"
 	"time"
 )
-
 
 func NewDefaultConfig() Config {
 	return Config{
@@ -50,19 +50,13 @@ func (r *Retrier) NextDelay() time.Duration {
 	base := r.currentInterval
 	// prepare next interval for future
 
-	next := time.Duration(float64(base) * r.cfg.Multiplier)
-	if next > r.cfg.MaxInterval {
-		next = r.cfg.MaxInterval
-	}
+	next := min(time.Duration(float64(base) * r.cfg.Multiplier), r.cfg.MaxInterval)
 	r.currentInterval = next
 
 	// apply FullJitter: random offset around base
 	// offset in [-JitterFactor*base, +JitterFactor*base]
-	offset := (rand.Float64()*2 - 1) * r.cfg.JitterFactor * float64(base)
-	delay := base + time.Duration(offset)
-	if delay < 0 {
-		delay = 0
-	}
+	offset := (secureFloat64()*2 - 1) * r.cfg.JitterFactor * float64(base)
+	delay := max(base + time.Duration(offset), 0)
 	return delay
 }
 
@@ -107,4 +101,18 @@ func Retry[T any](ctx context.Context, cfg Config, fn func() (T, error)) (T, err
 		return fnErr
 	})
 	return result, err
+}
+
+// secureFloat64 returns a cryptographically secure random float64 in the range [0, 1).
+func secureFloat64() float64 {
+	var buf [8]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	// Convert the random bytes to a uint64
+	u := binary.LittleEndian.Uint64(buf[:])
+	// Convert to float64 in [0, 1) by dividing by 2^64
+	return float64(u) / float64(1<<64)
 }
