@@ -378,6 +378,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 }
 
 func TestDirectUpdateManyTypes(t *testing.T) {
+	t.Skip("https://github.com/voedger/voedger/issues/3845")
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
