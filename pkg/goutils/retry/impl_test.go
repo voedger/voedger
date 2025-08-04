@@ -347,7 +347,7 @@ func TestMaxIntervalCapping(t *testing.T) {
 	result, err := Retry(context.Background(), cfg, fn)
 	require.NoError(err)
 	require.Equal("success", result)
-	require.Equal(attempts, 6)
+	require.Equal(6, attempts)
 	require.Len(retryDelays, 5)
 
 	for _, d := range retryDelays {
