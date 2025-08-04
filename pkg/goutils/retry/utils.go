@@ -37,18 +37,18 @@ func RetryErr(ctx context.Context, cfg Config, op func() error) error {
 	return err
 }
 
-func RetryFor(ctx context.Context, cfg Config, maxElapsed time.Duration, op func() error) (ok bool, err error) {
+func RetryFor[T any](ctx context.Context, cfg Config, maxElapsed time.Duration, op func() (T, error)) (ok bool, res T, err error) {
 	dlCtx, cancel := context.WithDeadline(ctx, time.Now().Add(maxElapsed))
 	defer cancel()
-	err = RetryErr(dlCtx, cfg, op)
+	res, err = Retry(dlCtx, cfg, op)
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return false, ctx.Err()
+			return false, res, ctx.Err()
 		}
-		return false, nil
+		return false, res, nil
 	case errors.Is(err, context.Canceled):
-		return false, err
+		return false, res, err
 	}
-	return true, err
+	return true, res, err
 }

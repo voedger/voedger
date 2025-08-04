@@ -83,14 +83,14 @@ func ExampleRetryFor() {
 
 	// 3) Simulate an operation that fails twice before succeeding
 	attempts := 0
-	ok, err := retrier.RetryFor(ctx, cfg, 800*time.Millisecond, func() error {
+	ok, res, err := retrier.RetryFor(ctx, cfg, 800*time.Millisecond, func() (int, error) {
 		attempts++
 		if attempts < 3 {
 			fmt.Printf("Attempt %d: temporary error\n", attempts)
-			return errors.New("temporary")
+			return 0, errors.New("temporary")
 		}
 		fmt.Printf("Attempt %d: success\n", attempts)
-		return nil
+		return 42, nil
 	})
 
 	if err != nil {
@@ -99,6 +99,7 @@ func ExampleRetryFor() {
 		fmt.Println("did not succeed within timeout")
 	} else {
 		fmt.Printf("succeeded after %d attempts\n", attempts)
+		fmt.Printf("result: %d", res)
 	}
 
 	// Output:
@@ -106,4 +107,5 @@ func ExampleRetryFor() {
 	// Attempt 2: temporary error
 	// Attempt 3: success
 	// succeeded after 3 attempts
+	// result: 42
 }
