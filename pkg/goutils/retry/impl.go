@@ -108,7 +108,7 @@ func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 		delay := r.NextDelay()
 		// OnRetry callback
 		if r.cfg.OnRetry != nil {
-			r.cfg.OnRetry(attempt, delay)
+			r.cfg.OnRetry(attempt, delay, err)
 		}
 
 		// wait for delay or context done

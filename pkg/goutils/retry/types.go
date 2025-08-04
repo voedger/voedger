@@ -20,7 +20,7 @@ type Config struct {
 	ResetAfter      time.Duration
 
 	// OnRetry is called before each retry with attempt number and next delay.
-	OnRetry func(attempt int, delay time.Duration)
+	OnRetry func(attempt int, delay time.Duration, err error)
 
 	// errors that should trigger a retry.
 	// if empty, all errors (except context cancellation) are retried.
