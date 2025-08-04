@@ -460,13 +460,19 @@ func TestRetryFor(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			count := 0
-			op := func() error { count++; return tc.opCounter(count) }
-			ok, err := RetryFor(tc.ctx, cfg, tc.maxElapsed, op)
+			op := func() (int, error) { count++; return 42, tc.opCounter(count) }
+			ok, res, err := RetryFor(tc.ctx, cfg, tc.maxElapsed, op)
 
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
 			} else {
 				require.NoError(t, err)
+				if tc.wantCalls == 0 {
+					require.False(t, ok)
+				} else {
+					require.True(t, ok)
+					require.Equal(t, 42, res)
+				}
 			}
 			require.Equal(t, tc.wantOk, ok)
 			require.Equal(t, tc.wantCalls, count)
