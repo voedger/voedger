@@ -10,16 +10,25 @@ package retrier
 
 import "time"
 
-// Config holds parameters for retry behavior.
-// ResetAfter defines a period after which the backoff interval resets.
+// Config holds parameters for retry behavior and error-handling policies.
 type Config struct {
+	// Backoff settings
 	InitialInterval time.Duration
 	MaxInterval     time.Duration
 	Multiplier      float64
 	JitterFactor    float64 // between 0 and 1
 	ResetAfter      time.Duration
+
 	// OnRetry is called before each retry with attempt number and next delay.
 	OnRetry func(attempt int, delay time.Duration)
+
+	// errors that should trigger a retry. 
+	// if empty, all errors (except context cancellation) are retried.
+	// not empty, abort on any other error
+	RetryOn []error
+
+	// errors treated as success
+	Acceptable []error
 }
 
 // Retrier executes operations with backoff, jitter, and reset logic.

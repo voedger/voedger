@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -141,14 +141,12 @@ func TestContextCancellation(t *testing.T) {
 		require.Equal("", result)
 	})
 
-	t.Run("somewhen during error", func(t *testing.T) {
+	t.Run("during retry", func(t *testing.T) {
 		fn := func() (string, error) {
 			return "", errors.New("permanent error")
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
-
-		// Cancel context after a short delay
 		go func() {
 			time.Sleep(150 * time.Millisecond)
 			cancel()
@@ -160,7 +158,7 @@ func TestContextCancellation(t *testing.T) {
 		require.Equal("", result)
 	})
 
-	t.Run("right after op", func(t *testing.T) {
+	t.Run("cancel in operation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		fn := func() (string, error) {
 			cancel()
@@ -183,11 +181,11 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 		InitialInterval: 100 * time.Millisecond,
 		MaxInterval:     1 * time.Second,
 		Multiplier:      2.0,
-		JitterFactor:    0.0, // No jitter for deterministic testing
+		JitterFactor:    0.0,
 	}
 
 	attempts := 0
-	retryDelays := make([]time.Duration, 0)
+	retryDelays := []time.Duration{}
 
 	fn := func() (string, error) {
 		attempts++
@@ -197,18 +195,16 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 		return "success", nil
 	}
 
-	// Track retry delays by using OnRetry callback
 	cfg.OnRetry = func(attempt int, delay time.Duration) {
 		retryDelays = append(retryDelays, delay)
 	}
 
-	ctx := context.Background()
-	result, err := Retry(ctx, cfg, fn)
+	result, err := Retry(context.Background(), cfg, fn)
 
 	require.NoError(err)
 	require.Equal("success", result)
 	require.Equal(6, attempts)
-	require.Equal(5, len(retryDelays)) // 5 retries, 5 delays
+	require.Equal(5, len(retryDelays))
 
 	// Verify exponential backoff behavior
 	// Expected delays: ~100ms, ~200ms, ~400ms, ~800ms, ~1000ms (capped)
@@ -217,7 +213,7 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 		200 * time.Millisecond,
 		400 * time.Millisecond,
 		800 * time.Millisecond,
-		1000 * time.Millisecond, // Capped at max interval
+		1000 * time.Millisecond,
 	}
 
 	for i, actualDelay := range retryDelays {
@@ -250,7 +246,7 @@ func TestResetAfter(t *testing.T) {
 	}
 
 	attempts := 0
-	retryDelays := make([]time.Duration, 0)
+	retryDelays := []time.Duration{}
 
 	fn := func() (string, error) {
 		attempts++
@@ -265,13 +261,12 @@ func TestResetAfter(t *testing.T) {
 		retryDelays = append(retryDelays, delay)
 	}
 
-	ctx := context.Background()
-	result, err := Retry(ctx, cfg, fn)
+	result, err := Retry(context.Background(), cfg, fn)
 
 	require.NoError(err)
 	require.Equal("success", result)
 	require.Equal(6, attempts)
-	require.Equal(5, len(retryDelays)) // 5 retries, 5 delays
+	require.Equal(5, len(retryDelays))
 
 	// Verify that reset behavior is working
 	// The key insight is that the reset happens when the time since last reset exceeds ResetAfter
@@ -305,10 +300,9 @@ func TestOnRetry(t *testing.T) {
 		JitterFactor:    0.0,
 	}
 
-	callbackCalls := 0
-
+	calls := 0
 	cfg.OnRetry = func(attempt int, delay time.Duration) {
-		callbackCalls++
+		calls++
 	}
 
 	attempts := 0
@@ -320,25 +314,23 @@ func TestOnRetry(t *testing.T) {
 		return "success", nil
 	}
 
-	ctx := context.Background()
-	result, err := Retry(ctx, cfg, fn)
-
+	result, err := Retry(context.Background(), cfg, fn)
 	require.NoError(err)
 	require.Equal("success", result)
-	require.Equal(2, callbackCalls)
+	require.Equal(2, calls)
 }
 
 func TestMaxIntervalCapping(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
 		InitialInterval: 100 * time.Millisecond,
-		MaxInterval:     200 * time.Millisecond, // Small max interval
+		MaxInterval:     200 * time.Millisecond,
 		Multiplier:      2.0,
 		JitterFactor:    0.0,
 	}
 
 	attempts := 0
-	retryDelays := make([]time.Duration, 0)
+	retryDelays := []time.Duration{}
 
 	fn := func() (string, error) {
 		attempts++
@@ -348,22 +340,18 @@ func TestMaxIntervalCapping(t *testing.T) {
 		return "success", nil
 	}
 
-	// Track retry delays by using OnRetry callback
 	cfg.OnRetry = func(attempt int, delay time.Duration) {
 		retryDelays = append(retryDelays, delay)
 	}
 
-	ctx := context.Background()
-	result, err := Retry(ctx, cfg, fn)
-
+	result, err := Retry(context.Background(), cfg, fn)
 	require.NoError(err)
 	require.Equal("success", result)
 	require.Equal(6, attempts)
-	require.Equal(5, len(retryDelays)) // 5 retries, 5 delays
+	require.Equal(5, len(retryDelays))
 
-	for i, delay := range retryDelays {
-		require.LessOrEqual(delay, cfg.MaxInterval,
-			"Delay %d (%v) should not exceed max interval (%v)", i, delay, cfg.MaxInterval)
+	for _, d := range retryDelays {
+		require.LessOrEqual(d, cfg.MaxInterval)
 	}
 }
 
@@ -380,9 +368,183 @@ func TestImmediateSuccess(t *testing.T) {
 		return "immediate success", nil
 	}
 
-	ctx := context.Background()
-	result, err := Retry(ctx, cfg, fn)
-
+	result, err := Retry(context.Background(), cfg, fn)
 	require.NoError(err)
 	require.Equal("immediate success", result)
+}
+
+func makeFastConfig() Config {
+	return Config{
+		InitialInterval: time.Nanosecond,
+		MaxInterval:     time.Nanosecond,
+		Multiplier:      1,
+		JitterFactor:    0,
+		ResetAfter:      0,
+	}
+}
+
+func TestRetryFor(t *testing.T) {
+	cfg := makeFastConfig()
+	now := time.Now()
+
+	opSuccess := func(int) error { return nil }
+
+	tests := []struct {
+		name       string
+		ctx        context.Context
+		maxElapsed time.Duration
+		opCounter  func(callNum int) error
+		wantOk     bool
+		wantErr    error
+		wantCalls  int
+	}{
+		{
+			name:       "success",
+			ctx:        context.Background(),
+			maxElapsed: time.Second,
+			opCounter:  opSuccess,
+			wantOk:     true,
+			wantErr:    nil,
+			wantCalls:  1,
+		},
+		{
+			name:       "eventualSuccess",
+			ctx:        context.Background(),
+			maxElapsed: time.Second,
+			opCounter: func(callNum int) error {
+				if callNum <= 3 {
+					return errors.New("temporary failure")
+				}
+				return nil
+			},
+			wantOk:    true,
+			wantErr:   nil,
+			wantCalls: 4,
+		},
+		{
+			name:       "immediateDeadline",
+			ctx:        context.Background(),
+			maxElapsed: -time.Second,
+			opCounter:  opSuccess,
+			wantOk:     false,
+			wantErr:    nil,
+			wantCalls:  0,
+		},
+		{
+			name: "parentCanceled",
+			ctx: func() context.Context {
+				parent, cancel := context.WithCancel(context.Background())
+				cancel()
+				return parent
+			}(),
+			maxElapsed: time.Second,
+			opCounter:  opSuccess,
+			wantOk:     false,
+			wantErr:    context.Canceled,
+			wantCalls:  0,
+		},
+		{
+			name: "parentDeadline",
+			ctx: func() context.Context {
+				ctx, _ := context.WithDeadline(context.Background(), now.Add(-time.Millisecond)) //nolint lostcancel
+				return ctx
+			}(),
+			maxElapsed: time.Second,
+			opCounter:  opSuccess,
+			wantOk:     false,
+			wantErr:    context.DeadlineExceeded,
+			wantCalls:  0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			count := 0
+			op := func() error { count++; return tc.opCounter(count) }
+			ok, err := RetryFor(tc.ctx, cfg, tc.maxElapsed, op)
+
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tc.wantOk, ok)
+			require.Equal(t, tc.wantCalls, count)
+		})
+	}
+}
+
+func TestRetryOnTable(t *testing.T) {
+	errA := errors.New("A")
+	errB := errors.New("B")
+	tcs := []struct {
+		name      string
+		retryOn   []error
+		opErrs    []error
+		wantErr   error
+		wantCalls int
+	}{
+		{"retry only A then success", []error{errA}, []error{errA, errA}, nil, 3},
+		{"retry only A abort on B", []error{errA}, []error{errA, errB}, errB, 2},
+		{"default retry all errors", nil, []error{errB, errB, errB}, nil, 4},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			req := require.New(t)
+			calls := 0
+			fn := func() error {
+				if calls < len(tc.opErrs) {
+					err := tc.opErrs[calls]
+					calls++
+					return err
+				}
+				calls++
+				return nil
+			}
+			cfg := Config{
+				InitialInterval: time.Nanosecond,
+				MaxInterval:     time.Nanosecond,
+				Multiplier:      1,
+				JitterFactor:    0,
+				RetryOn:         tc.retryOn,
+			}
+			err := RetryErr(context.Background(), cfg, fn)
+			if tc.wantErr != nil {
+				req.ErrorIs(err, tc.wantErr)
+			} else {
+				req.NoError(err)
+			}
+			req.Equal(tc.wantCalls, calls)
+		})
+	}
+}
+
+func TestAcceptableTable(t *testing.T) {
+	require := require.New(t)
+	errA := errors.New("A")
+	errB := errors.New("B")
+	errC := errors.New("C")
+
+	cfg := Config{
+		InitialInterval: time.Nanosecond,
+		MaxInterval:     time.Nanosecond,
+		Multiplier:      1,
+		JitterFactor:    0,
+		Acceptable:      []error{errC},
+	}
+
+	counter := 0
+	err := RetryErr(context.Background(), cfg, func() error {
+		counter++
+		switch counter {
+		case 1:
+			return errA
+		case 2:
+			return errB
+		default:
+			return errC
+		}
+	})
+	require.NoError(err)
+	require.Equal(3, counter)
 }

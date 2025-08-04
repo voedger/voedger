@@ -12,6 +12,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"time"
 )
 
@@ -60,51 +61,62 @@ func (r *Retrier) NextDelay() time.Duration {
 	return delay
 }
 
-// Run retries operation until success or context cancellation.
-func (r *Retrier) Run(ctx context.Context, operation func() error) error {
+// Run executes fn until it succeeds, matches Acceptable errors, or context is done/other error.
+func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 	attempt := 0
+
 	for ctx.Err() == nil {
-		if err := operation(); err == nil {
+		err := fn()
+
+		// success on nil
+		if err == nil {
 			return nil
 		}
-		attempt++
-		// compute delay
-		d := r.NextDelay()
-		// callback before sleep
-		if r.cfg.OnRetry != nil {
-			r.cfg.OnRetry(attempt, d)
+
+		// treat specified Acceptable errors as success
+		for _, ae := range r.cfg.Acceptable {
+			if errors.Is(err, ae) {
+				return nil
+			}
 		}
-		// wait before next attempt
+
+		// decide whether to retry
+		retry := false
+		if len(r.cfg.RetryOn) > 0 {
+			for _, re := range r.cfg.RetryOn {
+				if errors.Is(err, re) {
+					retry = true
+					break
+				}
+			}
+		} else {
+			// default: retry all errors except context
+			retry = true
+		}
+
+		if !retry {
+			// abort immediately with this error
+			return err
+		}
+
+		// prepare backoff
+		attempt++
+
+		delay := r.NextDelay()
+		// OnRetry callback
+		if r.cfg.OnRetry != nil {
+			r.cfg.OnRetry(attempt, delay)
+		}
+
+		// wait for delay or context done
 		select {
+		case <-time.After(delay):
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(d):
 		}
+
 	}
 	return ctx.Err()
-}
-
-// Retry executes fn with retry logic and returns its result or an error.
-func Retry[T any](ctx context.Context, cfg Config, op func() (T, error)) (T, error) {
-	r, err := New(cfg)
-	var zero T
-	if err != nil {
-		return zero, err
-	}
-	var result T
-	err = r.Run(ctx, func() error {
-		var fnErr error
-		result, fnErr = op()
-		return fnErr
-	})
-	return result, err
-}
-
-func RetryErr(ctx context.Context, cfg Config, op func() error) error {
-	_, err := Retry(ctx, cfg, func() (any, error) {
-		return nil, op()
-	})
-	return err
 }
 
 // secureFloat64 returns a cryptographically secure random float64 in the range [0, 1).

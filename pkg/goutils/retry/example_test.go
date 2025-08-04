@@ -66,3 +66,44 @@ func ExampleRetryErr() {
 	// Error: <nil>
 	// Attempts: 3
 }
+
+func ExampleRetryFor() {
+	// 1) Configure a fast backoff for demonstration:
+	cfg := retrier.Config{
+		InitialInterval: 100 * time.Millisecond,
+		MaxInterval:     300 * time.Millisecond,
+		Multiplier:      2.0,
+		JitterFactor:    0.0,
+		ResetAfter:      0, // no reset
+	}
+
+	// 2) Create a context with a deadline of 1 second
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	// 3) Simulate an operation that fails twice before succeeding
+	attempts := 0
+	ok, err := retrier.RetryFor(ctx, cfg, 800*time.Millisecond, func() error {
+		attempts++
+		if attempts < 3 {
+			fmt.Printf("Attempt %d: temporary error\n", attempts)
+			return errors.New("temporary")
+		}
+		fmt.Printf("Attempt %d: success\n", attempts)
+		return nil
+	})
+
+	if err != nil {
+		fmt.Printf("final error: %v\n", err)
+	} else if !ok {
+		fmt.Println("did not succeed within timeout")
+	} else {
+		fmt.Printf("succeeded after %d attempts\n", attempts)
+	}
+
+	// Output:
+	// Attempt 1: temporary error
+	// Attempt 2: temporary error
+	// Attempt 3: success
+	// succeeded after 3 attempts
+}
