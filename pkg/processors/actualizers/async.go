@@ -114,6 +114,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 	a.readCtx.cancelWithError(e)
 	a.conf.Broker.WatchChannel(a.readCtx.ctx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
 }
+qs u
 
 func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 	start := time.Now()
