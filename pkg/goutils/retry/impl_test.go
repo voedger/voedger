@@ -113,7 +113,7 @@ func TestInvalidConfig(t *testing.T) {
 			ctx := context.Background()
 			result, err := Retry(ctx, tc.cfg, fn)
 			require.ErrorIs(err, ErrInvalidConfig)
-			require.Equal("", result)
+			require.Empty(result)
 		})
 	}
 }
@@ -138,7 +138,7 @@ func TestContextCancellation(t *testing.T) {
 		result, err := Retry(ctx, cfg, fn)
 
 		require.ErrorIs(err, context.Canceled)
-		require.Equal("", result)
+		require.Empty(result)
 	})
 
 	t.Run("during retry", func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestContextCancellation(t *testing.T) {
 		result, err := Retry(ctx, cfg, fn)
 
 		require.ErrorIs(err, context.Canceled)
-		require.Equal("", result)
+		require.Empty(result)
 	})
 
 	t.Run("cancel in operation", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestContextCancellation(t *testing.T) {
 		result, err := Retry(ctx, cfg, fn)
 
 		require.ErrorIs(err, context.Canceled)
-		require.Equal("", result)
+		require.Empty(result)
 	})
 }
 
@@ -204,7 +204,7 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 	require.NoError(err)
 	require.Equal("success", result)
 	require.Equal(6, attempts)
-	require.Equal(5, len(retryDelays))
+	require.Len(retryDelays, 5)
 
 	// Verify exponential backoff behavior
 	// Expected delays: ~100ms, ~200ms, ~400ms, ~800ms, ~1000ms (capped)
@@ -266,7 +266,7 @@ func TestResetAfter(t *testing.T) {
 	require.NoError(err)
 	require.Equal("success", result)
 	require.Equal(6, attempts)
-	require.Equal(5, len(retryDelays))
+	require.Len(retryDelays, 5)
 
 	// Verify that reset behavior is working
 	// The key insight is that the reset happens when the time since last reset exceeds ResetAfter
@@ -347,8 +347,8 @@ func TestMaxIntervalCapping(t *testing.T) {
 	result, err := Retry(context.Background(), cfg, fn)
 	require.NoError(err)
 	require.Equal("success", result)
-	require.Equal(6, attempts)
-	require.Equal(5, len(retryDelays))
+	require.Equal(attempts, 6)
+	require.Len(retryDelays, 5)
 
 	for _, d := range retryDelays {
 		require.LessOrEqual(d, cfg.MaxInterval)
