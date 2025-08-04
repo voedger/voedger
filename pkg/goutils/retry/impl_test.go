@@ -299,9 +299,11 @@ func TestOnRetry(t *testing.T) {
 		Multiplier:      2.0,
 		JitterFactor:    0.0,
 	}
+	testErr := errors.New("temporary error")
 
 	calls := 0
-	cfg.OnRetry = func(attempt int, delay time.Duration) {
+	cfg.OnRetry = func(attempt int, delay time.Duration, err error) {
+		require.Equal(err, testErr)
 		calls++
 	}
 
@@ -309,7 +311,7 @@ func TestOnRetry(t *testing.T) {
 	fn := func() (string, error) {
 		attempts++
 		if attempts < 3 {
-			return "", errors.New("temporary error")
+			return "", testErr
 		}
 		return "success", nil
 	}
