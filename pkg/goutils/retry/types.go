@@ -14,7 +14,7 @@ import "time"
 type Config struct {
 	// Backoff settings
 	InitialInterval time.Duration
-	MaxInterval     time.Duration
+	MaxInterval     time.Duration // 0 only allowed if Multiplier == 1
 	Multiplier      float64
 	JitterFactor    float64 // between 0 and 1
 	ResetAfter      time.Duration
@@ -22,7 +22,7 @@ type Config struct {
 	// OnRetry is called before each retry with attempt number and next delay.
 	OnRetry func(attempt int, delay time.Duration)
 
-	// errors that should trigger a retry. 
+	// errors that should trigger a retry.
 	// if empty, all errors (except context cancellation) are retried.
 	// not empty, abort on any other error
 	RetryOn []error
