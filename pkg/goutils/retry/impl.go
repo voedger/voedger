@@ -25,7 +25,7 @@ func NewDefaultConfig() Config {
 
 // New creates a Retrier with provided Config, validating parameters.
 func New(cfg Config) (*Retrier, error) {
-	if cfg.InitialInterval <= 0 || cfg.MaxInterval <= 0 ||
+	if cfg.InitialInterval <= 0 || cfg.MaxInterval < 0 || (cfg.MaxInterval == 0 && cfg.Multiplier != 1) ||
 		cfg.Multiplier < 1 || cfg.JitterFactor < 0 || cfg.JitterFactor > 1 ||
 		cfg.ResetAfter < 0 {
 		return nil, ErrInvalidConfig
@@ -51,7 +51,10 @@ func (r *Retrier) NextDelay() time.Duration {
 	base := r.currentInterval
 	// prepare next interval for future
 
-	next := min(time.Duration(float64(base)*r.cfg.Multiplier), r.cfg.MaxInterval)
+	next := time.Duration(float64(base) * r.cfg.Multiplier)
+	if r.cfg.MaxInterval > 0 && next > r.cfg.MaxInterval {
+		next = r.cfg.MaxInterval
+	}
 	r.currentInterval = next
 
 	// apply FullJitter: random offset around base

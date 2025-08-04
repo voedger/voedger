@@ -57,7 +57,7 @@ func TestInvalidConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "zero max interval",
+			name: "zero max interval when Multiplier != 1",
 			cfg: Config{
 				InitialInterval: 100 * time.Millisecond,
 				MaxInterval:     0,
