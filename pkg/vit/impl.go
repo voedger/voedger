@@ -482,6 +482,15 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 	return blobReader
 }
 
+func (vit *VIT) GET(relativeURL string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+	vit.T.Helper()
+	opts = append(opts, coreutils.WithDefaultMethod(http.MethodGet))
+	url := vit.URLStr() + "/" + relativeURL
+	res, err := vit.httpClient.Req(url, "", opts...)
+	require.NoError(vit.T, err)
+	return res
+}
+
 func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))

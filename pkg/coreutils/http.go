@@ -404,7 +404,11 @@ reqLoop:
 		}
 		actualError := ""
 		if strings.Contains(urlStr, "api/v2") {
-			actualError = respMap["message"].(string)
+			if messageIntf, ok := respMap["message"]; ok {
+				actualError = messageIntf.(string)
+			} else {
+				actualError = respMap["error"].(map[string]interface{})["message"].(string)
+			}
 		} else {
 			actualError = respMap["sys.Error"].(map[string]interface{})["Message"].(string)
 		}
