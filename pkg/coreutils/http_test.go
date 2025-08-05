@@ -85,7 +85,8 @@ func TestHTTP(t *testing.T) {
 				handler = func(w http.ResponseWriter, r *http.Request) {
 					body, err := io.ReadAll(r.Body)
 					require.NoError(err)
-					w.Write([]byte("hello, " + string(body)))
+					_, err = w.Write([]byte("hello, " + string(body)))
+					require.NoError(err)
 				}
 			},
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
@@ -108,7 +109,8 @@ func TestHTTP(t *testing.T) {
 					cookie, err := r.Cookie("cookieKey")
 					require.NoError(err)
 					require.Equal("cookieValue", cookie.Value)
-					w.Write([]byte("ok"))
+					_, err = w.Write([]byte("ok"))
+					require.NoError(err)
 				}
 			},
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
@@ -122,7 +124,8 @@ func TestHTTP(t *testing.T) {
 			func() {
 				handler = func(w http.ResponseWriter, r *http.Request) {
 					require.Equal("PATCH", r.Method)
-					w.Write([]byte("patched"))
+					_, err := w.Write([]byte("patched"))
+					require.NoError(err)
 				}
 			},
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
@@ -136,7 +139,8 @@ func TestHTTP(t *testing.T) {
 			func() {
 				handler = func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusTeapot)
-					w.Write([]byte("i am a teapot"))
+					_, err := w.Write([]byte("i am a teapot"))
+					require.NoError(err)
 				}
 			},
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
@@ -151,7 +155,8 @@ func TestHTTP(t *testing.T) {
 			func() {
 				handler = func(w http.ResponseWriter, r *http.Request) {
 					require.Equal("/foo/bar", r.URL.Path)
-					w.Write([]byte("relurl"))
+					_, err := w.Write([]byte("relurl"))
+					require.NoError(err)
 				}
 			},
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
@@ -164,7 +169,8 @@ func TestHTTP(t *testing.T) {
 			[]ReqOptFunc{WithDiscardResponse()},
 			func() {
 				handler = func(w http.ResponseWriter, _ *http.Request) {
-					w.Write([]byte("should be discarded"))
+					_, err := w.Write([]byte("should be discarded"))
+					require.NoError(err)
 				}
 			},
 			func(t *testing.T, resp *HTTPResponse, req *http.Request) {
@@ -204,8 +210,8 @@ func TestHTTPReqWithOptions(t *testing.T) {
 	}
 	ln, err := net.Listen("tcp", ServerAddress(0))
 	require.NoError(err)
-	go ts.Serve(ln)
-	defer ts.Shutdown(context.Background())
+	go ts.Serve(ln) // nolint errcheck
+	defer func() { require.NoError(ts.Shutdown(context.Background())) }()
 	url := "http://" + ln.Addr().String()
 
 	httpClient, cleanup := NewIHTTPClient()
@@ -262,7 +268,8 @@ func TestHTTPReqWithOptions(t *testing.T) {
 				conn.Close()
 				return
 			}
-			w.Write([]byte("retried"))
+			_, err := w.Write([]byte("retried"))
+			require.NoError(err)
 		}
 		resp, err := httpClient.Req(url, "body", WithRetryOnAnyError(time.Second, 10*time.Millisecond))
 		require.NoError(err)
@@ -273,7 +280,8 @@ func TestHTTPReqWithOptions(t *testing.T) {
 	t.Run("WithResponseHandler is called", func(t *testing.T) {
 		var handlerCalled bool
 		handler = func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("ok"))
+			_, err := w.Write([]byte("ok"))
+			require.NoError(err)
 		}
 		_, _ = httpClient.Req(url, "body", WithResponseHandler(func(resp *http.Response) { handlerCalled = true }))
 		require.True(handlerCalled)
@@ -295,7 +303,8 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		var handlerCalled bool
 		handler = func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusTeapot)
-			w.Write([]byte("unexpected"))
+			_, err := w.Write([]byte("unexpected"))
+			require.NoError(err)
 			handlerCalled = true
 		}
 		_, _ = httpClient.Req(url, "body", WithLongPolling())
@@ -316,7 +325,8 @@ func TestHTTPReqWithOptions(t *testing.T) {
 	t.Run("WithExpectedCode and error message matching", func(t *testing.T) {
 		handler = func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"sys.Error":{"HTTPStatus":400,"Message":"foo bar error"}}`))
+			_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":400,"Message":"foo bar error"}}`))
+			require.NoError(err)
 		}
 		_, err := httpClient.Req(url, "body", WithExpectedCode(http.StatusBadRequest, "foo", "bar"))
 		require.NoError(err)
@@ -326,7 +336,8 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		var count int32
 		handler = func(w http.ResponseWriter, _ *http.Request) {
 			atomic.AddInt32(&count, 1)
-			w.Write([]byte("ok"))
+			_, err := w.Write([]byte("ok"))
+			require.NoError(err)
 		}
 		var wg sync.WaitGroup
 		for i := 0; i < 10; i++ {

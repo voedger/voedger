@@ -86,6 +86,7 @@ func TestClarifyJSONNumberErrors(t *testing.T) {
 		require.Nil(actual)
 	}
 
+	// nolint errcheck
 	require.Panics(func() {
 		ClarifyJSONNumber(json.Number("1"), appdef.DataKind_string)
 	})

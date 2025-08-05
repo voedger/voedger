@@ -238,7 +238,8 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 
 	t.Run("respond", func(t *testing.T) {
 		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			responder.Respond(ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, nil)
+			err := responder.Respond(ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, nil)
+			require.NoError(err)
 			require.Panics(func() {
 				responder.InitResponse(http.StatusOK)
 			})

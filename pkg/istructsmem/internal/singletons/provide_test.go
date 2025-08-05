@@ -312,7 +312,8 @@ func Test_Singletons_Errors(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
-		versions.Put(vers.SysSingletonsVersion, latestVersion)
+		err = versions.Put(vers.SysSingletonsVersion, latestVersion)
+		require.NoError(err)
 
 		t.Run("crack storage by put invalid QName string into Singletons system view", func(t *testing.T) {
 			err = storage.Put(

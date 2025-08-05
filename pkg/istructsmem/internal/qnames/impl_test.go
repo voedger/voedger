@@ -135,10 +135,11 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, latestVersion+1)
+		err := versions.Put(vers.SysQNamesVersion, latestVersion+1)
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
@@ -151,12 +152,14 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, latestVersion)
+		err := versions.Put(vers.SysQNamesVersion, latestVersion)
+		require.NoError(err)
 		const badName = "-test.error.qname-"
-		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(istructs.QNameID(512)))
+		err = storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(istructs.QNameID(512)))
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, appdef.ErrConvertError)
 		require.ErrorContains(err, badName)
 	})
@@ -170,11 +173,13 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, latestVersion)
-		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(istructs.NullQNameID))
+		err := versions.Put(vers.SysQNamesVersion, latestVersion)
+		require.NoError(err)
+		err = storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(istructs.NullQNameID))
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.NoError(err)
 	})
 
@@ -187,11 +192,13 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysQNamesVersion, latestVersion)
-		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(istructs.QNameIDForError))
+		err := versions.Put(vers.SysQNamesVersion, latestVersion)
+		require.NoError(err)
+		err = storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(istructs.QNameIDForError))
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, ErrWrongQNameID)
 		require.ErrorContains(err, fmt.Sprintf("unexpected ID (%v)", istructs.QNameIDForError))
 	})

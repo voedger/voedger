@@ -77,6 +77,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		}()
 		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
+		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num partitions changed: app %[1]s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumParts, otherApps[0].AppDeploymentDescriptor.NumParts-1), func() {
 			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
@@ -93,6 +94,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 			otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces--
 		}()
 
+		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num application workspaces changed: app %[1]s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorkspaces=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces-1), func() {
 			blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))

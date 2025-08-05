@@ -153,7 +153,8 @@ func TestRenameQName_Fails(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
-		versions.Put(vers.SysQNamesVersion, latestVersion+1) // future version
+		err = versions.Put(vers.SysQNamesVersion, latestVersion+1) // future version
+		require.NoError(err)
 
 		storage.ScheduleGetError(testError, utils.ToBytes(consts.SysView_Versions), nil)
 
@@ -167,7 +168,8 @@ func TestRenameQName_Fails(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
-		versions.Put(vers.SysQNamesVersion, latestVersion+1) // future version
+		err = versions.Put(vers.SysQNamesVersion, latestVersion+1) // future version
+		require.NoError(err)
 
 		err = Rename(storage, oldQName, newQName)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
