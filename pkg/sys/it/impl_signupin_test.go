@@ -290,7 +290,7 @@ func TestGlobalRoles(t *testing.T) {
 	require.Empty(payload1.GlobalRoles)
 
 	// view is not available for the user without global roles
-	vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
+	vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
 		coreutils.WithAuthorizeBy(prn.Token), coreutils.Expect403())
 
 	// update global roles not allowed by default
@@ -316,7 +316,7 @@ func TestGlobalRoles(t *testing.T) {
 	require.True(slices.Contains(payload2.GlobalRoles, appdef.NewQName("sys", "role2")))
 
 	// now user can work with the view
-	vit.IFederation.Query(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
+	vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
 		coreutils.WithAuthorizeBy(prn2.Token))
 
 }
