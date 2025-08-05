@@ -311,7 +311,7 @@ func TestCUDsToMap(t *testing.T) {
 				appdef.SystemField_QName: testQName,
 			},
 		}
-		event := &mockDbEvent{cuds: []istructs.ICUDRow{rec}}
+		event := &mockDBEvent{cuds: []istructs.ICUDRow{rec}}
 		got := CUDsToMap(event, appDef)
 		require.Len(got, 1)
 		cud := got[0]
@@ -325,7 +325,7 @@ func TestCUDsToMap(t *testing.T) {
 	t.Run("multiple CUDs", func(t *testing.T) {
 		rec1 := &TestObject{Name: testQName, ID_: 1, Data: map[string]interface{}{"int32": int32(1)}}
 		rec2 := &TestObject{Name: testQName, ID_: 2, Data: map[string]interface{}{"int32": int32(2)}}
-		event := &mockDbEvent{cuds: []istructs.ICUDRow{rec1, rec2}}
+		event := &mockDBEvent{cuds: []istructs.ICUDRow{rec1, rec2}}
 		got := CUDsToMap(event, appDef)
 		require.Len(got, 2)
 	})
@@ -333,7 +333,7 @@ func TestCUDsToMap(t *testing.T) {
 	t.Run("filter", func(t *testing.T) {
 		rec1 := &TestObject{Name: testQName, ID_: 1, Data: map[string]interface{}{"int32": int32(1)}}
 		rec2 := &TestObject{Name: testQNameSimple, ID_: 2, Data: map[string]interface{}{"int32": int32(2)}}
-		event := &mockDbEvent{cuds: []istructs.ICUDRow{rec1, rec2}}
+		event := &mockDBEvent{cuds: []istructs.ICUDRow{rec1, rec2}}
 		got := CUDsToMap(event, appDef, WithFilter(func(qn appdef.QName) bool { return qn == testQName }))
 		require.Len(got, 1)
 		require.Equal(testQName.String(), got[0]["sys.QName"])
@@ -344,7 +344,7 @@ func TestCUDsToMap(t *testing.T) {
 			"int32":                  int32(42),
 			"string":                 "foo",
 			appdef.SystemField_QName: testQName}}
-		event := &mockDbEvent{cuds: []istructs.ICUDRow{rec}}
+		event := &mockDBEvent{cuds: []istructs.ICUDRow{rec}}
 		got := CUDsToMap(event, appDef, WithMapperOpts(Filter(func(name string, kind appdef.DataKind) bool { return name == "string" })))
 		fields := got[0]["fields"].(map[string]interface{})
 		require.Equal("foo", fields["string"])
@@ -352,12 +352,12 @@ func TestCUDsToMap(t *testing.T) {
 	})
 }
 
-type mockDbEvent struct {
+type mockDBEvent struct {
 	istructs.IDbEvent
 	cuds []istructs.ICUDRow
 }
 
-func (e *mockDbEvent) CUDs(cb func(istructs.ICUDRow) bool) {
+func (e *mockDBEvent) CUDs(cb func(istructs.ICUDRow) bool) {
 	for _, c := range e.cuds {
 		if !cb(c) {
 			break

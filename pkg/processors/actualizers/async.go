@@ -340,7 +340,7 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 			}
 		}
 		if len(*batch) > 0 {
-			//nolint: suppress error if at least one event was read
+			//nolint suppress error if at least one event was read
 			return nil
 		}
 		return err

@@ -603,7 +603,7 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 		wsb.AddRole(iauthnz.QNameRoleEveryone)
 		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, func(args istructs.ExecCommandArgs) (err error) {
-			require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
+			require.Equal("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
 			close(ch)
 			return
 		}))

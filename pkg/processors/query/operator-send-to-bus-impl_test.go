@@ -47,7 +47,7 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 		result = append(result, elem.([]interface{})[0].(string))
 	}
 	require.NoError(*respErr)
-	require.EqualValues([]string{"hello world", "hello world"}, result)
+	require.Equal([]string{"hello world", "hello world"}, result)
 
 }
 

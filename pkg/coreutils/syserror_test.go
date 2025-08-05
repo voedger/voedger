@@ -28,7 +28,7 @@ func TestBasicUsage_SysError(t *testing.T) {
 		require.Empty(sysError.Data)
 		require.Empty(sysError.QName)
 		require.Equal("test", sysError.Error())
-		require.Equal(`{"sys.Error":{"HTTPStatus":500,"Message":"test"}}`, sysError.ToJSON_APIV1())
+		require.JSONEq(`{"sys.Error":{"HTTPStatus":500,"Message":"test"}}`, sysError.ToJSON_APIV1())
 	})
 
 	t.Run("nil on nil", func(t *testing.T) {

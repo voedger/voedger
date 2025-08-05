@@ -2415,7 +2415,7 @@ func TestOpenAPI(t *testing.T) {
 		AppName:       appdef.NewAppQName("voedger", "testapp"),
 	}
 
-	createOpenApi := func(wsName, role appdef.QName) string {
+	createOpenAPI := func(wsName, role appdef.QName) string {
 		writer := new(bytes.Buffer)
 		ws := appDef.Workspace(wsName)
 		require.NotNil(ws)
@@ -2430,14 +2430,14 @@ func TestOpenAPI(t *testing.T) {
 
 	currencyPath := "/apps/voedger/testapp/workspaces/{wsid}/docs/app1pkg.Currency"
 	initiateJoinWorkspacePath := "/apps/voedger/testapp/workspaces/{wsid}/commands/sys.InitiateJoinWorkspace"
-	json := createOpenApi(appdef.NewQName("app1pkg", "test_wsWS"), appdef.NewQName("app1pkg", "ApiRole"))
+	json := createOpenAPI(appdef.NewQName("app1pkg", "test_wsWS"), appdef.NewQName("app1pkg", "ApiRole"))
 	require.Contains(json, "\"components\": {")
 	require.Contains(json, "\"app1pkg.Currency\": {")
 	require.Contains(json, "\"paths\": {")
 	require.Contains(json, currencyPath)
 	require.NotContains(json, initiateJoinWorkspacePath)
 
-	json = createOpenApi(appdef.NewQName("sys", "Workspace"), appdef.NewQName("sys", "AuthenticatedUser"))
+	json = createOpenAPI(appdef.NewQName("sys", "Workspace"), appdef.NewQName("sys", "AuthenticatedUser"))
 	require.Contains(json, "\"components\": {")
 	require.Contains(json, initiateJoinWorkspacePath)
 	require.NotContains(json, currencyPath)

@@ -85,7 +85,7 @@ func TestDynoBufSchemes(t *testing.T) {
 	checkScheme := func(name appdef.QName, fields appdef.IWithFields, dynoScheme *dynobuffers.Scheme) {
 		require.NotNil(dynoScheme, "dynobuffer scheme for «%v» not found", name)
 
-		require.EqualValues(len(dynoScheme.FieldsMap), fields.UserFieldCount())
+		require.Equal(len(dynoScheme.FieldsMap), fields.UserFieldCount())
 
 		for _, f := range dynoScheme.Fields {
 			fld := fields.Field(f.Name)

@@ -58,23 +58,10 @@ linters:
     staticcheck:
       checks:
         - all
-        - '-SA1019'
-        - '-ST1003'
         - '-QF1008' # possibly dangerous: could remove embedded field ... from selector
     testifylint:
-      disable-all: true
-      enable:
-        - bool-compare
-        - compares
-        - empty
-        - error-is-as
-        - error-nil
-        - expected-actual
-        - len
-        - require-error
-        - suite-dont-use-pkg
-        - suite-extra-assert-call
-        - suite-thelper
+      disable:
+        - float-compare
     unparam:
       check-exported: true
     errcheck:
@@ -90,17 +77,19 @@ linters:
       - std-error-handling
     rules:
       - linters:
-          - gosec
-          - revive
-          - goconst
+        - gosec
+        - revive
+        - goconst
         path: _test.go
-      - linters:
-        - underscore
-        - underscores
-        path: (.+)\.go$
       - linters:
         - errcheck
         source: 'require\.Panics(?:WithValue)?'
+      - linters:
+        - testifylint
+        text: (do not use require in http handlers)|(must only be used in the goroutine running the test function)
+      - linters:
+        - staticcheck
+        text: should not use underscores
     paths:
       - third_party$
       - builtin$

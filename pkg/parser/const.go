@@ -25,12 +25,15 @@ const parserLookahead = 10
 const VSQLExt = ".vsql"
 const SQLExt = ".sql"
 
-const OP_SELECT = "SELECT"
-const OP_INSERT = "INSERT"
-const OP_UPDATE = "UPDATE"
-const OP_EXECUTE = "EXECUTE"
-const OP_ACTIVATE = "ACTIVATE"
-const OP_DEACTIVATE = "DEACTIVATE"
+// nolint ST003
+const (
+	OP_SELECT     = "SELECT"
+	OP_INSERT     = "INSERT"
+	OP_UPDATE     = "UPDATE"
+	OP_EXECUTE    = "EXECUTE"
+	OP_ACTIVATE   = "ACTIVATE"
+	OP_DEACTIVATE = "DEACTIVATE"
+)
 
 const identifierRegexp = `([a-zA-Z]\w{0,254})|("[a-zA-Z]\w{0,254}")`
 
