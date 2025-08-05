@@ -77,14 +77,10 @@ linters:
       - std-error-handling
     rules:
       - linters:
-          - gosec
-          - revive
-          - goconst
+        - gosec
+        - revive
+        - goconst
         path: _test.go
-      - linters:
-        - underscore
-        - underscores
-        path: (.+)\.go$
       - linters:
         - errcheck
         source: 'require\.Panics(?:WithValue)?'
