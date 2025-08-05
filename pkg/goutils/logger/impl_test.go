@@ -59,7 +59,7 @@ func Test_CheckRightPrefix(t *testing.T) {
 func Test_GetFuncName(t *testing.T) {
 	funcName, line := globalLogPrinter.getFuncName(2)
 	assert.Equal(t, "testing.tRunner", funcName)
-	assert.Positive(t, line, 0)
+	assert.Positive(t, line)
 }
 
 func Benchmark_FuncForPC(b *testing.B) {

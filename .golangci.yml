@@ -89,8 +89,11 @@ linters:
         - errcheck
         source: 'require\.Panics(?:WithValue)?'
       - linters:
-          - testifylint
+        - testifylint
         text: (do not use require in http handlers)|(must only be used in the goroutine running the test function)
+      - linters:
+        - staticcheck
+        text: should not use underscores
     paths:
       - third_party$
       - builtin$
