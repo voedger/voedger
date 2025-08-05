@@ -62,7 +62,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 	t.Run("query", func(t *testing.T) {
 		body := `{"args": {"Text": "world"},"elements": [{"fields": ["Res"]}]}`
 		resp := vit.PostWS(ws, "q.sys.Echo", body)
-		require.Equal(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, resp.Body)
+		require.JSONEq(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, resp.Body)
 		require.Equal("world", resp.SectionRow()[0])
 		require.Equal("world", resp.Sections[0].Elements[0][0][0][0])
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
@@ -164,7 +164,7 @@ func TestBasicUsage_POST(t *testing.T) {
 	bodyEcho := `{"args": {"Text": "world"},"elements": [{"fields": ["Res"]}]}`
 	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.air_table_plan","name":"test"}}]}`
 	httpResp := vit.Func("api/test1/app1/1/q.sys.Echo", bodyEcho) // HTTPResponse is returned
-	require.Equal(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, httpResp.Body)
+	require.JSONEq(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, httpResp.Body)
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 

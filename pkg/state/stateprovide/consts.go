@@ -9,6 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
+// nolint ST1003
 const (
 	S_GET       = 1
 	S_GET_BATCH = 2

@@ -1001,7 +1001,7 @@ func testAppStorage_QueryTTL(t *testing.T, storage IAppStorage, iTime timeu.ITim
 		seconds, exists, err := storage.QueryTTL(pKey, ccols)
 		require.NoError(err)
 		require.True(exists)
-		require.Greater(seconds, 0)
+		require.Positive(seconds)
 		require.LessOrEqual(seconds, ttl)
 
 		// Wait and check decreasing TTL
@@ -1009,7 +1009,7 @@ func testAppStorage_QueryTTL(t *testing.T, storage IAppStorage, iTime timeu.ITim
 		seconds, exists, err = storage.QueryTTL(pKey, ccols)
 		require.NoError(err)
 		require.True(exists)
-		require.Greater(seconds, 0)
+		require.Positive(seconds)
 		require.Less(seconds, ttl-1)
 
 		// Wait until expiration
@@ -1064,7 +1064,7 @@ func testAppStorage_QueryTTL(t *testing.T, storage IAppStorage, iTime timeu.ITim
 		seconds, exists, err := storage.QueryTTL(pKey, ccols)
 		require.NoError(err)
 		require.True(exists)
-		require.Greater(seconds, 0)
+		require.Positive(seconds)
 		require.LessOrEqual(seconds, initialTTL)
 
 		// Swap with new TTL

@@ -148,7 +148,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
 		body := testApp.post("/api/"+path, coreutils.ContentType_ApplicationJSON, testText, nil)
-		require.Equal(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
+		require.JSONEq(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
 	})
 
 	t.Run("call unknown app", func(t *testing.T) {
@@ -161,7 +161,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
 		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte("{\"sys.Error\":{\"HTTPStatus\":400,\"Message\":\"app is not deployed\"}}"), body)
+		require.JSONEq("{\"sys.Error\":{\"HTTPStatus\":400,\"Message\":\"app is not deployed\"}}", string(body))
 	})
 
 	t.Run("deploy the same app twice", func(t *testing.T) {

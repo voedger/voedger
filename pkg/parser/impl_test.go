@@ -277,7 +277,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	t.Run("Jobs", func(t *testing.T) {
 		job1 := appdef.Job(app.Type, appdef.NewQName("main", "TestJob1"))
-		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
+		require.Equal(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
 			for _, n := range proj.States().Names() {
@@ -298,7 +298,7 @@ func Test_BasicUsage(t *testing.T) {
 		})
 
 		job2 := appdef.Job(app.Type, appdef.NewQName("main", "TestJob2"))
-		require.EqualValues(`@every 2m30s`, job2.CronSchedule())
+		require.Equal(`@every 2m30s`, job2.CronSchedule())
 	})
 
 	cmd = appdef.Command(app.Type, appdef.NewQName("main", "NewOrder2"))
@@ -420,7 +420,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
 	ref1 := inner1.(appdef.IWithFields).RefField("ref1")
-	require.EqualValues([]appdef.QName{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
+	require.Equal([]appdef.QName{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
 func Test_CircularReferencesTables(t *testing.T) {
@@ -2432,11 +2432,11 @@ func Test_Grants(t *testing.T) {
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 			require.Equal("pkg.role", acl.Principal().QName().String())
 			if acl.Ops()[0] == appdef.OperationKind_Select {
-				require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Select}, acl.Ops())
-				require.EqualValues([]string{"sys.ID", "number", "name"}, acl.Filter().Fields())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, acl.Ops())
+				require.Equal([]string{"sys.ID", "number", "name"}, acl.Filter().Fields())
 			} else {
-				require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Update}, acl.Ops())
-				require.EqualValues([]string{"number", "name"}, acl.Filter().Fields())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Update}, acl.Ops())
+				require.Equal([]string{"number", "name"}, acl.Filter().Fields())
 			}
 		}
 	})
@@ -2463,8 +2463,8 @@ func Test_Grants(t *testing.T) {
 		for _, acl := range app.ACL() {
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 			require.Equal("pkg.role", acl.Principal().QName().String())
-			require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, acl.Ops())
-			require.EqualValues([]string{"number", "name"}, acl.Filter().Fields())
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, acl.Ops())
+			require.Equal([]string{"number", "name"}, acl.Filter().Fields())
 		}
 	})
 }
@@ -2498,7 +2498,7 @@ func Test_Grants_Inherit(t *testing.T) {
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_Types, acl.Filter().Kind())
-			require.EqualValues(
+			require.Equal(
 				[]appdef.TypeKind{appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_ODoc, appdef.TypeKind_WDoc,
 					appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_ORecord, appdef.TypeKind_WRecord},
 				acl.Filter().Types())

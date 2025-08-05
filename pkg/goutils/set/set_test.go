@@ -19,7 +19,7 @@ func TestEmpty(t *testing.T) {
 	require := require.New(t)
 	require.Zero(set.Empty[byte]().Len())
 	require.Empty(set.Empty[byte]().AsArray())
-	require.EqualValues(`[]`, set.Empty[byte]().String())
+	require.Equal(`[]`, set.Empty[byte]().String())
 	v, ok := set.Empty[byte]().First()
 	require.False(ok)
 	require.Zero(v)
@@ -92,7 +92,7 @@ func TestSet_All(t *testing.T) {
 	for i, v := range set.All() {
 		sum += i * int(v)
 	}
-	require.EqualValues(0*0+1*1+2*2+3*3+4*126+5*127+6*128+7*129+8*253+9*254+10*255, sum)
+	require.Equal(0*0+1*1+2*2+3*3+4*126+5*127+6*128+7*129+8*253+9*254+10*255, sum)
 
 	t.Run("should be breakable", func(t *testing.T) {
 		const cnt = 5
@@ -103,7 +103,7 @@ func TestSet_All(t *testing.T) {
 				break
 			}
 		}
-		require.EqualValues(0+1+2+3+126, sum)
+		require.Equal(0+1+2+3+126, sum)
 	})
 }
 
@@ -123,7 +123,7 @@ func TestSet_AsArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.set.AsArray()
-			require.EqualValues(tt.want, got, "SetFrom(%v).AsArray() = %v, want %v", tt.set, got, tt.want)
+			require.Equal(tt.want, got, "SetFrom(%v).AsArray() = %v, want %v", tt.set, got, tt.want)
 		})
 	}
 }
@@ -145,7 +145,7 @@ func TestSet_AsBytes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.set.AsBytes()
-			require.EqualValues(tt.want, got, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
+			require.Equal(tt.want, got, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
 		})
 	}
 }
@@ -159,7 +159,7 @@ func TestSet_Backward(t *testing.T) {
 	for v := range s.Backward() {
 		result = append(result, int(v))
 	}
-	require.EqualValues([]int{255, 254, 253, 129, 128, 127, 126, 3, 2, 1, 0}, result)
+	require.Equal([]int{255, 254, 253, 129, 128, 127, 126, 3, 2, 1, 0}, result)
 
 	t.Run("should be breakable", func(t *testing.T) {
 		s := set.From[uint8](0, 1, 2, 3, 129, 253, 254, 255)
@@ -170,7 +170,7 @@ func TestSet_Backward(t *testing.T) {
 				break
 			}
 		}
-		require.EqualValues([]int{255, 254, 253, 129, 3}, result)
+		require.Equal([]int{255, 254, 253, 129, 3}, result)
 	})
 }
 
@@ -183,13 +183,13 @@ func TestSet_Chunk(t *testing.T) {
 	for v := range s.Chunk(3) {
 		switch i {
 		case 0:
-			require.EqualValues(set.From(byte(0), 1, 2), v)
+			require.Equal(set.From(byte(0), 1, 2), v)
 		case 1:
-			require.EqualValues(set.From(byte(3), 126, 127), v)
+			require.Equal(set.From(byte(3), 126, 127), v)
 		case 2:
-			require.EqualValues(set.From(byte(128), 129, 253), v)
+			require.Equal(set.From(byte(128), 129, 253), v)
 		case 3:
-			require.EqualValues(set.From(byte(254), 255), v)
+			require.Equal(set.From(byte(254), 255), v)
 		default:
 			require.Fail("unexpected chunk", "chunk %d: %v", i, v)
 		}
@@ -200,7 +200,7 @@ func TestSet_Chunk(t *testing.T) {
 		i := 0
 		for v := range s.Chunk(3) {
 			i++
-			require.EqualValues(set.From(byte(0), 1, 2), v)
+			require.Equal(set.From(byte(0), 1, 2), v)
 			break
 		}
 		require.Equal(1, i)

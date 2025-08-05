@@ -9,7 +9,6 @@
 package logger
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -21,16 +20,16 @@ func Test_MsgFormatter(t *testing.T) {
 	var out string
 
 	out = globalLogPrinter.getFormattedMsg("", "sync_op.doSync", 120, "line1")
-	assert.True(t, strings.Contains(out, ": [sync_op.doSync:120]: line1"))
+	assert.Contains(t, out, ": [sync_op.doSync:120]: line1")
 
 	out = globalLogPrinter.getFormattedMsg("", "", 121, "line1", "line2")
-	assert.True(t, strings.Contains(out, ": [:121]: line1 line2"))
+	assert.Contains(t, out, ": [:121]: line1 line2")
 
 	out = globalLogPrinter.getFormattedMsg("m1:m2/m3", "sync_op.doSync", 126, "line1", "line2", "line3")
-	assert.True(t, strings.Contains(out, "m1:m2/m3: [sync_op.doSync:126]: line1 line2 line3"))
+	assert.Contains(t, out, "m1:m2/m3: [sync_op.doSync:126]: line1 line2 line3")
 
 	out = globalLogPrinter.getFormattedMsg("m1:m2/m3", "sync_op.doSync", 127, "line/1", "line/2", "line/3")
-	assert.True(t, strings.Contains(out, "m1:m2/m3: [sync_op.doSync:127]: line/1 line/2 line/3"))
+	assert.Contains(t, out, "m1:m2/m3: [sync_op.doSync:127]: line/1 line/2 line/3")
 }
 
 func Test_CheckRightPrefix(t *testing.T) {
@@ -60,7 +59,7 @@ func Test_CheckRightPrefix(t *testing.T) {
 func Test_GetFuncName(t *testing.T) {
 	funcName, line := globalLogPrinter.getFuncName(2)
 	assert.Equal(t, "testing.tRunner", funcName)
-	assert.Greater(t, line, 0)
+	assert.Positive(t, line, 0)
 }
 
 func Benchmark_FuncForPC(b *testing.B) {
