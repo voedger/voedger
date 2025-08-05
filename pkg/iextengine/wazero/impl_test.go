@@ -223,7 +223,7 @@ type expectedMetrics struct {
 
 func testMetrics(require *require.Require, metrics imetrics.IMetrics, expectedMetrcis expectedMetrics) {
 	checkedMetricsCount := 0
-	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+	err := metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		switch metric.Name() {
 		case metric_voedger_pee_invocations_total:
 			require.EqualValues(expectedMetrcis.invocationsTotal, metricValue)
@@ -242,6 +242,7 @@ func testMetrics(require *require.Require, metrics imetrics.IMetrics, expectedMe
 		}
 		return nil
 	})
+	require.NoError(err)
 	require.Equal(4, checkedMetricsCount)
 }
 
@@ -954,7 +955,9 @@ func appStructsFromSQL(packagePath string, appdefSQL string, prepareAppCfg appCf
 	if err != nil {
 		panic(err)
 	}
-	app.Records().Apply(wsEvent)
+	if err = app.Records().Apply(wsEvent); err != nil {
+		panic(err)
+	}
 
 	return app
 

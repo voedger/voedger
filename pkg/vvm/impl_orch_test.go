@@ -161,7 +161,7 @@ func TestWrongLaunchAndShutdownUsage(t *testing.T) {
 
 	t.Run("panic on Launch() if launched already", func(t *testing.T) {
 		vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
-		defer vvm.Shutdown()
+		defer func() { require.NoError(vvm.Shutdown()) }()
 		require.Panics(func() { vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration) })
 	})
 }

@@ -137,11 +137,12 @@ func TestBasicUsage_N10N(t *testing.T) {
 	n10nChan := vit.SubscribeForN10n(ws, QNameTestView)
 
 	// call test update to the view
-	vit.N10NUpdate(in10n.ProjectionKey{
+	err := vit.N10NUpdate(in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: appdef.NewQName(app1PkgName, "View"),
 		WS:         ws.WSID,
 	}, 13)
+	require.NoError(err)
 
 	offset := <-n10nChan
 	log.Println(offset)

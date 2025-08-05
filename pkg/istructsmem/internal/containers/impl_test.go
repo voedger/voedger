@@ -139,10 +139,11 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, latestVersion+1)
+		err := versions.Put(vers.SysContainersVersion, latestVersion+1)
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
@@ -155,12 +156,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, latestVersion)
+		err := versions.Put(vers.SysContainersVersion, latestVersion)
+		require.NoError(err)
 		const badName = "-test-error-name-"
-		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte(badName), utils.ToBytes(ContainerID(512)))
+		err = storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte(badName), utils.ToBytes(ContainerID(512)))
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, appdef.ErrInvalidError)
 	})
 
@@ -173,11 +176,13 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, latestVersion)
-		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("deleted"), utils.ToBytes(NullContainerID))
+		err := versions.Put(vers.SysContainersVersion, latestVersion)
+		require.NoError(err)
+		err = storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("deleted"), utils.ToBytes(NullContainerID))
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.NoError(err)
 	})
 
@@ -190,11 +195,13 @@ func TestContainersPrepareErrors(t *testing.T) {
 			panic(err)
 		}
 
-		versions.Put(vers.SysContainersVersion, latestVersion)
-		storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("test"), utils.ToBytes(ContainerID(1)))
+		err := versions.Put(vers.SysContainersVersion, latestVersion)
+		require.NoError(err)
+		err = storage.Put(utils.ToBytes(consts.SysView_Containers, ver01), []byte("test"), utils.ToBytes(ContainerID(1)))
+		require.NoError(err)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil)
+		err = names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, ErrWrongContainerID)
 	})
 

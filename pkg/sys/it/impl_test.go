@@ -399,7 +399,7 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	docID := resp.NewID()
 
 	checked := false
-	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+	err = as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
 			cud.SpecifiedValues(func(field appdef.IField, val interface{}) bool {
 				if field.Name() == "name" {
@@ -411,6 +411,7 @@ func TestNullability_SetEmptyString(t *testing.T) {
 		}
 		return nil
 	})
+	require.NoError(err)
 	require.True(checked)
 
 	body = fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"name":""}}]}`, docID)
@@ -419,7 +420,7 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	// string set to "" -> info about this is not stored in dynobuffer
 	// cud.ModifiedFields() calls dynobuffers.ModifiedFields() that iterates over fields that has values
 	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
-	as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+	err = as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
 			for iField, fv := range cud.SpecifiedValues {
 				switch iField.Name() {
@@ -433,6 +434,7 @@ func TestNullability_SetEmptyString(t *testing.T) {
 		}
 		return nil
 	})
+	require.NoError(err)
 }
 
 func TestNullability_SetEmptyObject(t *testing.T) {
@@ -452,7 +454,7 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	offsCreate := resp.CurrentWLogOffset
 	fields := map[string]interface{}{}
 	expectedNestedDocID := resp.NewIDs["1"]
-	as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+	err = as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		for cud := range event.CUDs {
 			cud.SpecifiedValues(func(f appdef.IField, val interface{}) bool {
 				fields[f.Name()] = val
@@ -461,6 +463,7 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 		}
 		return nil
 	})
+	require.NoError(err)
 	require.Len(fields, 7) // id_air_table_plan, form, sys.ID, sys,IsActive, sys.QName, sys.ParentID, sys.Container
 	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
 	require.EqualValues(15, fields["form"])

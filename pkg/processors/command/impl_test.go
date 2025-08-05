@@ -114,8 +114,9 @@ func TestBasicUsage(t *testing.T) {
 		require.Equal(projectionKey, projection)
 		check <- 1
 	})
-	app.n10nBroker.Subscribe(channelID, projectionKey)
-	defer app.n10nBroker.Unsubscribe(channelID, projectionKey)
+	err = app.n10nBroker.Subscribe(channelID, projectionKey)
+	require.NoError(err)
+	defer func() { require.NoError(app.n10nBroker.Unsubscribe(channelID, projectionKey)) }()
 
 	t.Run("basic usage", func(t *testing.T) {
 		// command processor works through ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()

@@ -342,7 +342,8 @@ func (require *ParserAssertions) NoBuildError(sql string) {
 	schema, err := require.AppSchema(sql)
 	require.NoError(err)
 	builder := builder.New()
-	BuildAppDefs(schema, builder)
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
 }
 
 func (require *ParserAssertions) Build(sql string) appdef.IAppDef {
