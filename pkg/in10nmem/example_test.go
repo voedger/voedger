@@ -72,6 +72,9 @@ func Example() {
 
 	// Subscribe on exist channel numSubscriptions must be equal 1
 	err = broker.Subscribe(channel, projectionKeyExample)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Before Subscribe(), numSubscriptions: ", broker.MetricNumSubcriptions())
 
