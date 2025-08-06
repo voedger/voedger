@@ -12,6 +12,8 @@ linters:
     - gocritic
     - gosec
     - govet
+    - copyloopvar
+    - durationcheck
     - mirror
     - misspell
     - nilnil
