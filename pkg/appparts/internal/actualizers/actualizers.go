@@ -97,10 +97,14 @@ func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName,
 		run(ctx, pa.app, pa.part, name)
 	}()
 
-	select {
-	case <-done: // wait until actualizer is started
-	case <-vvmCtx.Done():
-	}
+	// wrong to watch vvmCtx. Could lead to unpredicted behaviour e.g. in TestCorrectIDsIssueAfterRecovery. Case:
+	// VVM1 started
+	// came here but the actualizer is not started yet
+	// VVM1.Shutdown
+	// actualziers of VVM1 started because goroutines are kept
+	// VVM2.Launch
+	// actualizers of VVM2 started and conflicting with actualizers of VVM1
+	<-done // wait until actualizer is started
 
 	wg.Done()
 }
@@ -127,20 +131,13 @@ func (pa *PartitionActualizers) startNews(vvmCtx context.Context, appDef appdef.
 		startWG.Wait()
 		close(done)
 	}()
-
-	select {
-	case <-done:
-	case <-vvmCtx.Done():
-	}
+	<-done
 }
 
 // async stop actualizer
 func (pa *PartitionActualizers) stop(vvmCtx context.Context, rt *runtime, wg *sync.WaitGroup) {
 	rt.cancel()
-	select {
-	case <-rt.done: // wait until actualizer is finished
-	case <-vvmCtx.Done():
-	}
+	<-rt.done // wait until actualizer is finished
 	wg.Done()
 }
 
@@ -167,10 +164,7 @@ func (pa *PartitionActualizers) stopOlds(vvmCtx context.Context, appDef appdef.I
 		close(done)
 	}()
 
-	select {
-	case <-done:
-	case <-vvmCtx.Done():
-	}
+	<-done
 }
 
 type runtime struct {
