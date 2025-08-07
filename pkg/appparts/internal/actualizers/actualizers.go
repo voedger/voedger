@@ -37,7 +37,7 @@ func New(app appdef.AppQName, part istructs.PartitionID) *PartitionActualizers {
 // Deploys partition actualizers: stops actualizers for removed projectors and
 // starts actualizers for new projectors using the specified run function.
 func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	pa.stopOlds(vvmCtx, appDef)
+	pa.stopOlds(appDef)
 	pa.startNews(vvmCtx, appDef, run)
 }
 
@@ -97,10 +97,8 @@ func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName,
 		run(ctx, pa.app, pa.part, name)
 	}()
 
-	select {
-	case <-done: // wait until actualizer is started
-	case <-vvmCtx.Done():
-	}
+	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
+	<-done // wait until actualizer is started
 
 	wg.Done()
 }
@@ -128,24 +126,22 @@ func (pa *PartitionActualizers) startNews(vvmCtx context.Context, appDef appdef.
 		close(done)
 	}()
 
-	select {
-	case <-done:
-	case <-vvmCtx.Done():
-	}
+	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
+	<-done
 }
 
 // async stop actualizer
-func (pa *PartitionActualizers) stop(vvmCtx context.Context, rt *runtime, wg *sync.WaitGroup) {
+func (pa *PartitionActualizers) stop(rt *runtime, wg *sync.WaitGroup) {
 	rt.cancel()
-	select {
-	case <-rt.done: // wait until actualizer is finished
-	case <-vvmCtx.Done():
-	}
+
+	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
+	// wait until actualizer is finished
+	<-rt.done
 	wg.Done()
 }
 
 // async stop old actualizers
-func (pa *PartitionActualizers) stopOlds(vvmCtx context.Context, appDef appdef.IAppDef) {
+func (pa *PartitionActualizers) stopOlds(appDef appdef.IAppDef) {
 	olds := make([]*runtime, 0)
 	for name, rt := range pa.rt.Range {
 		name := name.(appdef.QName)
@@ -161,16 +157,14 @@ func (pa *PartitionActualizers) stopOlds(vvmCtx context.Context, appDef appdef.I
 		stopWG := sync.WaitGroup{}
 		for _, rt := range olds {
 			stopWG.Add(1)
-			go pa.stop(vvmCtx, rt, &stopWG)
+			go pa.stop(rt, &stopWG)
 		}
 		stopWG.Wait() // wait for all old actualizers to stop
 		close(done)
 	}()
 
-	select {
-	case <-done:
-	case <-vvmCtx.Done():
-	}
+	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
+	<-done
 }
 
 type runtime struct {
