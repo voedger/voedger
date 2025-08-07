@@ -85,8 +85,8 @@ func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 
 		// decide whether to retry
 		retry := false
-		if len(r.cfg.RetryOn) > 0 {
-			for _, re := range r.cfg.RetryOn {
+		if len(r.cfg.RetryOnlyOn) > 0 {
+			for _, re := range r.cfg.RetryOnlyOn {
 				if errors.Is(err, re) {
 					retry = true
 					break
