@@ -10,8 +10,6 @@ package retrier
 
 import (
 	"context"
-	"errors"
-	"time"
 )
 
 // Retry executes fn with retry logic and returns its result or an error.
@@ -35,20 +33,4 @@ func RetryErr(ctx context.Context, cfg Config, op func() error) error {
 		return nil, op()
 	})
 	return err
-}
-
-func RetryFor[T any](ctx context.Context, cfg Config, maxElapsed time.Duration, op func() (T, error)) (ok bool, res T, err error) {
-	dlCtx, cancel := context.WithDeadline(ctx, time.Now().Add(maxElapsed))
-	defer cancel()
-	res, err = Retry(dlCtx, cfg, op)
-	switch {
-	case errors.Is(err, context.DeadlineExceeded):
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return false, res, ctx.Err()
-		}
-		return false, res, nil
-	case errors.Is(err, context.Canceled):
-		return false, res, err
-	}
-	return true, res, err
 }

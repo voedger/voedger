@@ -22,10 +22,9 @@ type Config struct {
 	// OnRetry is called before each retry with attempt number and next delay.
 	OnRetry func(attempt int, delay time.Duration, err error)
 
-	// errors that should trigger a retry.
-	// if empty, all errors (except context cancellation) are retried.
-	// not empty, abort on any other error
-	RetryOn []error
+	// retry on any error from RetryOnlyOn, abort on any other error
+	// empty -> any error (except context cancellation) retried
+	RetryOnlyOn []error
 
 	// errors treated as success
 	Acceptable []error

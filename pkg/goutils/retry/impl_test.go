@@ -385,103 +385,6 @@ func makeFastConfig() Config {
 	}
 }
 
-func TestRetryFor(t *testing.T) {
-	cfg := makeFastConfig()
-	now := time.Now()
-
-	opSuccess := func(int) error { return nil }
-
-	tests := []struct {
-		name       string
-		ctx        context.Context
-		maxElapsed time.Duration
-		opCounter  func(callNum int) error
-		wantOk     bool
-		wantErr    error
-		wantCalls  int
-	}{
-		{
-			name:       "success",
-			ctx:        context.Background(),
-			maxElapsed: time.Second,
-			opCounter:  opSuccess,
-			wantOk:     true,
-			wantErr:    nil,
-			wantCalls:  1,
-		},
-		{
-			name:       "eventualSuccess",
-			ctx:        context.Background(),
-			maxElapsed: time.Second,
-			opCounter: func(callNum int) error {
-				if callNum <= 3 {
-					return errors.New("temporary failure")
-				}
-				return nil
-			},
-			wantOk:    true,
-			wantErr:   nil,
-			wantCalls: 4,
-		},
-		{
-			name:       "immediateDeadline",
-			ctx:        context.Background(),
-			maxElapsed: -time.Second,
-			opCounter:  opSuccess,
-			wantOk:     false,
-			wantErr:    nil,
-			wantCalls:  0,
-		},
-		{
-			name: "parentCanceled",
-			ctx: func() context.Context {
-				parent, cancel := context.WithCancel(context.Background())
-				cancel()
-				return parent
-			}(),
-			maxElapsed: time.Second,
-			opCounter:  opSuccess,
-			wantOk:     false,
-			wantErr:    context.Canceled,
-			wantCalls:  0,
-		},
-		{
-			name: "parentDeadline",
-			ctx: func() context.Context {
-				ctx, _ := context.WithDeadline(context.Background(), now.Add(-time.Millisecond)) //nolint lostcancel
-				return ctx
-			}(),
-			maxElapsed: time.Second,
-			opCounter:  opSuccess,
-			wantOk:     false,
-			wantErr:    context.DeadlineExceeded,
-			wantCalls:  0,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			count := 0
-			op := func() (int, error) { count++; return 42, tc.opCounter(count) }
-			ok, res, err := RetryFor(tc.ctx, cfg, tc.maxElapsed, op)
-
-			if tc.wantErr != nil {
-				require.ErrorIs(t, err, tc.wantErr)
-			} else {
-				require.NoError(t, err)
-				if tc.wantCalls == 0 {
-					require.False(t, ok)
-				} else {
-					require.True(t, ok)
-					require.Equal(t, 42, res)
-				}
-			}
-			require.Equal(t, tc.wantOk, ok)
-			require.Equal(t, tc.wantCalls, count)
-		})
-	}
-}
-
 func TestRetryOnTable(t *testing.T) {
 	errA := errors.New("A")
 	errB := errors.New("B")
@@ -514,7 +417,7 @@ func TestRetryOnTable(t *testing.T) {
 				MaxInterval:     time.Nanosecond,
 				Multiplier:      1,
 				JitterFactor:    0,
-				RetryOn:         tc.retryOn,
+				RetryOnlyOn:     tc.retryOn,
 			}
 			err := RetryErr(context.Background(), cfg, fn)
 			if tc.wantErr != nil {
