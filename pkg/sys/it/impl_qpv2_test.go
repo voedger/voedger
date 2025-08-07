@@ -207,7 +207,6 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		]}`, resp.Body)
 	})
 	t.Run("ACL test", func(t *testing.T) {
-		t.Skip()
 		newLoginName := vit.NextName()
 		newLogin := vit.SignUp(newLoginName, "1", istructs.AppQName_test1_app1)
 		newLoginPrn := vit.SignIn(newLogin)

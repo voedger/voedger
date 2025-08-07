@@ -316,7 +316,7 @@ func TestGlobalRoles(t *testing.T) {
 	require.True(slices.Contains(payload2.GlobalRoles, appdef.NewQName("sys", "role2")))
 
 	// now user can work with the view
-	vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
+	vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?keys=Year,Month,Day&where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
 		coreutils.WithAuthorizeBy(prn2.Token))
 
 }
