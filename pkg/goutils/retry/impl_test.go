@@ -17,11 +17,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDefaultConfig(t *testing.T) {
+func TestNewConfig(t *testing.T) {
 	require := require.New(t)
-	cfg := NewDefaultConfig()
-	require.Equal(0.5, cfg.JitterFactor)
-	require.Equal(2.0, cfg.Multiplier)
+	initialDelay := 100 * time.Millisecond
+	maxDelay := 5 * time.Second
+	t.Run("constant", func(t *testing.T) {
+		cfg := NewConfigConstantBackoff(initialDelay)
+		require.Equal(initialDelay, cfg.InitialDelay)
+		require.Zero(cfg.JitterFactor)
+		require.EqualValues(1, cfg.Multiplier)
+	})
+
+	t.Run("exponential", func(t *testing.T) {
+		cfg := NewConfigExponentialBackoff(initialDelay, maxDelay)
+		require.Equal(initialDelay, cfg.InitialDelay)
+		require.Equal(maxDelay, cfg.MaxDelay)
+		require.Equal(0.5, cfg.JitterFactor)
+		require.EqualValues(2, cfg.Multiplier)
+	})
 }
 
 func TestInvalidConfig(t *testing.T) {
@@ -32,74 +45,74 @@ func TestInvalidConfig(t *testing.T) {
 		{
 			name: "negative initial interval",
 			cfg: Config{
-				InitialInterval: -100 * time.Millisecond,
-				MaxInterval:     1 * time.Second,
-				Multiplier:      2.0,
-				JitterFactor:    0.5,
+				InitialDelay: -100 * time.Millisecond,
+				MaxDelay:     1 * time.Second,
+				Multiplier:   2.0,
+				JitterFactor: 0.5,
 			},
 		},
 		{
 			name: "zero initial interval",
 			cfg: Config{
-				InitialInterval: 0,
-				MaxInterval:     1 * time.Second,
-				Multiplier:      2.0,
-				JitterFactor:    0.5,
+				InitialDelay: 0,
+				MaxDelay:     1 * time.Second,
+				Multiplier:   2.0,
+				JitterFactor: 0.5,
 			},
 		},
 		{
 			name: "negative max interval",
 			cfg: Config{
-				InitialInterval: 100 * time.Millisecond,
-				MaxInterval:     -1 * time.Second,
-				Multiplier:      2.0,
-				JitterFactor:    0.5,
+				InitialDelay: 100 * time.Millisecond,
+				MaxDelay:     -1 * time.Second,
+				Multiplier:   2.0,
+				JitterFactor: 0.5,
 			},
 		},
 		{
 			name: "zero max interval when Multiplier != 1",
 			cfg: Config{
-				InitialInterval: 100 * time.Millisecond,
-				MaxInterval:     0,
-				Multiplier:      2.0,
-				JitterFactor:    0.5,
+				InitialDelay: 100 * time.Millisecond,
+				MaxDelay:     0,
+				Multiplier:   2.0,
+				JitterFactor: 0.5,
 			},
 		},
 		{
 			name: "multiplier less than 1",
 			cfg: Config{
-				InitialInterval: 100 * time.Millisecond,
-				MaxInterval:     1 * time.Second,
-				Multiplier:      0.5,
-				JitterFactor:    0.5,
+				InitialDelay: 100 * time.Millisecond,
+				MaxDelay:     1 * time.Second,
+				Multiplier:   0.5,
+				JitterFactor: 0.5,
 			},
 		},
 		{
 			name: "negative jitter factor",
 			cfg: Config{
-				InitialInterval: 100 * time.Millisecond,
-				MaxInterval:     1 * time.Second,
-				Multiplier:      2.0,
-				JitterFactor:    -0.1,
+				InitialDelay: 100 * time.Millisecond,
+				MaxDelay:     1 * time.Second,
+				Multiplier:   2.0,
+				JitterFactor: -0.1,
 			},
 		},
 		{
 			name: "jitter factor greater than 1",
 			cfg: Config{
-				InitialInterval: 100 * time.Millisecond,
-				MaxInterval:     1 * time.Second,
-				Multiplier:      2.0,
-				JitterFactor:    1.5,
+				InitialDelay: 100 * time.Millisecond,
+				MaxDelay:     1 * time.Second,
+				Multiplier:   2.0,
+				JitterFactor: 1.5,
 			},
 		},
 		{
 			name: "negative reset after",
 			cfg: Config{
-				InitialInterval: 100 * time.Millisecond,
-				MaxInterval:     1 * time.Second,
-				Multiplier:      2.0,
-				JitterFactor:    0.5,
-				ResetAfter:      -1 * time.Second,
+				InitialDelay: 100 * time.Millisecond,
+				MaxDelay:     1 * time.Second,
+				Multiplier:   2.0,
+				JitterFactor: 0.5,
+				ResetAfter:   -1 * time.Second,
 			},
 		},
 	}
@@ -121,10 +134,10 @@ func TestInvalidConfig(t *testing.T) {
 func TestContextCancellation(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialInterval: 100 * time.Millisecond,
-		MaxInterval:     1 * time.Second,
-		Multiplier:      2.0,
-		JitterFactor:    0.0,
+		InitialDelay: 100 * time.Millisecond,
+		MaxDelay:     1 * time.Second,
+		Multiplier:   2.0,
+		JitterFactor: 0.0,
 	}
 
 	t.Run("initially cancelled", func(t *testing.T) {
@@ -178,10 +191,10 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 	}
 	require := require.New(t)
 	cfg := Config{
-		InitialInterval: 100 * time.Millisecond,
-		MaxInterval:     1 * time.Second,
-		Multiplier:      2.0,
-		JitterFactor:    0.0,
+		InitialDelay: 100 * time.Millisecond,
+		MaxDelay:     1 * time.Second,
+		Multiplier:   2.0,
+		JitterFactor: 0.0,
 	}
 
 	attempts := 0
@@ -195,7 +208,7 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 		return "success", nil
 	}
 
-	cfg.OnRetry = func(attempt int, delay time.Duration, _ error) {
+	cfg.OnError = func(attempt int, delay time.Duration, _ error) {
 		retryDelays = append(retryDelays, delay)
 	}
 
@@ -238,11 +251,11 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 func TestResetAfter(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialInterval: 100 * time.Millisecond,
-		MaxInterval:     1 * time.Second,
-		Multiplier:      2.0,
-		JitterFactor:    0.0,
-		ResetAfter:      200 * time.Millisecond,
+		InitialDelay: 100 * time.Millisecond,
+		MaxDelay:     1 * time.Second,
+		Multiplier:   2.0,
+		JitterFactor: 0.0,
+		ResetAfter:   200 * time.Millisecond,
 	}
 
 	attempts := 0
@@ -256,8 +269,8 @@ func TestResetAfter(t *testing.T) {
 		return "success", nil
 	}
 
-	// Track retry delays by using OnRetry callback
-	cfg.OnRetry = func(attempt int, delay time.Duration, _ error) {
+	// Track retry delays by using OnError callback
+	cfg.OnError = func(attempt int, delay time.Duration, _ error) {
 		retryDelays = append(retryDelays, delay)
 	}
 
@@ -291,18 +304,18 @@ func TestResetAfter(t *testing.T) {
 	require.Equal(100*time.Millisecond, retryDelays[4])
 }
 
-func TestOnRetry(t *testing.T) {
+func TestOnError(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialInterval: 10 * time.Millisecond,
-		MaxInterval:     100 * time.Millisecond,
-		Multiplier:      2.0,
-		JitterFactor:    0.0,
+		InitialDelay: 10 * time.Millisecond,
+		MaxDelay:     100 * time.Millisecond,
+		Multiplier:   2.0,
+		JitterFactor: 0.0,
 	}
 	testErr := errors.New("temporary error")
 
 	calls := 0
-	cfg.OnRetry = func(attempt int, delay time.Duration, err error) {
+	cfg.OnError = func(attempt int, delay time.Duration, err error) {
 		require.Equal(err, testErr)
 		calls++
 	}
@@ -322,13 +335,13 @@ func TestOnRetry(t *testing.T) {
 	require.Equal(2, calls)
 }
 
-func TestMaxIntervalCapping(t *testing.T) {
+func TestMaxDelayCapping(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialInterval: 100 * time.Millisecond,
-		MaxInterval:     200 * time.Millisecond,
-		Multiplier:      2.0,
-		JitterFactor:    0.0,
+		InitialDelay: 100 * time.Millisecond,
+		MaxDelay:     200 * time.Millisecond,
+		Multiplier:   2.0,
+		JitterFactor: 0.0,
 	}
 
 	attempts := 0
@@ -342,7 +355,7 @@ func TestMaxIntervalCapping(t *testing.T) {
 		return "success", nil
 	}
 
-	cfg.OnRetry = func(attempt int, delay time.Duration, _ error) {
+	cfg.OnError = func(attempt int, delay time.Duration, _ error) {
 		retryDelays = append(retryDelays, delay)
 	}
 
@@ -353,17 +366,17 @@ func TestMaxIntervalCapping(t *testing.T) {
 	require.Len(retryDelays, 5)
 
 	for _, d := range retryDelays {
-		require.LessOrEqual(d, cfg.MaxInterval)
+		require.LessOrEqual(d, cfg.MaxDelay)
 	}
 }
 
 func TestImmediateSuccess(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialInterval: 100 * time.Millisecond,
-		MaxInterval:     1 * time.Second,
-		Multiplier:      2.0,
-		JitterFactor:    0.5,
+		InitialDelay: 100 * time.Millisecond,
+		MaxDelay:     1 * time.Second,
+		Multiplier:   2.0,
+		JitterFactor: 0.5,
 	}
 
 	fn := func() (string, error) {
@@ -377,11 +390,11 @@ func TestImmediateSuccess(t *testing.T) {
 
 func makeFastConfig() Config {
 	return Config{
-		InitialInterval: time.Nanosecond,
-		MaxInterval:     time.Nanosecond,
-		Multiplier:      1,
-		JitterFactor:    0,
-		ResetAfter:      0,
+		InitialDelay: time.Nanosecond,
+		MaxDelay:     time.Nanosecond,
+		Multiplier:   1,
+		JitterFactor: 0,
+		ResetAfter:   0,
 	}
 }
 
@@ -413,11 +426,11 @@ func TestRetryOnTable(t *testing.T) {
 				return nil
 			}
 			cfg := Config{
-				InitialInterval: time.Nanosecond,
-				MaxInterval:     time.Nanosecond,
-				Multiplier:      1,
-				JitterFactor:    0,
-				RetryOnlyOn:     tc.retryOn,
+				InitialDelay: time.Nanosecond,
+				MaxDelay:     time.Nanosecond,
+				Multiplier:   1,
+				JitterFactor: 0,
+				RetryOnlyOn:  tc.retryOn,
 			}
 			err := RetryErr(context.Background(), cfg, fn)
 			if tc.wantErr != nil {
@@ -437,11 +450,11 @@ func TestAcceptableTable(t *testing.T) {
 	errC := errors.New("C")
 
 	cfg := Config{
-		InitialInterval: time.Nanosecond,
-		MaxInterval:     time.Nanosecond,
-		Multiplier:      1,
-		JitterFactor:    0,
-		Acceptable:      []error{errC},
+		InitialDelay: time.Nanosecond,
+		MaxDelay:     time.Nanosecond,
+		Multiplier:   1,
+		JitterFactor: 0,
+		Acceptable:   []error{errC},
 	}
 
 	counter := 0

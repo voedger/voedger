@@ -16,24 +16,33 @@ import (
 	"time"
 )
 
-func NewDefaultConfig() Config {
+func NewConfigConstantBackoff(initialDelay time.Duration) Config {
+	return Config{
+		InitialDelay: initialDelay,
+		Multiplier:   1,
+	}
+}
+
+func NewConfigExponentialBackoff(initialDelay time.Duration, maxDelay time.Duration) Config {
 	return Config{
 		JitterFactor: DefaultJitterFactor,
 		Multiplier:   DefaultMultiplier,
+		InitialDelay: initialDelay,
+		MaxDelay:     maxDelay,
 	}
 }
 
 // New creates a Retrier with provided Config, validating parameters.
 func New(cfg Config) (*Retrier, error) {
-	if cfg.InitialInterval <= 0 || cfg.MaxInterval < 0 || (cfg.MaxInterval == 0 && cfg.Multiplier != 1) ||
+	if cfg.InitialDelay <= 0 || cfg.MaxDelay < 0 || (cfg.MaxDelay == 0 && cfg.Multiplier > 1) ||
 		cfg.Multiplier < 1 || cfg.JitterFactor < 0 || cfg.JitterFactor > 1 ||
 		cfg.ResetAfter < 0 {
 		return nil, ErrInvalidConfig
 	}
 	r := &Retrier{
-		cfg:             cfg,
-		currentInterval: cfg.InitialInterval,
-		lastReset:       time.Now(),
+		cfg:          cfg,
+		currentDelay: cfg.InitialDelay,
+		lastReset:    time.Now(),
 	}
 	return r, nil
 }
@@ -42,20 +51,20 @@ func New(cfg Config) (*Retrier, error) {
 // FullJitter, and reset logic.
 func (r *Retrier) NextDelay() time.Duration {
 	now := time.Now()
-	// reset interval if period elapsed
+	// reset delay if period elapsed
 	if r.cfg.ResetAfter > 0 && now.Sub(r.lastReset) >= r.cfg.ResetAfter {
-		r.currentInterval = r.cfg.InitialInterval
+		r.currentDelay = r.cfg.InitialDelay
 		r.lastReset = now
 	}
-	// compute base interval
-	base := r.currentInterval
-	// prepare next interval for future
+	// compute base delay
+	base := r.currentDelay
+	// prepare next delay for future
 
 	next := time.Duration(float64(base) * r.cfg.Multiplier)
-	if r.cfg.MaxInterval > 0 && next > r.cfg.MaxInterval {
-		next = r.cfg.MaxInterval
+	if r.cfg.MaxDelay > 0 && next > r.cfg.MaxDelay {
+		next = r.cfg.MaxDelay
 	}
-	r.currentInterval = next
+	r.currentDelay = next
 
 	// apply FullJitter: random offset around base
 	// offset in [-JitterFactor*base, +JitterFactor*base]
@@ -64,60 +73,61 @@ func (r *Retrier) NextDelay() time.Duration {
 	return delay
 }
 
-// Run executes fn until it succeeds, matches Acceptable errors, or context is done/other error.
 func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 	attempt := 0
 
 	for ctx.Err() == nil {
+
 		err := fn()
 
-		// success on nil
+		// -------------------------------------------------------------
+		// Success paths ------------------------------------------------
+		// -------------------------------------------------------------
 		if err == nil {
 			return nil
 		}
-
-		// treat specified Acceptable errors as success
-		for _, ae := range r.cfg.Acceptable {
-			if errors.Is(err, ae) {
+		for _, okErr := range r.cfg.Acceptable {
+			if errors.Is(err, okErr) {
 				return nil
 			}
 		}
 
-		// decide whether to retry
-		retry := false
-		if len(r.cfg.RetryOnlyOn) > 0 {
-			for _, re := range r.cfg.RetryOnlyOn {
-				if errors.Is(err, re) {
-					retry = true
-					break
-				}
+		// -------------------------------------------------------------
+		// Decide whether to retry ------------------------------------
+		// -------------------------------------------------------------
+		retriable := len(r.cfg.RetryOnlyOn) == 0 // default: retry everything
+		for _, re := range r.cfg.RetryOnlyOn {
+			if errors.Is(err, re) {
+				retriable = true
+				break
 			}
-		} else {
-			// default: retry all errors except context
-			retry = true
+			retriable = false
 		}
-
-		if !retry {
-			// abort immediately with this error
+		if !retriable {
 			return err
 		}
 
-		// prepare backoff
+		// -------------------------------------------------------------
+		// Back-off computation ----------------------------------------
+		// -------------------------------------------------------------
 		attempt++
-
 		delay := r.NextDelay()
-		// OnRetry callback
-		if r.cfg.OnRetry != nil {
-			r.cfg.OnRetry(attempt, delay, err)
+
+		// Callback *always* fires for observability
+		if r.cfg.OnError != nil {
+			r.cfg.OnError(attempt, delay, err)
 		}
 
-		// wait for delay or context done
+		// If the context was cancelled during computation or callback, abort now
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+
 		select {
 		case <-time.After(delay):
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-
 	}
 	return ctx.Err()
 }
