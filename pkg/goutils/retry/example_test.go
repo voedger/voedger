@@ -19,10 +19,10 @@ import (
 
 func ExampleRetry() {
 	cfg := retrier.Config{
-		InitialInterval: 10 * time.Millisecond,
-		MaxInterval:     100 * time.Millisecond,
-		Multiplier:      2.0,
-		JitterFactor:    0.5,
+		InitialDelay: 10 * time.Millisecond,
+		MaxDelay:     100 * time.Millisecond,
+		Multiplier:   2.0,
+		JitterFactor: 0.5,
 	}
 
 	attempts := 0
@@ -45,10 +45,10 @@ func ExampleRetry() {
 
 func ExampleRetryErr() {
 	cfg := retrier.Config{
-		InitialInterval: 10 * time.Millisecond,
-		MaxInterval:     100 * time.Millisecond,
-		Multiplier:      2.0,
-		JitterFactor:    0.5,
+		InitialDelay: 10 * time.Millisecond,
+		MaxDelay:     100 * time.Millisecond,
+		Multiplier:   2.0,
+		JitterFactor: 0.5,
 	}
 
 	attempts := 0
