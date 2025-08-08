@@ -388,16 +388,6 @@ func TestImmediateSuccess(t *testing.T) {
 	require.Equal("immediate success", result)
 }
 
-func makeFastConfig() Config {
-	return Config{
-		InitialDelay: time.Nanosecond,
-		MaxDelay:     time.Nanosecond,
-		Multiplier:   1,
-		JitterFactor: 0,
-		ResetAfter:   0,
-	}
-}
-
 func TestRetryOnTable(t *testing.T) {
 	errA := errors.New("A")
 	errB := errors.New("B")
