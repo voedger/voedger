@@ -19,17 +19,11 @@ type Config struct {
 	JitterFactor float64 // between 0 and 1
 	ResetAfter   time.Duration
 
-	// OnError is called on any non-acceptable error
-	OnError func(attempt int, delay time.Duration, err error)
-
-	// retry on any error from RetryOnlyOn, abort on any other error
-	// empty -> any error (except context cancellation) retried
-	RetryOnlyOn []error
-
-	// errors treated as success
-	// retrier returns no error if an acceptable error occurs
-	Acceptable []error
+	// HandleError is called on any non-acceptable error
+	HandleError func(attempt int, delay time.Duration, err error) Action
 }
+
+type Action int
 
 // Retrier executes operations with backoff, jitter, and reset logic.
 type Retrier struct {

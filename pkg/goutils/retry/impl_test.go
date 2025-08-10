@@ -208,8 +208,9 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 		return "success", nil
 	}
 
-	cfg.OnError = func(attempt int, delay time.Duration, _ error) {
+	cfg.HandleError = func(attempt int, delay time.Duration, _ error) Action {
 		retryDelays = append(retryDelays, delay)
+		return DoRetry
 	}
 
 	result, err := Retry(context.Background(), cfg, fn)
@@ -270,8 +271,9 @@ func TestResetAfter(t *testing.T) {
 	}
 
 	// Track retry delays by using OnError callback
-	cfg.OnError = func(attempt int, delay time.Duration, _ error) {
+	cfg.HandleError = func(attempt int, delay time.Duration, _ error) Action {
 		retryDelays = append(retryDelays, delay)
+		return DoRetry
 	}
 
 	result, err := Retry(context.Background(), cfg, fn)
@@ -315,9 +317,10 @@ func TestOnError(t *testing.T) {
 	testErr := errors.New("temporary error")
 
 	calls := 0
-	cfg.OnError = func(attempt int, delay time.Duration, err error) {
+	cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
 		require.Equal(err, testErr)
 		calls++
+		return DoRetry
 	}
 
 	attempts := 0
@@ -355,8 +358,9 @@ func TestMaxDelayCapping(t *testing.T) {
 		return "success", nil
 	}
 
-	cfg.OnError = func(attempt int, delay time.Duration, _ error) {
+	cfg.HandleError = func(attempt int, delay time.Duration, _ error) Action {
 		retryDelays = append(retryDelays, delay)
+		return DoRetry
 	}
 
 	result, err := Retry(context.Background(), cfg, fn)
@@ -388,77 +392,71 @@ func TestImmediateSuccess(t *testing.T) {
 	require.Equal("immediate success", result)
 }
 
-func TestRetryOnTable(t *testing.T) {
-	errA := errors.New("A")
-	errB := errors.New("B")
-	tcs := []struct {
-		name      string
-		retryOn   []error
-		opErrs    []error
-		wantErr   error
-		wantCalls int
-	}{
-		{"retry only A then success", []error{errA}, []error{errA, errA}, nil, 3},
-		{"retry only A abort on B", []error{errA}, []error{errA, errB}, errB, 2},
-		{"default retry all errors", nil, []error{errB, errB, errB}, nil, 4},
-	}
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			req := require.New(t)
-			calls := 0
-			fn := func() error {
-				if calls < len(tc.opErrs) {
-					err := tc.opErrs[calls]
-					calls++
-					return err
-				}
-				calls++
-				return nil
-			}
-			cfg := Config{
-				InitialDelay: time.Nanosecond,
-				MaxDelay:     time.Nanosecond,
-				Multiplier:   1,
-				JitterFactor: 0,
-				RetryOnlyOn:  tc.retryOn,
-			}
-			err := RetryErr(context.Background(), cfg, fn)
-			if tc.wantErr != nil {
-				req.ErrorIs(err, tc.wantErr)
-			} else {
-				req.NoError(err)
-			}
-			req.Equal(tc.wantCalls, calls)
-		})
-	}
-}
-
-func TestAcceptableTable(t *testing.T) {
+func TestHandleError(t *testing.T) {
 	require := require.New(t)
-	errA := errors.New("A")
-	errB := errors.New("B")
-	errC := errors.New("C")
+	testErr := errors.New("test error")
 
-	cfg := Config{
-		InitialDelay: time.Nanosecond,
-		MaxDelay:     time.Nanosecond,
-		Multiplier:   1,
-		JitterFactor: 0,
-		Acceptable:   []error{errC},
-	}
-
-	counter := 0
-	err := RetryErr(context.Background(), cfg, func() error {
-		counter++
-		switch counter {
-		case 1:
-			return errA
-		case 2:
-			return errB
-		default:
-			return errC
+	t.Run("DoRetry", func(t *testing.T) {
+		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
+		retriesNum := 0
+		fn := func() error {
+			switch retriesNum {
+			case 0, 1, 2:
+				return testErr
+			}
+			return nil
 		}
+		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+			retriesNum++
+			return DoRetry
+		}
+		err := RetryErr(context.Background(), cfg, fn)
+		require.NoError(err)
+		require.Equal(3, retriesNum)
 	})
-	require.NoError(err)
-	require.Equal(3, counter)
+
+	t.Run("Accept", func(t *testing.T) {
+		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
+		retriesNum := 0
+		fn := func() error {
+			return testErr
+		}
+		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+			retriesNum++
+			if retriesNum == 1 {
+				return DoRetry
+			}
+			return Accept
+		}
+		err := RetryErr(context.Background(), cfg, fn)
+		require.NoError(err)
+		require.Equal(2, retriesNum)
+	})
+
+	t.Run("Abort", func(t *testing.T) {
+		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
+		retriesNum := 0
+		fn := func() error {
+			return testErr
+		}
+		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+			retriesNum++
+			if retriesNum == 1 {
+				return DoRetry
+			}
+			return Abort
+		}
+		err := RetryErr(context.Background(), cfg, fn)
+		require.ErrorIs(err, testErr)
+		require.Equal(2, retriesNum)
+	})
+
+	t.Run("panic on unknown Action", func(t *testing.T) {
+		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
+		fn := func() error {return testErr}
+		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+			return -1
+		}
+		require.Panics(func() { RetryErr(context.Background(), cfg, fn) })
+	})
 }
