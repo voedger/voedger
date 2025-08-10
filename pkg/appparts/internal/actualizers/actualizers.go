@@ -8,7 +8,6 @@ package actualizers
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -57,26 +56,8 @@ func (pa *PartitionActualizers) Wait() {
 	pa.rtWG.Wait()
 }
 
-// Wait waits for all actualizers to finish.
-// Returns true if all actualizers finished before the timeout.
-// Returns false if the timeout is reached.
-func (pa *PartitionActualizers) WaitTimeout(timeout time.Duration) (finished bool) {
-	done := make(chan struct{})
-	go func() {
-		pa.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		return true
-	case <-time.After(timeout):
-		return false
-	}
-}
-
 // async start actualizer
-func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName, run Run, wg *sync.WaitGroup) {
+func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName, run Run) {
 	ctx, cancel := context.WithCancel(vvmCtx)
 	rt := newRuntime(cancel)
 
@@ -84,10 +65,7 @@ func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName,
 
 	pa.rtWG.Add(1)
 
-	done := make(chan struct{})
 	go func() {
-		close(done) // actualizer started
-
 		defer func() {
 			pa.rt.Delete(name)
 			close(rt.done) // actualizer finished
@@ -96,85 +74,48 @@ func (pa *PartitionActualizers) start(vvmCtx context.Context, name appdef.QName,
 
 		run(ctx, pa.app, pa.part, name)
 	}()
-
-	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
-	<-done // wait until actualizer is started
-
-	wg.Done()
 }
 
 // async start new actualizers
 func (pa *PartitionActualizers) startNews(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	news := make(map[appdef.QName]struct{})
 	for prj := range appdef.Projectors(appDef.Types()) {
 		if !prj.Sync() {
 			name := prj.QName()
 			if _, exists := pa.rt.Load(name); !exists {
-				news[name] = struct{}{}
+				pa.start(vvmCtx, name, run) // actualizer will be started in a separated goroutine there
 			}
 		}
 	}
-
-	done := make(chan struct{})
-	go func() {
-		startWG := sync.WaitGroup{}
-		for name := range news {
-			startWG.Add(1)
-			go pa.start(vvmCtx, name, run, &startWG)
-		}
-		startWG.Wait()
-		close(done)
-	}()
-
-	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
-	<-done
-}
-
-// async stop actualizer
-func (pa *PartitionActualizers) stop(rt *runtime, wg *sync.WaitGroup) {
-	rt.cancel()
-
-	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
-	// wait until actualizer is finished
-	<-rt.done
-	wg.Done()
 }
 
 // async stop old actualizers
 func (pa *PartitionActualizers) stopOlds(appDef appdef.IAppDef) {
-	olds := make([]*runtime, 0)
+	wg := sync.WaitGroup{}
 	for name, rt := range pa.rt.Range {
 		name := name.(appdef.QName)
 		rt := rt.(*runtime)
 		// TODO: compare if projector properties changed (events, sync/async, etc.)
 		if appdef.Projector(appDef.Type, name) == nil {
-			olds = append(olds, rt)
+			wg.Add(1)
+			go func() {
+				rt.cancel()
+				<-rt.done
+				wg.Done()
+			}()
 		}
 	}
-
-	done := make(chan struct{})
-	go func() {
-		stopWG := sync.WaitGroup{}
-		for _, rt := range olds {
-			stopWG.Add(1)
-			go pa.stop(rt, &stopWG)
-		}
-		stopWG.Wait() // wait for all old actualizers to stop
-		close(done)
-	}()
-
 	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
-	<-done
+	wg.Wait()
 }
 
 type runtime struct {
 	cancel context.CancelFunc
-	done   chan []struct{}
+	done   chan struct{}
 }
 
 func newRuntime(cancel context.CancelFunc) *runtime {
 	return &runtime{
 		cancel: cancel,
-		done:   make(chan []struct{}),
+		done:   make(chan struct{}),
 	}
 }
