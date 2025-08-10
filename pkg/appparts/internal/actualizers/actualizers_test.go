@@ -69,7 +69,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 		stop()
 
 		const timeout = 1 * time.Second
-		require.True(actualizers.WaitTimeout(timeout))
+		require.True(waitFor(actualizers, timeout))
 		require.Empty(actualizers.Enum())
 
 		runCalls.Range(func(key, value any) bool {
@@ -103,7 +103,22 @@ func TestActualizersWaitTimeout(t *testing.T) {
 		stop()
 
 		const timeout = 1 * time.Second
-		require.False(actualizers.WaitTimeout(timeout))
+		require.False(waitFor(actualizers, timeout))
 		require.Equal(prjNames, actualizers.Enum())
 	})
+}
+
+func waitFor(pa *actualizers.PartitionActualizers, timeout time.Duration) bool {
+	done := make(chan struct{})
+	go func() {
+		pa.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
 }
