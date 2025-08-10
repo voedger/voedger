@@ -11,3 +11,9 @@ const (
 	DefaultJitterFactor = 0.5
 	DefaultMultiplier   = 2
 )
+
+const (
+	DoRetry Action = iota
+	Accept
+	Abort
+)
