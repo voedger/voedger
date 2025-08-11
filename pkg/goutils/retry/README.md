@@ -9,9 +9,11 @@
   - **Exponential backoff** (`NewConfigExponentialBackoff`)
 - **Jitter** — Random delay adjustments to avoid thundering herd issues.
 - **Reset Logic** — Reset delay after a period of inactivity.
-- **Custom Error Handling** via `HandleError` callback:
+- **Custom Error Handling** — Fine-grained control over retry decisions via `OnError` callback
 
-| `HandleError` result    | Meaning                                           |
+## Error Handling Actions
+
+| `Action`  | Description                                                     |
 | --------- | --------------------------------------------------------------- |
 | `DoRetry` | Wait the computed delay, then try again                         |
 | `Accept`  | Stop retrying, return success (even if the last attempt failed) |
@@ -22,7 +24,7 @@
 | Field          | Type            | Description                                                     |
 | -------------- | --------------- | --------------------------------------------------------------- |
 | `InitialDelay` | `time.Duration` | Starting delay before the first retry                           |
-| `MaxDelay`     | `time.Duration` | Maximum delay cap (`0` allowed only if `Multiplier == 1`)       |
+| `MaxDelay`     | `time.Duration` | Maximum delay cap<br>`0` allowed only if `Multiplier == 1`      |
 | `Multiplier`   | `float64`       | Exponential growth factor (must be ≥ 1)                         |
 | `JitterFactor` | `float64`       | Randomness factor in the range \[0, 1]                          |
 | `ResetAfter`   | `time.Duration` | Time period after which the delay resets back to `InitialDelay` |
