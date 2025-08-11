@@ -17,7 +17,7 @@ type Config struct {
 	Multiplier   float64       // >1
 	JitterFactor float64       // between 0 and 1
 	ResetAfter   time.Duration
-	HandleError  func(attempt int, delay time.Duration, err error) Action
+	OnError      func(attempt int, delay time.Duration, err error) Action
 }
 
 // retry policy: DoRetry, Abort, Accept

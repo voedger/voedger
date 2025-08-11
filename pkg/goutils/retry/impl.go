@@ -88,8 +88,8 @@ func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 		delay := r.NextDelay()
 
 		action := DoRetry
-		if r.cfg.HandleError != nil {
-			action = r.cfg.HandleError(attempt, delay, err)
+		if r.cfg.OnError != nil {
+			action = r.cfg.OnError(attempt, delay, err)
 		}
 
 		switch action {
@@ -102,7 +102,7 @@ func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 			panic("unknown retry action")
 		}
 
-		// context might have been cancelled while in HandleError or in fn
+		// context might have been cancelled while in OnError or in fn
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return ctxErr
 		}

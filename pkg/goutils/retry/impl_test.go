@@ -208,7 +208,7 @@ func TestExponentialBackoffBehavior(t *testing.T) {
 		return "success", nil
 	}
 
-	cfg.HandleError = func(attempt int, delay time.Duration, _ error) Action {
+	cfg.OnError = func(attempt int, delay time.Duration, _ error) Action {
 		retryDelays = append(retryDelays, delay)
 		return DoRetry
 	}
@@ -271,7 +271,7 @@ func TestResetAfter(t *testing.T) {
 	}
 
 	// Track retry delays by using OnError callback
-	cfg.HandleError = func(attempt int, delay time.Duration, _ error) Action {
+	cfg.OnError = func(attempt int, delay time.Duration, _ error) Action {
 		retryDelays = append(retryDelays, delay)
 		return DoRetry
 	}
@@ -306,38 +306,6 @@ func TestResetAfter(t *testing.T) {
 	require.Equal(100*time.Millisecond, retryDelays[4])
 }
 
-func TestOnError(t *testing.T) {
-	require := require.New(t)
-	cfg := Config{
-		InitialDelay: 10 * time.Millisecond,
-		MaxDelay:     100 * time.Millisecond,
-		Multiplier:   2.0,
-		JitterFactor: 0.0,
-	}
-	testErr := errors.New("temporary error")
-
-	calls := 0
-	cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
-		require.Equal(err, testErr)
-		calls++
-		return DoRetry
-	}
-
-	attempts := 0
-	fn := func() (string, error) {
-		attempts++
-		if attempts < 3 {
-			return "", testErr
-		}
-		return "success", nil
-	}
-
-	result, err := Retry(context.Background(), cfg, fn)
-	require.NoError(err)
-	require.Equal("success", result)
-	require.Equal(2, calls)
-}
-
 func TestMaxDelayCapping(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
@@ -358,7 +326,7 @@ func TestMaxDelayCapping(t *testing.T) {
 		return "success", nil
 	}
 
-	cfg.HandleError = func(attempt int, delay time.Duration, _ error) Action {
+	cfg.OnError = func(attempt int, delay time.Duration, _ error) Action {
 		retryDelays = append(retryDelays, delay)
 		return DoRetry
 	}
@@ -392,7 +360,7 @@ func TestImmediateSuccess(t *testing.T) {
 	require.Equal("immediate success", result)
 }
 
-func TestHandleError(t *testing.T) {
+func TestOnError(t *testing.T) {
 	require := require.New(t)
 	testErr := errors.New("test error")
 
@@ -406,7 +374,7 @@ func TestHandleError(t *testing.T) {
 			}
 			return nil
 		}
-		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
 			retriesNum++
 			return DoRetry
 		}
@@ -421,7 +389,7 @@ func TestHandleError(t *testing.T) {
 		fn := func() error {
 			return testErr
 		}
-		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
 			retriesNum++
 			if retriesNum == 1 {
 				return DoRetry
@@ -439,7 +407,7 @@ func TestHandleError(t *testing.T) {
 		fn := func() error {
 			return testErr
 		}
-		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
 			retriesNum++
 			if retriesNum == 1 {
 				return DoRetry
@@ -453,8 +421,8 @@ func TestHandleError(t *testing.T) {
 
 	t.Run("panic on unknown Action", func(t *testing.T) {
 		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
-		fn := func() error {return testErr}
-		cfg.HandleError = func(attempt int, delay time.Duration, err error) Action {
+		fn := func() error { return testErr }
+		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
 			return -1
 		}
 		require.Panics(func() { RetryErr(context.Background(), cfg, fn) })
