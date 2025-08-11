@@ -14,6 +14,10 @@ const (
 
 const (
 	DoRetry Action = iota
+
+	// consider the current error as an acceptable result, return nil
 	Accept
+
+	// consider the further retries as senceless, return the current error
 	Abort
 )
