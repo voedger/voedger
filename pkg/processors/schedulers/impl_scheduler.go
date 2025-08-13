@@ -6,7 +6,6 @@ package schedulers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -50,13 +49,10 @@ func (a *scheduler) Prepare() {
 }
 
 func (a *scheduler) Run(ctx context.Context) {
-	var err error
-	if err = a.waitForAppDeploy(ctx); err != nil {
-		panic(err)
-	}
 	for ctx.Err() == nil {
 		a.ctx = ctx
-		if err = a.init(ctx); err == nil {
+		err := a.init(ctx)
+		if err == nil {
 			a.keepRunning()
 		}
 		a.finit() // even execute if a.init has failed
@@ -123,28 +119,6 @@ func (a *scheduler) runJob() {
 			a.jobInErrAddr.Increase(-1)
 		}
 	}
-}
-
-func (a *scheduler) waitForAppDeploy(ctx context.Context) error {
-	start := time.Now()
-	for ctx.Err() == nil {
-		ap, err := a.appParts.Borrow(a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
-		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
-			if ap != nil {
-				ap.Release()
-			}
-			return nil
-		}
-		if !errors.Is(err, appparts.ErrNotFound) {
-			return err
-		}
-		if time.Since(start) >= initFailureErrorLogInterval {
-			logger.Error(fmt.Sprintf("app %s part %d actualizer %s: failed to init in 30 seconds", a.conf.AppQName, a.conf.Partition, a.name))
-			start = time.Now()
-		}
-		time.Sleep(borrowRetryDelay)
-	}
-	return nil // consider "context canceled" as expected error
 }
 
 func (a *scheduler) init(_ context.Context) (err error) {
