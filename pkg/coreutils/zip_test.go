@@ -53,7 +53,7 @@ func TestZipAndUnzip(t *testing.T) {
 	}
 
 	// check there are no unexpected unzipped files
-	filepath.WalkDir(unzippedDir, func(unzippedFile string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(unzippedDir, func(unzippedFile string, d fs.DirEntry, err error) error {
 		require.NoError(err)
 		if d.IsDir() {
 			return nil
@@ -63,6 +63,7 @@ func TestZipAndUnzip(t *testing.T) {
 		require.Contains(filesToZip, actualRelFile)
 		return nil
 	})
+	require.NoError(err)
 
 	t.Run("target zip already exists", func(t *testing.T) {
 		err = Zip(srcDir, zipFilePath)

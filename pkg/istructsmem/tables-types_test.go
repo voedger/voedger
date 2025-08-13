@@ -325,7 +325,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			corrupted := b[0:i]
 			rec2 := newRecord(test.AppCfg)
 			err := rec2.loadFromBytes(corrupted)
-			require.Error(err, fmt.Sprintf("unexpected success load record from bytes truncated at length «%d»", i))
+			require.Error(err, "unexpected success load record from bytes truncated at length «%d»", i)
 		}
 	})
 

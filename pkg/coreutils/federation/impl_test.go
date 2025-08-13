@@ -54,12 +54,13 @@ func TestFederationFunc(t *testing.T) {
 			body, err := io.ReadAll(r.Body)
 			require.NoError(err)
 			require.Equal(`{"fld":"val"}`, string(body))
-			w.Write([]byte(`{
+			_, err = w.Write([]byte(`{
 				"newIDs":{"1":2},
 				"sections":[{"type":"","elements":[[[["hello, world"]]]]}],
 				"currentWLogOffset":13,
 				"result":{"Int":42,"Str":"Str","sys.Container":"","sys.QName":"app1pkg.TestCmdResult"}
 			}`))
+			require.NoError(err)
 		}
 		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`)
 		require.NoError(err)
@@ -86,7 +87,8 @@ func TestFederationFunc(t *testing.T) {
 				name: "basic error",
 				handler: func(body string, w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"sys.SomeErrorQName","Data":"additional data"}}`))
+					_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"sys.SomeErrorQName","Data":"additional data"}}`))
+					require.NoError(err)
 				},
 				expectedErr: coreutils.FuncError{
 					SysError: coreutils.SysError{
@@ -102,7 +104,8 @@ func TestFederationFunc(t *testing.T) {
 				name: "wrong QName",
 				handler: func(body string, w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
+					_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
+					require.NoError(err)
 				},
 				expectedErr: coreutils.FuncError{
 					SysError: coreutils.SysError{
@@ -118,7 +121,8 @@ func TestFederationFunc(t *testing.T) {
 				name: "wrong response JSON",
 				handler: func(body string, w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(`wrong JSON`))
+					_, err = w.Write([]byte(`wrong JSON`))
+					require.NoError(err)
 				},
 				expectedErr: errors.New("IFederation: failed to unmarshal response body to FuncErr: invalid character 'w' looking for beginning of value. Body:\nwrong JSON"),
 			},
@@ -126,7 +130,8 @@ func TestFederationFunc(t *testing.T) {
 				name: "non-OK status is expected",
 				handler: func(body string, w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
+					_, err = w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
+					require.NoError(err)
 				},
 				expectedErr: coreutils.FuncError{
 					SysError: coreutils.SysError{
@@ -164,7 +169,8 @@ func TestFederationFunc(t *testing.T) {
 				_, err := io.ReadAll(r.Body)
 				require.NoError(err)
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"sys.SomeErrorQName","Data":"additional data"}}`))
+				_, err = w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"sys.SomeErrorQName","Data":"additional data"}}`))
+				require.NoError(err)
 			}
 			resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError))
 			require.NoError(err)
@@ -200,7 +206,8 @@ func TestFederationFunc(t *testing.T) {
 			_, err := io.ReadAll(r.Body)
 			require.NoError(err)
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"sections":[{"type":"","elements":[[[["Hello", "world"]]],[[["next"]]]]}]}`))
+			_, err = w.Write([]byte(`{"sections":[{"type":"","elements":[[[["Hello", "world"]]],[[["next"]]]]}]}`))
+			require.NoError(err)
 		}
 		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError))
 		require.NoError(err)
@@ -225,7 +232,8 @@ func TestFederationFunc(t *testing.T) {
 			_, err := io.ReadAll(r.Body)
 			require.NoError(err)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"sections":[{"type":"","elements":[[[["Hello", "world"]]],[[["next"]]]]}]}`))
+			_, err = w.Write([]byte(`{"sections":[{"type":"","elements":[[[["Hello", "world"]]],[[["next"]]]]}]}`))
+			require.NoError(err)
 		}
 		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithDiscardResponse())
 		require.NoError(err)

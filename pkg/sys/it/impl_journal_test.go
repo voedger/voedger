@@ -192,40 +192,33 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 
 	startNow := vit.Now()
 	startYear := vit.Now().Year()
-	nextYear := startYear
 
 	//Create bills at different years
 	vit.TimeAdd(365 * 27 * time.Hour)
 	createBill(vit.NextNumber())
-	nextYear++
 
 	vit.TimeAdd(365 * 27 * time.Hour)
 	time1 := vit.Now()
 	table1 := vit.NextNumber()
 	offset1 := createBill(table1)
-	nextYear++
 
 	vit.TimeAdd(365 * 27 * time.Hour)
 	time2 := vit.Now()
 	table2 := vit.NextNumber()
 	offset2 := createBill(table2)
-	nextYear++
 
 	vit.TimeAdd(365 * 27 * time.Hour)
 	time3 := vit.Now()
 	table3 := vit.NextNumber()
 	offset3 := createBill(table3)
-	nextYear++
 
 	vit.TimeAdd(365 * 27 * time.Hour)
 	time4 := vit.Now()
 	table4 := vit.NextNumber()
 	offset4 := createBill(table4)
-	nextYear++
 
 	vit.TimeAdd(365 * 27 * time.Hour)
 	offset := createBill(vit.NextNumber())
-	nextYear++
 
 	WaitForIndexOffset(vit, ws, journal.QNameViewWLogDates, offset)
 

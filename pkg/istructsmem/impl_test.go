@@ -389,7 +389,8 @@ func TestBasicUsage_Resources(t *testing.T) {
 
 		// Calls have no effect since we use Null* closures
 
-		f.Exec(istructs.ExecCommandArgs{})
+		err := f.Exec(istructs.ExecCommandArgs{})
+		require.NoError(err)
 
 		// Test String()
 		log.Println(f)
@@ -398,9 +399,9 @@ func TestBasicUsage_Resources(t *testing.T) {
 	t.Run("Basic usage NewQueryFunction", func(t *testing.T) {
 		myExecQuery := func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 			// Can use NullExecQuery instead of myExecQuery, it does nothing
-			NullQueryExec(ctx, args, callback)
+			NullQueryExec(ctx, args, callback) // nolint errcheck
 
-			callback(&istructs.NullObject{})
+			require.NoError(callback(&istructs.NullObject{}))
 			return nil
 		}
 
@@ -412,7 +413,8 @@ func TestBasicUsage_Resources(t *testing.T) {
 		require.Panics(func() { f.ResultType(istructs.PrepareArgs{}) })
 
 		// Depends on myExecQuery
-		f.Exec(context.Background(), istructs.ExecQueryArgs{}, func(istructs.IObject) error { return nil })
+		err := f.Exec(context.Background(), istructs.ExecQueryArgs{}, func(istructs.IObject) error { return nil })
+		require.NoError(err)
 
 		// Test String()
 		log.Println(f)

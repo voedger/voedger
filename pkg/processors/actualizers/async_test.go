@@ -282,16 +282,17 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require.Equal(int32(1), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
 }
 
-func getProjectorsInError(metrics imetrics.IMetrics, appName appdef.AppQName, vvmName string) *float64 {
+func getProjectorsInError(t *testing.T, metrics imetrics.IMetrics, appName appdef.AppQName, vvmName string) *float64 {
 	var foundMetricValue float64
 	var projInErrors *float64 = nil
-	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+	err := metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		if metric.App() == appName && metric.Vvm() == vvmName && metric.Name() == ProjectorsInError {
 			foundMetricValue = metricValue
 			projInErrors = &foundMetricValue
 		}
 		return nil
 	})
+	require.NoError(t, err)
 	return projInErrors
 }
 
@@ -393,7 +394,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		time.Sleep(time.Microsecond)
 	}
 	require.Equal(1, attempts)
-	projInErr := getProjectorsInError(actConf.Metrics, appName, actConf.VvmName)
+	projInErr := getProjectorsInError(t, actConf.Metrics, appName, actConf.VvmName)
 	require.NotNil(projInErr)
 	require.Equal(1.0, *projInErr)
 
@@ -404,7 +405,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	for getActualizerOffset(require, appStructs, partitionNr, name) < topOffset {
 		time.Sleep(time.Microsecond)
 	}
-	projInErr = getProjectorsInError(actConf.Metrics, appName, actConf.VvmName)
+	projInErr = getProjectorsInError(t, actConf.Metrics, appName, actConf.VvmName)
 	require.NotNil(projInErr)
 	require.Equal(0.0, *projInErr)
 
@@ -502,7 +503,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	// expected projection values
 	require.Equal(int32(3), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
 	require.Equal(int32(1), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
-	projInErrs := getProjectorsInError(actCfg.Metrics, appName, actCfg.VvmName)
+	projInErrs := getProjectorsInError(t, actCfg.Metrics, appName, actCfg.VvmName)
 	require.NotNil(projInErrs)
 	require.Equal(0.0, *projInErrs)
 }
@@ -864,13 +865,14 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 
 	t.Logf("Stopped in %s ", time.Since(t0))
 	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
-	actCfg.Metrics.List(func(m imetrics.IMetric, v float64) error {
+	err := actCfg.Metrics.List(func(m imetrics.IMetric, v float64) error {
 		if m.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", v)
 			t.Logf("Batch Per Second: %.2f", v/duration.Seconds())
 		}
 		return nil
 	})
+	require.NoError(err)
 	t.Logf("FlushesTotal: %d", actMetrics.total(aaFlushesTotal))
 }
 
@@ -997,12 +999,13 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 
 	t.Logf("Stopped in %s ", time.Since(t0))
 	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
-	actCfg.Metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+	err := actCfg.Metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		if metric.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", metricValue)
 			t.Logf("Batch Per Second: %.2f", metricValue/duration.Seconds())
 		}
 		return nil
 	})
+	require.NoError(t, err)
 	t.Logf("FlushesTotal: %d", actMetrics.total(aaFlushesTotal))
 }

@@ -152,7 +152,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 			BCC:     []string{},
 		},
 	}
-	require.EqualValues(expectedEmails, actualEmails)
+	require.Equal(expectedEmails, actualEmails)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 

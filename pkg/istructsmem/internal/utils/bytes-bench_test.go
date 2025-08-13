@@ -90,9 +90,9 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 	})
 
 	require := require.New(b)
-	require.EqualValues(int64bytes, usrBytes)
-	require.EqualValues(int64bytes, synBytes)
-	require.EqualValues(int64bytes, castBytes)
+	require.Equal(int64bytes, usrBytes)
+	require.Equal(int64bytes, synBytes)
+	require.Equal(int64bytes, castBytes)
 
 	var b_ []byte
 	b.Run("5. WriteUint64, no heap escapes", func(b *testing.B) {
@@ -107,7 +107,7 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 		}
 	})
 
-	require.EqualValues(int64bytes, b_)
+	require.Equal(int64bytes, b_)
 }
 
 // Writes value to bytes buffer.
@@ -211,7 +211,7 @@ func Benchmark_BufWrite(b *testing.B) {
 			old_SafeWriteBuf(buf, s1.float64)
 
 			if i == 0 {
-				require.New(b).EqualValues(data, buf.Bytes())
+				require.New(b).Equal(data, buf.Bytes())
 			}
 		}
 	})
@@ -232,7 +232,7 @@ func Benchmark_BufWrite(b *testing.B) {
 			SafeWriteBuf(buf, s1.float64)
 
 			if i == 0 {
-				require.New(b).EqualValues(data, buf.Bytes())
+				require.New(b).Equal(data, buf.Bytes())
 			}
 		}
 	})
@@ -253,7 +253,7 @@ func Benchmark_BufWrite(b *testing.B) {
 			WriteFloat64(buf, s1.float64)
 
 			if i == 0 {
-				require.New(b).EqualValues(data, buf.Bytes())
+				require.New(b).Equal(data, buf.Bytes())
 			}
 		}
 	})
@@ -332,7 +332,7 @@ func Benchmark_BufRead(b *testing.B) {
 			binary.Read(buf, binary.BigEndian, &s2.i)
 
 			if i == 0 {
-				require.New(b).EqualValues(s1, s2)
+				require.New(b).Equal(s1, s2)
 			}
 		}
 	})
@@ -351,7 +351,7 @@ func Benchmark_BufRead(b *testing.B) {
 			s2.i, _ = ReadBool(buf)
 
 			if i == 0 {
-				require.New(b).EqualValues(s1, s2)
+				require.New(b).Equal(s1, s2)
 			}
 		}
 	})
@@ -372,7 +372,7 @@ func Benchmark_BufRead(b *testing.B) {
 			}
 
 			if i == 0 {
-				require.New(b).EqualValues(s1, s2)
+				require.New(b).Equal(s1, s2)
 			}
 		}
 	})

@@ -373,7 +373,8 @@ func TestSynthetic(t *testing.T) {
 	}()
 
 	// call a test method that updates the projection
-	vit.N10NUpdate(testProjectionKey, 13)
+	err = vit.N10NUpdate(testProjectionKey, 13)
+	require.NoError(err)
 
 	// unsubscribe to force offsetsChan to close
 	unsubscribe()
@@ -400,7 +401,8 @@ func TestChannelExpiration_V1(t *testing.T) {
 	testingu.MockTime.Add(25 * time.Hour)
 
 	// produce SSE event
-	vit.N10NUpdate(testProjectionKey, 13)
+	err = vit.N10NUpdate(testProjectionKey, 13)
+	require.NoError(err)
 
 	// the channel is closed on SSE event because it is expired
 	for range offsetsChan {

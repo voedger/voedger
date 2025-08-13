@@ -187,14 +187,15 @@ func Test_RecordsRead(t *testing.T) {
 
 		rec := test.newTestCRecord(testID)
 		data := rec.storeToBytes()
-		app.Records().(*appRecordsType).putRecord(test.workspace, testID, data)
+		err := app.Records().(*appRecordsType).putRecord(test.workspace, testID, data)
+		require.NoError(err)
 
 		recs := make([]istructs.RecordGetBatchItem, 3)
 		recs[0].ID = testID - 1
 		recs[1].ID = testID
 		recs[2].ID = testID + 1
 
-		err := app.Records().GetBatch(test.workspace, true, recs)
+		err = app.Records().GetBatch(test.workspace, true, recs)
 		require.Error(err, require.Is(ErrUnknownCodecError), require.Has(badCodec))
 	})
 }

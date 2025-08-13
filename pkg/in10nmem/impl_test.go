@@ -126,8 +126,8 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 
 	// Unsubscribe all channels from projectionKey1
 
-	nb.Unsubscribe(channel1ID, projectionKey1)
-	nb.Unsubscribe(channel2ID, projectionKey1)
+	require.NoError(t, nb.Unsubscribe(channel1ID, projectionKey1))
+	require.NoError(t, nb.Unsubscribe(channel2ID, projectionKey1))
 
 	for i := 100; i < 110; i++ {
 
@@ -232,8 +232,8 @@ func Test_Subscribe_NoUpdate_Unsubscribe(t *testing.T) {
 			})
 		}
 		// Unsubscribe
-		nb.Unsubscribe(channel1ID, projectionKey1)
-		nb.Unsubscribe(channel1ID, projectionKey2)
+		require.NoError(t, nb.Unsubscribe(channel1ID, projectionKey1))
+		require.NoError(t, nb.Unsubscribe(channel1ID, projectionKey2))
 
 	}
 
@@ -533,7 +533,8 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 	})
 
 	// Unsubscribe from projection1
-	broker.Unsubscribe(channelID, projection1)
+	err = broker.Unsubscribe(channelID, projection1)
+	require.NoError(t, err)
 
 	// Wait for metrics to be updated
 	req.Equal(1, broker.MetricNumSubcriptions())

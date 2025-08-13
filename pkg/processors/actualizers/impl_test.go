@@ -95,14 +95,14 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	t.Run("Emulate the command processor", func(t *testing.T) {
 		proc := cmdProcMock{appParts}
 
-		proc.TestEvent(1001)
-		proc.TestEvent(1001)
-		proc.TestEvent(1002)
-		proc.TestEvent(1001)
-		proc.TestEvent(1001)
-		proc.TestEvent(1001)
-		proc.TestEvent(1002)
-		proc.TestEvent(1002)
+		require.NoError(proc.TestEvent(1001))
+		require.NoError(proc.TestEvent(1001))
+		require.NoError(proc.TestEvent(1002))
+		require.NoError(proc.TestEvent(1001))
+		require.NoError(proc.TestEvent(1001))
+		require.NoError(proc.TestEvent(1001))
+		require.NoError(proc.TestEvent(1002))
+		require.NoError(proc.TestEvent(1002))
 	})
 
 	// now read the projection values in workspaces
@@ -399,7 +399,9 @@ func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsKind, wsDescr
 	if err != nil {
 		panic(err)
 	}
-	appStructs.Records().Apply(wsEvent)
+	if err = appStructs.Records().Apply(wsEvent); err != nil {
+		panic(err)
+	}
 }
 
 func Test_ErrorInSyncActualizer(t *testing.T) {

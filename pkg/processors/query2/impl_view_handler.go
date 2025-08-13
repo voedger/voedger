@@ -41,17 +41,12 @@ func viewSetResultType(ctx context.Context, qw *queryWork, statelessResources is
 	return nil
 }
 func viewAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
-	if qw.resultType != appdef.AnyType {
-		// will authorize result only if result is sys.Any
-		// otherwise each field is considered as allowed if EXECUTE ON QUERY is allowed
-		return nil
-	}
 	ws := qw.iWorkspace
 	var requestedFields []string
 	if len(qw.queryParams.Constraints.Keys) != 0 {
 		requestedFields = qw.queryParams.Constraints.Keys
 	} else {
-		for _, field := range qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().Fields() {
+		for _, field := range qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Fields() {
 			requestedFields = append(requestedFields, field.Name())
 		}
 	}

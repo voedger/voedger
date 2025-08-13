@@ -49,7 +49,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 
 				t.Run("check app2pkg.test_ws", func(t *testing.T) {
 					require.Contains(structs, "app2pkg.test_ws")
-					require.EqualValues(
+					require.Equal(
 						map[string]interface{}{
 							"Fields": []interface{}{
 								map[string]interface{}{
@@ -81,7 +81,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 
 				t.Run("check app2pkg.doc1", func(t *testing.T) {
 					require.Contains(structs, "app2pkg.doc1")
-					require.EqualValues(
+					require.Equal(
 						map[string]interface{}{
 							"Fields": []interface{}{
 								map[string]interface{}{
@@ -111,7 +111,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 				require.Len(commands, 1)
 				t.Run("check app2pkg.testCmd", func(t *testing.T) {
 					require.Contains(commands, "app2pkg.testCmd")
-					require.EqualValues(
+					require.Equal(
 						map[string]interface{}{
 							"Engine": "BuiltIn",
 							"Name":   "testCmd",

@@ -142,7 +142,7 @@ func checkPathsToIgnore(t *testing.T, pathsToIgnore [][]string, compatErrors, fi
 				break
 			}
 		}
-		require.True(t, found, fmt.Sprintf("there is no path %s in compat errors", pathToIgnore))
+		require.True(t, found, "there is no path %s in compat errors", pathToIgnore)
 	}
 	for _, pathToIgnore := range pathsToIgnore {
 		found := false
@@ -152,6 +152,6 @@ func checkPathsToIgnore(t *testing.T, pathsToIgnore [][]string, compatErrors, fi
 				break
 			}
 		}
-		require.False(t, found, fmt.Sprintf("path %s should be ignored", pathToIgnore))
+		require.False(t, found, "path %s should be ignored", pathToIgnore)
 	}
 }
