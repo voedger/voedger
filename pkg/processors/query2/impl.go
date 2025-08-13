@@ -235,7 +235,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						data: coreutils.FieldsToMap(queryResultWrapper{
 							IObject: o,
 							qName:   qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result().QName(),
-						}, qw.appStructs.AppDef(), coreutils.WithAllFields()), // we do not know which fields are specified because `o` is different on each query -> read all fields of the result
+						},
+							qw.appStructs.AppDef(),
+							coreutils.WithAllFields(), // we do not know which fields are specified because `o` is different on each query -> read all fields of the result
+							coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+								// system fields like sys.QName, sys.Container are emitted due of WithAllFields
+								// skip them in the query result
+								return !appdef.IsSysField(name)
+							}),
+						),
 					}
 				}
 				return qw.rowsProcessor.SendAsync(o.(pipeline.IWorkpiece))
