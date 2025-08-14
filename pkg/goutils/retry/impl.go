@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-func NewConfig(BaseDelay time.Duration, maxDelay time.Duration) Config {
+func NewConfig(baseDelay time.Duration, maxDelay time.Duration) Config {
 	return Config{
-		BaseDelay:               BaseDelay,
+		BaseDelay:               baseDelay,
 		MaxDelay:                maxDelay,
 		ResetDelayAfterMaxDelay: true,
 	}
@@ -42,7 +42,7 @@ func (r *Retrier) NextDelay() time.Duration {
 	exponentialDelay := float64(r.cfg.BaseDelay) * float64(uint64(1)<<r.attempt)
 
 	// Apply max delay cap
-	cap := min(exponentialDelay, float64(r.cfg.MaxDelay))
+	cap := min(exponentialDelay, float64(r.cfg.MaxDelay)) // nolint predeclared
 
 	// Full Jitter: uniform random in [0, cap]
 	delay := time.Duration(secureFloat64() * cap)

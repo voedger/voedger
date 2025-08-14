@@ -141,8 +141,7 @@ func TestNextDelay_GrowsOnAverage(t *testing.T) {
 
 	for attempt := 0; attempt < 50; attempt++ {
 		// Compute the expected cap: min(base * 2^attempt, max)
-		expDelay := float64(cfg.BaseDelay) * float64(uint64(1)<<attempt)
-		cap := expDelay
+		cap := float64(cfg.BaseDelay) * float64(uint64(1)<<attempt) // nolint predeclared
 		if cap > float64(cfg.MaxDelay) {
 			cap = float64(cfg.MaxDelay)
 		}
