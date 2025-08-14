@@ -17,24 +17,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testCfg = NewConfig(100*time.Millisecond, 5*time.Second)
+
 func TestNewConfig(t *testing.T) {
 	require := require.New(t)
-	initialDelay := 100 * time.Millisecond
+	baseDelay := 100 * time.Millisecond
 	maxDelay := 5 * time.Second
-	t.Run("constant", func(t *testing.T) {
-		cfg := NewConfigConstantBackoff(initialDelay)
-		require.Equal(initialDelay, cfg.InitialDelay)
-		require.Zero(cfg.JitterFactor)
-		require.EqualValues(1, cfg.Multiplier)
-	})
-
-	t.Run("exponential", func(t *testing.T) {
-		cfg := NewConfigExponentialBackoff(initialDelay, maxDelay)
-		require.Equal(initialDelay, cfg.InitialDelay)
-		require.Equal(maxDelay, cfg.MaxDelay)
-		require.Equal(0.5, cfg.JitterFactor)
-		require.EqualValues(2, cfg.Multiplier)
-	})
+	cfg := NewConfig(baseDelay, maxDelay)
+	require.Equal(baseDelay, cfg.BaseDelay)
+	require.Equal(maxDelay, cfg.MaxDelay)
 }
 
 func TestInvalidConfig(t *testing.T) {
@@ -43,76 +34,31 @@ func TestInvalidConfig(t *testing.T) {
 		cfg  Config
 	}{
 		{
-			name: "negative initial interval",
+			name: "negative base delay",
 			cfg: Config{
-				InitialDelay: -100 * time.Millisecond,
-				MaxDelay:     1 * time.Second,
-				Multiplier:   2.0,
-				JitterFactor: 0.5,
+				BaseDelay: -100 * time.Millisecond,
+				MaxDelay:  1 * time.Second,
 			},
 		},
 		{
-			name: "zero initial interval",
+			name: "zero base delay",
 			cfg: Config{
-				InitialDelay: 0,
-				MaxDelay:     1 * time.Second,
-				Multiplier:   2.0,
-				JitterFactor: 0.5,
+				BaseDelay: 0,
+				MaxDelay:  1 * time.Second,
 			},
 		},
 		{
-			name: "negative max interval",
+			name: "negative max delay",
 			cfg: Config{
-				InitialDelay: 100 * time.Millisecond,
-				MaxDelay:     -1 * time.Second,
-				Multiplier:   2.0,
-				JitterFactor: 0.5,
+				BaseDelay: 100 * time.Millisecond,
+				MaxDelay:  -1 * time.Second,
 			},
 		},
 		{
-			name: "zero max interval when Multiplier != 1",
+			name: "zero max delay",
 			cfg: Config{
-				InitialDelay: 100 * time.Millisecond,
-				MaxDelay:     0,
-				Multiplier:   2.0,
-				JitterFactor: 0.5,
-			},
-		},
-		{
-			name: "multiplier less than 1",
-			cfg: Config{
-				InitialDelay: 100 * time.Millisecond,
-				MaxDelay:     1 * time.Second,
-				Multiplier:   0.5,
-				JitterFactor: 0.5,
-			},
-		},
-		{
-			name: "negative jitter factor",
-			cfg: Config{
-				InitialDelay: 100 * time.Millisecond,
-				MaxDelay:     1 * time.Second,
-				Multiplier:   2.0,
-				JitterFactor: -0.1,
-			},
-		},
-		{
-			name: "jitter factor greater than 1",
-			cfg: Config{
-				InitialDelay: 100 * time.Millisecond,
-				MaxDelay:     1 * time.Second,
-				Multiplier:   2.0,
-				JitterFactor: 1.5,
-			},
-		},
-		{
-			name: "negative reset after",
-			cfg: Config{
-				InitialDelay: 100 * time.Millisecond,
-				MaxDelay:     1 * time.Second,
-				Multiplier:   2.0,
-				JitterFactor: 0.5,
-				ResetAfter:   -1 * time.Second,
+				BaseDelay: 100 * time.Millisecond,
+				MaxDelay:  0,
 			},
 		},
 	}
@@ -133,14 +79,8 @@ func TestInvalidConfig(t *testing.T) {
 
 func TestContextCancellation(t *testing.T) {
 	require := require.New(t)
-	cfg := Config{
-		InitialDelay: 100 * time.Millisecond,
-		MaxDelay:     1 * time.Second,
-		Multiplier:   2.0,
-		JitterFactor: 0.0,
-	}
 
-	t.Run("initially cancelled", func(t *testing.T) {
+	t.Run("initialy cancelled", func(t *testing.T) {
 		fn := func() (string, error) {
 			return "", errors.New("permanent error")
 		}
@@ -148,7 +88,7 @@ func TestContextCancellation(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		result, err := Retry(ctx, cfg, fn)
+		result, err := Retry(ctx, testCfg, fn)
 
 		require.ErrorIs(err, context.Canceled)
 		require.Empty(result)
@@ -165,7 +105,7 @@ func TestContextCancellation(t *testing.T) {
 			cancel()
 		}()
 
-		result, err := Retry(ctx, cfg, fn)
+		result, err := Retry(ctx, testCfg, fn)
 
 		require.ErrorIs(err, context.Canceled)
 		require.Empty(result)
@@ -178,141 +118,107 @@ func TestContextCancellation(t *testing.T) {
 			return "", errors.New("permanent error")
 		}
 
-		result, err := Retry(ctx, cfg, fn)
+		result, err := Retry(ctx, testCfg, fn)
 
 		require.ErrorIs(err, context.Canceled)
 		require.Empty(result)
 	})
 }
 
-func TestExponentialBackoffBehavior(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skip long test")
-	}
+func TestNextDelay_GrowsOnAverage(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialDelay: 100 * time.Millisecond,
-		MaxDelay:     1 * time.Second,
-		Multiplier:   2.0,
-		JitterFactor: 0.0,
+		BaseDelay:               10 * time.Millisecond,
+		MaxDelay:                800 * time.Millisecond, // small cap to keep test fast
+		ResetDelayAfterMaxDelay: false,                  // avoid internal resets affecting attempt
 	}
-
-	attempts := 0
-	retryDelays := []time.Duration{}
-
-	fn := func() (string, error) {
-		attempts++
-		if attempts < 6 {
-			return "", errors.New("temporary error")
-		}
-		return "success", nil
-	}
-
-	cfg.OnError = func(attempt int, delay time.Duration, _ error) Action {
-		retryDelays = append(retryDelays, delay)
-		return DoRetry
-	}
-
-	result, err := Retry(context.Background(), cfg, fn)
-
+	r, err := New(cfg)
 	require.NoError(err)
-	require.Equal("success", result)
-	require.Equal(6, attempts)
-	require.Len(retryDelays, 5)
 
-	// Verify exponential backoff behavior
-	// Expected delays: ~100ms, ~200ms, ~400ms, ~800ms, ~1000ms (capped)
-	expectedDelays := []time.Duration{
-		100 * time.Millisecond,
-		200 * time.Millisecond,
-		400 * time.Millisecond,
-		800 * time.Millisecond,
-		1000 * time.Millisecond,
-	}
+	const samplesPerAttempt = 1000
+	var prevMean float64
+	var prevCap float64
 
-	for i, actualDelay := range retryDelays {
-		expectedDelay := expectedDelays[i]
-		// Allow some tolerance for timing variations
-		tolerance := expectedDelay / 10 // 10% tolerance
-		minDelay := expectedDelay - tolerance
-		maxDelay := expectedDelay + tolerance
+	for attempt := 0; attempt < 50; attempt++ {
+		// Compute the expected cap: min(base * 2^attempt, max)
+		expDelay := float64(cfg.BaseDelay) * float64(uint64(1)<<attempt)
+		cap := expDelay
+		if cap > float64(cfg.MaxDelay) {
+			cap = float64(cfg.MaxDelay)
+		}
 
-		require.GreaterOrEqual(actualDelay, minDelay, "Delay %d should be >= %v, got %v", i, minDelay, actualDelay)
-		require.LessOrEqual(actualDelay, maxDelay, "Delay %d should be <= %v, got %v", i, maxDelay, actualDelay)
-	}
+		// Sample many delays at this attempt level.
+		var sum float64
+		for i := 0; i < samplesPerAttempt; i++ {
+			// Force the attempt we want to test (NextDelay mutates it).
+			r.attempt = attempt
+			d := r.NextDelay()
 
-	// Verify that delays are monotonically increasing (except for the last one which might be capped)
-	for i := 1; i < len(retryDelays)-1; i++ {
-		require.Greater(retryDelays[i], retryDelays[i-1],
-			"Delay should increase exponentially: delay[%d]=%v, delay[%d]=%v",
-			i, retryDelays[i], i-1, retryDelays[i-1])
+			// Basic bounds: 0 <= d < cap
+			require.GreaterOrEqual(d, time.Duration(0), "Delay %d should be >= 0", i)
+			if float64(d) >= cap && cap > 0 { // Duration truncates, so equality shouldn't happen
+				t.Fatalf("delay exceeds cap at attempt=%d: d=%v cap=%v", attempt, d, time.Duration(cap))
+			}
+			sum += float64(d)
+		}
+		mean := sum / samplesPerAttempt
+
+		// Only check monotonic growth when the cap itself increases.
+		if attempt > 0 && cap > prevCap {
+			// Because mean ~ cap/2 and samplesPerAttempt is large,
+			// the mean should clearly increase when cap increases.
+			require.Greater(mean, prevMean, "mean delay did not increase: attempt=%d prevMean=%.2f mean=%.2f prevCap=%v cap=%v",
+				attempt, prevMean, mean, time.Duration(prevCap), time.Duration(cap))
+
+			// Be stricter: demand a noticeable increase relative to noise.
+			// When cap doubles, mean should ~double; require at least +25% to avoid flakiness.
+			if mean < prevMean*1.25 && cap >= prevCap*1.5 {
+				t.Fatalf("mean delay increase too small: attempt=%d prevMean=%.2f mean=%.2f prevCap=%v cap=%v",
+					attempt, prevMean, mean, time.Duration(prevCap), time.Duration(cap))
+			}
+		}
+
+		prevMean = mean
+		prevCap = cap
+
+		// Once the cap has saturated at MaxDelay, we can stop early.
+		if cap == float64(cfg.MaxDelay) {
+			// Optional: verify plateau (means should be ~stable around MaxDelay/2)
+			// but we won't enforce exact value to avoid crypto/rand variance edge cases.
+			break
+		}
 	}
 }
 
-func TestResetAfter(t *testing.T) {
+func TestResetDelayAfterMaxDelay(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialDelay: 100 * time.Millisecond,
-		MaxDelay:     1 * time.Second,
-		Multiplier:   2.0,
-		JitterFactor: 0.0,
-		ResetAfter:   200 * time.Millisecond,
+		BaseDelay:               10 * time.Millisecond,
+		MaxDelay:                80 * time.Millisecond, // base * 2^3 = 80ms hits the cap
+		ResetDelayAfterMaxDelay: true,
 	}
-
-	attempts := 0
-	retryDelays := []time.Duration{}
-
-	fn := func() (string, error) {
-		attempts++
-		if attempts < 6 {
-			return "", errors.New("temporary error")
-		}
-		return "success", nil
-	}
-
-	// Track retry delays by using OnError callback
-	cfg.OnError = func(attempt int, delay time.Duration, _ error) Action {
-		retryDelays = append(retryDelays, delay)
-		return DoRetry
-	}
-
-	result, err := Retry(context.Background(), cfg, fn)
-
+	r, err := New(cfg)
 	require.NoError(err)
-	require.Equal("success", result)
-	require.Equal(6, attempts)
-	require.Len(retryDelays, 5)
 
-	// Verify that reset behavior is working
-	// The key insight is that the reset happens when the time since last reset exceeds ResetAfter
-	// Since we have no jitter, we can verify the pattern:
+	// Force the attempt so that exponentialDelay = base * 2^attempt = 80ms == MaxDelay.
+	// With ResetDelayAfterMaxDelay == true, this call should reset r.attempt to 0.
+	r.attempt = 3
+	_ = r.NextDelay()
 
-	// First delay should be initial interval
-	require.Equal(100*time.Millisecond, retryDelays[0])
+	require.Zero(r.attempt, "attempt did not reset after hitting cap; got %d, want 0", r.attempt)
 
-	// Second delay should be 2x initial
-	require.Equal(200*time.Millisecond, retryDelays[1])
-
-	// The third delay should show the reset behavior
-	// If the reset is working, it should be 100ms (reset to initial)
-	// If not working, it would be 400ms (2x previous)
-	require.Equal(100*time.Millisecond, retryDelays[2],
-		"Third delay should be reset to initial interval")
-
-	// Fourth delay should be 2x the reset initial
-	require.Equal(200*time.Millisecond, retryDelays[3])
-
-	// Fifth delay should be reset to initial again (because 200ms has passed)
-	require.Equal(100*time.Millisecond, retryDelays[4])
+	// Next call should use attempt=0, i.e., cap = BaseDelay.
+	d := r.NextDelay()
+	if d < 0 || d >= cfg.BaseDelay {
+		t.Fatalf("delay not reset to base range; got %v, want in [0, %v)", d, cfg.BaseDelay)
+	}
 }
 
 func TestMaxDelayCapping(t *testing.T) {
 	require := require.New(t)
 	cfg := Config{
-		InitialDelay: 100 * time.Millisecond,
-		MaxDelay:     200 * time.Millisecond,
-		Multiplier:   2.0,
-		JitterFactor: 0.0,
+		BaseDelay: 100 * time.Millisecond,
+		MaxDelay:  200 * time.Millisecond,
 	}
 
 	attempts := 0
@@ -326,9 +232,9 @@ func TestMaxDelayCapping(t *testing.T) {
 		return "success", nil
 	}
 
-	cfg.OnError = func(attempt int, delay time.Duration, _ error) Action {
+	cfg.OnError = func(attempt int, delay time.Duration, _ error) (bool, error) {
 		retryDelays = append(retryDelays, delay)
-		return DoRetry
+		return true, nil
 	}
 
 	result, err := Retry(context.Background(), cfg, fn)
@@ -344,18 +250,12 @@ func TestMaxDelayCapping(t *testing.T) {
 
 func TestImmediateSuccess(t *testing.T) {
 	require := require.New(t)
-	cfg := Config{
-		InitialDelay: 100 * time.Millisecond,
-		MaxDelay:     1 * time.Second,
-		Multiplier:   2.0,
-		JitterFactor: 0.5,
-	}
 
 	fn := func() (string, error) {
 		return "immediate success", nil
 	}
 
-	result, err := Retry(context.Background(), cfg, fn)
+	result, err := Retry(context.Background(), testCfg, fn)
 	require.NoError(err)
 	require.Equal("immediate success", result)
 }
@@ -363,9 +263,9 @@ func TestImmediateSuccess(t *testing.T) {
 func TestOnError(t *testing.T) {
 	require := require.New(t)
 	testErr := errors.New("test error")
+	cfg := NewConfig(100*time.Millisecond, 3*time.Second)
 
-	t.Run("DoRetry", func(t *testing.T) {
-		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
+	t.Run("Retry", func(t *testing.T) {
 		retriesNum := 0
 		fn := func() error {
 			switch retriesNum {
@@ -374,57 +274,46 @@ func TestOnError(t *testing.T) {
 			}
 			return nil
 		}
-		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
+		cfg.OnError = func(attempt int, delay time.Duration, err error) (bool, error) {
 			retriesNum++
-			return DoRetry
+			return true, nil
 		}
-		err := RetryErr(context.Background(), cfg, fn)
+		err := RetryNoResult(context.Background(), cfg, fn)
 		require.NoError(err)
 		require.Equal(3, retriesNum)
 	})
 
 	t.Run("Accept", func(t *testing.T) {
-		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
 		retriesNum := 0
 		fn := func() error {
 			return testErr
 		}
-		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
+		cfg.OnError = func(attempt int, delay time.Duration, err error) (bool, error) {
 			retriesNum++
 			if retriesNum == 1 {
-				return DoRetry
+				return true, nil
 			}
-			return Accept
+			return false, nil
 		}
-		err := RetryErr(context.Background(), cfg, fn)
+		err := RetryNoResult(context.Background(), cfg, fn)
 		require.NoError(err)
 		require.Equal(2, retriesNum)
 	})
 
-	t.Run("Abort", func(t *testing.T) {
-		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
+	t.Run("Fail fast", func(t *testing.T) {
 		retriesNum := 0
 		fn := func() error {
 			return testErr
 		}
-		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
+		cfg.OnError = func(attempt int, delay time.Duration, err error) (bool, error) {
 			retriesNum++
 			if retriesNum == 1 {
-				return DoRetry
+				return true, nil
 			}
-			return Abort
+			return false, err
 		}
-		err := RetryErr(context.Background(), cfg, fn)
+		err := RetryNoResult(context.Background(), cfg, fn)
 		require.ErrorIs(err, testErr)
 		require.Equal(2, retriesNum)
-	})
-
-	t.Run("panic on unknown Action", func(t *testing.T) {
-		cfg := NewConfigConstantBackoff(100 * time.Millisecond)
-		fn := func() error { return testErr }
-		cfg.OnError = func(attempt int, delay time.Duration, err error) Action {
-			return -1
-		}
-		require.Panics(func() { RetryErr(context.Background(), cfg, fn) })
 	})
 }

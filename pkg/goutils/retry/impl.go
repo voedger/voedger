@@ -15,91 +15,69 @@ import (
 	"time"
 )
 
-func NewConfigConstantBackoff(initialDelay time.Duration) Config {
+func NewConfig(BaseDelay time.Duration, maxDelay time.Duration) Config {
 	return Config{
-		InitialDelay: initialDelay,
-		Multiplier:   1,
-	}
-}
-
-func NewConfigExponentialBackoff(initialDelay time.Duration, maxDelay time.Duration) Config {
-	return Config{
-		JitterFactor: DefaultJitterFactor,
-		Multiplier:   DefaultMultiplier,
-		InitialDelay: initialDelay,
-		MaxDelay:     maxDelay,
+		BaseDelay:               BaseDelay,
+		MaxDelay:                maxDelay,
+		ResetDelayAfterMaxDelay: true,
 	}
 }
 
 // New creates a Retrier with provided Config, validating parameters.
 func New(cfg Config) (*Retrier, error) {
-	if cfg.InitialDelay <= 0 || cfg.MaxDelay < 0 || (cfg.MaxDelay == 0 && cfg.Multiplier > 1) ||
-		cfg.Multiplier < 1 || cfg.JitterFactor < 0 || cfg.JitterFactor > 1 ||
-		cfg.ResetAfter < 0 {
+	if cfg.BaseDelay <= 0 || cfg.MaxDelay <= 0 {
 		return nil, ErrInvalidConfig
 	}
 	r := &Retrier{
-		cfg:          cfg,
-		currentDelay: cfg.InitialDelay,
-		lastReset:    time.Now(),
+		cfg:       cfg,
+		lastReset: time.Now(),
 	}
 	return r, nil
 }
 
-// NextDelay computes the next delay, applying exponential backoff,
-// FullJitter, and reset logic.
+// NextDelay computes the next delay using [Full Jitter algorithm from AWS](https://aws.amazon.com/ru/blogs/architecture/exponential-backoff-and-jitter/):
+// sleep = random_between(0, min(cap, base * 2^attempt))
 func (r *Retrier) NextDelay() time.Duration {
-	now := time.Now()
-	// reset delay if period elapsed
-	if r.cfg.ResetAfter > 0 && now.Sub(r.lastReset) >= r.cfg.ResetAfter {
-		r.currentDelay = r.cfg.InitialDelay
-		r.lastReset = now
-	}
-	// compute base delay
-	base := r.currentDelay
-	// prepare next delay for future
+	// Calculate exponential backoff: base * 2^attempt
+	exponentialDelay := float64(r.cfg.BaseDelay) * float64(uint64(1)<<r.attempt)
 
-	next := time.Duration(float64(base) * r.cfg.Multiplier)
-	if r.cfg.MaxDelay > 0 && next > r.cfg.MaxDelay {
-		next = r.cfg.MaxDelay
-	}
-	r.currentDelay = next
+	// Apply max delay cap
+	cap := min(exponentialDelay, float64(r.cfg.MaxDelay))
 
-	// apply FullJitter: random offset around base
-	// offset in [-JitterFactor*base, +JitterFactor*base]
-	offset := (secureFloat64()*2 - 1) * r.cfg.JitterFactor * float64(base)
-	delay := max(base+time.Duration(offset), 0)
+	// Full Jitter: uniform random in [0, cap]
+	delay := time.Duration(secureFloat64() * cap)
+
+	if r.cfg.ResetDelayAfterMaxDelay && exponentialDelay >= float64(r.cfg.MaxDelay) {
+		r.attempt = 0
+	} else {
+		r.attempt++
+	}
+
 	return delay
 }
 
 func (r *Retrier) Run(ctx context.Context, fn func() error) error {
-	attempt := 0
+	r.attempt = 0 // Reset attempt counter at start
+	totalAttempts := 0
 
 	for ctx.Err() == nil {
-
 		err := fn()
-
 		if err == nil {
 			return nil
 		}
 
 		// backoff computation
-		attempt++
+		totalAttempts++
 		delay := r.NextDelay()
 
-		action := DoRetry
 		if r.cfg.OnError != nil {
-			action = r.cfg.OnError(attempt, delay, err)
-		}
-
-		switch action {
-		case Accept:
-			return nil
-		case Abort:
-			return err
-		case DoRetry:
-		default:
-			panic("unknown retry action")
+			retry, abortErr := r.cfg.OnError(totalAttempts, delay, err)
+			if abortErr != nil {
+				return abortErr
+			}
+			if !retry {
+				return nil
+			}
 		}
 
 		// context might have been cancelled while in OnError or in fn
