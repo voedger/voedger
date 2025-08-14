@@ -80,7 +80,7 @@ func TestInvalidConfig(t *testing.T) {
 func TestContextCancellation(t *testing.T) {
 	require := require.New(t)
 
-	t.Run("initialy cancelled", func(t *testing.T) {
+	t.Run("initially cancelled", func(t *testing.T) {
 		fn := func() (string, error) {
 			return "", errors.New("permanent error")
 		}
