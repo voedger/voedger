@@ -12,20 +12,15 @@ import "time"
 
 // Config holds parameters for retry behavior and error-handling policies.
 type Config struct {
-	InitialDelay time.Duration
-	MaxDelay     time.Duration // >=0. 0 - not used. 0 only allowed if Multiplier == 1
-	Multiplier   float64       // >1
-	JitterFactor float64       // between 0 and 1
-	ResetAfter   time.Duration
-	OnError      func(attempt int, delay time.Duration, err error) Action
+	BaseDelay               time.Duration
+	MaxDelay                time.Duration // >=0. 0 - not used. 0 only allowed if Multiplier == 1
+	OnError                 func(attempt int, delay time.Duration, opErr error) (retry bool, err error)
+	ResetDelayAfterMaxDelay bool
 }
-
-// retry policy: DoRetry, Abort, Accept
-type Action int
 
 // Retrier executes operations with backoff, jitter, and reset logic.
 type Retrier struct {
-	cfg          Config
-	currentDelay time.Duration
-	lastReset    time.Time
+	cfg       Config
+	attempt   int
+	lastReset time.Time
 }

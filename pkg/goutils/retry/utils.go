@@ -28,7 +28,7 @@ func Retry[T any](ctx context.Context, cfg Config, op func() (T, error)) (T, err
 	return result, err
 }
 
-func RetryErr(ctx context.Context, cfg Config, op func() error) error {
+func RetryNoResult(ctx context.Context, cfg Config, op func() error) error {
 	_, err := Retry(ctx, cfg, func() (any, error) {
 		return nil, op()
 	})
