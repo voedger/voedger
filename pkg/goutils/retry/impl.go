@@ -11,7 +11,8 @@ package retrier
 import (
 	"context"
 	"crypto/rand"
-	"encoding/binary"
+	"math"
+	"math/big"
 	"math/bits"
 	"time"
 )
@@ -29,36 +30,33 @@ func New(cfg Config) (*Retrier, error) {
 	if cfg.BaseDelay <= 0 || cfg.MaxDelay <= 0 {
 		return nil, ErrInvalidConfig
 	}
-	r := &Retrier{
-		cfg:       cfg,
-		lastReset: time.Now(),
-	}
+	r := &Retrier{cfg: cfg}
 	return r, nil
 }
 
 // NextDelay computes the next delay using [Full Jitter algorithm from AWS](https://aws.amazon.com/ru/blogs/architecture/exponential-backoff-and-jitter/):
 // sleep = random_between(0, min(cap, base*2^attempt))
 func (r *Retrier) NextDelay() time.Duration {
-	const maxSafeShift = bits.UintSize - 1 // 63 on 64-bit, 31 on 32-bit
-	exponentialDelay := float64(r.cfg.MaxDelay)
-	if r.attempt < maxSafeShift {
-		// Calculate exponential backoff: base*2^attempt
-		exponentialDelay = float64(r.cfg.BaseDelay) * float64(uint64(1)<<r.attempt)
-	}
 
-	// Apply max delay cap
-	cap := min(exponentialDelay, float64(r.cfg.MaxDelay)) // nolint predeclared
+	// Saturating exponential: base * 2^attempt, capping at MaxInt64 on overflow.
+	nextDelay := saturatingMulPow2(r.cfg.BaseDelay, r.attempt)
 
-	// Full Jitter: uniform random in [0, cap]
-	delay := time.Duration(secureFloat64() * cap)
+	// Apply cap
+	nextDelay = min(nextDelay, r.cfg.MaxDelay)
 
-	if r.cfg.ResetDelayAfterMaxDelay && exponentialDelay >= float64(r.cfg.MaxDelay) {
+	// Attempt accounting
+	if r.cfg.ResetDelayAfterMaxDelay && nextDelay >= r.cfg.MaxDelay {
 		r.attempt = 0
 	} else {
 		r.attempt++
 	}
 
-	return delay
+	// Full Jitter draw in [0, cap)
+	if nextDelay > 0 {
+		nextDelay = time.Duration(secureInt63n(int64(nextDelay)))
+	}
+
+	return nextDelay
 }
 
 func (r *Retrier) Run(ctx context.Context, fn func() error) error {
@@ -100,16 +98,33 @@ func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 	return ctx.Err()
 }
 
-// secureFloat64 returns a cryptographically secure random float64 in the range [0, 1).
-func secureFloat64() float64 {
-	var buf [8]byte
-	_, err := rand.Read(buf[:])
+// saturatingMulPow2 returns x*2^s, saturating to MaxInt64 on overflow.
+func saturatingMulPow2(x time.Duration, s int) time.Duration {
+	const maxSafeShift = bits.UintSize - 1 // 63 on 64-bit, 31 on 32-bit
+	if x <= 0 || s <= 0 {
+		return x
+	}
+	if s >= maxSafeShift { // would cross sign bit
+		return math.MaxInt64
+	}
+	// factor = 1 << s is safe since s < maxSafeShift
+	factor := time.Duration(1) << uint(s)
+	// Overflow if x > MaxInt64 / factor
+	if x > math.MaxInt64/factor {
+		return math.MaxInt64
+	}
+	return x * factor //nolint
+}
+
+// secureInt63n returns a crypto-secure integer uniformly in [0, n).
+func secureInt63n(n int64) int64 {
+	if n <= 0 {
+		return 0
+	}
+	x, err := rand.Int(rand.Reader, big.NewInt(n))
 	if err != nil {
 		// notest
 		panic(err)
 	}
-	// Convert the random bytes to a uint64
-	u := binary.LittleEndian.Uint64(buf[:])
-	// Convert to float64 in [0, 1) by dividing by 2^64
-	return float64(u) / float64(1<<64)
+	return x.Int64()
 }
