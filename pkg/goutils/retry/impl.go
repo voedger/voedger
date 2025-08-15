@@ -113,14 +113,11 @@ func saturatingMulPow2(x time.Duration, s int) time.Duration {
 	if x > math.MaxInt64/factor {
 		return math.MaxInt64
 	}
-	return x * factor //nolint
+	return x * factor //nolint durationcheck
 }
 
 // secureInt63n returns a crypto-secure integer uniformly in [0, n).
 func secureInt63n(n int64) int64 {
-	if n <= 0 {
-		return 0
-	}
 	x, err := rand.Int(rand.Reader, big.NewInt(n))
 	if err != nil {
 		// notest
