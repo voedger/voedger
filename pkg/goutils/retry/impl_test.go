@@ -143,7 +143,7 @@ func TestNextDelay_GrowsOnAverage(t *testing.T) {
 
 	for attempt := 0; attempt < 50; attempt++ {
 		// Compute the expected cap: min(base * 2^attempt, max)
-		cap := float64(cfg.BaseDelay) * float64(uint64(1)<<attempt) // nolint predeclared
+		cap := float64(cfg.BaseDelay) * float64(uint64(1)<<attempt) //nolint predeclared
 		if cap > float64(cfg.MaxDelay) {
 			cap = float64(cfg.MaxDelay)
 		}
@@ -400,4 +400,90 @@ func TestNextDelayOverflowAverageIsConstant2(t *testing.T) {
 		require.LessOrEqual(m, high, "bucket %d mean too high: got %.3fms, want <= %.3fms",
 			i, m/float64(time.Millisecond), high/float64(time.Millisecond))
 	}
+}
+
+func TestSaturatingMulPow2(t *testing.T) {
+	req := require.New(t)
+
+	const (
+		maxDur       = time.Duration(math.MaxInt64)
+		shiftSignBit = 63 // int64 sign bit; Duration is always int64
+	)
+
+	tests := []struct {
+		name     string
+		input    time.Duration
+		shift    int
+		expected time.Duration
+	}{
+		// Zero and negative inputs / shifts
+		{"zero input", 0, 5, 0},
+		{"negative input", -100 * time.Millisecond, 3, -100 * time.Millisecond},
+		{"zero shift", 100 * time.Millisecond, 0, 100 * time.Millisecond},
+		{"negative shift", 100 * time.Millisecond, -1, 100 * time.Millisecond},
+		{"very negative shift", 250 * time.Millisecond, math.MinInt, 250 * time.Millisecond},
+
+		// Normal doubling
+		{"shift 1", 100 * time.Millisecond, 1, 200 * time.Millisecond},
+		{"shift 2", 100 * time.Millisecond, 2, 400 * time.Millisecond},
+		{"shift 3", 1 * time.Second, 3, 8 * time.Second},
+
+		// Saturation threshold tied to int64, not bits.UintSize
+		{"limit-1 ok (62)", 1 * time.Nanosecond, 62, time.Duration(1 << 62)},
+		{"at sign bit (63) saturates", 1 * time.Nanosecond, 63, maxDur},
+		{"beyond sign bit (64) saturates", 1 * time.Nanosecond, 64, maxDur},
+
+		// Overflow detection around boundary
+		{"large base overflow", time.Duration(math.MaxInt64 / 2), 2, maxDur},
+		{"boundary exact", time.Duration(math.MaxInt64 / 4), 2, time.Duration(math.MaxInt64/4) * 4},
+		{"over boundary", time.Duration(math.MaxInt64/4 + 1), 2, maxDur},
+
+		// Edge around huge factor (1<<62)
+		{"exact at 1<<62", time.Duration(math.MaxInt64 >> 62), 62, time.Duration(math.MaxInt64>>62) * (1 << 62)},
+		{"just over at 1<<62", time.Duration((math.MaxInt64 >> 62) + 1), 62, maxDur},
+
+		// Max values
+		{"max int64 input", time.Duration(math.MaxInt64), 1, maxDur},
+		{"over half max with shift 1", time.Duration(math.MaxInt64/2 + 1), 1, maxDur},
+
+		// Small values with larger shifts
+		{"1ns shift 1", 1 * time.Nanosecond, 1, 2 * time.Nanosecond},
+		{"1ns shift 10", 1 * time.Nanosecond, 10, 1024 * time.Nanosecond},
+		{"1ns shift 20", 1 * time.Nanosecond, 20, time.Duration(1 << 20)},
+		{"1ns shift 30", 1 * time.Nanosecond, 30, time.Duration(1 << 30)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := saturatingMulPow2(tt.input, tt.shift)
+			req.Equal(tt.expected, got)
+		})
+	}
+
+	// Idempotence once saturated
+	t.Run("saturated stays saturated", func(t *testing.T) {
+		x := time.Duration(math.MaxInt64/2 + 1)
+		req.Equal(maxDur, saturatingMulPow2(x, 1))
+		req.Equal(maxDur, saturatingMulPow2(x, 10))
+		req.Equal(maxDur, saturatingMulPow2(x, 100))
+	})
+
+	// Monotonicity in shift for positive x until saturation
+	t.Run("monotonic nondecreasing in s", func(t *testing.T) {
+		x := 3 * time.Millisecond
+		prev := saturatingMulPow2(x, 0)
+		for s := 1; s < shiftSignBit+5; s++ {
+			cur := saturatingMulPow2(x, s)
+			req.GreaterOrEqual(cur, prev)
+			if prev == maxDur {
+				req.Equal(maxDur, cur)
+			}
+			prev = cur
+		}
+	})
+
+	// Negative input remains unchanged even for huge shift
+	t.Run("negative input unchanged for huge shift", func(t *testing.T) {
+		req.Equal(-5*time.Second, saturatingMulPow2(-5*time.Second, 1000))
+	})
 }
