@@ -138,52 +138,52 @@ func TestNextDelay_GrowsOnAverage(t *testing.T) {
 	require.NoError(err)
 
 	const samplesPerAttempt = 1000
-	var prevMean float64
-	var prevCap float64
+	var prevMean time.Duration
+	var prevCap time.Duration
 
 	for attempt := 0; attempt < 50; attempt++ {
 		// Compute the expected cap: min(base * 2^attempt, max)
-		cap := float64(cfg.BaseDelay) * float64(uint64(1)<<attempt) //nolint predeclared
-		if cap > float64(cfg.MaxDelay) {
-			cap = float64(cfg.MaxDelay)
+		delayCap := cfg.BaseDelay << attempt
+		if delayCap < 0 || delayCap > cfg.MaxDelay { // overflow or max reached
+			delayCap = cfg.MaxDelay
 		}
 
 		// Sample many delays at this attempt level.
-		var sum float64
+		var sum time.Duration
 		for i := 0; i < samplesPerAttempt; i++ {
 			// Force the attempt we want to test (NextDelay mutates it).
 			r.attempt = attempt
 			d := r.NextDelay()
 
-			// Basic bounds: 0 <= d < cap
+			// Basic bounds: 0 <= d < delayCap
 			require.GreaterOrEqual(d, time.Duration(0), "Delay %d should be >= 0", i)
-			if float64(d) >= cap && cap > 0 { // Duration truncates, so equality shouldn't happen
-				t.Fatalf("delay exceeds cap at attempt=%d: d=%v cap=%v", attempt, d, time.Duration(cap))
+			if d >= delayCap && delayCap > 0 {
+				t.Fatalf("delay exceeds cap at attempt=%d: d=%v cap=%v", attempt, d, delayCap)
 			}
-			sum += float64(d)
+			sum += d
 		}
-		mean := sum / samplesPerAttempt
+		mean := sum / samplesPerAttempt // integer mean in Duration
 
 		// Only check monotonic growth when the cap itself increases.
-		if attempt > 0 && cap > prevCap {
-			// Because mean ~ cap/2 and samplesPerAttempt is large,
-			// the mean should clearly increase when cap increases.
-			require.Greater(mean, prevMean, "mean delay did not increase: attempt=%d prevMean=%.2f mean=%.2f prevCap=%v cap=%v",
-				attempt, prevMean, mean, time.Duration(prevCap), time.Duration(cap))
+		if attempt > 0 && delayCap > prevCap {
+			// Because mean ~ delayCap/2 and samplesPerAttempt is large,
+			// the mean should clearly increase when delayCap increases.
+			require.Greater(mean, prevMean,
+				"mean delay did not increase: attempt=%d prevMean=%v mean=%v prevCap=%v cap=%v",
+				attempt, prevMean, mean, prevCap, delayCap)
 
-			// Be stricter: demand a noticeable increase relative to noise.
-			// When cap doubles, mean should ~double; require at least +25% to avoid flakiness.
-			if mean < prevMean*1.25 && cap >= prevCap*1.5 {
-				t.Fatalf("mean delay increase too small: attempt=%d prevMean=%.2f mean=%.2f prevCap=%v cap=%v",
-					attempt, prevMean, mean, time.Duration(prevCap), time.Duration(cap))
+			// Be stricter: demand a noticeable increase (~+25%) when cap grows by >=50%.
+			if mean*100 < prevMean*125 && delayCap >= prevCap*3/2 {
+				t.Fatalf("mean delay increase too small: attempt=%d prevMean=%v mean=%v prevCap=%v cap=%v",
+					attempt, prevMean, mean, prevCap, delayCap)
 			}
 		}
 
 		prevMean = mean
-		prevCap = cap
+		prevCap = delayCap
 
 		// Once the cap has saturated at MaxDelay, we can stop early.
-		if cap == float64(cfg.MaxDelay) {
+		if delayCap == cfg.MaxDelay {
 			// Optional: verify plateau (means should be ~stable around MaxDelay/2)
 			// but we won't enforce exact value to avoid crypto/rand variance edge cases.
 			break

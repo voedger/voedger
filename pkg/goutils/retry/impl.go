@@ -13,7 +13,6 @@ import (
 	"crypto/rand"
 	"math"
 	"math/big"
-	"math/bits"
 	"time"
 )
 
@@ -100,20 +99,18 @@ func (r *Retrier) Run(ctx context.Context, fn func() error) error {
 
 // saturatingMulPow2 returns x*2^s, saturating to MaxInt64 on overflow.
 func saturatingMulPow2(x time.Duration, s int) time.Duration {
-	const maxSafeShift = bits.UintSize - 1 // 63 on 64-bit, 31 on 32-bit
+	const maxSafeShift = 63 // on 32-bit systems would be 31, that will cause too early saturation
 	if x <= 0 || s <= 0 {
 		return x
 	}
 	if s >= maxSafeShift { // would cross sign bit
 		return math.MaxInt64
 	}
-	// factor = 1 << s is safe since s < maxSafeShift
-	factor := time.Duration(1) << uint(s)
-	// Overflow if x > MaxInt64 / factor
-	if x > math.MaxInt64/factor {
+	// Check if shift would overflow
+	if x > math.MaxInt64>>s {
 		return math.MaxInt64
 	}
-	return x * factor //nolint durationcheck
+	return x << s
 }
 
 // secureInt63n returns a crypto-secure integer uniformly in [0, n).
