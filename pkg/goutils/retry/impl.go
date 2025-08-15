@@ -12,6 +12,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"math/bits"
 	"time"
 )
 
@@ -36,10 +37,14 @@ func New(cfg Config) (*Retrier, error) {
 }
 
 // NextDelay computes the next delay using [Full Jitter algorithm from AWS](https://aws.amazon.com/ru/blogs/architecture/exponential-backoff-and-jitter/):
-// sleep = random_between(0, min(cap, base * 2^attempt))
+// sleep = random_between(0, min(cap, base*2^attempt))
 func (r *Retrier) NextDelay() time.Duration {
-	// Calculate exponential backoff: base * 2^attempt
-	exponentialDelay := float64(r.cfg.BaseDelay) * float64(uint64(1)<<r.attempt)
+	const maxSafeShift = bits.UintSize - 1 // 63 on 64-bit, 31 on 32-bit
+	exponentialDelay := float64(r.cfg.MaxDelay)
+	if r.attempt < maxSafeShift {
+		// Calculate exponential backoff: base*2^attempt
+		exponentialDelay = float64(r.cfg.BaseDelay) * float64(uint64(1)<<r.attempt)
+	}
 
 	// Apply max delay cap
 	cap := min(exponentialDelay, float64(r.cfg.MaxDelay)) // nolint predeclared

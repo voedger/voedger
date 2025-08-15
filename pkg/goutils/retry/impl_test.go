@@ -11,6 +11,8 @@ package retrier
 import (
 	"context"
 	"errors"
+	"math"
+	"math/bits"
 	"testing"
 	"time"
 
@@ -315,4 +317,87 @@ func TestOnError(t *testing.T) {
 		require.ErrorIs(err, testErr)
 		require.Equal(2, retriesNum)
 	})
+}
+
+func TestNextDelayOverflowAverageIsConstant2(t *testing.T) {
+	require := require.New(t)
+	// We’ll force the overflow branch: attempt >= bits.UintSize-1.
+	// In that branch NextDelay() draws U[0, MaxDelay) and (since ResetDelayAfterMaxDelay==true)
+	// resets attempt to 0; we’ll push it back to overflow before each sample.
+	const (
+		samples   = 20000 // crypto/rand-backed; keep reasonably large but quick
+		buckets   = 10
+		baseDelay = 7 * time.Millisecond
+		maxDelay  = 1 * time.Second
+	)
+
+	cfg := NewConfig(baseDelay, maxDelay)
+	r, err := New(cfg)
+	require.NoError(err)
+
+	overflowAttempt := bits.UintSize - 1
+
+	var sum float64
+	bucketSums := make([]float64, buckets)
+	bucketCounts := make([]int, buckets)
+
+	for i := 0; i < samples; i++ {
+		// Force the overflow path on every draw.
+		r.attempt = overflowAttempt
+
+		d := r.NextDelay()
+		val := float64(d)
+
+		sum += val
+		b := i / (samples / buckets) // Fix: even bucket distribution
+		if b >= buckets {
+			b = buckets - 1
+		}
+		bucketSums[b] += val
+		bucketCounts[b]++
+	}
+
+	// Expected mean for U[0, MaxDelay) is MaxDelay/2.
+	expMean := float64(maxDelay) / 2.0
+	mean := sum / float64(samples)
+
+	// 1) Check the overall mean is close to MaxDelay/2.
+	// Allow a small relative error; with 20k samples from a uniform, 5% is very safe.
+	// Check both upper and lower bounds
+	const relTol = 0.05
+	require.GreaterOrEqual(mean, expMean*(1-relTol), "mean too low: got %.3fms, want ~%.3fms (±%.1f%%)",
+		mean/float64(time.Millisecond), expMean/float64(time.Millisecond), relTol*100)
+	require.LessOrEqual(mean, expMean*(1+relTol), "mean too high: got %.3fms, want ~%.3fms (±%.1f%%)",
+		mean/float64(time.Millisecond), expMean/float64(time.Millisecond), relTol*100)
+
+	// 2) Check for “no growth” across time: bucket means should be stable,
+	// and the last bucket should not be meaningfully larger than the first.
+	bucketMeans := make([]float64, buckets)
+	for i := range bucketMeans {
+		require.NotZero(bucketCounts[i], "bucket %d empty", i)
+		bucketMeans[i] = bucketSums[i] / float64(bucketCounts[i])
+	}
+
+	first := bucketMeans[0]
+	last := bucketMeans[len(bucketMeans)-1]
+
+	// Let buckets vary by noise, but forbid any clear upward trend:
+	// last cannot exceed first by more than 10% of expected mean.
+	// Check for both upward and downward trends
+	const trendTol = 0.10
+	require.LessOrEqual(math.Abs(last-first), trendTol*expMean,
+		"trend detected: first=%.3fms last=%.3fms diff=%.3fms (limit=±%.1f%% of exp mean)",
+		first/float64(time.Millisecond), last/float64(time.Millisecond),
+		math.Abs(last-first)/float64(time.Millisecond), trendTol*100)
+
+	// Also enforce all bucket means stay within a reasonable band around expMean.
+	// For uniform noise, ±12.5% is lenient and avoids flakiness on slow CI.
+	const band = 0.125
+	low, high := expMean*(1-band), expMean*(1+band)
+	for i, m := range bucketMeans {
+		require.GreaterOrEqual(m, low, "bucket %d mean too low: got %.3fms, want >= %.3fms",
+			i, m/float64(time.Millisecond), low/float64(time.Millisecond))
+		require.LessOrEqual(m, high, "bucket %d mean too high: got %.3fms, want <= %.3fms",
+			i, m/float64(time.Millisecond), high/float64(time.Millisecond))
+	}
 }
