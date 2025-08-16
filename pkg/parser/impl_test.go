@@ -165,7 +165,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	csingleton := appdef.CDoc(app.Type, appdef.NewQName("main", "SubscriptionProfile"))
 	require.True(csingleton.Singleton())
-	require.Equal("CSingletones is a configration singleton.\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", csingleton.Comment())
+	require.Equal("CSingletones is a configuration singleton.\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", csingleton.Comment())
 
 	wsingletone := appdef.WDoc(app.Type, appdef.NewQName("main", "Transaction"))
 	require.True(wsingletone.Singleton())
