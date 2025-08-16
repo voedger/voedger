@@ -251,67 +251,67 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 	t.Run("Echo function", func(t *testing.T) {
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello world"}`)))
 		require.JSONEq(`{"results":[
-				{"Res":"Hello world","sys.Container":"Hello world","sys.QName":"sys.EchoResult"}
+				{"Res":"Hello world"}
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg", func(t *testing.T) {
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023,"Month":3}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
-				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":3,"StringValue":"2023-03-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":3,"StringValue":"2023-03-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":3,"StringValue":"2023-03-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"}
+				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023},
+				{"Day":3,"Month":3,"StringValue":"2023-03-03","Year":2023},
+				{"Day":4,"Month":3,"StringValue":"2023-03-04","Year":2023},
+				{"Day":5,"Month":3,"StringValue":"2023-03-05","Year":2023}
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg and filter", func(t *testing.T) {
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&where={"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
-				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"}
+				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023},
+				{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023},
+				{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023},
+				{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023}
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order desc", func(t *testing.T) {
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=-Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
-				{"Day":2,"Month":4,"StringValue":"2023-04-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":4,"StringValue":"2023-04-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":3,"StringValue":"2023-03-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":3,"StringValue":"2023-03-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":3,"StringValue":"2023-03-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":2,"StringValue":"2023-02-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":2,"Month":2,"StringValue":"2023-02-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":1,"StringValue":"2023-01-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":1,"StringValue":"2023-01-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":1,"StringValue":"2023-01-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"}
+				{"Day":2,"Month":4,"StringValue":"2023-04-02","Year":2023},
+				{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023},
+				{"Day":4,"Month":4,"StringValue":"2023-04-04","Year":2023},
+				{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023},
+				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023},
+				{"Day":3,"Month":3,"StringValue":"2023-03-03","Year":2023},
+				{"Day":4,"Month":3,"StringValue":"2023-03-04","Year":2023},
+				{"Day":5,"Month":3,"StringValue":"2023-03-05","Year":2023},
+				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023},
+				{"Day":4,"Month":2,"StringValue":"2023-02-04","Year":2023},
+				{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023},
+				{"Day":2,"Month":2,"StringValue":"2023-02-02","Year":2023},
+				{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023},
+				{"Day":5,"Month":1,"StringValue":"2023-01-05","Year":2023},
+				{"Day":4,"Month":1,"StringValue":"2023-01-04","Year":2023},
+				{"Day":3,"Month":1,"StringValue":"2023-01-03","Year":2023}
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order asc", func(t *testing.T) {
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
-				{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":1,"StringValue":"2023-01-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":1,"StringValue":"2023-01-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":1,"StringValue":"2023-01-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":2,"Month":2,"StringValue":"2023-02-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":2,"StringValue":"2023-02-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":3,"StringValue":"2023-03-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":3,"StringValue":"2023-03-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":3,"StringValue":"2023-03-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":2,"Month":4,"StringValue":"2023-04-02","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":4,"Month":4,"StringValue":"2023-04-04","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"},
-				{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023,"sys.Container":"","sys.QName":"app1pkg.QryDailyIdxResult"}
+				{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023},
+				{"Day":3,"Month":1,"StringValue":"2023-01-03","Year":2023},
+				{"Day":4,"Month":1,"StringValue":"2023-01-04","Year":2023},
+				{"Day":5,"Month":1,"StringValue":"2023-01-05","Year":2023},
+				{"Day":2,"Month":2,"StringValue":"2023-02-02","Year":2023},
+				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023},
+				{"Day":4,"Month":2,"StringValue":"2023-02-04","Year":2023},
+				{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023},
+				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023},
+				{"Day":3,"Month":3,"StringValue":"2023-03-03","Year":2023},
+				{"Day":4,"Month":3,"StringValue":"2023-03-04","Year":2023},
+				{"Day":5,"Month":3,"StringValue":"2023-03-05","Year":2023},
+				{"Day":2,"Month":4,"StringValue":"2023-04-02","Year":2023},
+				{"Day":3,"Month":4,"StringValue":"2023-04-03","Year":2023},
+				{"Day":4,"Month":4,"StringValue":"2023-04-04","Year":2023},
+				{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023}
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with keys", func(t *testing.T) {

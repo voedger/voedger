@@ -1,19 +1,19 @@
 name: Cherry Pick Commits on Issue Creation
 
-on:  
+on:
   issues:
     types: [opened]
 
-jobs: 
+jobs:
   cherry-pick:
     if: |
       github.event.issue.title != '' &&
       (
         startsWith(github.event.issue.title, 'cprc') ||
         startsWith(github.event.issue.title, 'cprelease')
-      )    
-    uses: untillpro/ci-action/.github/workflows/cp.yml@master
-    with: 
+      )
+    uses: untillpro/ci-action/.github/workflows/cp.yml@main
+    with:
       org: 'voedger'
       repo: 'voedger'
       team: 'DevOps_cp'
