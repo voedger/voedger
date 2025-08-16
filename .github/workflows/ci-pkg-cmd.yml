@@ -10,7 +10,7 @@ on:
 jobs:
   call-workflow-ci-pkg:
     if: github.repository == 'voedger/voedger'
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main
     with:
       test_folder: "pkg"
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
@@ -18,7 +18,7 @@ jobs:
       short_test: "true"
       go_race: "false"
       ignore_build: "true"
-      test_subfolders: "true" 
+      test_subfolders: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ""
