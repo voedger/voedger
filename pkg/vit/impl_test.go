@@ -305,3 +305,4 @@ func (s *nilAppStructs) Events() istructs.IEvents           { return nil }
 func (s *nilAppStructs) Records() istructs.IRecords         { return nil }
 func (s *nilAppStructs) ViewRecords() istructs.IViewRecords { return nil }
 func (s *nilAppStructs) AppDef() appdef.IAppDef             { return nil }
+
