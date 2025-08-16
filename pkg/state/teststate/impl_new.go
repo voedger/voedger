@@ -307,7 +307,7 @@ func (gts *generalTestState) record(fQName IFullQName, id istructs.RecordID, isS
 	qName := gts.getQNameFromFQName(fQName)
 
 	// check if the record already exists
-	slices.ContainsFunc(gts.recordItems, func(i recordItem) bool {
+	_ = slices.ContainsFunc(gts.recordItems, func(i recordItem) bool {
 		if i.entity == fQName {
 			if isSingleton {
 				panic(fmt.Errorf("singletone %s already exists", qName.String()))
