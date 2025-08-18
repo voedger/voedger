@@ -208,7 +208,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideBuiltInApps,
 		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
 		actualizers.ProvideActualizers,    // projectors.IActualizersService
-		provideSchedulerRunner,            // appparts.IProcessorRunner
+		provideActualizersRunner,
+		provideSchedulerRunner,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -267,6 +268,10 @@ func provideN10NQuotas(vvmCfg *VVMConfig) in10n.Quotas {
 
 func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISchedulerRunner {
 	return schedulers.ProvideSchedulers(cfg)
+}
+
+func provideActualizersRunner(as actualizers.IActualizersService) appparts.IActualizerRunner {
+	return as
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, apppar appparts.IAppPartitions,
@@ -362,7 +367,7 @@ func provideAppPartitions(
 	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
-	act actualizers.IActualizersService,
+	act appparts.IActualizerRunner,
 	sch appparts.ISchedulerRunner,
 	bf irates.BucketsFactoryType,
 	sr istructsmem.IStatelessResources,
@@ -834,7 +839,6 @@ func provideServicePipeline(
 	opQueryProcessors_v1 OperatorQueryProcessors_V1,
 	opQueryProcessors_v2 OperatorQueryProcessors_V2,
 	opBLOBProcessors OperatorBLOBProcessors,
-	opAsyncActualizers actualizers.IActualizersService,
 	appPartsCtl IAppPartsCtlPipelineService,
 	bootstrapSyncOp BootstrapOperator,
 	adminEndpoint AdminEndpointServiceOperator,
@@ -847,7 +851,6 @@ func provideServicePipeline(
 			pipeline.ForkBranch(opQueryProcessors_v2),
 			pipeline.ForkBranch(opCommandProcessors),
 			pipeline.ForkBranch(opBLOBProcessors),
-			pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)), // is service to stop goroutines in bbolt driver
 		)),
