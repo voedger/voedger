@@ -16,8 +16,7 @@ import (
 /*
 implements:
 
-	pipeline.IServiceEx
-	appparts.IProcessorRunner
+	appparts.ISchedulerRunner
 */
 type schedulers struct {
 	cfg      BasicSchedulerConfig
@@ -25,7 +24,7 @@ type schedulers struct {
 	appParts appparts.IAppPartitions
 }
 
-func newSchedulers(cfg BasicSchedulerConfig) ISchedulersService {
+func newSchedulers(cfg BasicSchedulerConfig) appparts.ISchedulerRunner {
 	return &schedulers{
 		cfg: cfg,
 	}
@@ -53,25 +52,6 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 	a.wait.Done()
 }
 
-// # pipeline.IService.Prepare
-func (*schedulers) Prepare(interface{}) error { return nil }
-
-// # pipeline.IService.Run
-func (*schedulers) Run(context.Context) {
-	panic("not implemented")
-}
-
-// # pipeline.IServiceEx.RunEx
-func (a *schedulers) RunEx(_ context.Context, started func()) {
-	started()
-}
-
 func (a *schedulers) SetAppPartitions(ap appparts.IAppPartitions) {
 	a.appParts = ap
-}
-
-func (a *schedulers) Stop() {
-	// Cancellation has already been sent to the context by caller.
-	// Here we are just waiting while all async actualizers are stopped
-	a.wait.Wait()
 }

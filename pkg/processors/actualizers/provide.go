@@ -11,6 +11,7 @@ import (
 	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -18,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-func ProvideActualizers(cfg BasicAsyncActualizerConfig) IActualizersService {
+func ProvideActualizers(cfg BasicAsyncActualizerConfig) appparts.IActualizerRunner {
 	return newActualizers(cfg)
 }
 

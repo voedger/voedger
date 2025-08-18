@@ -206,9 +206,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideAppPartsCtlPipelineService,
 		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
-		actualizers.ProvideActualizers,    // projectors.IActualizersService
-		provideActualizersRunner,
+		provideBasicAsyncActualizerConfig, // actualizers.BasicAsyncActualizerConfig
+		actualizers.ProvideActualizers,    // appparts.IActualizerRunner
 		provideSchedulerRunner,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
@@ -268,10 +267,6 @@ func provideN10NQuotas(vvmCfg *VVMConfig) in10n.Quotas {
 
 func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISchedulerRunner {
 	return schedulers.ProvideSchedulers(cfg)
-}
-
-func provideActualizersRunner(as actualizers.IActualizersService) appparts.IActualizerRunner {
-	return as
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, apppar appparts.IAppPartitions,
