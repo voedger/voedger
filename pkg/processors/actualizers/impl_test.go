@@ -63,7 +63,7 @@ var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
 func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		istructs.AppQName_test1_app1, 1, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -89,7 +89,6 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 
-	start()
 	defer stop()
 
 	t.Run("Emulate the command processor", func(t *testing.T) {
@@ -202,9 +201,9 @@ func deployTestApp(
 ) (
 	appParts appparts.IAppPartitions,
 	appStructs istructs.IAppStructs,
-	start, stop func(),
+	stop func(),
 ) {
-	appParts, _, appStructs, start, stop = deployTestAppEx(
+	appParts, appStructs, stop = deployTestAppEx(
 		appName,
 		appPartsCount,
 		cachedStorage,
@@ -214,7 +213,7 @@ func deployTestApp(
 		prepareAppCfg,
 		actualizerCfg,
 	)
-	return appParts, appStructs, start, stop
+	return appParts, appStructs, stop
 }
 
 func deployTestAppEx(
@@ -227,9 +226,8 @@ func deployTestAppEx(
 	actualizerCfg *BasicAsyncActualizerConfig,
 ) (
 	appParts appparts.IAppPartitions,
-	actualizers IActualizersService,
 	appStructs istructs.IAppStructs,
-	start, stop func(),
+	stop func(),
 ) {
 	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
@@ -332,7 +330,7 @@ func deployTestAppEx(
 		secretReader = actualizerCfg.SecretReader
 	}
 
-	actualizers = ProvideActualizers(*actualizerCfg)
+	actualizers := ProvideActualizers(*actualizerCfg)
 
 	appParts, appPartsCleanup, err := appparts.New2(
 		vvmCtx,
@@ -354,23 +352,15 @@ func deployTestAppEx(
 
 	appParts.DeployApp(appName, nil, appDef, appPartsCount, appparts.PoolSize(10, 10, 10, 0), cfg.NumAppWorkspaces())
 
-	start = func() {
-		if err := actualizers.Prepare(struct{}{}); err != nil {
-			panic(err)
-		}
-		actualizers.RunEx(vvmCtx, func() {})
-	}
-
 	stop = func() {
 		vvmCancel()
-		actualizers.Stop()
 		appPartsCleanup()
 		if n10cleanup != nil {
 			n10cleanup()
 		}
 	}
 
-	return appParts, actualizers, appStructs, start, stop
+	return appParts, appStructs, stop
 }
 
 func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsKind, wsDescriptorKind appdef.QName, partition istructs.PartitionID, offset istructs.Offset,
@@ -407,7 +397,7 @@ func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsKind, wsDescr
 func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		istructs.AppQName_test1_app1, 1, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -434,7 +424,6 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 
-	start()
 	defer stop()
 
 	t.Run("Emulate the command processor", func(t *testing.T) {

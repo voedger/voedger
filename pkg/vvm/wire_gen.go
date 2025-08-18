@@ -117,8 +117,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	v4 := vvmConfig.ActualizerStateOpts
 	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
-	iActualizersService := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
-	iActualizerRunner := provideActualizersRunner(iActualizersService)
+	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
 		SecretReader: iSecretReader,
@@ -329,10 +328,6 @@ func provideN10NQuotas(vvmCfg *VVMConfig) in10n.Quotas {
 
 func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISchedulerRunner {
 	return schedulers.ProvideSchedulers(cfg)
-}
-
-func provideActualizersRunner(as actualizers.IActualizersService) appparts.IActualizerRunner {
-	return as
 }
 
 func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, apppar appparts.IAppPartitions,

@@ -61,7 +61,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		Broker: broker,
 	}
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -113,8 +113,6 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
 
-	start()
-
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Millisecond)
@@ -156,7 +154,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	t0 := time.Now()
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -196,8 +194,6 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
 
-	start()
-
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Millisecond)
@@ -233,7 +229,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	t0 := time.Now()
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -265,8 +261,6 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	topOffset := f.fill(1001, idGen)
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-
-	start()
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
@@ -334,7 +328,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		FlushInterval: 10 * time.Millisecond,
 	}
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -382,8 +376,6 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	topOffset := f.fill(1001, idGen)
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-
-	start()
 
 	// Wait for the logged error
 	errStr := <-errorsCh
@@ -441,7 +433,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		Broker:        broker,
 	}
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -473,8 +465,6 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	topOffset := f.fill(1002, idGen)
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-
-	start()
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
@@ -583,7 +573,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	t0 := time.Now()
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -619,8 +609,6 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 	}
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-
-	start()
 
 	// Wait for the projectors
 	for actMetrics.value(aaStoredOffset, partitionNr, incrementorName) < int64(topOffset) {
@@ -667,7 +655,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	t0 := time.Now()
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, false,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -699,8 +687,6 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	topOffset := f.fill(1001, idGen)
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-
-	start()
 
 	// Wait for the projectors
 	for actMetrics.value(aaStoredOffset, partitionNr, incrementorName) < int64(topOffset) {
@@ -793,7 +779,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 
 	t0 := time.Now()
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, true,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -838,8 +824,6 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	}
 
 	appParts.DeployAppPartitions(appName, partID)
-
-	start()
 
 	t.Logf("Initialized in %s", time.Since(t0))
 
@@ -926,7 +910,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 
 	t0 := time.Now()
 
-	appParts, appStructs, start, stop := deployTestApp(
+	appParts, appStructs, stop := deployTestApp(
 		appName, totalPartitions, true,
 		testWorkspace, testWorkspaceDescriptor,
 		func(wsb appdef.IWorkspaceBuilder) {
@@ -972,8 +956,6 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	}
 
 	appParts.DeployAppPartitions(appName, partID)
-
-	start()
 
 	t.Logf("Initialized in %s", time.Since(t0))
 

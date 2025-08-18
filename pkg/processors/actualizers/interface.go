@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -51,11 +50,6 @@ type BasicAsyncActualizerConfig struct {
 	FlushInterval time.Duration
 	// FlushPositionInterval specifies how often actualizer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInterval time.Duration
-}
-
-type IActualizersService interface {
-	pipeline.IServiceEx
-	appparts.IActualizerRunner
 }
 
 type AsyncActualizerConf struct {
