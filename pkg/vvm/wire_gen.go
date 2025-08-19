@@ -94,7 +94,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	storageCacheSizeType := vvmConfig.StorageCacheSize
 	iMetrics := imetrics.Provide()
 	vvmName := vvmConfig.Name
-	iAppStorageFactory, err := provideStorageFactory(vvmConfig)
+	iAppStorageFactory, err := provideStorageFactory(vvmConfig, iTime)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -117,7 +117,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	v4 := vvmConfig.ActualizerStateOpts
 	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
-	iActualizersService := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
+	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
 		SecretReader: iSecretReader,
@@ -149,7 +149,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizersService, iSchedulerRunner, bucketsFactoryType, iStatelessResources, builtInAppsArtefacts, vvmName, iMetrics)
+	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizerRunner, iSchedulerRunner, bucketsFactoryType, iStatelessResources, builtInAppsArtefacts, vvmName, iMetrics)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -220,7 +220,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
 	publicEndpointServiceOperator := providePublicEndpointServiceOperator(routerServices, metricsServiceOperator)
-	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors_V1, operatorQueryProcessors_V2, operatorBLOBProcessors, iActualizersService, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator, iAppStorageProvider)
+	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors_V1, operatorQueryProcessors_V2, operatorBLOBProcessors, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator, iAppStorageProvider)
 	v9 := provideMetricsServicePortGetter(metricsService)
 	v10 := provideBuiltInAppPackages(builtInAppsArtefacts)
 	iSysVvmStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
@@ -422,7 +422,7 @@ func provideAppPartitions(
 	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
-	act actualizers.IActualizersService,
+	act appparts.IActualizerRunner,
 	sch appparts.ISchedulerRunner,
 	bf irates.BucketsFactoryType,
 	sr istructsmem.IStatelessResources,
@@ -486,8 +486,8 @@ func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFact
 	}
 }
 
-func provideStorageFactory(vvmConfig *VVMConfig) (provider2 istorage.IAppStorageFactory, err error) {
-	return vvmConfig.StorageFactory()
+func provideStorageFactory(vvmConfig *VVMConfig, time timeu.ITime) (provider2 istorage.IAppStorageFactory, err error) {
+	return vvmConfig.StorageFactory(time)
 }
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
@@ -890,13 +890,12 @@ func provideServicePipeline(
 	opQueryProcessors_v1 OperatorQueryProcessors_V1,
 	opQueryProcessors_v2 OperatorQueryProcessors_V2,
 	opBLOBProcessors OperatorBLOBProcessors,
-	opAsyncActualizers actualizers.IActualizersService,
 	appPartsCtl IAppPartsCtlPipelineService,
 	bootstrapSyncOp BootstrapOperator,
 	adminEndpoint AdminEndpointServiceOperator,
 	publicEndpoint PublicEndpointServiceOperator,
 	appStorageProvider istorage.IAppStorageProvider,
 ) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors_v1), pipeline.ForkBranch(opQueryProcessors_v2), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint),
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors_v1), pipeline.ForkBranch(opQueryProcessors_v2), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint),
 	)
 }

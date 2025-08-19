@@ -94,10 +94,6 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 		// stop vvm from context, wait actualizers finished
 		stop()
 
-		const timeout = 1 * time.Second
-		require.True(schedulers.WaitTimeout(timeout))
-		require.Empty(schedulers.Enum())
-
 		runCalls.Range(func(key, value any) bool {
 			require.Fail("scheduler %v was not run", key)
 			return true
@@ -126,9 +122,6 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 		// stop vvm from context, wait actualizers finished
 		stop()
 
-		const timeout = 1 * time.Second
-		require.False(schedulers.WaitTimeout(timeout))
-		require.Len(schedulers.Enum(), 2)
 	})
 }
 

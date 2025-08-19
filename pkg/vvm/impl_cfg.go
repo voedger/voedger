@@ -11,7 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors"
@@ -50,9 +49,9 @@ func NewVVMDefaultConfig() VVMConfig {
 		MaxPrepareQueries:      DefaultMaxPrepareQueries,
 		VVMPort:                DefaultVVMPort,
 		MetricsServicePort:     DefaultMetricsServicePort,
-		StorageFactory: func() (provider istorage.IAppStorageFactory, err error) {
+		StorageFactory: func(time timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
-			return mem.Provide(testingu.MockTime), nil
+			return mem.Provide(time), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
 		IP:            coreutils.LocalhostIP,

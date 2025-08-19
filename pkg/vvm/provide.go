@@ -206,9 +206,9 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideAppPartsCtlPipelineService,
 		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
-		actualizers.ProvideActualizers,    // projectors.IActualizersService
-		provideSchedulerRunner,            // appparts.IProcessorRunner
+		provideBasicAsyncActualizerConfig, // actualizers.BasicAsyncActualizerConfig
+		actualizers.ProvideActualizers,    // appparts.IActualizerRunner
+		provideSchedulerRunner,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -362,7 +362,7 @@ func provideAppPartitions(
 	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
-	act actualizers.IActualizersService,
+	act appparts.IActualizerRunner,
 	sch appparts.ISchedulerRunner,
 	bf irates.BucketsFactoryType,
 	sr istructsmem.IStatelessResources,
@@ -426,8 +426,8 @@ func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFact
 	}
 }
 
-func provideStorageFactory(vvmConfig *VVMConfig) (provider istorage.IAppStorageFactory, err error) {
-	return vvmConfig.StorageFactory()
+func provideStorageFactory(vvmConfig *VVMConfig, time timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
+	return vvmConfig.StorageFactory(time)
 }
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
@@ -834,7 +834,6 @@ func provideServicePipeline(
 	opQueryProcessors_v1 OperatorQueryProcessors_V1,
 	opQueryProcessors_v2 OperatorQueryProcessors_V2,
 	opBLOBProcessors OperatorBLOBProcessors,
-	opAsyncActualizers actualizers.IActualizersService,
 	appPartsCtl IAppPartsCtlPipelineService,
 	bootstrapSyncOp BootstrapOperator,
 	adminEndpoint AdminEndpointServiceOperator,
@@ -847,7 +846,6 @@ func provideServicePipeline(
 			pipeline.ForkBranch(opQueryProcessors_v2),
 			pipeline.ForkBranch(opCommandProcessors),
 			pipeline.ForkBranch(opBLOBProcessors),
-			pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)), // is service to stop goroutines in bbolt driver
 		)),

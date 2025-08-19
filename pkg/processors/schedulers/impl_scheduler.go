@@ -51,7 +51,7 @@ func (a *scheduler) Prepare() {
 func (a *scheduler) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		a.ctx = ctx
-		err := a.init(ctx)
+		err := a.init()
 		if err == nil {
 			a.keepRunning()
 		}
@@ -121,7 +121,7 @@ func (a *scheduler) runJob() {
 	}
 }
 
-func (a *scheduler) init(_ context.Context) (err error) {
+func (a *scheduler) init() (err error) {
 
 	appDef, err := a.appParts.AppDef(a.conf.AppQName)
 	if err != nil {

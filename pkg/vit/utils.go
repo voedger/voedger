@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -437,11 +438,11 @@ func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestar
 	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
 		if sharedStorageFactory == nil {
 			var err error
-			sharedStorageFactory, err = cfg.StorageFactory()
+			sharedStorageFactory, err = cfg.StorageFactory(cfg.Time)
 			require.NoError(t, err)
 		}
 		cfg.KeyspaceNameSuffix = suffix
-		cfg.StorageFactory = func() (istorage.IAppStorageFactory, error) {
+		cfg.StorageFactory = func(timeu.ITime) (istorage.IAppStorageFactory, error) {
 			return sharedStorageFactory, nil
 		}
 	}))

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -16,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -52,9 +50,4 @@ type SchedulerConfig struct {
 	Workspace istructs.WSID
 	AppWSIdx  istructs.AppWorkspaceNumber
 	Partition istructs.PartitionID // ?
-}
-
-type ISchedulersService interface {
-	pipeline.IServiceEx
-	appparts.ISchedulerRunner
 }

@@ -284,7 +284,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			if qw.apiPathHandler.authorizeResult == nil {
 				return nil
 			}
-			return qw.apiPathHandler.authorizeResult(ctx, qw)
+			err = qw.apiPathHandler.authorizeResult(ctx, qw)
+			if errors.Is(err, appdef.ErrNotFoundError) {
+				// TODO: temporary solution. Such case must not happen after https://github.com/voedger/voedger/issues/3522
+				// to be eliminated in https://github.com/voedger/voedger/issues/4003
+				err = coreutils.WrapSysError(err, http.StatusBadRequest)
+			}
+			return err
 		}),
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
 			now := time.Now()
