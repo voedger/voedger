@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -33,15 +34,15 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 			case 1:
 				// 1st VVM launch
 				var err error
-				sharedStorageFactory, err = cfg.StorageFactory()
+				sharedStorageFactory, err = cfg.StorageFactory(cfg.Time)
 				require.NoError(err)
 				cfg.KeyspaceNameSuffix = keyspaceSuffix
-				cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+				cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
 				}
 			case 2:
 				// 2nd VVM launch - the IDGenerator must be updated on recovery
-				cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+				cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
 				}
 				cfg.KeyspaceNameSuffix = keyspaceSuffix

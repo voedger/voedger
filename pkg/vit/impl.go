@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/isequencer"
 
@@ -96,7 +97,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	}
 
 	if useCas {
-		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+		cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragecas ", fmt.Sprint(cas.DefaultCasParams))
 			return cas.Provide(cas.DefaultCasParams)
 		}

@@ -146,7 +146,7 @@ type VVMConfig struct {
 	RoutesRewrite              map[string]string
 	RouteDomains               map[string]string
 	SendTimeout                bus.SendTimeout
-	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
+	StorageFactory             func(time timeu.ITime) (provider istorage.IAppStorageFactory, err error)
 	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
 	Name                       processors.VVMName
 	NumCommandProcessors       istructs.NumCommandProcessors
