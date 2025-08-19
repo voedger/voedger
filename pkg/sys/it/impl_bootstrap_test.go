@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -130,7 +131,7 @@ func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWork
 		}),
 		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
 			// use predefined storage
-			cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+			cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 				return storage, nil
 			}
 		}),

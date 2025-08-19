@@ -94,7 +94,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	storageCacheSizeType := vvmConfig.StorageCacheSize
 	iMetrics := imetrics.Provide()
 	vvmName := vvmConfig.Name
-	iAppStorageFactory, err := provideStorageFactory(vvmConfig)
+	iAppStorageFactory, err := provideStorageFactory(vvmConfig, iTime)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -486,8 +486,8 @@ func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFact
 	}
 }
 
-func provideStorageFactory(vvmConfig *VVMConfig) (provider2 istorage.IAppStorageFactory, err error) {
-	return vvmConfig.StorageFactory()
+func provideStorageFactory(vvmConfig *VVMConfig, time timeu.ITime) (provider2 istorage.IAppStorageFactory, err error) {
+	return vvmConfig.StorageFactory(time)
 }
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
