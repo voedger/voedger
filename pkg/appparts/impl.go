@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// IAppPartitions
 type apps struct {
 	mx                     sync.RWMutex
 	vvmCtx                 context.Context
@@ -55,7 +56,26 @@ func newAppPartitions(
 	}
 	a.asyncActualizersRunner.SetAppPartitions(a)
 	a.schedulerRunner.SetAppPartitions(a)
-	return a, func() {}, err
+	return a, func() {
+		select {
+		case <-a.vvmCtx.Done():
+		default:
+			panic("vvmCtx must be closed before calling cleanup()")
+		}
+		
+		var wg sync.WaitGroup
+		for _, app := range a.apps {
+			for _, part := range app.parts {
+				wg.Add(1)
+				go func(p *appPartitionRT) {
+					defer wg.Done()
+					p.actualizers.Wait()
+					p.schedulers.Wait()
+				}(part)
+			}
+		}
+		wg.Wait()
+	}, err
 }
 
 func (aps *apps) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {

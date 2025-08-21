@@ -56,12 +56,11 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 	}
 
 	t.Run("basic usage", func(t *testing.T) {
-		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
-		require.NoError(err)
+		appParts, cleanup := appparts.NewTestAppParts(vit.IAppStructsProvider)
 		defer cleanup()
 		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
+		err := btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
 			nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
 		require.NoError(err)
 		require.NotNil(*blobStorage)
@@ -69,8 +68,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 	})
 
 	t.Run("panic on NumPartitions change", func(t *testing.T) {
-		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
-		require.NoError(err)
+		appParts, cleanup := appparts.NewTestAppParts(vit.IAppStructsProvider)
 		defer cleanup()
 		otherApps[0].AppDeploymentDescriptor.NumParts++
 		defer func() {
@@ -87,8 +85,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 	})
 
 	t.Run("panic on NumAppPartitions change", func(t *testing.T) {
-		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
-		require.NoError(err)
+		appParts, cleanup := appparts.NewTestAppParts(vit.IAppStructsProvider)
 		defer cleanup()
 		otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces++
 		defer func() {

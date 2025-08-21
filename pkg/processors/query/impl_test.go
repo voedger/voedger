@@ -183,7 +183,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 
 func deployTestAppWithSecretToken(require *require.Assertions,
 	prepareAppDef func(appdef.IAppDefBuilder, appdef.IWorkspaceBuilder),
-	cfgFunc ...func(*istructsmem.AppConfigType)) (appParts appparts.IAppPartitions, cleanup func(),
+	cfgFunc ...func(*istructsmem.AppConfigType)) (appParts appparts.IAppPartitions, cl func(),
 	appTokens istructs.IAppTokens, statelessResources istructsmem.IStatelessResources) {
 	cfgs := make(istructsmem.AppConfigsType)
 	asf := mem.Provide(testingu.MockTime)
@@ -339,7 +339,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	require.NoError(as.Records().Apply(pLogEvent))
 	require.NoError(as.Events().PutWlog(pLogEvent))
 
-	appParts, cleanup, err = appparts.New2(context.Background(), asp,
+	vvmCtx, cancel := context.WithCancel(context.Background())
+	appParts, cleanup, err := appparts.New2(vvmCtx, asp,
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator { return &pipeline.NOOP{} }, // no projectors
 		appparts.NullActualizerRunner,
 		appparts.NullSchedulerRunner,
@@ -356,7 +357,11 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 
 	appTokens = atf.New(appName)
 
-	return appParts, cleanup, appTokens, statelessResources
+	combinedCleanup := func() {
+		cancel()
+		cleanup()
+	}
+	return appParts, combinedCleanup, appTokens, statelessResources
 }
 
 func TestBasicUsage_ServiceFactory(t *testing.T) {
