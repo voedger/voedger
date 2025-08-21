@@ -703,7 +703,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	serviceChannel := make(CommandChannel)
 	done := make(chan struct{})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	vvmCtx, cancel := context.WithCancel(context.Background())
 
 	cfgs := istructsmem.AppConfigsType{}
 	asf := mem.Provide(testingu.MockTime)
@@ -744,7 +744,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	}, timeu.NewITime())
 
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
+	appParts, appPartsClean, err := appparts.New2(vvmCtx, appStructsProvider,
 		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		appparts.NullActualizerRunner,
 		appparts.NullSchedulerRunner,
@@ -756,7 +756,6 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 			}, "", imetrics.Provide()),
 		iratesce.TestBucketsFactory)
 	require.NoError(err)
-	defer appPartsClean()
 
 	appParts.DeployApp(testAppName, nil, appDef, testAppPartCount, testAppEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
@@ -776,7 +775,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		if authHeader, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "")
+		icm := NewCommandMessage(vvmCtx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "")
 		serviceChannel <- icm
 	})
 
@@ -789,7 +788,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	cmdProcService := cmdProcessorFactory(serviceChannel)
 
 	go func() {
-		cmdProcService.Run(ctx)
+		cmdProcService.Run(vvmCtx)
 		close(done)
 	}()
 
@@ -803,8 +802,8 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	return testApp{
 		cfg:               cfg,
 		requestSender:     requestSender,
-		cancel:            cancel,
-		ctx:               ctx,
+		cancel:            func() { cancel(); appPartsClean() },
+		ctx:               vvmCtx,
 		done:              done,
 		cmdProcService:    cmdProcService,
 		serviceChannel:    serviceChannel,

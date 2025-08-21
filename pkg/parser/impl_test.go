@@ -3156,7 +3156,8 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
-	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+	vvmCtx, cancel := context.WithCancel(context.Background())
+	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -3165,7 +3166,10 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 			}, "vvmName", imetrics.Provide()),
 		irates.NullBucketsFactory)
 	require.NoError(err)
-	defer cleanup()
+	defer func() {
+		cancel()
+		cleanup()
+	}()
 	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
 	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
 	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
@@ -3210,7 +3214,8 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
-	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+	vvmCtx, cancel := context.WithCancel(context.Background())
+	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -3219,7 +3224,10 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 			}, "vvmName", imetrics.Provide()),
 		irates.NullBucketsFactory)
 	require.NoError(err)
-	defer cleanup()
+	defer func() {
+		cancel()
+		cleanup()
+	}()
 	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
 	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
 	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
