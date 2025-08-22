@@ -313,7 +313,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 				StrField: "str1",
 			})
 		}()
-	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
+	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timeout on client disconnect. It could take up to few seconds
 	defer tearDown(router)
 
 	// client side
