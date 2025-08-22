@@ -294,27 +294,26 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 				StrField: "str",
 			})
 
-			// now let's wait for client disconnect
+			// now let's wait for setting onBeforeWriteResponse hook
 			<-setDisconnectOnWriteResponse
 
+			// next send to bus should be successful because client will be disconnected on the next writeResponse()
+			// this operation should trigger the client disconnect
 			expectedErrCh <- respWriter.Write(testObject{
 				IntField: 42,
 				StrField: "str0",
 			})
 
-			// this object must be successfully sent to bus but the router will fail to send in on next writeResponse() call
+			// wait for the client disconnection
+			<-requestCtx.Done()
+
+			// next sending to bus must be failed because the ctx is closed
 			expectedErrCh <- respWriter.Write(testObject{
 				IntField: 43,
 				StrField: "str1",
 			})
-
-			// this sending to bus must be failed because requestCtx stored in IResponseSender is closed
-			expectedErrCh <- respWriter.Write(testObject{
-				IntField: 44,
-				StrField: "str2",
-			})
 		}()
-	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
+	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timeout on client disconnect. It could take up to few seconds
 	defer tearDown(router)
 
 	// client side
@@ -337,14 +336,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	// force client disconnect right before write to the socket on the next writeResponse() call
 	once := sync.Once{}
 	onBeforeWriteResponse = func(w http.ResponseWriter) {
-		once.Do(func() {
-			resp.Body.Close()
-
-			// wait for write to the socket will be failed indeed. It happens not at once
-			// that will guarantee context.Canceled error on next sending instead of possible ErrNoConsumer
-			for _, err := w.Write([]byte{0}); err == nil; _, err = w.Write([]byte{0}) {
-			}
-		})
+		once.Do(func() { resp.Body.Close() })
 	}
 
 	// signal to the handler it could try to send the next section
@@ -352,8 +344,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	// but will be failed in router (will be disconnected right on writeResponse)
 	close(setDisconnectOnWriteResponse)
 
-	// first elem send after client disconnect should be successful, next one should fail
-	require.NoError(<-expectedErrCh)
+	// first elem send after client disconnect should be successful
 	require.NoError(<-expectedErrCh)
 
 	// next sending to the bus must be failed because the requestCtx is closed
