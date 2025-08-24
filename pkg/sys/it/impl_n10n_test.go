@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"testing"
@@ -83,6 +84,8 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
 	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
+	log.Println("resultOffsetOfCategoryCUD", resultOffsetOfCategoryCUD, "resultOffsetOfDailyCUD", resultOffsetOfDailyCUD)
+
 	// read events
 	waitForOffset(t, resultOffsetOfCategoryCUD, offsetsChan)
 	waitForOffset(t, resultOffsetOfDailyCUD, offsetsChan)
@@ -123,6 +126,7 @@ func waitForOffset(t *testing.T, expectedOffset istructs.Offset, offsetCh federa
 		if actualOffset == expectedOffset {
 			return
 		}
+		log.Println("received offset", actualOffset)
 		if time.Since(start) > 10*time.Second {
 			t.Fatal()
 		}
