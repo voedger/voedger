@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"io/fs"
@@ -66,8 +67,8 @@ type FuncError struct {
 }
 
 type IHTTPClient interface {
-	Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
-	ReqReader(urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	Req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	ReqReader(ctx context.Context, urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	CloseIdleConnections()
 }
 
