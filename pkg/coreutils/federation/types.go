@@ -6,6 +6,7 @@
 package federation
 
 import (
+	"context"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -17,6 +18,7 @@ type implIFederation struct {
 	federationURL      func() *url.URL
 	adminPortGetter    func() int
 	defaultReqOptFuncs []coreutils.ReqOptFunc
+	vvmCtx             context.Context
 }
 
 type implIFederationForQP struct {

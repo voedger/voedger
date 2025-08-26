@@ -33,7 +33,7 @@ func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(
 //
 // # Parameters:
 //
-//	vvmCtx - VVM context. Used to run processors (actualizers and schedulers)
+//	vvmCtx - VVM context. Used to run processors (actualizers and schedulers). Must be canceled before calling cleanup
 //	structs - application structures provider
 //	syncAct - sync actualizer factory, old actualizers style, should be used with builtin applications only
 //	asyncActualizersRunner - async actualizers runner

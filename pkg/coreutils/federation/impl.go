@@ -43,13 +43,13 @@ func (f *implIFederation) get(relativeURL string, optFuncs ...coreutils.ReqOptFu
 func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
 	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
-	return f.httpClient.ReqReader(url, bodyReader, optFuncs...)
+	return f.httpClient.ReqReader(f.vvmCtx, url, bodyReader, optFuncs...)
 }
 
 func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
 	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
-	return f.httpClient.Req(url, body, optFuncs...)
+	return f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 }
 
 func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
@@ -173,7 +173,7 @@ func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...coreu
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodGet))
 	url := f.federationURL().String() + "/" + relativeURL
 	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
-	return f.httpClient.Req(url, body, optFuncs...)
+	return f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 }
 
 func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
@@ -190,7 +190,7 @@ func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ..
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
 	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
-	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
+	httpResp, err := f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
 }
 
@@ -305,6 +305,7 @@ func (f *implIFederation) WithRetry() IFederationWithRetry {
 		federationURL:      f.federationURL,
 		adminPortGetter:    f.adminPortGetter,
 		defaultReqOptFuncs: []coreutils.ReqOptFunc{coreutils.WithRetryOn503()},
+		vvmCtx:             f.vvmCtx,
 	}
 }
 

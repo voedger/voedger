@@ -6,6 +6,7 @@ package vit
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -437,7 +438,7 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
-	httpResp, err := vit.httpClient.Req(vit.URLStr()+"/"+url, body, opts...)
+	httpResp, err := vit.httpClient.Req(context.Background(), vit.URLStr()+"/"+url, body, opts...)
 	require.NoError(vit.T, err)
 	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
 	require.NoError(vit.T, err)
@@ -486,7 +487,7 @@ func (vit *VIT) GET(relativeURL string, opts ...coreutils.ReqOptFunc) *coreutils
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithDefaultMethod(http.MethodGet))
 	url := vit.URLStr() + "/" + relativeURL
-	res, err := vit.httpClient.Req(url, "", opts...)
+	res, err := vit.httpClient.Req(context.Background(), url, "", opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -495,7 +496,7 @@ func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFu
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
 	url := vit.URLStr() + "/" + relativeURL
-	res, err := vit.httpClient.Req(url, body, opts...)
+	res, err := vit.httpClient.Req(context.Background(), url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -504,7 +505,7 @@ func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName s
 	vit.T.Helper()
 	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
 	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
-	res, err := vit.httpClient.Req(url, body, opts...)
+	res, err := vit.httpClient.Req(context.Background(), url, body, opts...)
 	require.NoError(vit.T, err)
 	funcResp, err := federation.HTTPRespToFuncResp(res, err)
 	require.NoError(vit.T, err)

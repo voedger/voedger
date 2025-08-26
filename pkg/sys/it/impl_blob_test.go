@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -354,7 +355,7 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 	defer cleanup()
 	uploadBLOBURL := fmt.Sprintf("%s/blob/test1/app1/%d?name=%s&mimeType=%s", vit.IFederation.URLStr(), ws.WSID,
 		url.QueryEscape(coreutils.BlobName), url.QueryEscape(coreutils.ContentType_ApplicationXBinary))
-	resp, err := httpClient.ReqReader(uploadBLOBURL, io.NopCloser(bytes.NewReader(expBLOB)),
+	resp, err := httpClient.ReqReader(context.Background(), uploadBLOBURL, io.NopCloser(bytes.NewReader(expBLOB)),
 		coreutils.WithMethod(http.MethodPost),
 		coreutils.WithAuthorizeBy(ws.Owner.Token),
 	)

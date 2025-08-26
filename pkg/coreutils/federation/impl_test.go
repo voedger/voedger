@@ -6,6 +6,7 @@
 package federation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -44,7 +45,7 @@ func TestFederationFunc(t *testing.T) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	federationURL, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", port))
 	require.NoError(err)
-	federation, cleanup := New(func() *url.URL {
+	federation, cleanup := New(context.Background(), func() *url.URL {
 		return federationURL
 	}, coreutils.NilAdminPortGetter)
 	defer cleanup()
@@ -238,5 +239,23 @@ func TestFederationFunc(t *testing.T) {
 		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithDiscardResponse())
 		require.NoError(err)
 		require.Nil(resp)
+	})
+	t.Run("context cancel during retry on 503", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		federation, cleanup := New(ctx, func() *url.URL {
+			return federationURL
+		}, coreutils.NilAdminPortGetter)
+		defer cleanup()
+		counter := 0
+		handler = func(w http.ResponseWriter, _ *http.Request) {
+			counter++
+			w.WriteHeader(http.StatusServiceUnavailable)
+			if counter < 5 {
+				return
+			}
+			cancel()
+		}
+		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithRetryOn503())
+		require.ErrorIs(err, context.Canceled)
 	})
 }

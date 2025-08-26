@@ -202,7 +202,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		SubscriptionsPerSubject: 10,
 	}, timeu.NewITime())
 
-	appParts, appPartsCleanup, err := appparts.New2(context.Background(), appStructsProvider,
+	vvmCtx, cancel := context.WithCancel(context.Background())
+	appParts, appPartsCleanup, err := appparts.New2(vvmCtx, appStructsProvider,
 		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		appparts.NullActualizerRunner,
 		appparts.NullSchedulerRunner,
@@ -226,6 +227,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	require.NoError(err)
 
 	cleanup = func() {
+		cancel()
 		appPartsCleanup()
 		n10nBrokerCleanup()
 	}

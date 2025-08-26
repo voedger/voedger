@@ -270,18 +270,18 @@ func req(method, url, body string, bodyReader io.Reader, headers, cookies map[st
 	return req, nil
 }
 
-func (c *implIHTTPClient) ReqReader(urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func (c *implIHTTPClient) ReqReader(ctx context.Context, urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	optFuncs = append(optFuncs, withBodyReader(bodyReader))
-	return c.req(urlStr, "", optFuncs...)
+	return c.req(ctx, urlStr, "", optFuncs...)
 }
 
 // status code expected -> DiscardBody, ResponseHandler are used
 // status code is unexpected -> DiscardBody, ResponseHandler are ignored, body is read out, wrapped ErrUnexpectedStatusCode is returned
-func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	return c.req(urlStr, body, optFuncs...)
+func (c *implIHTTPClient) Req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+	return c.req(ctx, urlStr, body, optFuncs...)
 }
 
-func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
@@ -334,8 +334,10 @@ func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc
 	tryNum := 0
 	startTime := time.Now()
 
+	reqCtx, cancel := context.WithTimeout(ctx, maxHTTPRequestTimeout)
+	defer cancel()
 reqLoop:
-	for time.Since(startTime) < maxHTTPRequestTimeout {
+	for reqCtx.Err() == nil {
 		req, err := req(opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
@@ -373,6 +375,9 @@ reqLoop:
 			continue
 		}
 		break
+	}
+	if reqCtx.Err() != nil {
+		return nil, reqCtx.Err()
 	}
 	isCodeExpected := slices.Contains(opts.expectedHTTPCodes, resp.StatusCode)
 	if isCodeExpected && opts.discardResp {
