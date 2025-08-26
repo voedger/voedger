@@ -6,6 +6,7 @@ package vit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -383,7 +384,7 @@ func (vit *VIT) SubscribeForN10nUnsubscribe(pk in10n.ProjectionKey) (offsetsChan
 func (vit *VIT) MetricsRequest(client coreutils.IHTTPClient, opts ...coreutils.ReqOptFunc) (resp string) {
 	vit.T.Helper()
 	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", vit.VoedgerVM.MetricsServicePort())
-	res, err := client.Req(url, "", opts...)
+	res, err := client.Req(context.Background(), url, "", opts...)
 	require.NoError(vit.T, err)
 	return res.Body
 }

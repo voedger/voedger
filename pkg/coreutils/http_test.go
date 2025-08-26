@@ -187,7 +187,7 @@ func TestHTTP(t *testing.T) {
 			if tc.customURL != "" {
 				url = federationURL.String() + tc.customURL
 			}
-			resp, _ := httpClient.Req(url, "world", tc.opts...)
+			resp, _ := httpClient.Req(context.Background(), url, "world", tc.opts...)
 			req := &http.Request{}
 			tc.verify(t, resp, req)
 		})
@@ -223,7 +223,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			gotReq = r
 			w.WriteHeader(http.StatusOK)
 		}
-		_, _ = httpClient.Req(url, "body",
+		_, _ = httpClient.Req(context.Background(), url, "body",
 			WithHeaders("A", "a", "B", "b"),
 			WithCookies("c1", "v1", "c2", "v2"),
 		)
@@ -244,7 +244,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			gotReq = r
 			w.WriteHeader(http.StatusOK)
 		}
-		_, _ = httpClient.Req(url, "body",
+		_, _ = httpClient.Req(context.Background(), url, "body",
 			WithAuthorizeBy("tok"),
 			WithCookies(Authorization, "tok"),
 			WithoutAuth(),
@@ -271,7 +271,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			_, err := w.Write([]byte("retried"))
 			require.NoError(err)
 		}
-		resp, err := httpClient.Req(url, "body", WithRetryOnAnyError(time.Second, 10*time.Millisecond))
+		resp, err := httpClient.Req(context.Background(), url, "body", WithRetryOnAnyError(time.Second, 10*time.Millisecond))
 		require.NoError(err)
 		require.Equal("retried", resp.Body)
 		require.Equal(2, callCount)
@@ -283,7 +283,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			_, err := w.Write([]byte("ok"))
 			require.NoError(err)
 		}
-		_, _ = httpClient.Req(url, "body", WithResponseHandler(func(resp *http.Response) { handlerCalled = true }))
+		_, _ = httpClient.Req(context.Background(), url, "body", WithResponseHandler(func(resp *http.Response) { handlerCalled = true }))
 		require.True(handlerCalled)
 	})
 
@@ -295,7 +295,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}
 		body := strings.NewReader("custom body")
-		_, _ = httpClient.ReqReader(url, body)
+		_, _ = httpClient.ReqReader(context.Background(), url, body)
 		require.Equal("custom body", gotBody)
 	})
 
@@ -307,7 +307,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			require.NoError(err)
 			handlerCalled = true
 		}
-		_, _ = httpClient.Req(url, "body", WithLongPolling())
+		_, _ = httpClient.Req(context.Background(), url, "body", WithLongPolling())
 		require.True(handlerCalled)
 	})
 
@@ -317,7 +317,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			callCount++
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
-		_, err := httpClient.Req(url, "body", WithDeadlineOn503(50*time.Millisecond))
+		_, err := httpClient.Req(context.Background(), url, "body", WithDeadlineOn503(50*time.Millisecond))
 		require.Error(err)
 		require.GreaterOrEqual(callCount, 1)
 	})
@@ -328,7 +328,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":400,"Message":"foo bar error"}}`))
 			require.NoError(err)
 		}
-		_, err := httpClient.Req(url, "body", WithExpectedCode(http.StatusBadRequest, "foo", "bar"))
+		_, err := httpClient.Req(context.Background(), url, "body", WithExpectedCode(http.StatusBadRequest, "foo", "bar"))
 		require.NoError(err)
 	})
 
@@ -344,7 +344,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				resp, err := httpClient.Req(url, "body")
+				resp, err := httpClient.Req(context.Background(), url, "body")
 				require.NoError(err)
 				require.Equal("ok", resp.Body)
 			}()
@@ -352,4 +352,35 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		wg.Wait()
 		require.Equal(int32(10), count)
 	})
+}
+
+func TestContextCanceled(t *testing.T) {
+	require := require.New(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	count := 0
+	ts := http.Server{
+		Addr: ServerAddress(0),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			count++
+			w.WriteHeader(http.StatusServiceUnavailable)
+			if count < 5 {
+				return
+			}
+			cancel()
+		}),
+	}
+	ln, err := net.Listen("tcp", ServerAddress(0))
+	require.NoError(err)
+	go ts.Serve(ln) // nolint errcheck
+	defer func() { require.NoError(ts.Shutdown(context.Background())) }()
+	url := "http://" + ln.Addr().String()
+
+	httpClient, cleanup := NewIHTTPClient()
+	defer cleanup()
+
+	resp, err := httpClient.Req(ctx, url, "body")
+	require.ErrorIs(err, context.Canceled)
+	require.Nil(resp)
 }
