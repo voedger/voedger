@@ -532,17 +532,6 @@ func (resp *FuncResponse) IsEmpty() bool {
 	return len(resp.Sections) == 0 && len(resp.QPv2Response) == 0
 }
 
-func (fe FuncError) Error() string {
-	if len(fe.ExpectedHTTPCodes) == 1 && fe.ExpectedHTTPCodes[0] == http.StatusOK {
-		return fmt.Sprintf("status %d: %s", fe.HTTPStatus, fe.Message)
-	}
-	return fmt.Sprintf("status %d, expected %v: %s", fe.HTTPStatus, fe.ExpectedHTTPCodes, fe.Message)
-}
-
-func (fe FuncError) Unwrap() error {
-	return fe.SysError
-}
-
 type implIHTTPClient struct {
 	client     *http.Client
 	defaultOps []ReqOptFunc

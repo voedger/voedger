@@ -61,11 +61,6 @@ type FuncResponse struct {
 	QPv2Response QPv2Response // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
 }
 
-type FuncError struct {
-	SysError
-	ExpectedHTTPCodes []int
-}
-
 type IHTTPClient interface {
 	Req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	ReqReader(ctx context.Context, urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error)

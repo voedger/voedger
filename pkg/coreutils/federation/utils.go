@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -82,11 +83,14 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (re
 		return nil, nil
 	}
 	if isUnexpectedCode {
-		funcError, err := getFuncError(httpResp)
+		sysError, err := getSysError(httpResp)
 		if err != nil {
 			return nil, err
 		}
-		return nil, funcError
+		if len(httpResp.ExpectedHTTPCodes()) == 1 && httpResp.ExpectedHTTPCodes()[0] == http.StatusOK {
+			return nil, fmt.Errorf("status %d: %w", httpResp.HTTPResp.StatusCode, sysError)
+		}
+		return nil, fmt.Errorf("status %d, expected %v: %w", httpResp.HTTPResp.StatusCode, httpResp.ExpectedHTTPCodes(), sysError)
 	}
 	res = &coreutils.FuncResponse{
 		CommandResponse: coreutils.CommandResponse{
