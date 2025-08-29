@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"maps"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 )
 
 // Start starts Sequencing Transaction for the given WSID.
@@ -150,7 +150,8 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 		s.toBeFlushedMu.RUnlock()
 
 		// Error handling: Handle errors with retry mechanism (500ms wait)
-		err := coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
+
+		err := retrier.RetryNoResult(s.cleanupCtx, s.retrierCfg, func() error {
 			return s.seqStorage.WriteValuesAndNextPLogOffset(flushValues, flushOffset)
 		})
 		if err != nil {
@@ -231,19 +232,8 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	}
 
 	// Try s.params.SeqStorage.ReadNumber()
-	var storedNumbers []Number
-	err = coreutils.Retry(s.cleanupCtx, s.iTime, func() error {
-		var err error
-		// Read all known Numbers for wsKind, wsID
-		storedNumbers, err = s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
-		// Write all Numbers to s.cache
-		for _, number := range storedNumbers {
-			if number == 0 {
-				continue
-			}
-			s.cache.Add(key, number)
-		}
-		return err
+	storedNumbers, err := retrier.Retry(s.cleanupCtx, s.retrierCfg, func() ([]Number, error) {
+		return s.seqStorage.ReadNumbers(s.currentWSID, []SeqID{seqID})
 	})
 	if err != nil {
 		// happens when ctx is closed during storage error
@@ -399,10 +389,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 
 	var err error
 	// Read nextPLogOffset from s.params.SeqStorage.ReadNextPLogOffset()
-	err = coreutils.Retry(actualizerCtx, s.iTime, func() error {
-		s.nextOffset, err = s.seqStorage.ReadNextPLogOffset()
-		return err
-	})
+	s.nextOffset, err = retrier.Retry(actualizerCtx, s.retrierCfg, s.seqStorage.ReadNextPLogOffset)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			// happens when ctx is closed during storage error
@@ -413,7 +400,7 @@ func (s *sequencer) actualizer(actualizerCtx context.Context) {
 	}
 
 	// Use s.params.SeqStorage.ActualizeSequencesFromPLog() and s.batcher()
-	err = coreutils.Retry(actualizerCtx, s.iTime, func() error {
+	err = retrier.RetryNoResult(actualizerCtx, s.retrierCfg, func() error {
 		return s.seqStorage.ActualizeSequencesFromPLog(actualizerCtx, s.nextOffset, s.batcher)
 	})
 	if err != nil {

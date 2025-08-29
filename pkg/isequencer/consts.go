@@ -5,12 +5,16 @@
 
 package isequencer
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	DefaultLRUCacheSize                      = 100_000
 	DefaultMaxNumUnflushedValues             = 500
 	defaultBatcherDelayOnToBeFlushedOverflow = 5 * time.Millisecond
+	baseRetryDelay                           = 500 * time.Millisecond
+	maxRetryDelay                            = 10 * time.Second
 )
 
 const (
