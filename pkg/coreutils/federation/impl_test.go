@@ -91,14 +91,11 @@ func TestFederationFunc(t *testing.T) {
 					_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"sys.SomeErrorQName","Data":"additional data"}}`))
 					require.NoError(err)
 				},
-				expectedErr: coreutils.FuncError{
-					SysError: coreutils.SysError{
-						HTTPStatus: 500,
-						QName:      appdef.NewQName("sys", "SomeErrorQName"),
-						Message:    "something gone wrong",
-						Data:       "additional data",
-					},
-					ExpectedHTTPCodes: []int{http.StatusOK, http.StatusCreated},
+				expectedErr: coreutils.SysError{
+					HTTPStatus: 500,
+					QName:      appdef.NewQName("sys", "SomeErrorQName"),
+					Message:    "something gone wrong",
+					Data:       "additional data",
 				},
 			},
 			{
@@ -108,14 +105,11 @@ func TestFederationFunc(t *testing.T) {
 					_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
 					require.NoError(err)
 				},
-				expectedErr: coreutils.FuncError{
-					SysError: coreutils.SysError{
-						HTTPStatus: 500,
-						QName:      appdef.NewQName("<err>", "errored QName"),
-						Message:    "something gone wrong",
-						Data:       "additional data",
-					},
-					ExpectedHTTPCodes: []int{http.StatusOK, http.StatusCreated},
+				expectedErr: coreutils.SysError{
+					HTTPStatus: 500,
+					QName:      appdef.NewQName("<err>", "errored QName"),
+					Message:    "something gone wrong",
+					Data:       "additional data",
 				},
 			},
 			{
@@ -134,11 +128,8 @@ func TestFederationFunc(t *testing.T) {
 					_, err = w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
 					require.NoError(err)
 				},
-				expectedErr: coreutils.FuncError{
-					SysError: coreutils.SysError{
-						HTTPStatus: http.StatusOK,
-					},
-					ExpectedHTTPCodes: []int{http.StatusInternalServerError},
+				expectedErr: coreutils.SysError{
+					HTTPStatus: http.StatusOK,
 				},
 				opts: []coreutils.ReqOptFunc{coreutils.WithExpectedCode(http.StatusInternalServerError)},
 			},
@@ -152,9 +143,9 @@ func TestFederationFunc(t *testing.T) {
 					c.handler(string(body), w, r)
 				}
 				resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, c.opts...)
-				var fe coreutils.FuncError
-				if errors.As(err, &fe) {
-					require.Equal(c.expectedErr, err, c.name)
+				var se coreutils.SysError
+				if errors.As(err, &se) {
+					require.Equal(c.expectedErr, se, c.name)
 				} else {
 					require.Equal(c.expectedErr.Error(), err.Error(), c.name)
 				}
