@@ -230,6 +230,12 @@ func ExpectSysError500() ReqOptFunc {
 	}
 }
 
+func WithOptsValidator(validator func(*reqOpts) (panicMessage string)) ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.validators = append(opts.validators, validator)
+	}
+}
+
 type reqOpts struct {
 	method                string
 	headers               map[string]string
@@ -245,6 +251,7 @@ type reqOpts struct {
 	withoutAuth           bool
 	skipRetryOn503        bool
 	deadlineOn503         time.Duration
+	validators            []func(*reqOpts) (panicMessage string)
 }
 
 // body and bodyReader are mutual exclusive
@@ -281,10 +288,30 @@ func (c *implIHTTPClient) Req(ctx context.Context, urlStr string, body string, o
 	return c.req(ctx, urlStr, body, optFuncs...)
 }
 
+func mutualExclusiveOptsValidator(opts *reqOpts) (panicMessage string) {
+	mutualExclusiveOpts := 0
+	if opts.discardResp {
+		mutualExclusiveOpts++
+	}
+	if opts.expectedSysErrorCode > 0 {
+		mutualExclusiveOpts++
+	}
+	if opts.responseHandler != nil {
+		mutualExclusiveOpts++
+	}
+	if mutualExclusiveOpts > 1 {
+		return "request options conflict"
+	}
+	return ""
+}
+
 func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
+		validators: []func(*reqOpts) (panicMessage string){
+			mutualExclusiveOptsValidator,
+		},
 	}
 	optFuncs = append(optFuncs, WithRetryOnCertainError(func(err error) bool {
 		// https://github.com/voedger/voedger/issues/1694
@@ -298,20 +325,6 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 	if len(opts.method) == 0 {
 		opts.method = http.MethodGet
-	}
-
-	mutualExclusiveOpts := 0
-	if opts.discardResp {
-		mutualExclusiveOpts++
-	}
-	if opts.expectedSysErrorCode > 0 {
-		mutualExclusiveOpts++
-	}
-	if opts.responseHandler != nil {
-		mutualExclusiveOpts++
-	}
-	if mutualExclusiveOpts > 1 {
-		panic("request options conflict")
 	}
 
 	if len(opts.expectedHTTPCodes) == 0 {
@@ -328,6 +341,11 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	if opts.withoutAuth {
 		delete(opts.headers, Authorization)
 		delete(opts.cookies, Authorization)
+	}
+	for _, v := range opts.validators {
+		if panicMessage := v(opts); len(panicMessage) > 0 {
+			panic(panicMessage)
+		}
 	}
 	var resp *http.Response
 	var err error
@@ -555,4 +573,11 @@ func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func(
 		defaultOps: defaultOpts,
 	}
 	return client, client.CloseIdleConnections
+}
+
+func DenyGETAndDiscardResponse(opts *reqOpts) (panicMessage string) {
+	if opts.discardResp && opts.method == http.MethodGet {
+		return "WithDiscardResponse is denied on GET method"
+	}
+	return ""
 }
