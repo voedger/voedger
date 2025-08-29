@@ -261,6 +261,7 @@ func TestPanicOnGETAndDiscardResponse(t *testing.T) {
 	defer cleanup()
 
 	require.Panics(func() {
+		//nolint errcheck
 		federation.Func("abc", "", coreutils.WithMethod(http.MethodGet), coreutils.WithDiscardResponse())
 	})
 }
