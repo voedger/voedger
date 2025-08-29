@@ -216,3 +216,12 @@ func (m *MockStorage) AddPLogEntry(offset PLogOffset, wsid WSID, seqID SeqID, nu
 		},
 	)
 }
+
+func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
+	return Params{
+		SeqTypes:                          seqTypes,
+		MaxNumUnflushedValues:             DefaultMaxNumUnflushedValues,
+		LRUCacheSize:                      DefaultLRUCacheSize,
+		BatcherDelayOnToBeFlushedOverflow: defaultBatcherDelayOnToBeFlushedOverflow,
+	}
+}

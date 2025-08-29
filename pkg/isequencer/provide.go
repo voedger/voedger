@@ -10,17 +10,9 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
-
-func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
-	return Params{
-		SeqTypes:                          seqTypes,
-		MaxNumUnflushedValues:             DefaultMaxNumUnflushedValues,
-		LRUCacheSize:                      DefaultLRUCacheSize,
-		BatcherDelayOnToBeFlushedOverflow: defaultBatcherDelayOnToBeFlushedOverflow,
-	}
-}
 
 // New creates a new sequencer
 func New(params Params, seqStorage ISeqStorage, iTime timeu.ITime) (ISequencer, context.CancelFunc) {
@@ -52,7 +44,9 @@ func New(params Params, seqStorage ISeqStorage, iTime timeu.ITime) (ISequencer, 
 		actualizerWG:            &sync.WaitGroup{},
 		seqStorage:              seqStorage,
 		transactionIsInProgress: true, // to allow Actualize() to exec right below
+		retrierCfg:              retrier.NewConfig(baseRetryDelay, maxRetryDelay),
 	}
+	s.retrierCfg.ResetDelayAfterMaxDelay = true
 	s.Actualize()
 
 	return s, s.cleanup

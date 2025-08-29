@@ -12,6 +12,7 @@ import (
 	"time"
 
 	lruPkg "github.com/hashicorp/golang-lru/v2"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
@@ -99,6 +100,7 @@ type sequencer struct {
 	iTime timeu.ITime
 
 	transactionIsInProgress bool
+	retrierCfg              retrier.Config
 }
 
 // [~server.design.sequences/test.isequencer.mockISeqStorage~impl]
