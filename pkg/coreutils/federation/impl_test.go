@@ -250,3 +250,18 @@ func TestFederationFunc(t *testing.T) {
 		require.ErrorIs(err, context.Canceled)
 	})
 }
+
+func TestPanicOnGETAndDiscardResponse(t *testing.T) {
+	require := require.New(t)
+	federationURL, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", 123))
+	require.NoError(err)
+	federation, cleanup := New(context.Background(), func() *url.URL {
+		return federationURL
+	}, coreutils.NilAdminPortGetter)
+	defer cleanup()
+
+	require.Panics(func() {
+		//nolint errcheck
+		federation.Func("abc", "", coreutils.WithMethod(http.MethodGet), coreutils.WithDiscardResponse())
+	})
+}

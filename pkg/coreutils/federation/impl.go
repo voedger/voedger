@@ -27,7 +27,7 @@ import (
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
 func (f *implIFederation) post(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodPost))
-	return f.req(relativeURL, body, optFuncs...)
+	return f.reqFederation(relativeURL, body, optFuncs...)
 }
 
 func (f *implIFederation) postReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
@@ -37,18 +37,24 @@ func (f *implIFederation) postReader(relativeURL string, bodyReader io.Reader, o
 
 func (f *implIFederation) get(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodGet))
-	return f.req(relativeURL, "", optFuncs...)
+	return f.reqFederation(relativeURL, "", optFuncs...)
+}
+
+func (f *implIFederation) reqFederation(apiPath string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+	url := f.federationURL().String() + "/" + apiPath
+	return f.reqURL(url, body, optFuncs...)
 }
 
 func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
 	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
+	optFuncs = append(optFuncs, coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse))
 	return f.httpClient.ReqReader(f.vvmCtx, url, bodyReader, optFuncs...)
 }
 
-func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	url := f.federationURL().String() + "/" + relativeURL
+func (f *implIFederation) reqURL(url string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
+	optFuncs = append(optFuncs, coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse))
 	return f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 }
 
@@ -169,13 +175,6 @@ func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFunc
 	return err
 }
 
-func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodGet))
-	url := f.federationURL().String() + "/" + relativeURL
-	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
-	return f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
-}
-
 func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	httpResp, err := f.post(relativeURL, body, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
@@ -282,7 +281,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		`, channelID, projectionKey.App, projectionKey.Projection, projectionKey.WS)
 		params := url.Values{}
 		params.Add("payload", body)
-		_, err := f.get("n10n/unsubscribe?"+params.Encode(), coreutils.WithDiscardResponse())
+		_, err := f.get("n10n/unsubscribe?"+params.Encode())
 		if err != nil {
 			logger.Error("unsubscribe failed", err.Error())
 		}
