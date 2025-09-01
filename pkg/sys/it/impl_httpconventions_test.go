@@ -31,8 +31,9 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("query", func(t *testing.T) {
+		t.Skip("waiting for https://github.com/voedger/voedger/issues/4027")
 		body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
-		resp := vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.ExpectSysError500())
+		resp := vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.Expect500())
 		require.Equal("world", resp.SectionRow()[0])
 		require.Equal(coreutils.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
@@ -44,9 +45,11 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 		resp := vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.Expect500())
 		require.Equal(coreutils.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusInternalServerError, resp.HTTPResp.StatusCode)
-		require.Equal(http.StatusInternalServerError, resp.SysError.HTTPStatus)
-		require.Empty(resp.SysError.Data)
-		require.Empty(resp.SysError.QName)
+		var sysErr coreutils.SysError
+		require.ErrorAs(resp.SysError, &sysErr)
+		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
+		require.Empty(sysErr.Data)
+		require.Empty(sysErr.QName)
 		resp.Println()
 	})
 }

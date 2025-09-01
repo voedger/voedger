@@ -93,11 +93,10 @@ func TestReplyError(t *testing.T) {
 				requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
 					c.f(responder)
 				})
-				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, Request{})
-				require.NoError(err)
+				cmdRespMeta, _, err := GetCommandResponse(context.Background(), requestSender, Request{})
+				require.Equal(c.expected.error, err)
 				require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
-				require.Equal(c.expected.error, cmdResp.SysError)
 			})
 		}
 
@@ -126,11 +125,12 @@ func TestReplyError(t *testing.T) {
 				if len(c.expectedMessage) > 0 {
 					expectedMessage = c.expectedMessage
 				}
-				meta, resp, err := GetCommandResponse(context.Background(), requestSender, Request{})
-				require.NoError(err)
+				meta, _, err := GetCommandResponse(context.Background(), requestSender, Request{})
+				var sysError coreutils.SysError
+				require.ErrorAs(err, &sysError)
 				require.Equal(coreutils.ContentType_ApplicationJSON, meta.ContentType)
-				require.Equal(c.statusCode, resp.SysError.HTTPStatus)
-				require.Equal(expectedMessage, resp.SysError.Message)
+				require.Equal(c.statusCode, sysError.HTTPStatus)
+				require.Equal(expectedMessage, sysError.Message)
 			})
 		}
 	})

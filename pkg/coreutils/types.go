@@ -37,7 +37,6 @@ type ReqOptFunc func(opts *reqOpts)
 type CommandResponse struct {
 	NewIDs            map[string]istructs.RecordID
 	CurrentWLogOffset istructs.Offset
-	SysError          SysError
 	CmdResult         map[string]interface{}
 }
 
@@ -59,6 +58,7 @@ type FuncResponse struct {
 		Elements [][][][]interface{} `json:"elements"`
 	} `json:"sections"`
 	QPv2Response QPv2Response // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
+	SysError     error
 }
 
 type IHTTPClient interface {
@@ -155,12 +155,6 @@ func (cr *CommandResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if raw, ok := m["sys.Error"]; ok {
-		if err := json.Unmarshal(raw, &cr.SysError); err != nil {
-			return err
-		}
-	}
-
 	if raw, ok := m["Result"]; ok {
 		if err := json.Unmarshal(raw, &cr.CmdResult); err != nil {
 			return err
@@ -203,6 +197,49 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(raw, &resp.QPv2Response); err != nil {
 			return err
 		}
+	} else if raw, ok := m["results"]; ok && len(raw) > 0 {
+		if err := json.Unmarshal(raw, &resp.QPv2Response); err != nil {
+			return err
+		}
 	}
+
+	if raw, ok := m["sys.Error"]; ok {
+		var sysError SysError
+		if err := json.Unmarshal(raw, &sysError); err != nil {
+			return err
+		}
+		resp.SysError = sysError
+	} else {
+		if raw, ok := m["error"]; ok {
+			apiV2Err := map[string]interface{}{}
+			if err := json.Unmarshal(raw, &apiV2Err); err != nil {
+				return err
+			}
+			var sysError SysError
+			if commonErrorStatusIntf, ok := apiV2Err["status"]; ok {
+				sysError.HTTPStatus = int(commonErrorStatusIntf.(float64))
+			}
+			if commonErrorMessageIntf, ok := apiV2Err["message"]; ok {
+				sysError.Message = commonErrorMessageIntf.(string)
+			}
+			resp.SysError = sysError
+		} else {
+			var sysError SysError
+			if raw, ok := m["status"]; ok {
+				if err := json.Unmarshal(raw, &sysError.HTTPStatus); err != nil {
+					return err
+				}
+			}
+			if raw, ok := m["message"]; ok {
+				if err := json.Unmarshal(raw, &sysError.Message); err != nil {
+					return err
+				}
+			}
+			if !sysError.IsNil() {
+				resp.SysError = sysError
+			}
+		}
+	}
+
 	return nil
 }

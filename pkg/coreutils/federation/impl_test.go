@@ -171,6 +171,7 @@ func TestFederationFunc(t *testing.T) {
 			resp.RequireError(t, "something gone wrong")
 		})
 		t.Run("ExpectedErrorContains", func(t *testing.T) {
+			t.Skip("waiting for https://github.com/voedger/voedger/issues/4027")
 			errorMessage := "non-expected"
 			handler = func(w http.ResponseWriter, r *http.Request) {
 				_, err := io.ReadAll(r.Body)

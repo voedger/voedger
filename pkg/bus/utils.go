@@ -20,10 +20,11 @@ import (
 )
 
 // TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
-func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req Request) (cmdRespMeta ResponseMeta, cmdResp coreutils.CommandResponse, err error) {
+func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req Request) (cmdRespMeta ResponseMeta, cmdResp coreutils.CommandResponse, sysErr error) {
 	responseCh, responseMeta, responseErr, err := requestSender.SendRequest(ctx, req)
 	if err != nil {
-		return cmdRespMeta, cmdResp, err
+		// notest
+		panic(err)
 	}
 	body := ""
 	for elem := range responseCh {
@@ -45,14 +46,17 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 		}
 	}
 	if *responseErr != nil {
-		cmdResp.SysError = coreutils.WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
-		return responseMeta, cmdResp, nil
+		return responseMeta, cmdResp, coreutils.WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
 	}
-	if err = json.Unmarshal([]byte(body), &cmdResp); err != nil {
+	var fe coreutils.FuncResponse
+	if err = json.Unmarshal([]byte(body), &fe); err != nil {
 		// notest
 		panic(err)
 	}
-	return responseMeta, cmdResp, nil
+	if fe.SysError == nil {
+		return responseMeta, fe.CommandResponse, nil
+	}
+	return responseMeta, fe.CommandResponse, fe.SysError
 }
 
 func ReadQueryResponse(ctx context.Context, sender IRequestSender, req Request) (resp []map[string]interface{}, err error) {

@@ -52,7 +52,7 @@ func TestBasicUsage_FederationCommand(t *testing.T) {
 		body := `{"args": {"Input": "Anything"},"elements": [{"fields": ["Res"]}]}`
 		resp := vit.PostWS(ws, "q.app1pkg.MockQry", body)
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
-		require.Equal(0, resp.SysError.HTTPStatus)
+		require.NoError(resp.SysError)
 		resp.Println()
 	})
 
