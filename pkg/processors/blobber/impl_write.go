@@ -95,14 +95,8 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		Header:   bw.blobMessageWrite.header,
 		Host:     coreutils.Localhost,
 	}
-	cudWDocBLOBUpdateMeta, cudWDocBLOBUpdateResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
-	if err != nil {
-		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
-	}
-	if cudWDocBLOBUpdateMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Message)
-	}
-	return nil
+	_, _, err = bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
+	return err
 }
 
 func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
@@ -118,12 +112,9 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		QName:    bw.registerFuncName,
 		IsAPIV2:  true,
 	}
-	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
-	if err != nil {
-		return fmt.Errorf("failed to exec %s: %w", bw.registerFuncName, err)
-	}
-	if blobHelperMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, bw.registerFuncName.String()+" returned error: "+blobHelperResp.SysError.Data)
+	_, blobHelperResp, sysErr := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
+	if sysErr != nil {
+		return fmt.Errorf("%s failed: %w", bw.registerFuncName.String(), sysErr)
 	}
 	if bw.isPersistent() {
 		bw.newBLOBID = blobHelperResp.NewIDs["1"]

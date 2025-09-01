@@ -353,12 +353,11 @@ func TestCUDUpdate(t *testing.T) {
 		Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.test"}}]}`),
 		Header:   app.sysAuthHeader,
 	}
-	cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
-	require.NoError(err)
+	cmdRespMeta, cmdResp, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
+	require.NoError(sysErr)
 	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
 	require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	require.Empty(cmdResp.CmdResult)
-	require.Zero(cmdResp.SysError)
 	newID := cmdResp.NewIDs["1"]
 	require.NotZero(newID)
 
@@ -373,7 +372,7 @@ func TestCUDUpdate(t *testing.T) {
 	t.Run("404 not found on update not existing", func(t *testing.T) {
 		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.NonExistingRecordID))
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
-		require.NoError(err)
+		require.Error(err)
 		require.Equal(http.StatusNotFound, cmdRespMeta.StatusCode)
 		require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	})
@@ -422,12 +421,17 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 				Body:     []byte("{" + c.bodyAdd + "}"),
 				Header:   app.sysAuthHeader,
 			}
-			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
-			require.NoError(err)
+			cmdRespMeta, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.Equal(http.StatusBadRequest, cmdRespMeta.StatusCode, c.desc)
 			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
-			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
-			require.Equal(http.StatusBadRequest, cmdResp.SysError.HTTPStatus, c.desc)
+			if sysErr != nil {
+				var sysError coreutils.SysError
+				require.ErrorAs(sysErr, &sysError)
+				require.Contains(sysError.Message, c.expectedMessageLike, c.desc)
+				require.Equal(http.StatusBadRequest, sysError.HTTPStatus, c.desc)
+			} else {
+				require.Empty(c.expectedMessageLike, c.desc)
+			}
 		})
 	}
 }
@@ -497,12 +501,17 @@ func TestErrors(t *testing.T) {
 			if len(c.Resource) > 0 {
 				req.Resource = c.Resource
 			}
-			cmdRespMeta, cmdResp, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
-			require.NoError(err, c.desc)
+			cmdRespMeta, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
 			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
-			require.Contains(cmdResp.SysError.Message, c.expectedMessageLike, c.desc)
-			require.Equal(c.expectedStatusCode, cmdResp.SysError.HTTPStatus, c.desc)
+			if sysErr != nil {
+				var sysError coreutils.SysError
+				require.ErrorAs(sysErr, &sysError)
+				require.Contains(sysError.Message, c.expectedMessageLike, c.desc)
+				require.Equal(c.expectedStatusCode, sysError.HTTPStatus, c.desc)
+			} else {
+				require.Empty(c.expectedMessageLike, c.desc)
+			}
 		})
 	}
 }
@@ -581,7 +590,7 @@ func TestAuthnz(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, c.req)
-			require.NoError(err)
+			require.Error(err)
 			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
 		})
 	}
@@ -663,7 +672,7 @@ func TestRateLimit(t *testing.T) {
 
 	// 3rd exceeds rate limits
 	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
-	require.NoError(err)
+	require.Error(err)
 	require.Equal(http.StatusTooManyRequests, cmdRespMeta.StatusCode)
 }
 

@@ -115,8 +115,14 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (re
 	if err != nil {
 		return nil, fmt.Errorf("IFederation: failed to unmarshal response body to FuncResponse: %w. Body:\n%s", err, httpResp.Body)
 	}
-	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {
-		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.ExpectedSysErrorCode(), res.SysError.Message)
+
+	var sysErr coreutils.SysError
+	if errors.As(res.SysError, &sysErr)  {
+		if sysErr.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != sysErr.HTTPStatus {
+			return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", sysErr.HTTPStatus, res.ExpectedSysErrorCode(), sysErr.Message)
+		}
+	} else {
+		return res, res.SysError
 	}
 	return res, nil
 }

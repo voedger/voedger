@@ -506,7 +506,6 @@ func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName s
 	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
 	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
 	res, err := vit.httpClient.Req(context.Background(), url, body, opts...)
-	require.NoError(vit.T, err)
 	funcResp, err := federation.HTTPRespToFuncResp(res, err)
 	require.NoError(vit.T, err)
 	return funcResp
