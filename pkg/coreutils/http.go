@@ -15,7 +15,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -414,15 +413,6 @@ reqLoop:
 
 func (c *implIHTTPClient) CloseIdleConnections() {
 	c.client.CloseIdleConnections()
-}
-
-func containsAllMessages(strs []string, toFind string) bool {
-	for _, str := range strs {
-		if !strings.Contains(toFind, str) {
-			return false
-		}
-	}
-	return true
 }
 
 func (resp *HTTPResponse) ExpectedHTTPCodes() []int {
