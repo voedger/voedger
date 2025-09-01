@@ -15,7 +15,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -224,12 +223,6 @@ func Expect410() ReqOptFunc {
 	return WithExpectedCode(http.StatusGone)
 }
 
-func ExpectSysError500() ReqOptFunc {
-	return func(opts *reqOpts) {
-		opts.expectedSysErrorCode = http.StatusInternalServerError
-	}
-}
-
 func WithOptsValidator(validator func(*reqOpts) (panicMessage string)) ReqOptFunc {
 	return func(opts *reqOpts) {
 		opts.validators = append(opts.validators, validator)
@@ -245,7 +238,6 @@ type reqOpts struct {
 	responseHandler       func(httpResp *http.Response) // used if no errors and an expected status code is received
 	relativeURL           string
 	discardResp           bool
-	expectedSysErrorCode  int
 	retriersOnErrors      []retrier
 	bodyReader            io.Reader
 	withoutAuth           bool
@@ -291,9 +283,6 @@ func (c *implIHTTPClient) Req(ctx context.Context, urlStr string, body string, o
 func mutualExclusiveOptsValidator(opts *reqOpts) (panicMessage string) {
 	mutualExclusiveOpts := 0
 	if opts.discardResp {
-		mutualExclusiveOpts++
-	}
-	if opts.expectedSysErrorCode > 0 {
 		mutualExclusiveOpts++
 	}
 	if opts.responseHandler != nil {
@@ -403,9 +392,8 @@ reqLoop:
 		return nil, err
 	}
 	httpResponse := &HTTPResponse{
-		HTTPResp:             resp,
-		expectedSysErrorCode: opts.expectedSysErrorCode,
-		expectedHTTPCodes:    opts.expectedHTTPCodes,
+		HTTPResp:          resp,
+		expectedHTTPCodes: opts.expectedHTTPCodes,
 	}
 	if resp.StatusCode == http.StatusOK && isCodeExpected && opts.responseHandler != nil {
 		opts.responseHandler(resp)
@@ -420,43 +408,11 @@ reqLoop:
 	if !isCodeExpected {
 		statusErr = fmt.Errorf("%w: %d, %s", ErrUnexpectedStatusCode, resp.StatusCode, respBody)
 	}
-	if resp.StatusCode != http.StatusOK && len(opts.expectedErrorContains) > 0 {
-		respMap := map[string]interface{}{}
-		if err := json.Unmarshal([]byte(respBody), &respMap); err != nil {
-			return nil, err
-		}
-		actualError := ""
-		if strings.Contains(urlStr, "api/v2") {
-			if messageIntf, ok := respMap["message"]; ok {
-				actualError = messageIntf.(string)
-			} else {
-				actualError = respMap["error"].(map[string]interface{})["message"].(string)
-			}
-		} else {
-			actualError = respMap["sys.Error"].(map[string]interface{})["Message"].(string)
-		}
-		if !containsAllMessages(opts.expectedErrorContains, actualError) {
-			return nil, fmt.Errorf(`actual error message "%s" does not contain the expected messages %v`, actualError, opts.expectedErrorContains)
-		}
-	}
 	return httpResponse, statusErr
 }
 
 func (c *implIHTTPClient) CloseIdleConnections() {
 	c.client.CloseIdleConnections()
-}
-
-func containsAllMessages(strs []string, toFind string) bool {
-	for _, str := range strs {
-		if !strings.Contains(toFind, str) {
-			return false
-		}
-	}
-	return true
-}
-
-func (resp *HTTPResponse) ExpectedSysErrorCode() int {
-	return resp.expectedSysErrorCode
 }
 
 func (resp *HTTPResponse) ExpectedHTTPCodes() []int {

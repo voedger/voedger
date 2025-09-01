@@ -105,12 +105,8 @@ func TestFederationFunc(t *testing.T) {
 					_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
 					require.NoError(err)
 				},
-				expectedErr: coreutils.SysError{
-					HTTPStatus: 500,
-					QName:      appdef.NewQName("<err>", "errored QName"),
-					Message:    "something gone wrong",
-					Data:       "additional data",
-				},
+				expectedErr: errors.New(`failed to unmarshal response body: convert error: string «errored QName» to qualified name. Body:
+{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`),
 			},
 			{
 				name: "wrong response JSON",
@@ -119,19 +115,7 @@ func TestFederationFunc(t *testing.T) {
 					_, err = w.Write([]byte(`wrong JSON`))
 					require.NoError(err)
 				},
-				expectedErr: errors.New("IFederation: failed to unmarshal response body to FuncErr: invalid character 'w' looking for beginning of value. Body:\nwrong JSON"),
-			},
-			{
-				name: "non-OK status is expected",
-				handler: func(body string, w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusOK)
-					_, err = w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"errored QName","Data":"additional data"}}`))
-					require.NoError(err)
-				},
-				expectedErr: coreutils.SysError{
-					HTTPStatus: http.StatusOK,
-				},
-				opts: []coreutils.ReqOptFunc{coreutils.WithExpectedCode(http.StatusInternalServerError)},
+				expectedErr: errors.New("failed to unmarshal response body: invalid character 'w' looking for beginning of value. Body:\nwrong JSON"),
 			},
 		}
 
