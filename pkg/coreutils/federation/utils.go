@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -75,23 +76,14 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 }
 
 func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (res *coreutils.FuncResponse, err error) {
-	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
-	if httpRespErr != nil && !isUnexpectedCode {
+	if httpRespErr != nil && !errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode) {
 		return nil, httpRespErr
 	}
 	if httpResp == nil {
+		// WithDiscardResponse
 		return nil, nil
 	}
-	if isUnexpectedCode {
-		sysError, err := getSysError(httpResp)
-		if err != nil {
-			return nil, err
-		}
-		if len(httpResp.ExpectedHTTPCodes()) == 1 && httpResp.ExpectedHTTPCodes()[0] == http.StatusOK {
-			return nil, fmt.Errorf("status %d: %w", httpResp.HTTPResp.StatusCode, sysError)
-		}
-		return nil, fmt.Errorf("status %d, expected %v: %w", httpResp.HTTPResp.StatusCode, httpResp.ExpectedHTTPCodes(), sysError)
-	}
+
 	res = &coreutils.FuncResponse{
 		CommandResponse: coreutils.CommandResponse{
 			NewIDs:    map[string]istructs.RecordID{},
@@ -99,30 +91,28 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (re
 		},
 		HTTPResponse: httpResp,
 	}
-	if len(httpResp.Body) == 0 {
-		return res, nil
-	}
-	if strings.HasPrefix(httpResp.HTTPResp.Request.URL.Path, "/api/v2/") {
-		// TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
-		if httpResp.HTTPResp.Header.Get(coreutils.ContentType) == coreutils.ContentType_ApplicationJSON {
-			if err = json.Unmarshal([]byte(httpResp.Body), &res.QPv2Response); err == nil {
-				err = json.Unmarshal([]byte(httpResp.Body), &res.CommandResponse)
-			}
+	if len(httpResp.Body) > 0 {
+		if err = json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal response body: %w. Body:\n%s", err, httpResp.Body)
 		}
-	} else {
-		err = json.Unmarshal([]byte(httpResp.Body), &res)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("IFederation: failed to unmarshal response body to FuncResponse: %w. Body:\n%s", err, httpResp.Body)
+
+	if !slices.Contains(httpResp.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode) {
+		if len(httpResp.ExpectedHTTPCodes()) == 1 && httpResp.ExpectedHTTPCodes()[0] == http.StatusOK {
+			return nil, fmt.Errorf("status %d: %w", httpResp.HTTPResp.StatusCode, res.SysError)
+		}
+		return nil, fmt.Errorf("status %d, expected %v: %w", httpResp.HTTPResp.StatusCode, httpResp.ExpectedHTTPCodes(), res.SysError)
 	}
 
 	var sysErr coreutils.SysError
-	if errors.As(res.SysError, &sysErr)  {
-		if sysErr.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != sysErr.HTTPStatus {
-			return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", sysErr.HTTPStatus, res.ExpectedSysErrorCode(), sysErr.Message)
+	if errors.As(res.SysError, &sysErr) {
+		if !slices.Contains(httpResp.ExpectedHTTPCodes(), sysErr.HTTPStatus) {
+			if len(httpResp.ExpectedHTTPCodes()) == 1 && httpResp.ExpectedHTTPCodes()[0] == http.StatusOK {
+				return nil, fmt.Errorf("status %d: %w", sysErr.HTTPStatus, res.SysError)
+			}
+			return nil, fmt.Errorf("status %d, expected %v: %w", sysErr.HTTPStatus, httpResp.ExpectedHTTPCodes(), res.SysError)
 		}
-	} else {
-		return res, res.SysError
+		return res, nil
 	}
-	return res, nil
+	return res, res.SysError
 }

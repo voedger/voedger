@@ -25,10 +25,9 @@ type EmbedFS interface {
 }
 
 type HTTPResponse struct {
-	Body                 string
-	HTTPResp             *http.Response
-	expectedSysErrorCode int
-	expectedHTTPCodes    []int
+	Body              string
+	HTTPResp          *http.Response
+	expectedHTTPCodes []int
 }
 
 type ReqOptFunc func(opts *reqOpts)
@@ -40,25 +39,29 @@ type CommandResponse struct {
 	CmdResult         map[string]interface{}
 }
 
-type QPv2Response map[string]interface{}
+type QueryResponse struct {
+	QPv2Response // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
+	Sections     []struct {
+		Elements [][][][]interface{} `json:"elements"`
+	} `json:"sections"`
+}
+
+type QPv2Response []map[string]interface{}
 
 func (r QPv2Response) Result() map[string]interface{} {
 	return r.ResultRow(0)
 }
 
 func (r QPv2Response) ResultRow(rowNum int) map[string]interface{} {
-	return r["results"].([]interface{})[rowNum].(map[string]interface{})
+	return r[rowNum]
 }
 
 // implements json.Unmarshaler
 type FuncResponse struct {
 	*HTTPResponse
 	CommandResponse
-	Sections []struct {
-		Elements [][][][]interface{} `json:"elements"`
-	} `json:"sections"`
-	QPv2Response QPv2Response // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
-	SysError     error
+	QueryResponse
+	SysError error
 }
 
 type IHTTPClient interface {
@@ -193,11 +196,7 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if raw, ok := m["QPv2Response"]; ok && len(raw) > 0 {
-		if err := json.Unmarshal(raw, &resp.QPv2Response); err != nil {
-			return err
-		}
-	} else if raw, ok := m["results"]; ok && len(raw) > 0 {
+	if raw, ok := m["results"]; ok && len(raw) > 0 {
 		if err := json.Unmarshal(raw, &resp.QPv2Response); err != nil {
 			return err
 		}
