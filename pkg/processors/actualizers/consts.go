@@ -24,8 +24,7 @@ const (
 	defaultBundlesLimit          = 100
 	defaultFlushInterval         = time.Millisecond * 100
 	defaultFlushPositionInterval = time.Minute
-	defaultActualizerErrorDelay  = time.Second * 30
-	testActualizerErrorDelay     = 100 * time.Millisecond // used in tests only
+	DefaultRetryDelay            = RetryDelay(30 * time.Second)
 	n10nChannelDuration          = 100 * 365 * 24 * time.Hour
 	DefaultIntentsLimit          = builtin.MaxCUDs * 10
 )

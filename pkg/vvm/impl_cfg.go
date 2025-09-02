@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
@@ -31,24 +32,25 @@ func NewVVMDefaultConfig() VVMConfig {
 		panic(err)
 	}
 	res := VVMConfig{
-		Routes:                 map[string]string{},
-		RoutesRewrite:          map[string]string{},
-		RouteDomains:           map[string]string{},
-		RouterWriteTimeout:     router.DefaultRouterWriteTimeout, // same
-		RouterReadTimeout:      router.DefaultRouterWriteTimeout, // same
-		RouterConnectionsLimit: router.DefaultConnectionsLimit,
-		BLOBMaxSize:            DefaultBLOBMaxSize,
-		Time:                   timeu.NewITime(),
-		Name:                   processors.VVMName(hostname),
-		VVMAppsBuilder:         VVMAppsBuilder{},
-		SendTimeout:            bus.DefaultSendTimeout,
-		NumCommandProcessors:   DefaultNumCommandProcessors,
-		NumQueryProcessors:     DefaultNumQueryProcessors,
-		NumBLOBProcessors:      DefaultNumBLOBProcessors,
-		StorageCacheSize:       DefaultCacheSize,
-		MaxPrepareQueries:      DefaultMaxPrepareQueries,
-		VVMPort:                DefaultVVMPort,
-		MetricsServicePort:     DefaultMetricsServicePort,
+		Routes:                     map[string]string{},
+		RoutesRewrite:              map[string]string{},
+		RouteDomains:               map[string]string{},
+		RouterWriteTimeout:         router.DefaultRouterWriteTimeout, // same
+		RouterReadTimeout:          router.DefaultRouterWriteTimeout, // same
+		RouterConnectionsLimit:     router.DefaultConnectionsLimit,
+		BLOBMaxSize:                DefaultBLOBMaxSize,
+		Time:                       timeu.NewITime(),
+		Name:                       processors.VVMName(hostname),
+		VVMAppsBuilder:             VVMAppsBuilder{},
+		SendTimeout:                bus.DefaultSendTimeout,
+		NumCommandProcessors:       DefaultNumCommandProcessors,
+		NumQueryProcessors:         DefaultNumQueryProcessors,
+		NumBLOBProcessors:          DefaultNumBLOBProcessors,
+		StorageCacheSize:           DefaultCacheSize,
+		MaxPrepareQueries:          DefaultMaxPrepareQueries,
+		VVMPort:                    DefaultVVMPort,
+		MetricsServicePort:         DefaultMetricsServicePort,
+		AsyncActualizersRetryDelay: actualizers.DefaultRetryDelay,
 		StorageFactory: func(time timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
 			return mem.Provide(time), nil

@@ -115,8 +115,9 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iFederation, cleanup2 := provideIFederation(vvmCtx, vvmConfig, vvmPortSource)
 	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
+	retryDelay := vvmConfig.AsyncActualizersRetryDelay
 	v4 := vvmConfig.ActualizerStateOpts
-	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
+	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, retryDelay, v4...)
 	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
@@ -379,7 +380,9 @@ func provideBasicAsyncActualizerConfig(
 
 	broker in10n.IN10nBroker, federation2 federation.IFederation,
 
+	asyncActualizersRetryDelay actualizers.RetryDelay,
 	opts ...state.StateOptFunc,
+
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
@@ -391,6 +394,7 @@ func provideBasicAsyncActualizerConfig(
 		Opts:          opts,
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
+		RetryDelay:    asyncActualizersRetryDelay,
 	}
 }
 

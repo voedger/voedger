@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -53,16 +54,16 @@ type (
 
 // 1 asyncActualizer per each projector per each partition
 type asyncActualizer struct {
-	conf                 AsyncActualizerConf
-	projectorQName       appdef.QName
-	pipeline             pipeline.IAsyncPipeline
-	offset               istructs.Offset
-	name                 string
-	readCtx              *asyncActualizerContextState
-	projErrState         int32 // 0 - no error, 1 - error
-	plogBatch                  // [50]plogEvent
-	appParts             appparts.IAppPartitions
-	actualizerErrorDelay time.Duration // 30 seconds in production, 100ms in tests
+	conf           AsyncActualizerConf
+	projectorQName appdef.QName
+	pipeline       pipeline.IAsyncPipeline
+	offset         istructs.Offset
+	name           string
+	readCtx        *asyncActualizerContextState
+	projErrState   int32 // 0 - no error, 1 - error
+	plogBatch            // [50]plogEvent
+	appParts       appparts.IAppPartitions
+	retrierCfg     retrier.Config
 }
 
 func (a *asyncActualizer) Prepare() {
@@ -80,30 +81,27 @@ func (a *asyncActualizer) Prepare() {
 	if a.conf.FlushPositionInterval == 0 {
 		a.conf.FlushPositionInterval = defaultFlushPositionInterval
 	}
-	if a.conf.AfterError == nil {
-		a.conf.AfterError = time.After
-	}
-
 	if a.conf.LogError == nil {
 		a.conf.LogError = logger.Error
+	}
+
+	a.retrierCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, err error) {
+		a.conf.LogError(a.name, opErr)
+		return true, nil
 	}
 }
 
 func (a *asyncActualizer) Run(ctx context.Context) {
 	for ctx.Err() == nil {
-		err := a.init(ctx)
-		if err == nil {
-			logger.Trace(a.name, "started")
-			err = a.keepReading()
-		}
-		a.finit() // execute even if a.init() has failed
-		if err != nil {
-			a.conf.LogError(a.name, err)
-			select {
-			case <-ctx.Done():
-			case <-a.conf.AfterError(a.actualizerErrorDelay):
+		_ = retrier.RetryNoResult(ctx, a.retrierCfg, func() error {
+			err := a.init(ctx)
+			if err == nil {
+				logger.Trace(a.name, "started")
+				err = a.keepReading()
 			}
-		}
+			a.finit() // execute even if a.init() has failed
+			return err
+		})
 	}
 }
 

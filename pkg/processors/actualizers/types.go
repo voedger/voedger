@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -87,3 +88,5 @@ func ProjectorEvent(prj appdef.IProjector, event istructs.IPLogEvent) (triggered
 	}
 	return false
 }
+
+type RetryDelay time.Duration

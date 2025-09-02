@@ -31,6 +31,7 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
@@ -161,6 +162,7 @@ type VVMConfig struct {
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         metrics.MetricsServicePort
+	AsyncActualizersRetryDelay actualizers.RetryDelay
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
