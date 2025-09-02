@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 )
@@ -105,20 +107,6 @@ func WithAuthorizeBy(principalToken string) ReqOptFunc {
 	return func(po *reqOpts) {
 		po.headers[Authorization] = BearerPrefix + principalToken
 	}
-}
-
-func WithRetryOnCertainError(errMatcher func(err error) bool, timeout time.Duration, retryDelay time.Duration) ReqOptFunc {
-	return func(opts *reqOpts) {
-		opts.retriersOnErrors = append(opts.retriersOnErrors, retrier{
-			macther: errMatcher,
-			timeout: timeout,
-			delay:   retryDelay,
-		})
-	}
-}
-
-func WithRetryOnAnyError(timeout time.Duration, retryDelay time.Duration) ReqOptFunc {
-	return WithRetryOnCertainError(func(error) bool { return true }, timeout, retryDelay)
 }
 
 func WithDeadlineOn503(deadline time.Duration) ReqOptFunc {
@@ -238,12 +226,12 @@ type reqOpts struct {
 	responseHandler       func(httpResp *http.Response) // used if no errors and an expected status code is received
 	relativeURL           string
 	discardResp           bool
-	retriersOnErrors      []retrier
 	bodyReader            io.Reader
 	withoutAuth           bool
 	skipRetryOn503        bool
 	deadlineOn503         time.Duration
 	validators            []func(*reqOpts) (panicMessage string)
+	retryErrsMatchers     []func(err error) (retry bool)
 }
 
 // body and bodyReader are mutual exclusive
@@ -302,11 +290,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 			mutualExclusiveOptsValidator,
 		},
 	}
-	optFuncs = append(optFuncs, WithRetryOnCertainError(func(err error) bool {
-		// https://github.com/voedger/voedger/issues/1694
-		return IsWSAEError(err, WSAECONNREFUSED)
-	}, retryOn_WSAECONNREFUSED_Timeout, retryOn_WSAECONNREFUSED_Delay))
-	for _, defaultOptFunc := range c.defaultOps {
+	for _, defaultOptFunc := range c.defaultOpts {
 		defaultOptFunc(opts)
 	}
 	for _, optFunc := range optFuncs {
@@ -336,55 +320,47 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 			panic(panicMessage)
 		}
 	}
-	var resp *http.Response
-	var err error
-	tryNum := 0
 	startTime := time.Now()
 
 	reqCtx, cancel := context.WithTimeout(ctx, maxHTTPRequestTimeout)
 	defer cancel()
-reqLoop:
-	for reqCtx.Err() == nil {
+
+	retrierCfg := retrier.NewConfig(httpBaseRetryDelay, httpMaxRetryDelay)
+	retrierCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, abortErr error) {
+		for _, matcher := range opts.retryErrsMatchers {
+			if matcher(opErr) {
+				return true, nil
+			}
+		}
+		return false, fmt.Errorf("request failed: %w", opErr)
+	}
+
+	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
 		req, err := req(opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
-		resp, err = c.client.Do(req)
+		resp, err := c.client.Do(req)
 		if err != nil {
-			for _, retrier := range opts.retriersOnErrors {
-				if retrier.macther(err) {
-					if time.Since(startTime) < retrier.timeout {
-						time.Sleep(retrier.delay)
-						continue reqLoop
-					}
-				}
-			}
-			return nil, fmt.Errorf("request do() failed: %w", err)
+			return nil, err
 		}
-		if opts.responseHandler == nil {
-			defer resp.Body.Close()
-		}
+
 		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) &&
 			!opts.skipRetryOn503 {
 			if opts.deadlineOn503 > 0 && time.Since(startTime) > opts.deadlineOn503 {
-				break
+				return resp, nil
 			}
+			defer resp.Body.Close()
 			if err := discardRespBody(resp); err != nil {
 				return nil, err
 			}
 			logger.Verbose("503. retrying...")
-			if tryNum > shortRetriesOn503Amount {
-				time.Sleep(longRetryOn503Delay)
-			} else {
-				time.Sleep(shortRetryOn503Delay)
-			}
-			tryNum++
-			continue
+			return nil, errHTTPStatus503
 		}
-		break
-	}
-	if reqCtx.Err() != nil {
-		return nil, reqCtx.Err()
+		return resp, nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	isCodeExpected := slices.Contains(opts.expectedHTTPCodes, resp.StatusCode)
 	if isCodeExpected && opts.discardResp {
@@ -507,8 +483,25 @@ func (resp *FuncResponse) IsEmpty() bool {
 }
 
 type implIHTTPClient struct {
-	client     *http.Client
-	defaultOps []ReqOptFunc
+	client      *http.Client
+	defaultOpts []ReqOptFunc
+}
+
+var constDefaultOpts = []ReqOptFunc{
+	WithRetryErrorMatcher(func(err error) bool {
+		// https://github.com/voedger/voedger/issues/1694
+		return IsWSAEError(err, WSAECONNREFUSED)
+	}),
+	WithRetryErrorMatcher(func(err error) bool {
+		// retry on 503
+		return errors.Is(err, errHTTPStatus503)
+	}),
+}
+
+func WithRetryErrorMatcher(matcher func(err error) (retry bool)) ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.retryErrsMatchers = append(opts.retryErrsMatchers, matcher)
+	}
 }
 
 func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func()) {
@@ -525,8 +518,8 @@ func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func(
 		return conn, err
 	}
 	client = &implIHTTPClient{
-		client:     &http.Client{Transport: tr},
-		defaultOps: defaultOpts,
+		client:      &http.Client{Transport: tr},
+		defaultOpts: append(slices.Clone(constDefaultOpts), defaultOpts...),
 	}
 	return client, client.CloseIdleConnections
 }

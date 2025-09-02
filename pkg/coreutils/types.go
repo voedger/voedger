@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -68,12 +67,6 @@ type IHTTPClient interface {
 	Req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	ReqReader(ctx context.Context, urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	CloseIdleConnections()
-}
-
-type retrier struct {
-	macther func(err error) bool
-	timeout time.Duration
-	delay   time.Duration
 }
 
 type PathReader struct {
