@@ -22,9 +22,3 @@ func New(vvmCtx context.Context, federationURL func() *url.URL, adminPortGetter 
 	}
 	return fed, cln
 }
-
-func NewForQP(federation IFederation) IFederationForQP {
-	return &implIFederationForQP{
-		fed: federation,
-	}
-}

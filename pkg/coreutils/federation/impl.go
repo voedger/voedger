@@ -281,7 +281,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		`, channelID, projectionKey.App, projectionKey.Projection, projectionKey.WS)
 		params := url.Values{}
 		params.Add("payload", body)
-		_, err := f.get("n10n/unsubscribe?"+params.Encode())
+		_, err := f.get("n10n/unsubscribe?" + params.Encode())
 		if err != nil {
 			logger.Error("unsubscribe failed", err.Error())
 		}
@@ -303,9 +303,4 @@ func (f *implIFederation) WithRetry() IFederationWithRetry {
 		defaultReqOptFuncs: []coreutils.ReqOptFunc{coreutils.WithRetryOn503()},
 		vvmCtx:             f.vvmCtx,
 	}
-}
-
-func (f *implIFederationForQP) QueryNoRetry(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithSkipRetryOn503())
-	return f.fed.Query(relativeURL, optFuncs...)
 }
