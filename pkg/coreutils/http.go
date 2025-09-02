@@ -325,7 +325,8 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	reqCtx, cancel := context.WithTimeout(ctx, maxHTTPRequestTimeout)
 	defer cancel()
 
-	c.retrierCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, abortErr error) {
+	retrierCfg := retrier.NewConfig(httpBaseRetryDelay, httpMaxRetryDelay)
+	retrierCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, abortErr error) {
 		for _, matcher := range opts.retryErrsMatchers {
 			if matcher(opErr) {
 				return true, nil
@@ -333,9 +334,8 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 		}
 		return false, fmt.Errorf("request failed: %w", opErr)
 	}
-	defer func() { c.retrierCfg.OnError = nil }()
 
-	resp, err := retrier.Retry(reqCtx, c.retrierCfg, func() (*http.Response, error) {
+	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
 		req, err := req(opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
@@ -485,7 +485,6 @@ func (resp *FuncResponse) IsEmpty() bool {
 type implIHTTPClient struct {
 	client      *http.Client
 	defaultOpts []ReqOptFunc
-	retrierCfg  retrier.Config
 }
 
 var constDefaultOpts = []ReqOptFunc{
@@ -521,7 +520,6 @@ func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func(
 	client = &implIHTTPClient{
 		client:      &http.Client{Transport: tr},
 		defaultOpts: append(slices.Clone(constDefaultOpts), defaultOpts...),
-		retrierCfg:  retrier.NewConfig(httpBaseRetryDelay, httpMaxRetryDelay),
 	}
 	return client, client.CloseIdleConnections
 }
