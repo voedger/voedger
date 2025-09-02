@@ -14,7 +14,7 @@ const (
 	DefaultMaxNumUnflushedValues             = 500
 	defaultBatcherDelayOnToBeFlushedOverflow = 5 * time.Millisecond
 	baseRetryDelay                           = 500 * time.Millisecond
-	maxRetryDelay                            = 10 * time.Second
+	maxRetryDelay                            = baseRetryDelay
 )
 
 const (

@@ -9,12 +9,11 @@ import (
 	"context"
 	"math"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-var actualizationTimeoutLimit = 1 * time.Second
+const actualizationTimeoutLimit = maxRetryDelay
 
 // waitForActualization waits for actualization to complete by repeatedly calling Start
 func WaitForStart(t *testing.T, seq ISequencer, wsKind WSKind, wsID WSID, shouldBeOk bool) PLogOffset {
