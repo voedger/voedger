@@ -242,6 +242,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"ActualizerStateOpts",
 			"SecretsReader",
 			"SequencesTrustLevel",
+			"AsyncActualizersRetryDelay",
 		),
 	))
 }
@@ -318,7 +319,9 @@ func provideBasicAsyncActualizerConfig(
 	metrics imetrics.IMetrics,
 	broker in10n.IN10nBroker,
 	federation federation.IFederation,
+	asyncActualizersRetryDelay actualizers.RetryDelay,
 	opts ...state.StateOptFunc,
+
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
@@ -330,6 +333,7 @@ func provideBasicAsyncActualizerConfig(
 		Opts:          opts,
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
+		RetryDelay:    asyncActualizersRetryDelay,
 	}
 }
 
