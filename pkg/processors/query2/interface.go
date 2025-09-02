@@ -18,7 +18,6 @@ import (
 
 type ServiceFactory func(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, itokens itokens.ITokens, 
-	federationForQP federation.IFederationForQP, // Federation interface for query processing
-	federationForState federation.IFederation,   // Federation interface for state management
+	authn iauthnz.IAuthenticator, itokens itokens.ITokens,
+	federation federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService

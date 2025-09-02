@@ -37,7 +37,7 @@ func authLoginHandler() apiPathHandler {
 			url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/queries/registry.IssuePrincipalToken?args=%s`,
 				istructs.SysOwner, istructs.AppQName_sys_registry.Name(), pseudoWSID,
 				url.QueryEscape(fmt.Sprintf(`{"Login":"%s", "Password":"%s", "AppName": "%s"}`, login, password, qw.msg.AppQName())))
-			resp, err := qw.federation.QueryNoRetry(url)
+			resp, err := qw.federation.Query(url)
 			if err != nil {
 				return err
 			}

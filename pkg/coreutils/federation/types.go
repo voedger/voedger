@@ -21,8 +21,4 @@ type implIFederation struct {
 	vvmCtx             context.Context
 }
 
-type implIFederationForQP struct {
-	fed IFederation
-}
-
 type OffsetsChan chan istructs.Offset

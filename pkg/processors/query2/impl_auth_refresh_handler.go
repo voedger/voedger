@@ -24,7 +24,7 @@ func authRefreshHandler() apiPathHandler {
 
 			url := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/queries/sys.RefreshPrincipalToken", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(),
 				qw.principalPayload.ProfileWSID)
-			resp, err := qw.federation.QueryNoRetry(url, coreutils.WithAuthorizeBy(qw.msg.Token()))
+			resp, err := qw.federation.Query(url, coreutils.WithAuthorizeBy(qw.msg.Token()))
 			if err != nil {
 				return err
 			}
