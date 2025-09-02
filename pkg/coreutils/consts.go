@@ -45,6 +45,6 @@ const (
 )
 
 var (
-	LocalhostIP = net.IPv4(127, 0, 0, 1)
-	httpErr503  = errors.New(http.StatusText(http.StatusServiceUnavailable))
+	LocalhostIP      = net.IPv4(127, 0, 0, 1)
+	errHTTPStatus503 = errors.New(http.StatusText(http.StatusServiceUnavailable))
 )

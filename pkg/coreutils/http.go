@@ -355,7 +355,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 				return nil, err
 			}
 			logger.Verbose("503. retrying...")
-			return nil, httpErr503
+			return nil, errHTTPStatus503
 		}
 		return resp, nil
 	})
@@ -494,7 +494,7 @@ var constDefaultOpts = []ReqOptFunc{
 	}),
 	WithRetryErrorMatcher(func(err error) bool {
 		// retry on 503
-		return errors.Is(err, httpErr503)
+		return errors.Is(err, errHTTPStatus503)
 	}),
 }
 
