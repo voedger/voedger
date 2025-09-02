@@ -35,8 +35,6 @@ type BasicSchedulerConfig struct {
 
 	Opts []state.StateOptFunc
 
-	// Optional. Default value: `time.After`
-	AfterError TimeAfterFunc
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc
 	//IntentsLimit top limit per event, optional, default value is 100

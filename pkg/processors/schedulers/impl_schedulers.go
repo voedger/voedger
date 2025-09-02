@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -43,7 +44,8 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 			Workspace:            wsid,
 			AppWSIdx:             appWSIdx,
 		},
-		appParts: a.appParts,
+		appParts:   a.appParts,
+		retrierCfg: retrier.NewConfig(schedulerRetryDelay, schedulerRetryDelay),
 	}
 	act.Prepare()
 
