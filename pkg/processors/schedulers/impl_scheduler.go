@@ -6,6 +6,7 @@ package schedulers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
@@ -31,6 +33,7 @@ type scheduler struct {
 	ctx          context.Context
 	projErrState int32 // 0 - no error, 1 - error
 	appParts     appparts.IAppPartitions
+	retrierCfg   retrier.Config
 }
 
 func (a *scheduler) Prepare() {
@@ -38,32 +41,31 @@ func (a *scheduler) Prepare() {
 		a.conf.IntentsLimit = defaultIntentsLimit
 	}
 
-	if a.conf.AfterError == nil {
-		a.conf.AfterError = time.After
-	}
-
 	if a.conf.LogError == nil {
 		a.conf.LogError = logger.Error
+	}
+
+	a.retrierCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, abortErr error) {
+		a.finit() // even execute if a.init has failed
+		a.conf.LogError(a.name, opErr)
+		if errors.Is(opErr, appparts.ErrNotFound) {
+			return true, nil
+		}
+		return false, opErr
 	}
 	a.name = fmt.Sprintf("%v [idx: %d, id: %d]", a.job, a.conf.AppWSIdx, a.conf.Workspace)
 }
 
 func (a *scheduler) Run(ctx context.Context) {
-	for ctx.Err() == nil {
-		a.ctx = ctx
-		err := a.init()
-		if err == nil {
-			a.keepRunning()
-		}
-		a.finit() // even execute if a.init has failed
-		if ctx.Err() == nil && err != nil {
-			a.conf.LogError(a.name, err)
-			select {
-			case <-ctx.Done():
-			case <-a.conf.AfterError(schedulerErrorDelay):
-			}
-		}
+	a.ctx = ctx
+	err := retrier.RetryNoResult(ctx, a.retrierCfg, a.init)
+	if err != nil {
+		// context.Canceled is only possible here
+		// err is logged already by retrier OnError()
+		return
 	}
+	a.keepRunning()
+	a.finit()
 }
 
 func (a *scheduler) runJob() {

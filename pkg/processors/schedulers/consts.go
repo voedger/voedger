@@ -7,6 +7,6 @@ package schedulers
 import "time"
 
 const (
-	schedulerErrorDelay = time.Second * 30
+	schedulerRetryDelay = time.Second * 30
 	defaultIntentsLimit = 100
 )
