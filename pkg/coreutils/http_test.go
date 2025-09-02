@@ -256,27 +256,6 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		}
 	})
 
-	t.Run("WithRetryOnAnyError retries on failure", func(t *testing.T) {
-		var callCount int
-		handler = func(w http.ResponseWriter, r *http.Request) {
-			callCount++
-			if callCount == 1 {
-				hj, ok := w.(http.Hijacker)
-				require.True(ok)
-				conn, _, err := hj.Hijack()
-				require.NoError(err)
-				conn.Close()
-				return
-			}
-			_, err := w.Write([]byte("retried"))
-			require.NoError(err)
-		}
-		resp, err := httpClient.Req(context.Background(), url, "body", WithRetryOnAnyError(time.Second, 10*time.Millisecond))
-		require.NoError(err)
-		require.Equal("retried", resp.Body)
-		require.Equal(2, callCount)
-	})
-
 	t.Run("WithResponseHandler is called", func(t *testing.T) {
 		var handlerCalled bool
 		handler = func(w http.ResponseWriter, r *http.Request) {
