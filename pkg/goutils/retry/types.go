@@ -14,7 +14,7 @@ import "time"
 type Config struct {
 	BaseDelay               time.Duration // required
 	MaxDelay                time.Duration // required
-	OnError                 func(attempt int, delay time.Duration, opErr error) (retry bool, err error)
+	OnError                 func(attempt int, delay time.Duration, opErr error) (retry bool, abortErr error)
 	ResetDelayAfterMaxDelay bool
 }
 

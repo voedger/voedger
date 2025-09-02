@@ -7,10 +7,12 @@ package appparts
 
 import (
 	"context"
+	"errors"
 	"iter"
 	"net/url"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -57,6 +59,13 @@ func newAppPartitions(
 	}
 	a.asyncActualizersRunner.SetAppPartitions(a)
 	a.schedulerRunner.SetAppPartitions(a)
+	a.partBorrowRetryCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, err error) {
+		if !errors.Is(err, ErrNotAvailableEngines) {
+			return true, nil
+		}
+		// notest: ErrNotAvailableEngines is only possible in [borrowedPartition.borrow]
+		return false, opErr
+	}
 	return a, func() {
 		select {
 		case <-a.vvmCtx.Done():
