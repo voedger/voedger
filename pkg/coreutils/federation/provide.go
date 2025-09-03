@@ -13,7 +13,10 @@ import (
 )
 
 func New(vvmCtx context.Context, federationURL func() *url.URL, adminPortGetter func() int) (federation IFederation, cleanup func()) {
-	httpClient, cln := coreutils.NewIHTTPClient(coreutils.WithSkipRetryOn503())
+	httpClient, cln := coreutils.NewIHTTPClient(
+		coreutils.WithSkipRetryOn503(),
+		coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), // to prevent discarding possible sys.Error
+	)
 	fed := &implIFederation{
 		httpClient:      httpClient,
 		federationURL:   federationURL,

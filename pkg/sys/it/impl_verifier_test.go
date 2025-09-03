@@ -132,7 +132,7 @@ func TestVerifierErrors(t *testing.T) {
 
 	t.Run("error 400 on set the raw value instead of verified value token for the verified field", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail)
-		vit.PostProfile(userPrincipal, "c.sys.CUD", body, coreutils.Expect400("invalid token")).Println()
+		vit.PostProfile(userPrincipal, "c.sys.CUD", body, it.Expect400("invalid token")).Println()
 	})
 
 	// issue a token for email field

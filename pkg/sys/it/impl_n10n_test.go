@@ -217,7 +217,7 @@ func TestN10NSubscribeErrors(t *testing.T) {
 			t.Run(c.body, func(t *testing.T) {
 				vit.POST("api/v2/apps/test1/app1/notifications", c.body,
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect400(c.expected),
+					it.Expect400(c.expected),
 				).Println()
 			})
 		}
