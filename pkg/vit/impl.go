@@ -509,11 +509,11 @@ func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFu
 	url := vit.URLStr() + "/" + relativeURL
 	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
 	require.NoError(vit.T, err)
-	vit.checkExpecationsInHTTPResp(httpResp)
+	vit.checkExpectationsInHTTPResp(httpResp)
 	return httpResp
 }
 
-func (vit *VIT) checkExpecationsInHTTPResp(httpResp *coreutils.HTTPResponse) {
+func (vit *VIT) checkExpectationsInHTTPResp(httpResp *coreutils.HTTPResponse) {
 	if len(httpResp.Opts.(*vitReqOpts).expectedMessages) == 0 {
 		return
 	}

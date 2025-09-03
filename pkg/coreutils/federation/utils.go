@@ -96,10 +96,6 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (fu
 		}
 	}
 
-	if !slices.Contains(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode) {
-		return nil, unexpectedStatusErr(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode, funcResp.SysError)
-	}
-
 	var sysErr coreutils.SysError
 	if errors.As(funcResp.SysError, &sysErr) {
 		if !slices.Contains(httpResp.Opts.ExpectedHTTPCodes(), sysErr.HTTPStatus) {
@@ -107,6 +103,11 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (fu
 		}
 		return funcResp, nil
 	}
+	
+	if !slices.Contains(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode) {
+		return nil, unexpectedStatusErr(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode, funcResp.SysError)
+	}
+
 	return funcResp, funcResp.SysError
 }
 
