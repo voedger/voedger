@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -75,7 +74,7 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 	return offsetsChan, channelID, func() { wg.Wait() }
 }
 
-func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (res *coreutils.FuncResponse, err error) {
+func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (funcResp *coreutils.FuncResponse, err error) {
 	if httpRespErr != nil && !errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode) {
 		return nil, httpRespErr
 	}
@@ -84,35 +83,34 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (re
 		return nil, nil
 	}
 
-	res = &coreutils.FuncResponse{
+	funcResp = &coreutils.FuncResponse{
 		CommandResponse: coreutils.CommandResponse{
 			NewIDs:    map[string]istructs.RecordID{},
 			CmdResult: map[string]interface{}{},
 		},
-		HTTPResponse: httpResp,
+		HTTPResponse: *httpResp,
 	}
 	if len(httpResp.Body) > 0 {
-		if err = json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
+		if err = json.Unmarshal([]byte(httpResp.Body), &funcResp); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal response body: %w. Body:\n%s", err, httpResp.Body)
 		}
 	}
 
-	if !slices.Contains(httpResp.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode) {
-		if len(httpResp.ExpectedHTTPCodes()) == 1 && httpResp.ExpectedHTTPCodes()[0] == http.StatusOK {
-			return nil, fmt.Errorf("status %d: %w", httpResp.HTTPResp.StatusCode, res.SysError)
+	var sysErr coreutils.SysError
+	if errors.As(funcResp.SysError, &sysErr) {
+		if !slices.Contains(httpResp.Opts.ExpectedHTTPCodes(), sysErr.HTTPStatus) {
+			return nil, unexpectedStatusErr(httpResp.Opts.ExpectedHTTPCodes(), sysErr.HTTPStatus, funcResp.SysError)
 		}
-		return nil, fmt.Errorf("status %d, expected %v: %w", httpResp.HTTPResp.StatusCode, httpResp.ExpectedHTTPCodes(), res.SysError)
+		return funcResp, nil
+	}
+	
+	if !slices.Contains(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode) {
+		return nil, unexpectedStatusErr(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode, funcResp.SysError)
 	}
 
-	var sysErr coreutils.SysError
-	if errors.As(res.SysError, &sysErr) {
-		if !slices.Contains(httpResp.ExpectedHTTPCodes(), sysErr.HTTPStatus) {
-			if len(httpResp.ExpectedHTTPCodes()) == 1 && httpResp.ExpectedHTTPCodes()[0] == http.StatusOK {
-				return nil, fmt.Errorf("status %d: %w", sysErr.HTTPStatus, res.SysError)
-			}
-			return nil, fmt.Errorf("status %d, expected %v: %w", sysErr.HTTPStatus, httpResp.ExpectedHTTPCodes(), res.SysError)
-		}
-		return res, nil
-	}
-	return res, res.SysError
+	return funcResp, funcResp.SysError
+}
+
+func unexpectedStatusErr(expectedCodes []int, actualCode int, sysErr error) error {
+	return fmt.Errorf("status %d, expected %v: %w", actualCode, expectedCodes, sysErr)
 }

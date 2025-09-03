@@ -31,7 +31,6 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("query", func(t *testing.T) {
-		t.Skip("waiting for https://github.com/voedger/voedger/issues/4027")
 		body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 		resp := vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.Expect500())
 		require.Equal("world", resp.SectionRow()[0])

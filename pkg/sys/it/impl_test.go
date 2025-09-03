@@ -236,20 +236,20 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
-			// c.app1pkg.TestCmd is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, coreutils.Expect404("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
+			// c.app1pkg.TestCmd is not defined in test_ws_anotherWS workspace -> 404 not found
+			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, it.Expect404("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
 
 			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 			body = "{}"
-			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
-			vit.PostWS(ws, "c.app1pkg.testCmd", body, coreutils.Expect404("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
+			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 404 not found
+			vit.PostWS(ws, "c.app1pkg.testCmd", body, it.Expect404("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
 		})
 
 		t.Run("type", func(t *testing.T) {
 			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 			body := "{}"
 			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
-			vit.PostWS(ws, "c.app1pkg.MockQry", body, coreutils.Expect400("app1pkg.MockQry is not a command"))
+			vit.PostWS(ws, "c.app1pkg.MockQry", body, it.Expect400("app1pkg.MockQry is not a command"))
 		})
 	})
 
@@ -258,12 +258,12 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"args":{"Input":"str"}}`
 			// q.app1pkg.MockQry is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, coreutils.Expect400("query app1pkg.MockQry does not exist in Workspace «app1pkg.test_wsWS_another»"))
+			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, it.Expect400("query app1pkg.MockQry does not exist in Workspace «app1pkg.test_wsWS_another»"))
 		})
 		t.Run("type", func(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
-			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("query app1pkg.testCmd does not exist in Workspace «app1pkg.test_wsWS_another»"))
+			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, it.Expect400("query app1pkg.testCmd does not exist in Workspace «app1pkg.test_wsWS_another»"))
 		})
 	})
 
@@ -271,7 +271,7 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 		t.Run("CUD in the request -> 400 bad request", func(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
-			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect500("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
+			vit.PostWS(anotherWS, "c.sys.CUD", body, it.Expect500("not found", "app1pkg.options", "Workspace «app1pkg.test_wsWS_another»"))
 		})
 		t.Run("CUD produced by a command -> 500 internal server error", func(t *testing.T) {
 			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
@@ -288,7 +288,7 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			}
 			body := `{"args":{"Input":"Str"}}`
 			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-			vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.WithExpectedCode(500, "app1pkg.docInAnotherWS qname is not defined in workspace app1pkg.test_ws"))
+			vit.PostWS(ws, "c.app1pkg.MockCmd", body, it.Expect500("app1pkg.docInAnotherWS qname is not defined in workspace app1pkg.test_ws"))
 		})
 	})
 }
@@ -342,11 +342,11 @@ func TestErrorFromResponseIntent(t *testing.T) {
 	body := `{"args":{"StatusCodeToReturn": 555}}`
 
 	t.Run("command", func(t *testing.T) {
-		vit.PostWS(ws, "c.app1pkg.CmdWithResponseIntent", body, coreutils.WithExpectedCode(555, "error from response intent"))
+		vit.PostWS(ws, "c.app1pkg.CmdWithResponseIntent", body, it.WithExpectedCode(555, "error from response intent"))
 	})
 
 	t.Run("query", func(t *testing.T) {
-		vit.PostWS(ws, "q.app1pkg.QryWithResponseIntent", body, coreutils.WithExpectedCode(555, "error from response intent"))
+		vit.PostWS(ws, "q.app1pkg.QryWithResponseIntent", body, it.WithExpectedCode(555, "error from response intent"))
 	})
 }
 
@@ -502,22 +502,22 @@ func TestSysFieldsModification(t *testing.T) {
 	t.Run("deny", func(t *testing.T) {
 		t.Run("sys.ID", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"sys.ID": 90000}}]}`, idDep)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ID")).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unable to update system field", "sys.ID")).Println()
 		})
 
 		t.Run("sys.ParentID", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.ParentID": 90000}}]}`, idDepOpts)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.ParentID")).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unable to update system field", "sys.ParentID")).Println()
 		})
 
 		t.Run("sys.Container", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.Container": "department_options_2"}}]}`, idDepOpts)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.Container")).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unable to update system field", "sys.Container")).Println()
 		})
 
 		t.Run("sys.QName", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d, "fields": {"sys.QName": "app1pkg.department"}}]}`, idDepOpts)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("unable to update system field", "sys.QName")).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unable to update system field", "sys.QName")).Println()
 		})
 	})
 

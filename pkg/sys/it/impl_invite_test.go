@@ -198,7 +198,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 			email1, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
 		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body,
-			coreutils.Expect400("re-invite not allowed for state State_Joined"))
+			it.Expect400("re-invite not allowed for state State_Joined"))
 	})
 
 	//Update roles
@@ -291,7 +291,7 @@ func TestCancelSentInvite(t *testing.T) {
 		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
 	})
 	t.Run("invite not exists -> 400 bad request", func(t *testing.T) {
-		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.NonExistingRecordID), coreutils.Expect400RefIntegrity_Existence())
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.NonExistingRecordID), it.Expect400RefIntegrity_Existence())
 	})
 }
 
@@ -361,7 +361,7 @@ func TestRejectInvitationOnDifferentLogin(t *testing.T) {
 	// simulate accepting invitation by different login
 	differentLogin := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
 	InitiateJoinWorkspace(vit, ws, inviteID, differentLogin, verificationCode,
-		coreutils.Expect400(fmt.Sprintf("invitation was sent to %s but current login is login", email)))
+		it.Expect400(fmt.Sprintf("invitation was sent to %s but current login is login", email)))
 }
 
 func TestWrongEmail(t *testing.T) {

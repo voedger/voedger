@@ -299,10 +299,10 @@ func TestRefIntegrity(t *testing.T) {
 
 		t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field1": %d}}]}`, istructs.NonExistingRecordID)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect400RefIntegrity_Existence())
 
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, istructs.NonExistingRecordID)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect400RefIntegrity_Existence())
 		})
 
 		t.Run("ref to existing, allowed QName", func(t *testing.T) {
@@ -318,7 +318,7 @@ func TestRefIntegrity(t *testing.T) {
 
 		t.Run("ref to existing wrong QName -> 400 bad request", func(t *testing.T) {
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, idOption)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_QName())
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect400RefIntegrity_QName())
 		})
 	})
 
@@ -348,7 +348,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 			for _, oDoc1RefField := range oDoc.RefFields() {
 				t.Run(oDoc1RefField.Name(), func(t *testing.T) {
 					body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":%d`, oDoc1RefField.Name(), istructs.NonExistingRecordID))
-					vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400(fmt.Sprintf("record ID %d referenced by app1pkg.odoc2.%s does not exist",
+					vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400(fmt.Sprintf("record ID %d referenced by app1pkg.odoc2.%s does not exist",
 						istructs.NonExistingRecordID, oDoc1RefField.Name()))).Println()
 				})
 			}
@@ -358,7 +358,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 			for _, oRecord1RefField := range oRecord.RefFields() {
 				t.Run(oRecord1RefField.Name(), func(t *testing.T) {
 					body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"orecord1":[{"%s":%d,"sys.ID":3,"sys.ParentID":1}]`, oRecord1RefField.Name(), istructs.NonExistingRecordID))
-					vit.PostWS(ws, "c.app1pkg.CmdODocOne", body, coreutils.Expect400(fmt.Sprintf("record ID %d referenced by app1pkg.orecord1.%s does not exist",
+					vit.PostWS(ws, "c.app1pkg.CmdODocOne", body, it.Expect400(fmt.Sprintf("record ID %d referenced by app1pkg.orecord1.%s does not exist",
 						istructs.NonExistingRecordID, oRecord1RefField.Name()))).Println()
 				})
 			}
@@ -374,12 +374,12 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 
 			t.Run("wrong QName CDoc-> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToODoc1":%d`, idCDoc))
-				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ORecord -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToODoc1":%d`, idOrecord1))
-				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400RefIntegrity_QName()).Println()
 			})
 		})
 		t.Run("ORecord", func(t *testing.T) {
@@ -395,17 +395,17 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 
 			t.Run("wrong QName CDoc -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord1":%d`, idCDoc))
-				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ODoc ORecord1 -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord1":%d`, idOdoc1))
-				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400RefIntegrity_QName()).Println()
 			})
 
 			t.Run("wrong QName ODoc ORecord2 -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToORecord2":%d`, idOdoc1))
-				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName()).Println()
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400RefIntegrity_QName()).Println()
 			})
 		})
 		t.Run("Any", func(t *testing.T) {
@@ -423,7 +423,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 			})
 			t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1":%d`, idOdoc1))
-				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400RefIntegrity_QName())
 			})
 		})
 
@@ -437,7 +437,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 			})
 			t.Run("wrong QName -> 400 bad request", func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"refToCDoc1OrODoc1":%d`, idOrecord1))
-				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_QName())
+				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400RefIntegrity_QName())
 			})
 		})
 	})
@@ -520,7 +520,7 @@ func TestSelectFromNestedTables(t *testing.T) {
 				{"path": "unknownNested","fields": ["FldNested"]},
 				{"path": "Nested/Third","fields": ["Fld1"]}
 			]}`
-			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownNested"))
+			vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("unknown nested table unknownNested"))
 		})
 		t.Run("3rd level", func(t *testing.T) {
 			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
@@ -528,14 +528,14 @@ func TestSelectFromNestedTables(t *testing.T) {
 				{"path": "Nested","fields": ["FldNested"]},
 				{"path": "Nested/unknownThird","fields": ["Fld1"]}
 			]}`
-			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownThird"))
+			vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("unknown nested table unknownThird"))
 
 			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
 				{"fields": ["FldRoot"]},
 				{"path": "Nested","fields": ["FldNested"]},
 				{"path": "unknownNested/Third","fields": ["Fld1"]}
 			]}`
-			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table unknownNested"))
+			vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("unknown nested table unknownNested"))
 		})
 	})
 
@@ -546,7 +546,7 @@ func TestSelectFromNestedTables(t *testing.T) {
 				{"path": "Nested","fields": ["unknown"]},
 				{"path": "Nested/Third","fields": ["Fld1"]}
 			]}`
-			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("'unknown' that is unexpected among fields of app1pkg.Nested"))
+			vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("'unknown' that is unexpected among fields of app1pkg.Nested"))
 		})
 		t.Run("3rd level", func(t *testing.T) {
 			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
@@ -554,7 +554,7 @@ func TestSelectFromNestedTables(t *testing.T) {
 				{"path": "Nested","fields": ["FldNested"]},
 				{"path": "Nested/Third","fields": ["unknown"]}
 			]}`
-			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("'unknown' that is unexpected among fields of app1pkg.Third"))
+			vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("'unknown' that is unexpected among fields of app1pkg.Third"))
 		})
 	})
 
@@ -564,14 +564,14 @@ func TestSelectFromNestedTables(t *testing.T) {
 			body = `{"args":{"Schema":"app1pkg.cdoc2"},"elements": [
 				{"path": "field1","fields": ["SomeField"]}
 				]}`
-			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table field1"))
+			vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("unknown nested table field1"))
 		})
 		t.Run("in nested", func(t *testing.T) {
 			// Root.Nested.Third.Fld1 field exists but is not a nested table
 			body = `{"args":{"Schema":"app1pkg.Root"},"elements": [
 				{"path": "Nested/Third/Fld1","fields": ["SomeField"]}
 			]}`
-			vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("unknown nested table Fld1"))
+			vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("unknown nested table Fld1"))
 		})
 	})
 }
@@ -590,7 +590,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":true}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Activate", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("cuds[0] OperationKind_Activate", "operation forbidden"))
 	})
 
 	t.Run("deactivate", func(t *testing.T) {
@@ -598,7 +598,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"sys.IsActive":false}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Deactivate", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("cuds[0] OperationKind_Deactivate", "operation forbidden"))
 	})
 
 	t.Run("field insert", func(t *testing.T) {
@@ -608,7 +608,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 
 		// denied
 		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.DocFieldInsertDenied","FldDenied":42}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Insert", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("cuds[0] OperationKind_Insert", "operation forbidden"))
 	})
 
 	t.Run("field update", func(t *testing.T) {
@@ -621,7 +621,7 @@ func TestFieldsAuthorization_OpForbidden(t *testing.T) {
 
 		// denied
 		body = fmt.Sprintf(`{"cuds": [{"sys.ID":%d,"fields": {"FldDenied":46}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("cuds[0] OperationKind_Update", "operation forbidden"))
+		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("cuds[0] OperationKind_Update", "operation forbidden"))
 	})
 
 	// note: select authorization is tested in [TestDeniedResourcesAuthorization]
@@ -635,7 +635,7 @@ func TestErrors(t *testing.T) {
 
 	t.Run("no QName on insert -> 400 bad request", func(t *testing.T) {
 		body := `{"cuds": [{"fields": {"sys.ID": 1,"FldAllowed":42}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400("failed to parse sys.QName"))
+		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("failed to parse sys.QName"))
 	})
 }
 

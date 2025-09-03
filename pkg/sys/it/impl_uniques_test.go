@@ -193,7 +193,7 @@ func TestFewUniquesOneDoc(t *testing.T) {
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int2":%d,"Str2":"str","Bool2":true}}]}`, newNum)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "01")))).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "01")))).Println()
 		})
 		t.Run("uniq2", func(t *testing.T) {
 
@@ -209,7 +209,7 @@ func TestFewUniquesOneDoc(t *testing.T) {
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int1":%d,"Str1":"str","Bool1":true}}]}`, newNum)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "uniq1")))).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "uniq1")))).Println()
 		})
 	})
 }
@@ -329,7 +329,7 @@ func TestMaxUniqueLen(t *testing.T) {
 	longBytes := make([]byte, bigLen)
 	longBytesBase64 := base64.StdEncoding.EncodeToString(longBytes)
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"%s","Bool":true,"Bytes":"%s"}}]}`, num, longString, longBytesBase64)
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403(uniques.ErrUniqueValueTooLong.Error())).Println()
+	vit.PostWS(ws, "c.sys.CUD", body, it.Expect403(uniques.ErrUniqueValueTooLong.Error())).Println()
 }
 
 func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
@@ -347,7 +347,7 @@ func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
 	// fire the UNIQUEFIELD violation, avoid UNIQUE (Str) violation
 	_, newBts := getUniqueNumber(vit)
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, newBts)
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(it.QNameApp1_DocConstraintsOldAndNewUniques.String()))
+	vit.PostWS(ws, "c.sys.CUD", body, it.Expect409(it.QNameApp1_DocConstraintsOldAndNewUniques.String()))
 
 	t.Run("get record id by uniquefield value", func(t *testing.T) {
 		as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
@@ -451,11 +451,11 @@ func TestNullFields(t *testing.T) {
 
 	// 0 for Int field -> conflict
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":0,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf("unique constraint violation with ID %d", expectedRecID)))
+	vit.PostWS(ws, "c.sys.CUD", body, it.Expect409(fmt.Sprintf("unique constraint violation with ID %d", expectedRecID)))
 
 	// null for Int field -> conflict
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":null,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf("unique constraint violation with ID %d", expectedRecID)))
+	vit.PostWS(ws, "c.sys.CUD", body, it.Expect409(fmt.Sprintf("unique constraint violation with ID %d", expectedRecID)))
 }
 
 func TestGetRecordIDByUniqueCombination_AllKinds(t *testing.T) {

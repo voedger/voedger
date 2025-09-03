@@ -887,7 +887,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 		t.Run("Expected error https://github.com/voedger/voedger/issues/3714", func(t *testing.T) {
 			vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=EpicFail`, ws.WSID, it.QNameApp1_ViewClients),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400("field expression - 'EpicFail', 'EpicFail' - unexpected field"),
+				it.Expect400("field expression - 'EpicFail', 'EpicFail' - unexpected field"),
 			)
 		})
 		t.Run("Read by PK, include all and select some fields", func(t *testing.T) {
@@ -2397,7 +2397,7 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 
 	t.Run("404 not found", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, 123)
-		vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404("document app1pkg.category with ID 123 not found"))
+		vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token), it.Expect404("document app1pkg.category with ID 123 not found"))
 	})
 }
 

@@ -151,30 +151,6 @@ func TestFederationFunc(t *testing.T) {
 			resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError))
 			require.NoError(err)
 			resp.Println()
-			resp.RequireContainsError(t, "something")
-			resp.RequireError(t, "something gone wrong")
-		})
-		t.Run("ExpectedErrorContains", func(t *testing.T) {
-			t.Skip("waiting for https://github.com/voedger/voedger/issues/4027")
-			errorMessage := "non-expected"
-			handler = func(w http.ResponseWriter, r *http.Request) {
-				_, err := io.ReadAll(r.Body)
-				require.NoError(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, `{"sys.Error":{"HTTPStatus":500,"Message":"%s","QName":"sys.SomeErrorQName","Data":"additional data"}}`,
-					errorMessage)
-			}
-			resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError,
-				"expected error message"))
-			require.Error(err)
-			require.Nil(resp)
-
-			errorMessage = "expected error message"
-			resp, err = federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError,
-				"expected error message"))
-			require.NoError(err)
-			resp.RequireContainsError(t, "expected")
-			resp.RequireError(t, "expected error message")
 		})
 	})
 

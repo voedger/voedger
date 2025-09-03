@@ -123,7 +123,7 @@ func TestWrongFieldReferencedByRefField(t *testing.T) {
 	vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	body = `{"args":{"Schema":"app1pkg.cdoc2"},"elements":[{"fields": ["field2","sys.ID"], "refs":[["field2","unexistingFieldInTargetDoc"]]}]}`
-	vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect400("ref field field2 references to table app1pkg.cdoc1 that does not contain field unexistingFieldInTargetDoc"))
+	vit.PostWS(ws, "q.sys.Collection", body, it.Expect400("ref field field2 references to table app1pkg.cdoc1 that does not contain field unexistingFieldInTargetDoc"))
 }
 
 // https://github.com/voedger/voedger/issues/3046

@@ -172,7 +172,7 @@ func TestAuth(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403("OperationKind_Insert app1pkg.TestDeniedCDoc: operation forbidden"),
+			it.Expect403("OperationKind_Insert app1pkg.TestDeniedCDoc: operation forbidden"),
 		).Println()
 	})
 
@@ -189,7 +189,7 @@ func TestAuth(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.TestDeniedCDoc/%d", ws.WSID, newIDs["1"]), body,
 			coreutils.WithMethod(http.MethodPatch),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403("OperationKind_Update app1pkg.TestDeniedCDoc: operation forbidden"),
+			it.Expect403("OperationKind_Update app1pkg.TestDeniedCDoc: operation forbidden"),
 		).Println()
 	})
 
@@ -204,7 +204,7 @@ func TestAuth(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocDeactivateDenied/%d", ws.WSID, newIDs["1"]), "{}",
 			coreutils.WithMethod(http.MethodDelete),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403("OperationKind_Deactivate app1pkg.DocDeactivateDenied: operation forbidden"),
+			it.Expect403("OperationKind_Deactivate app1pkg.DocDeactivateDenied: operation forbidden"),
 		).Println()
 	})
 
@@ -247,7 +247,7 @@ func TestErrorsCPv2(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, newIDs["7"]), body,
 			coreutils.WithMethod(http.MethodPatch),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect400("sys.ID field is not allowed among fields to update"),
+			it.Expect400("sys.ID field is not allowed among fields to update"),
 		).Println()
 	})
 
@@ -274,7 +274,7 @@ func TestErrorsCPv2(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root", ws.WSID), body,
 			coreutils.WithMethod(http.MethodPost),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect400(`field "sys.ID" must be json.Number`),
+			it.Expect400(`field "sys.ID" must be json.Number`),
 		).Println()
 	})
 
@@ -283,7 +283,7 @@ func TestErrorsCPv2(t *testing.T) {
 		vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.Root/%d", ws.WSID, newIDs["1"]), body,
 			coreutils.WithMethod(http.MethodDelete),
 			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect400("unexpected body is provided on delete"),
+			it.Expect400("unexpected body is provided on delete"),
 		).Println()
 	})
 
@@ -293,7 +293,7 @@ func TestErrorsCPv2(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.category/%d", ws.WSID, newIDs["1"]), body,
 				coreutils.WithMethod(http.MethodPatch),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
+				it.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
 			).Println()
 
 		})
@@ -302,7 +302,7 @@ func TestErrorsCPv2(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.category/%d", ws.WSID, newIDs["1"]), "{}",
 				coreutils.WithMethod(http.MethodDelete),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
+				it.Expect400(fmt.Sprintf("record id %d leads to app1pkg.Root QName whereas app1pkg.category QName is mentioned in the request", newIDs["1"])),
 			).Println()
 		})
 	})
@@ -312,14 +312,14 @@ func TestErrorsCPv2(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1", ws.WSID), "{}",
 				coreutils.WithMethod(http.MethodPost),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
+				it.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 			).Println()
 		})
 		t.Run("insert ORecord", func(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1", ws.WSID), "{}",
 				coreutils.WithMethod(http.MethodPost),
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
+				it.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 			).Println()
 		})
 
@@ -331,14 +331,14 @@ func TestErrorsCPv2(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1/%d", ws.WSID, odocID), "{}",
 					coreutils.WithMethod(http.MethodPatch),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
+					it.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 			t.Run("delete", func(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.odoc1/%d", ws.WSID, odocID), "{}",
 					coreutils.WithMethod(http.MethodDelete),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
+					it.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 		})
@@ -351,14 +351,14 @@ func TestErrorsCPv2(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1/%d", ws.WSID, orecordID), "{}",
 					coreutils.WithMethod(http.MethodPatch),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
+					it.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 			t.Run("delete", func(t *testing.T) {
 				vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.orecord1/%d", ws.WSID, orecordID), "{}",
 					coreutils.WithMethod(http.MethodDelete),
 					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
+					it.Expect405("cannot operate on the ODoc\\ORecord in any way other than through command arguments"),
 				).Println()
 			})
 		})
