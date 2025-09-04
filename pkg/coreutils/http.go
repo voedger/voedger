@@ -109,9 +109,9 @@ func WithAuthorizeBy(principalToken string) ReqOptFunc {
 	}
 }
 
-func WithDeadlineOn503(deadline time.Duration) ReqOptFunc {
+func WithMaxRetryDurationOn503(maxRetryDuration time.Duration) ReqOptFunc {
 	return func(opts *reqOpts) {
-		opts.deadlineOn503 = deadline
+		opts.maxRetryDurationOn503 = maxRetryDuration
 	}
 }
 
@@ -229,7 +229,7 @@ type reqOpts struct {
 	bodyReader            io.Reader
 	withoutAuth           bool
 	skipRetryOn503        bool
-	deadlineOn503         time.Duration
+	maxRetryDurationOn503 time.Duration
 	validators            []func(*reqOpts) (panicMessage string)
 	retryErrsMatchers     []func(err error) (retry bool)
 }
@@ -345,9 +345,8 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 			return nil, err
 		}
 
-		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) &&
-			!opts.skipRetryOn503 {
-			if opts.deadlineOn503 > 0 && time.Since(startTime) > opts.deadlineOn503 {
+		if resp.StatusCode == http.StatusServiceUnavailable && opts.shouldHandle503() {
+			if opts.maxRetryDurationOn503 > 0 && time.Since(startTime) > opts.maxRetryDurationOn503 {
 				return resp, nil
 			}
 			defer resp.Body.Close()
@@ -529,4 +528,8 @@ func DenyGETAndDiscardResponse(opts *reqOpts) (panicMessage string) {
 		return "WithDiscardResponse is denied on GET method"
 	}
 	return ""
+}
+
+func (o reqOpts) shouldHandle503() bool {
+	return !slices.Contains(o.expectedHTTPCodes, http.StatusServiceUnavailable) && !o.skipRetryOn503
 }
