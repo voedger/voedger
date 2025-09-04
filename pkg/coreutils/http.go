@@ -235,11 +235,11 @@ type reqOpts struct {
 }
 
 // body and bodyReader are mutual exclusive
-func req(method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
+func req(ctx context.Context, method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
 	if bodyReader != nil {
-		req, err = http.NewRequest(method, url, bodyReader)
+		req, err = http.NewRequestWithContext(ctx, method, url, bodyReader)
 	} else {
-		req, err = http.NewRequest(method, url, bytes.NewReader([]byte(body)))
+		req, err = http.NewRequestWithContext(ctx, method, url, bytes.NewReader([]byte(body)))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("NewRequest() failed: %w", err)
@@ -344,7 +344,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
-		req, err := req(opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
+		req, err := req(ctx, opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
