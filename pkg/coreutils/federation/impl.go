@@ -47,13 +47,13 @@ func (f *implIFederation) reqFederation(apiPath string, body string, optFuncs ..
 
 func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
-	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
+	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
 	optFuncs = append(optFuncs, coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse))
 	return f.httpClient.ReqReader(f.vvmCtx, url, bodyReader, optFuncs...)
 }
 
 func (f *implIFederation) reqURL(url string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
+	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
 	optFuncs = append(optFuncs, coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse))
 	return f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 }
@@ -188,7 +188,7 @@ func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOpt
 func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
-	optFuncs = append(f.defaultReqOptFuncs, optFuncs...)
+	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
 	httpResp, err := f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
 }
