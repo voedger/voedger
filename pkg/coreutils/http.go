@@ -268,7 +268,7 @@ func (c *implIHTTPClient) Req(ctx context.Context, urlStr string, body string, o
 	return c.req(ctx, urlStr, body, optFuncs...)
 }
 
-func mutualExclusiveOptsValidator(opts *reqOpts) (panicMessage string) {
+func optsValidator_responseHandling(opts *reqOpts) (panicMessage string) {
 	mutualExclusiveOpts := 0
 	if opts.discardResp {
 		mutualExclusiveOpts++
@@ -282,12 +282,20 @@ func mutualExclusiveOptsValidator(opts *reqOpts) (panicMessage string) {
 	return ""
 }
 
+func optsValidator_retryOn503(opts *reqOpts) (panicMessage string) {
+	if opts.maxRetryDurationOn503 > 0 && opts.skipRetryOn503 {
+		return "max retry duration on 503 cannot be specified if skip on 503 is set"
+	}
+	return ""
+}
+
 func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
 		validators: []func(*reqOpts) (panicMessage string){
-			mutualExclusiveOptsValidator,
+			optsValidator_responseHandling,
+			optsValidator_retryOn503,
 		},
 	}
 	for _, defaultOptFunc := range c.defaultOpts {

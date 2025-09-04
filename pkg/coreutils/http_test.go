@@ -331,6 +331,21 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		wg.Wait()
 		require.Equal(int32(10), count)
 	})
+
+	t.Run("default options validation", func(t *testing.T) {
+		t.Run("WithDiscardResponse and WithResponseHandler", func(t *testing.T) {
+			require.Panics(func() {
+				//nolint errcheck
+				httpClient.Req(context.Background(), url, "body", WithDiscardResponse(), WithResponseHandler(func(*http.Response) {}))
+			})
+		})
+		t.Run("WithMaxRetryDurationOn503 and WithSkipRetryOn503", func(t *testing.T) {
+			require.Panics(func() {
+				//nolint errcheck
+				httpClient.Req(context.Background(), url, "body", WithMaxRetryDurationOn503(time.Millisecond), WithSkipRetryOn503())
+			})
+		})
+	})
 }
 
 func TestContextCanceled(t *testing.T) {
