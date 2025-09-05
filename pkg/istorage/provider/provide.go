@@ -5,26 +5,29 @@
 package provider
 
 import (
-	"github.com/google/uuid"
-
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-// keyspaceNameSuffix is used in tests only
+// keyspaceIsolationSuffix is used in tests only
+// need to make different keyspaces when few integration tests run on the same non-memory storage. E.g. on `go test ./...` in github
+// otherwise tests from different packages will conflict
+// normally should be a unique random string per VVM
 // see https://dev.untill.com/projects/#!638565
-func Provide(asf istorage.IAppStorageFactory, keyspaceNameSuffix ...string) istorage.IAppStorageProvider {
+func Provide(asf istorage.IAppStorageFactory, keyspaceIsolationSuffix ...string) istorage.IAppStorageProvider {
 	res := &implIAppStorageProvider{
 		asf:   asf,
 		cache: map[appdef.AppQName]istorage.IAppStorage{},
 	}
-	if coreutils.IsTest() {
-		if len(keyspaceNameSuffix) > 0 && len(keyspaceNameSuffix[0]) > 0 {
-			res.suffix = keyspaceNameSuffix[0]
-		} else {
-			res.suffix = uuid.NewString()
-		}
+	if len(keyspaceIsolationSuffix) > 0 && len(keyspaceIsolationSuffix[0]) > 0 {
+		res.keyspaceIsolationSuffix = keyspaceIsolationSuffix[0]
 	}
+	var err error
+	res.sysMetaAppSafeName, err = istorage.NewSafeAppName(appdef.NewAppQName(appdef.SysPackage, "meta"), func(name string) (bool, error) { return true, nil })
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	res.sysMetaAppSafeName.ApplyKeysapceIsolationSuffix(res.keyspaceIsolationSuffix)
 	return res
 }

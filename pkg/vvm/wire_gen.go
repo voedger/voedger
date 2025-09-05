@@ -485,7 +485,7 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 
 func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingProviderFactory {
 	return func() istorage.IAppStorageProvider {
-		return provider.Provide(factory, vvmCfg.KeyspaceNameSuffix)
+		return provider.Provide(factory, vvmCfg.KeyspaceIsolationSuffix)
 	}
 }
 

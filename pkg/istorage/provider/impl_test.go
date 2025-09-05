@@ -44,7 +44,7 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(storageApp2.Put([]byte{1}, []byte{1}, []byte{2}))
 
 		// re-initialize
-		asp = Provide(asf, asp.(*implIAppStorageProvider).suffix)
+		asp = Provide(asf, asp.(*implIAppStorageProvider).keyspaceIsolationSuffix)
 
 		// obtain IAppStorage for app2
 		// it should be the same as before
@@ -63,14 +63,15 @@ func TestBasicUsage(t *testing.T) {
 func TestInitErrorPersistence(t *testing.T) {
 	require := require.New(t)
 	asf := mem.Provide(testingu.MockTime)
-	asp := Provide(asf)
+	suffix := NewTestKeyspaceIsolationSuffix()
+	asp := Provide(asf, suffix)
 
 	app1 := appdef.NewAppQName("sys", "_")
 	app1SafeName, err := istorage.NewSafeAppName(app1, func(name string) (bool, error) { return true, nil })
 	require.NoError(err)
 
 	// init the storage manually to force the error
-	app1SafeName = asp.(*implIAppStorageProvider).clarifyKeyspaceName(app1SafeName)
+	app1SafeName.ApplyKeysapceIsolationSuffix(suffix)
 	require.NoError(asf.Init(app1SafeName))
 
 	// expect an error
@@ -78,7 +79,7 @@ func TestInitErrorPersistence(t *testing.T) {
 	require.ErrorIs(err, ErrStorageInitError)
 
 	// re-init
-	asp = Provide(asf, asp.(*implIAppStorageProvider).suffix)
+	asp = Provide(asf, suffix)
 
 	// expect Init() error is stored in sysmeta
 	_, err = asp.AppStorage(app1)

@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -25,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/registry"
@@ -435,14 +435,14 @@ func getWorkspaceInitAwaitTimeout() time.Duration {
 func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
 	require.False(t, cfg.isShared, "storage restart could be done on Own VIT Config only")
 	var sharedStorageFactory istorage.IAppStorageFactory
-	suffix := t.Name() + uuid.NewString()
+	suffix := provider.NewTestKeyspaceIsolationSuffix()
 	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
 		if sharedStorageFactory == nil {
 			var err error
 			sharedStorageFactory, err = cfg.StorageFactory(cfg.Time)
 			require.NoError(t, err)
 		}
-		cfg.KeyspaceNameSuffix = suffix
+		cfg.KeyspaceIsolationSuffix = suffix
 		cfg.StorageFactory = func(timeu.ITime) (istorage.IAppStorageFactory, error) {
 			return sharedStorageFactory, nil
 		}
