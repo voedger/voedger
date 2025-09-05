@@ -6,6 +6,7 @@
 package router
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -29,10 +30,7 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
 	httpServ := getHTTPService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
 		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
-
-	if coreutils.IsTest() {
-		adminEndpoint = "127.0.0.1:0"
-	}
+	adminEndpoint := fmt.Sprintf("%s:%d", coreutils.LocalhostIP, rp.AdminPort)
 	adminSrv = getHTTPService("Admin HTTP server", adminEndpoint, RouterParams{
 		WriteTimeout:     rp.WriteTimeout,
 		ReadTimeout:      rp.ReadTimeout,

@@ -93,7 +93,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		Resource: "c.sys.CUD",
 		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
 		Header:   bw.blobMessageWrite.header,
-		Host:     coreutils.Localhost,
+		Host:     coreutils.LocalhostIP.String(),
 	}
 	_, _, err = bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
 	return err
@@ -107,7 +107,7 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		AppQName: bw.blobMessageWrite.appQName,
 		Header:   bw.blobMessageWrite.header,
 		Body:     []byte(bw.registerFuncBody),
-		Host:     coreutils.Localhost,
+		Host:     coreutils.LocalhostIP.String(),
 		APIPath:  int(processors.APIPath_Commands),
 		QName:    bw.registerFuncName,
 		IsAPIV2:  true,

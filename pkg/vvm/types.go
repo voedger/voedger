@@ -163,6 +163,7 @@ type VVMConfig struct {
 	DataPath                   string
 	MetricsServicePort         metrics.MetricsServicePort
 	AsyncActualizersRetryDelay actualizers.RetryDelay
+	AdminPort                  int
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
