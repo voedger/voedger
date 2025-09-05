@@ -109,7 +109,7 @@ func (asp *implIAppStorageProvider) getNewAppStorageDesc(appQName appdef.AppQNam
 	if err := metaStorage.Put(pkBytes, cCols_SafeAppName, value_SafeAppName); err != nil {
 		return res, err
 	}
-	san.ApplyKeysapceIsolationSuffix(asp.keyspaceIsolationSuffix)
+	san.ApplyKeyspaceIsolationSuffix(asp.keyspaceIsolationSuffix)
 	return istorage.AppStorageDesc{
 		SafeName: san,
 		Status:   istorage.AppStorageStatus_Pending,
