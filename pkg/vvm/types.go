@@ -171,10 +171,13 @@ type VVMConfig struct {
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL *url.URL
 
-	// used in tests only
-	// normally is empty in VIT. coretuils.IsTest -> UUID is added to the keyspace name at istorage/provider/Provide()
-	// need to e.g. test VVM restart preserving storage
-	KeyspaceNameSuffix string
+	// the string that will be added to the keyspace names of each app to isolate keyspaces among few integration tests run
+	// simultaneosly on the same storage driver.
+	// normally should be a random string matching ^[a-z0-9]+$
+	// use [provider.NewTestKeyspaceIsolationSuffix()]
+	// normally should be used in tests only
+	// exposed here for test cases when >1 VVMs must use the same storage
+	KeyspaceIsolationSuffix string
 
 	// [~server.design.orch/VVMConfig.Orch~impl]
 	NumVVM NumVVM // amount of VVMs in the cluster. Default 1
