@@ -28,6 +28,6 @@ func Provide(asf istorage.IAppStorageFactory, keyspaceIsolationSuffix ...string)
 		// notest
 		panic(err)
 	}
-	res.sysMetaAppSafeName.ApplyKeysapceIsolationSuffix(res.keyspaceIsolationSuffix)
+	res.sysMetaAppSafeName.ApplyKeyspaceIsolationSuffix(res.keyspaceIsolationSuffix)
 	return res
 }

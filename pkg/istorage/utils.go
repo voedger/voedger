@@ -95,7 +95,7 @@ func (san *SafeAppName) UnmarshalText(text []byte) error {
 // need to make different keyspaces when few integration tests run on the same non-memory storage. E.g. on `go test ./...` in github
 // otherwise tests from different packages will conflict
 // see https://dev.untill.com/projects/#!638565
-func (san *SafeAppName) ApplyKeysapceIsolationSuffix(suffix string) {
+func (san *SafeAppName) ApplyKeyspaceIsolationSuffix(suffix string) {
 	if len(suffix) == 0 {
 		return
 	}

@@ -71,7 +71,7 @@ func TestInitErrorPersistence(t *testing.T) {
 	require.NoError(err)
 
 	// init the storage manually to force the error
-	app1SafeName.ApplyKeysapceIsolationSuffix(suffix)
+	app1SafeName.ApplyKeyspaceIsolationSuffix(suffix)
 	require.NoError(asf.Init(app1SafeName))
 
 	// expect an error

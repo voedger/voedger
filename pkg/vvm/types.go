@@ -172,7 +172,7 @@ type VVMConfig struct {
 	FederationURL *url.URL
 
 	// the string that will be added to the keyspace names of each app to isolate keyspaces among few integration tests run
-	// simultaneosly on the same storage driver.
+	// simultaneously on the same storage driver.
 	// normally should be a random string matching ^[a-z0-9]+$
 	// use [provider.NewTestKeyspaceIsolationSuffix()]
 	// normally should be used in tests only
