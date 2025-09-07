@@ -94,7 +94,7 @@ func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err erro
 		AppQName: bw.blobMessageRead.appQName,
 		Header:   bw.blobMessageRead.header,
 		Body:     []byte(`{}`),
-		Host:     coreutils.Localhost,
+		Host:     coreutils.LocalhostIP.String(),
 		APIPath:  int(processors.APIPath_Queries),
 		IsAPIV2:  true,
 		QName:    downloadPersistentBLOBFuncQName,
@@ -134,7 +134,7 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error)
 		APIPath:  int(processors.APIPath_Docs),
 		DocID:    istructs.IDType(bw.blobMessageRead.ownerID),
 		QName:    bw.blobMessageRead.ownerRecord,
-		Host:     coreutils.Localhost,
+		Host:     coreutils.LocalhostIP.String(),
 		IsAPIV2:  true,
 		Query: map[string]string{
 			"keys": bw.blobMessageRead.ownerRecordField,

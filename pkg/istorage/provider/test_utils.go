@@ -7,7 +7,9 @@ package provider
 
 import "github.com/google/uuid"
 
+const testTeyspaceIsloationSuffixLen = 8
+
 func NewTestKeyspaceIsolationSuffix() string {
 	res := uuid.NewString()
-	return res[:8]
+	return res[:testTeyspaceIsloationSuffixLen]
 }

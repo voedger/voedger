@@ -27,7 +27,6 @@ const (
 	ContentType_MultipartFormData                = "multipart/form-data"
 	BearerPrefix                                 = "Bearer "
 	BlobName                                     = "Blob-Name"
-	Localhost                                    = "127.0.0.1"
 	CRC16Mask                                    = uint32(math.MaxUint32 >> 16)
 	EmailTemplatePrefix_Text                     = "text:"
 	emailTemplatePrefix_Resource                 = "resource:"

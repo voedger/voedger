@@ -18,7 +18,6 @@ const (
 	DefaultConnectionsLimit         = 10000
 	DefaultRouterReadTimeout        = 15
 	DefaultRouterWriteTimeout       = 15
-	localhost                       = "127.0.0.1"
 	URLPlaceholder_wsid             = "wsid"
 	URLPlaceholder_appOwner         = "appOwner"
 	URLPlaceholder_appName          = "appName"
@@ -42,7 +41,6 @@ const (
 
 var (
 	onRequestCtxClosed func() = nil // used in tests
-	adminEndpoint             = "127.0.0.1:55555"
 )
 
 const (
