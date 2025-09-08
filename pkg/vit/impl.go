@@ -452,7 +452,7 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 	httpResp, err := vit.httpClient.Req(context.Background(), vit.URLStr()+"/"+url, body, o...)
 	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
 	require.NoError(vit.T, err)
-	vit.checkExpectationsInFuncResp(funcResp, httpResp.Opts)
+	vit.satisfySysErrorExpectations(funcResp, httpResp.Opts)
 	return funcResp
 }
 
@@ -524,10 +524,10 @@ func (vit *VIT) checkExpectationsInHTTPResp(httpResp *coreutils.HTTPResponse) {
 	vit.T.Helper()
 	var funcResponse *coreutils.FuncResponse
 	require.NoError(vit.T, json.Unmarshal([]byte(httpResp.Body), &funcResponse))
-	vit.checkExpectationsInFuncResp(funcResponse, httpResp.Opts)
+	vit.satisfySysErrorExpectations(funcResponse, httpResp.Opts)
 }
 
-func (vit *VIT) checkExpectationsInFuncResp(funcResp *coreutils.FuncResponse, opts coreutils.IReqOpts) {
+func (vit *VIT) satisfySysErrorExpectations(funcResp *coreutils.FuncResponse, opts coreutils.IReqOpts) {
 	if len(opts.(*vitReqOpts).expectedMessages) == 0 {
 		return
 	}
@@ -553,7 +553,7 @@ func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName s
 	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
 	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
 	require.NoError(vit.T, err)
-	vit.checkExpectationsInFuncResp(funcResp, httpResp.Opts)
+	vit.satisfySysErrorExpectations(funcResp, httpResp.Opts)
 	return funcResp
 }
 
