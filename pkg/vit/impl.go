@@ -35,6 +35,7 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -84,6 +85,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	// only dynamic ports are used in tests
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
+	cfg.AdminPort = 0
 
 	// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
@@ -93,6 +95,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
 	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailSenderOverride(emailMessagesChan))
+
+	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 
 	vitPreConfig := &vitPreConfig{
 		vvmCfg:  &cfg,

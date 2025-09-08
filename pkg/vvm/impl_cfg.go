@@ -58,6 +58,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
 		IP:            coreutils.LocalhostIP,
 		NumVVM:        1,
+		AdminPort:     DefaultAdminPort,
 
 		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,

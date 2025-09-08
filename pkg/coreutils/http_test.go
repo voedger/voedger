@@ -290,13 +290,13 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		require.True(handlerCalled)
 	})
 
-	t.Run("WithDeadlineOn503 and default WithSkipRetryOn503", func(t *testing.T) {
+	t.Run("WithMaxRetryDurationOn503 and default WithSkipRetryOn503", func(t *testing.T) {
 		var callCount int
 		handler = func(w http.ResponseWriter, r *http.Request) {
 			callCount++
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
-		_, err := httpClient.Req(context.Background(), url, "body", WithDeadlineOn503(50*time.Millisecond))
+		_, err := httpClient.Req(context.Background(), url, "body", WithMaxRetryDurationOn503(50*time.Millisecond))
 		require.Error(err)
 		require.GreaterOrEqual(callCount, 1)
 	})
@@ -321,6 +321,21 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		}
 		wg.Wait()
 		require.Equal(int32(10), count)
+	})
+
+	t.Run("default options validation", func(t *testing.T) {
+		t.Run("WithDiscardResponse and WithResponseHandler", func(t *testing.T) {
+			require.Panics(func() {
+				//nolint errcheck
+				httpClient.Req(context.Background(), url, "body", WithDiscardResponse(), WithResponseHandler(func(*http.Response) {}))
+			})
+		})
+		t.Run("WithMaxRetryDurationOn503 and WithSkipRetryOn503", func(t *testing.T) {
+			require.Panics(func() {
+				//nolint errcheck
+				httpClient.Req(context.Background(), url, "body", WithMaxRetryDurationOn503(time.Millisecond), WithSkipRetryOn503())
+			})
+		})
 	})
 }
 

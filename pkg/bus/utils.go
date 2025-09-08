@@ -24,7 +24,7 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 	responseCh, responseMeta, responseErr, err := requestSender.SendRequest(ctx, req)
 	if err != nil {
 		// notest
-		panic(err)
+		return cmdRespMeta, cmdResp, err
 	}
 	body := ""
 	for elem := range responseCh {

@@ -8,10 +8,10 @@ package sys_it
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
@@ -20,7 +20,7 @@ import (
 
 func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 	require := require.New(t)
-	keyspaceSuffix := uuid.NewString()
+	keyspaceSuffix := provider.NewTestKeyspaceIsolationSuffix()
 	var sharedStorageFactory istorage.IAppStorageFactory
 	counter := 1
 	cfg := it.NewOwnVITConfig(
@@ -36,7 +36,7 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 				var err error
 				sharedStorageFactory, err = cfg.StorageFactory(cfg.Time)
 				require.NoError(err)
-				cfg.KeyspaceNameSuffix = keyspaceSuffix
+				cfg.KeyspaceIsolationSuffix = keyspaceSuffix
 				cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
 				}
@@ -45,7 +45,7 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 				cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
 				}
-				cfg.KeyspaceNameSuffix = keyspaceSuffix
+				cfg.KeyspaceIsolationSuffix = keyspaceSuffix
 			}
 		}),
 	)

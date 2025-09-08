@@ -106,9 +106,9 @@ func WithAuthorizeBy(principalToken string) ReqOptFunc {
 	}
 }
 
-func WithDeadlineOn503(deadline time.Duration) ReqOptFunc {
+func WithMaxRetryDurationOn503(maxRetryDuration time.Duration) ReqOptFunc {
 	return func(opts IReqOpts) {
-		opts.httpOpts().deadlineOn503 = deadline
+		opts.httpOpts().maxRetryDurationOn503 = maxRetryDuration
 	}
 }
 
@@ -219,29 +219,29 @@ func WithOptsValidator(validator func(IReqOpts) (panicMessage string)) ReqOptFun
 }
 
 type reqOpts struct {
-	method             string
-	headers            map[string]string
-	cookies            map[string]string
-	expectedHTTPCodes  []int
-	responseHandler    func(httpResp *http.Response) // used if no errors and an expected status code is received
-	relativeURL        string
-	discardResp        bool
-	bodyReader         io.Reader
-	withoutAuth        bool
-	skipRetryOn503     bool
-	deadlineOn503      time.Duration
-	customOptsProvider func(IReqOpts) IReqOpts
-	appendedOpts       []ReqOptFunc
-	validators         []func(IReqOpts) (panicMessage string)
-	retryErrsMatchers  []func(err error) (retry bool)
+	method                string
+	headers               map[string]string
+	cookies               map[string]string
+	expectedHTTPCodes     []int
+	responseHandler       func(httpResp *http.Response) // used if no errors and an expected status code is received
+	relativeURL           string
+	discardResp           bool
+	bodyReader            io.Reader
+	withoutAuth           bool
+	skipRetryOn503        bool
+	maxRetryDurationOn503 time.Duration
+	customOptsProvider    func(IReqOpts) IReqOpts
+	appendedOpts          []ReqOptFunc
+	validators            []func(IReqOpts) (panicMessage string)
+	retryErrsMatchers     []func(err error) (retry bool)
 }
 
 // body and bodyReader are mutual exclusive
-func req(method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
+func req(ctx context.Context, method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
 	if bodyReader != nil {
-		req, err = http.NewRequest(method, url, bodyReader)
+		req, err = http.NewRequestWithContext(ctx, method, url, bodyReader)
 	} else {
-		req, err = http.NewRequest(method, url, bytes.NewReader([]byte(body)))
+		req, err = http.NewRequestWithContext(ctx, method, url, bytes.NewReader([]byte(body)))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("NewRequest() failed: %w", err)
@@ -270,7 +270,7 @@ func (c *implIHTTPClient) Req(ctx context.Context, urlStr string, body string, o
 	return c.req(ctx, urlStr, body, optFuncs...)
 }
 
-func mutualExclusiveOptsValidator(opts IReqOpts) (panicMessage string) {
+func optsValidator_responseHandling(opts IReqOpts) (panicMessage string) {
 	mutualExclusiveOpts := 0
 	o := opts.httpOpts()
 	if o.discardResp {
@@ -297,12 +297,20 @@ func (opts *reqOpts) httpOpts() *reqOpts {
 	return opts
 }
 
+func optsValidator_retryOn503(opts IReqOpts) (panicMessage string) {
+	if opts.httpOpts().maxRetryDurationOn503 > 0 && opts.httpOpts().skipRetryOn503 {
+		return "max retry duration on 503 cannot be specified if skip on 503 is set"
+	}
+	return ""
+}
+
 func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
 		validators: []func(IReqOpts) (panicMessage string){
-			mutualExclusiveOptsValidator,
+			optsValidator_responseHandling,
+			optsValidator_retryOn503,
 		},
 	}
 	for _, defaultOptFunc := range c.defaultOpts {
@@ -361,7 +369,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
-		req, err := req(opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
+		req, err := req(ctx, opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
@@ -370,9 +378,8 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 			return nil, err
 		}
 
-		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) &&
-			!opts.skipRetryOn503 {
-			if opts.deadlineOn503 > 0 && time.Since(startTime) > opts.deadlineOn503 {
+		if resp.StatusCode == http.StatusServiceUnavailable && opts.shouldHandle503() {
+			if opts.maxRetryDurationOn503 > 0 && time.Since(startTime) > opts.maxRetryDurationOn503 {
 				return resp, nil
 			}
 			defer resp.Body.Close()
@@ -523,4 +530,8 @@ func DenyGETAndDiscardResponse(opts IReqOpts) (panicMessage string) {
 		return "WithDiscardResponse is denied on GET method"
 	}
 	return ""
+}
+
+func (o reqOpts) shouldHandle503() bool {
+	return !slices.Contains(o.expectedHTTPCodes, http.StatusServiceUnavailable) && !o.skipRetryOn503
 }

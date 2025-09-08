@@ -9,10 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
@@ -39,13 +37,13 @@ func (asp *implIAppStorageProvider) AppStorage(appQName appdef.AppQName) (storag
 		return nil, err
 	}
 	if !exists {
-		if appStorageDesc, err = getNewAppStorageDesc(appQName, asp.metaStorage); err != nil {
+		if appStorageDesc, err = asp.getNewAppStorageDesc(appQName, asp.metaStorage); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(appStorageDesc.Error) == 0 && appStorageDesc.Status == istorage.AppStorageStatus_Pending {
-		if err := asp.asf.Init(asp.clarifyKeyspaceName(appStorageDesc.SafeName)); err != nil {
+		if err := asp.asf.Init(appStorageDesc.SafeName); err != nil {
 			appStorageDesc.Error = err.Error()
 		} else {
 			appStorageDesc.Status = istorage.AppStorageStatus_Done
@@ -58,7 +56,7 @@ func (asp *implIAppStorageProvider) AppStorage(appQName appdef.AppQName) (storag
 	if len(appStorageDesc.Error) > 0 {
 		return nil, fmt.Errorf("%s: %w: %s", appStorageDesc.SafeName.String(), ErrStorageInitError, appStorageDesc.Error)
 	}
-	storage, err = asp.asf.AppStorage(asp.clarifyKeyspaceName(appStorageDesc.SafeName))
+	storage, err = asp.asf.AppStorage(appStorageDesc.SafeName)
 	if err == nil {
 		asp.cache[appQName] = storage
 	}
@@ -66,28 +64,10 @@ func (asp *implIAppStorageProvider) AppStorage(appQName appdef.AppQName) (storag
 }
 
 func (asp *implIAppStorageProvider) getMetaStorage() (istorage.IAppStorage, error) {
-	if err := asp.asf.Init(asp.clarifyKeyspaceName(istorage.SysMetaSafeName)); err != nil && err != istorage.ErrStorageAlreadyExists {
+	if err := asp.asf.Init(asp.sysMetaAppSafeName); err != nil && err != istorage.ErrStorageAlreadyExists {
 		return nil, err
 	}
-	return asp.asf.AppStorage(asp.clarifyKeyspaceName(istorage.SysMetaSafeName))
-}
-
-func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName) istorage.SafeAppName {
-	if coreutils.IsTest() {
-		// unique safe keyspace name is generated at istorage.NewSafeAppName()
-		// uuid suffix is need in tests only avoiding the case:
-		// - go test ./... in github using Scylla
-		// - integration tests for different packages are run in simultaneously in separate processes
-		// - 2 processes using the same shared VIT config -> 2 VITs are initialized on the same keyspaces names -> conflict when e.g. creating the same logins
-		// see also getNewAppStorageDesc() below
-		newName := sn.String() + strings.ToLower(asp.suffix)
-		newName = strings.ReplaceAll(newName, "-", "")
-		if len(newName) > istorage.MaxSafeNameLength {
-			newName = newName[:istorage.MaxSafeNameLength]
-		}
-		sn = istorage.NewTestSafeName(newName)
-	}
-	return sn
+	return asp.asf.AppStorage(asp.sysMetaAppSafeName)
 }
 
 func (asp *implIAppStorageProvider) Prepare(_ any) error { return nil }
@@ -112,7 +92,7 @@ func storeAppDesc(appQName appdef.AppQName, appDesc istorage.AppStorageDesc, met
 	return metaStorage.Put(pkBytes, cColsBytes, appDescJSON)
 }
 
-func getNewAppStorageDesc(appQName appdef.AppQName, metaStorage istorage.IAppStorage) (res istorage.AppStorageDesc, err error) {
+func (asp *implIAppStorageProvider) getNewAppStorageDesc(appQName appdef.AppQName, metaStorage istorage.IAppStorage) (res istorage.AppStorageDesc, err error) {
 	san, err := istorage.NewSafeAppName(appQName, func(name string) (bool, error) {
 		pkBytes := []byte(name)
 		exists, err := metaStorage.Get(pkBytes, cCols_SafeAppName, &value_SafeAppName)
@@ -129,6 +109,7 @@ func getNewAppStorageDesc(appQName appdef.AppQName, metaStorage istorage.IAppSto
 	if err := metaStorage.Put(pkBytes, cCols_SafeAppName, value_SafeAppName); err != nil {
 		return res, err
 	}
+	san.ApplyKeyspaceIsolationSuffix(asp.keyspaceIsolationSuffix)
 	return istorage.AppStorageDesc{
 		SafeName: san,
 		Status:   istorage.AppStorageStatus_Pending,

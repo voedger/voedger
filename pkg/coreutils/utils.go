@@ -43,7 +43,7 @@ func IsDynamoDBStorage() bool {
 func ServerAddress(port int) string {
 	addr := ""
 	if IsTest() {
-		addr = "127.0.0.1"
+		addr = LocalhostIP.String()
 	}
 	return fmt.Sprintf("%s:%d", addr, port)
 }

@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -45,10 +45,10 @@ func TestBasic(t *testing.T) {
 		vvmCfg1 := GetTestVVMCfg(net.IPv4(192, 168, 0, 1))
 
 		// make so that VVM launch on vvmCfg1 will store the resulting storage in sharedStorageFactory
-		suffix := t.Name() + uuid.NewString()
+		suffix := provider.NewTestKeyspaceIsolationSuffix()
 		sharedStorageFactory, err := vvmCfg1.StorageFactory(iTime)
 		require.NoError(t, err)
-		vvmCfg1.KeyspaceNameSuffix = suffix
+		vvmCfg1.KeyspaceIsolationSuffix = suffix
 		vvmCfg1.StorageFactory = func(timeu.ITime) (istorage.IAppStorageFactory, error) {
 			return sharedStorageFactory, nil
 		}
@@ -72,7 +72,7 @@ func TestBasic(t *testing.T) {
 			vvmCfg2.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 				return sharedStorageFactory, nil
 			}
-			vvmCfg2.KeyspaceNameSuffix = suffix
+			vvmCfg2.KeyspaceIsolationSuffix = suffix
 
 			vvm2, err := Provide(vvmCfg2)
 			r.NoError(err)
