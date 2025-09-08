@@ -532,6 +532,6 @@ func DenyGETAndDiscardResponse(opts IReqOpts) (panicMessage string) {
 	return ""
 }
 
-func (o reqOpts) shouldHandle503() bool {
-	return !slices.Contains(o.expectedHTTPCodes, http.StatusServiceUnavailable) && !o.skipRetryOn503
+func (opts *reqOpts) shouldHandle503() bool {
+	return !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) && !opts.skipRetryOn503
 }
