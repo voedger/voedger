@@ -177,12 +177,6 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if raw, ok := m["HTTPResponse"]; ok && len(raw) > 0 {
-		if err := json.Unmarshal(raw, &resp.HTTPResponse); err != nil {
-			return err
-		}
-	}
-
 	var commandResp CommandResponse
 	if err := commandResp.UnmarshalJSON(data); err != nil {
 		return err

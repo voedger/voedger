@@ -390,6 +390,7 @@ func TestAdminService(t *testing.T) {
 		}
 		// hostport
 		_, err = net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
+		require.Error(err)
 		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") &&
 			!strings.Contains(err.Error(), "i/o timeout") {
 			t.Fatal(err)
