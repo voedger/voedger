@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -401,8 +402,9 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-
-	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, opts...)
+	o := []coreutils.ReqOptFunc{WithVITOpts()}
+	o = append(o, opts...)
+	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, o...)
 	require.NoError(vit.T, err)
 	return blobID
 }
@@ -436,18 +438,21 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, opts...)
+	o := []coreutils.ReqOptFunc{WithVITOpts()}
+	o = append(o, opts...)
+	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, o...)
 	require.NoError(vit.T, err)
 	return blobSUUID
 }
 
 func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
-	httpResp, err := vit.httpClient.Req(context.Background(), vit.URLStr()+"/"+url, body, opts...)
-	require.NoError(vit.T, err)
+	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
+	o = append(o, opts...)
+	httpResp, err := vit.httpClient.Req(context.Background(), vit.URLStr()+"/"+url, body, o...)
 	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
 	require.NoError(vit.T, err)
+	vit.satisfySysErrorExpectations(funcResp, httpResp.Opts)
 	return funcResp
 }
 
@@ -456,7 +461,9 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
 	optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
-	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, optFuncs...)
+	o := []coreutils.ReqOptFunc{WithVITOpts()}
+	o = append(o, optFuncs...)
+	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, o...)
 	require.NoError(vit.T, err)
 	vit.registerBLOBReaderCleanup(reader)
 	return reader
@@ -491,29 +498,62 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 
 func (vit *VIT) GET(relativeURL string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultMethod(http.MethodGet))
+	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodGet)}
+	o = append(o, opts...)
 	url := vit.URLStr() + "/" + relativeURL
-	res, err := vit.httpClient.Req(context.Background(), url, "", opts...)
+	res, err := vit.httpClient.Req(context.Background(), url, "", o...)
 	require.NoError(vit.T, err)
 	return res
 }
 
 func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
+	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
+	o = append(o, opts...)
 	url := vit.URLStr() + "/" + relativeURL
-	res, err := vit.httpClient.Req(context.Background(), url, body, opts...)
+	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
 	require.NoError(vit.T, err)
-	return res
+	vit.checkExpectationsInHTTPResp(httpResp)
+	return httpResp
+}
+
+func (vit *VIT) checkExpectationsInHTTPResp(httpResp *coreutils.HTTPResponse) {
+	if len(httpResp.Opts.(*vitReqOpts).expectedMessages) == 0 {
+		return
+	}
+	vit.T.Helper()
+	var funcResponse *coreutils.FuncResponse
+	require.NoError(vit.T, json.Unmarshal([]byte(httpResp.Body), &funcResponse))
+	vit.satisfySysErrorExpectations(funcResponse, httpResp.Opts)
+}
+
+func (vit *VIT) satisfySysErrorExpectations(funcResp *coreutils.FuncResponse, opts coreutils.IReqOpts) {
+	if len(opts.(*vitReqOpts).expectedMessages) == 0 {
+		return
+	}
+	if funcResp == nil || funcResp.SysError == nil {
+		vit.T.Fatal("expected error messages", opts.(*vitReqOpts).expectedMessages, "but no response or no error in response")
+	}
+	var sysError coreutils.SysError
+	if !errors.As(funcResp.SysError, &sysError) {
+		require.NoError(vit.T, funcResp.SysError)
+	}
+	index := 0
+	for _, expectedMes := range opts.(*vitReqOpts).expectedMessages {
+		require.Containsf(vit.T, sysError.Message[index:], expectedMes, `actual message "%s", ordered expected %#v`, sysError.Message, opts.(*vitReqOpts).expectedMessages)
+		index = strings.Index(sysError.Message[index:], expectedMes) + len(expectedMes)
+	}
 }
 
 func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
-	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
-	res, err := vit.httpClient.Req(context.Background(), url, body, opts...)
-	funcResp, err := federation.HTTPRespToFuncResp(res, err)
+	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
+	o = append(o, opts...)
+	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
+	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
 	require.NoError(vit.T, err)
+	vit.satisfySysErrorExpectations(funcResp, httpResp.Opts)
 	return funcResp
 }
 

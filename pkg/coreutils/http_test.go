@@ -301,15 +301,6 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		require.GreaterOrEqual(callCount, 1)
 	})
 
-	t.Run("WithExpectedCode and error message matching", func(t *testing.T) {
-		handler = func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusBadRequest)
-			_, err := w.Write([]byte(`{"sys.Error":{"HTTPStatus":400,"Message":"foo bar error"}}`))
-			require.NoError(err)
-		}
-		_, err := httpClient.Req(context.Background(), url, "body", WithExpectedCode(http.StatusBadRequest, "foo", "bar"))
-		require.NoError(err)
-	})
 
 	t.Run("concurrent requests", func(t *testing.T) {
 		var count int32

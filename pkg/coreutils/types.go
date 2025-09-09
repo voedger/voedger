@@ -24,12 +24,18 @@ type EmbedFS interface {
 }
 
 type HTTPResponse struct {
-	Body              string
-	HTTPResp          *http.Response
-	expectedHTTPCodes []int
+	Body     string
+	HTTPResp *http.Response
+	Opts     IReqOpts
 }
 
-type ReqOptFunc func(opts *reqOpts)
+type IReqOpts interface {
+	Append(ReqOptFunc)
+	ExpectedHTTPCodes() []int
+	httpOpts() *reqOpts
+}
+
+type ReqOptFunc func(opts IReqOpts)
 
 // implements json.Unmarshaler
 type CommandResponse struct {
@@ -57,7 +63,7 @@ func (r QPv2Response) ResultRow(rowNum int) map[string]interface{} {
 
 // implements json.Unmarshaler
 type FuncResponse struct {
-	*HTTPResponse
+	HTTPResponse
 	CommandResponse
 	QueryResponse
 	SysError error
@@ -207,7 +213,7 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(raw, &apiV2Err); err != nil {
 				return err
 			}
-			var sysError SysError
+			sysError := SysError{}
 			if commonErrorStatusIntf, ok := apiV2Err["status"]; ok {
 				sysError.HTTPStatus = int(commonErrorStatusIntf.(float64))
 			}
@@ -216,7 +222,7 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 			}
 			resp.SysError = sysError
 		} else {
-			var sysError SysError
+			sysError := SysError{}
 			if raw, ok := m["status"]; ok {
 				if err := json.Unmarshal(raw, &sysError.HTTPStatus); err != nil {
 					return err

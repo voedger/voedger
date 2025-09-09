@@ -167,7 +167,7 @@ func TestBlobberErrors(t *testing.T) {
 					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
-				coreutils.Expect400("blob owner QName unknown.doc is unknown"),
+				it.Expect400("blob owner QName unknown.doc is unknown"),
 			).Println()
 		})
 		t.Run("field", func(t *testing.T) {
@@ -178,7 +178,7 @@ func TestBlobberErrors(t *testing.T) {
 					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
-				coreutils.Expect400("blob owner field someField does not exist in blob owner app1pkg.DocWithBLOB"),
+				it.Expect400("blob owner field someField does not exist in blob owner app1pkg.DocWithBLOB"),
 			).Println()
 		})
 
@@ -190,7 +190,7 @@ func TestBlobberErrors(t *testing.T) {
 					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
-				coreutils.Expect400("blob owner app1pkg.DocWithBLOB.IntFld must be of blob type"),
+				it.Expect400("blob owner app1pkg.DocWithBLOB.IntFld must be of blob type"),
 			).Println()
 		})
 	})
@@ -199,14 +199,14 @@ func TestBlobberErrors(t *testing.T) {
 		t.Run("doc", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, appdef.NewQName("unknown", "doc"), "Name", 1,
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400("document or record unknown.doc is not defined in Workspace «app1pkg.test_wsWS»"),
+				it.Expect400("document or record unknown.doc is not defined in Workspace «app1pkg.test_wsWS»"),
 			)
 		})
 
 		t.Run("id", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameApp1_CDocCountry, "Name", 1,
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect404("document app1pkg.Country with ID 1 not found"),
+				it.Expect404("document app1pkg.Country with ID 1 not found"),
 			)
 		})
 
@@ -217,14 +217,14 @@ func TestBlobberErrors(t *testing.T) {
 		t.Run("target field is not set", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", docWithBLOBID_noBLOB,
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400("no value for owner field Blob in blob owner doc app1pkg.DocWithBLOB"),
+				it.Expect400("no value for owner field Blob in blob owner doc app1pkg.DocWithBLOB"),
 			)
 		})
 
 		t.Run("non-blob field", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "IntFld", docWithBLOBID_noBLOB,
 				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400("owner field app1pkg.DocWithBLOB.IntFld is not of blob type"),
+				it.Expect400("owner field app1pkg.DocWithBLOB.IntFld is not of blob type"),
 			)
 		})
 	})
@@ -234,11 +234,11 @@ func TestBlobberErrors(t *testing.T) {
 			it.QNameDocWithBLOB, it.Field_Blob, coreutils.WithAuthorizeBy(ws.Owner.Token))
 		t.Run("403 forbidden on set blob to another owner record", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","image":%d}}]}`, blobID)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("intended for app1pkg.DocWithBLOB.Blob whereas it is being used in app1pkg.air_table_plan.image"))
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect403("intended for app1pkg.DocWithBLOB.Blob whereas it is being used in app1pkg.air_table_plan.image"))
 		})
 		t.Run("403 forbidden on set blob to another owner record field", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","AnotherBlob":%d}}]}`, blobID)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("intended for app1pkg.DocWithBLOB.Blob whereas it is being used in app1pkg.DocWithBLOB.AnotherBlob"))
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect403("intended for app1pkg.DocWithBLOB.Blob whereas it is being used in app1pkg.DocWithBLOB.AnotherBlob"))
 		})
 
 		t.Run("403 forbidden on use the same BLOB twice in CUDs", func(t *testing.T) {
@@ -246,7 +246,7 @@ func TestBlobberErrors(t *testing.T) {
 				{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%[1]d}},
 				{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.DocWithBLOB","Blob":%[1]d}}
 			]}`, blobID)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403("mentioned in CUD app1pkg.DocWithBLOB.Blob is used already in CUD app1pkg.DocWithBLOB.1"))
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect403("mentioned in CUD app1pkg.DocWithBLOB.Blob is used already in CUD app1pkg.DocWithBLOB.1"))
 		})
 
 		// assign the blob to the owner
@@ -255,7 +255,7 @@ func TestBlobberErrors(t *testing.T) {
 
 		t.Run("403 forbidden on re-use the blob", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403(fmt.Sprintf(" mentioned in CUD app1pkg.DocWithBLOB.Blob is used already in app1pkg.DocWithBLOB.%d.Blob", assignedBLOBOwnerID)))
+			vit.PostWS(ws, "c.sys.CUD", body, it.Expect403(fmt.Sprintf(" mentioned in CUD app1pkg.DocWithBLOB.Blob is used already in app1pkg.DocWithBLOB.%d.Blob", assignedBLOBOwnerID)))
 		})
 	})
 

@@ -48,13 +48,11 @@ func (f *implIFederation) reqFederation(apiPath string, body string, optFuncs ..
 func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
 	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
-	optFuncs = append(optFuncs, coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse))
 	return f.httpClient.ReqReader(f.vvmCtx, url, bodyReader, optFuncs...)
 }
 
 func (f *implIFederation) reqURL(url string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
-	optFuncs = append(optFuncs, coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse))
 	return f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 }
 
@@ -74,7 +72,7 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 	if err != nil {
 		return "", err
 	}
-	if !slices.Contains(resp.ExpectedHTTPCodes(), resp.HTTPResp.StatusCode) {
+	if !slices.Contains(resp.Opts.ExpectedHTTPCodes(), resp.HTTPResp.StatusCode) {
 		sysErr, err := getSysError(resp)
 		if err != nil {
 			return "", err
@@ -104,7 +102,7 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 	if err != nil {
 		return istructs.NullRecordID, err
 	}
-	if !slices.Contains(resp.ExpectedHTTPCodes(), resp.HTTPResp.StatusCode) {
+	if !slices.Contains(resp.Opts.ExpectedHTTPCodes(), resp.HTTPResp.StatusCode) {
 		sysErr, err := getSysError(resp)
 		if err != nil {
 			return istructs.NullRecordID, err

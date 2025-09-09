@@ -233,7 +233,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 43"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400("Dummy", "is empty"),
+			it.Expect400("field is empty", "Dummy"),
 		)
 	})
 
@@ -241,7 +241,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 1 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400(fmt.Sprint(istructs.ErrRecordNotFound)), // `record not found`
+			it.Expect400(fmt.Sprint(istructs.ErrRecordNotFound)), // `record not found`
 		)
 	})
 
@@ -249,7 +249,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set unexistingField = 'any' where IntFld = 43 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400(istructsmem.ErrNameNotFoundError.Error(), "app1pkg.CategoryIdx", "unexistingField"),
+			it.Expect400(istructsmem.ErrNameNotFoundError.Error(), "unexistingField", "app1pkg.CategoryIdx"),
 		)
 	})
 }
@@ -296,7 +296,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set int_fld1 = 44"}}`, ws.WSID, istructs.NonExistingRecordID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400(fmt.Sprintf("record ID %d does not exist", istructs.NonExistingRecordID)),
+			it.Expect400(fmt.Sprintf("record ID %d does not exist", istructs.NonExistingRecordID)),
 		)
 	})
 
@@ -304,7 +304,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set unknownField = 44"}}`, ws.WSID, categoryID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400(istructsmem.ErrNameNotFoundError.Error(), "app1pkg.category", "unknownField"),
+			it.Expect400(istructsmem.ErrNameNotFoundError.Error(), "unknownField", "app1pkg.category"),
 		)
 	})
 }
@@ -349,7 +349,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400("Dummy", "is empty"),
+			it.Expect400("is empty", "Dummy"),
 		)
 	})
 
@@ -362,7 +362,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		// insert the same again -> 409 conflict
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect409("view record already exists"),
+			it.Expect409("view record already exists"),
 		)
 	})
 
@@ -372,7 +372,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1, Unexisting = 42"}}`, ws.WSID, newName, intFld)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400(istructsmem.ErrNameNotFoundError.Error(), "app1pkg.CategoryIdx", "Unexisting"),
+			it.Expect400(istructsmem.ErrNameNotFoundError.Error(), "Unexisting", "app1pkg.CategoryIdx"),
 		)
 	})
 }
@@ -564,7 +564,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 			body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
 			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 				coreutils.WithAuthorizeBy(sysPrn.Token),
-				coreutils.Expect400(expectedError),
+				it.Expect400(expectedError),
 			).Println()
 		})
 	}
