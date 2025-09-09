@@ -178,6 +178,7 @@ func (resp *FuncResponse) UnmarshalJSON(data []byte) error {
 	}
 
 	if raw, ok := m["HTTPResponse"]; ok && len(raw) > 0 {
+		panic("sd")
 		if err := json.Unmarshal(raw, &resp.HTTPResponse); err != nil {
 			return err
 		}
