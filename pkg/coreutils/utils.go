@@ -40,12 +40,16 @@ func IsDynamoDBStorage() bool {
 	return ok
 }
 
-func ServerAddress(port int) string {
-	addr := ""
-	if IsTest() {
-		addr = LocalhostIP.String()
-	}
-	return fmt.Sprintf("%s:%d", addr, port)
+// PublicAddress returns a server address that binds to all interfaces (public-facing)
+// Use this for production servers that need to accept external connections
+func PublicAddress(port int) string {
+	return fmt.Sprintf(":%d", port)
+}
+
+// LocalhostDynamic returns a server address that binds only to localhost (127.0.0.1:0)
+// Use this for tests, admin interfaces, or services that should only be locally accessible
+func LocalhostDynamic() string {
+	return fmt.Sprintf("%s:0", LocalhostIP.String())
 }
 
 func SplitErrors(joinedError error) (errs []error) {

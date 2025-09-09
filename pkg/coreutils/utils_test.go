@@ -52,8 +52,16 @@ func TestIsDynamoDBStorage(t *testing.T) {
 }
 
 func TestServerAddress(t *testing.T) {
-	require.Equal(t, "127.0.0.1:0", ServerAddress(0))
-	require.Equal(t, "127.0.0.1:8080", ServerAddress(8080))
+	require := require.New(t)
+
+	t.Run("PublicAddress binds to all interfaces", func(t *testing.T) {
+		require.Equal(":0", PublicAddress(0))
+		require.Equal(":8080", PublicAddress(8080))
+	})
+
+	t.Run("LocalhostAddress binds to localhost:0 only", func(t *testing.T) {
+		require.Equal("127.0.0.1:0", LocalhostDynamic())
+	})
 }
 
 type errUnwrapper struct{ errs []error }

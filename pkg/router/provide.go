@@ -28,7 +28,7 @@ import (
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHTTPService("HTTP server", coreutils.ServerAddress(rp.Port), rp, broker, blobRequestHandler,
+	httpServ := getHTTPService("HTTP server", coreutils.PublicAddress(rp.Port), rp, broker, blobRequestHandler,
 		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
 	adminEndpoint := fmt.Sprintf("%s:%d", coreutils.LocalhostIP, rp.AdminPort)
 	adminSrv = getHTTPService("Admin HTTP server", adminEndpoint, RouterParams{

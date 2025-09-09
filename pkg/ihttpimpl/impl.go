@@ -62,7 +62,7 @@ type redirectionRoute struct {
 
 func (p *httpProcessor) Prepare() (err error) {
 	if p.isHTTPS() {
-		acmeAddr := coreutils.ServerAddress(defaultHTTPPort)
+		acmeAddr := coreutils.PublicAddress(defaultHTTPPort)
 		p.certManager = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: p.hostPolicy,
@@ -83,7 +83,7 @@ func (p *httpProcessor) Prepare() (err error) {
 		}
 	}
 
-	if p.listener, err = net.Listen("tcp", coreutils.ServerAddress(p.params.Port)); err == nil {
+	if p.listener, err = net.Listen("tcp", coreutils.PublicAddress(p.params.Port)); err == nil {
 		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 	}
 

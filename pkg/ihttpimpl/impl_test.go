@@ -268,7 +268,7 @@ func TestReverseProxy(t *testing.T) {
 	defer tearDown(testApp)
 
 	testAppPort := testApp.processor.ListeningPort()
-	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(0))
+	targetListener, err := net.Listen("tcp", coreutils.LocalhostDynamic())
 	require.NoError(err)
 	targetListenerPort := targetListener.Addr().(*net.TCPAddr).Port
 

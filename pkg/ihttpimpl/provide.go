@@ -28,7 +28,7 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 		certCache:   dbcertcache.ProvideDBCache(&routerAppStorage),
 		acmeDomains: &sync.Map{},
 		server: &http.Server{
-			Addr:              coreutils.ServerAddress(params.Port),
+			Addr:              coreutils.PublicAddress(params.Port),
 			Handler:           r,
 			ReadHeaderTimeout: defaultReadHeaderTimeout,
 		},
