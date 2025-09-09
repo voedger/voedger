@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -25,7 +26,7 @@ func TestBasicUsage_ResetPassword(t *testing.T) {
 	vit.SignIn(login)
 
 	profileWSID := istructs.WSID(0)
-	token, code := InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
+	token, code := InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, login.Name)
 		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body) // null auth policy
 
@@ -81,7 +82,7 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 	})
 
 	profileWSID := istructs.WSID(0)
-	token, code := InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
+	token, code := InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 		resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 		profileWSID = istructs.WSID(resp.SectionRow()[1].(float64))
@@ -116,7 +117,7 @@ func TestResetPasswordLimits(t *testing.T) {
 		})
 
 		// 1st call -> ok, do not store the code
-		_, _ = InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
+		_, _ = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 			return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 		})
@@ -129,7 +130,7 @@ func TestResetPasswordLimits(t *testing.T) {
 		vit.TimeAdd(time.Minute)
 
 		// call again to get actual token and code
-		token, code = InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
+		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 			resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 

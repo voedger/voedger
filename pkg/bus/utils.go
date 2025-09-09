@@ -16,11 +16,12 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 // TODO: CP should send CommandResponse struct itself, not CommandResponse marshaled to a string
-func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req Request) (cmdRespMeta ResponseMeta, cmdResp coreutils.CommandResponse, sysErr error) {
+func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req Request) (cmdRespMeta ResponseMeta, cmdResp federation.CommandResponse, sysErr error) {
 	responseCh, responseMeta, responseErr, err := requestSender.SendRequest(ctx, req)
 	if err != nil {
 		// notest
@@ -48,7 +49,7 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 	if *responseErr != nil {
 		return responseMeta, cmdResp, coreutils.WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
 	}
-	var fe coreutils.FuncResponse
+	var fe federation.FuncResponse
 	if err = json.Unmarshal([]byte(body), &fe); err != nil {
 		// notest
 		panic(err)

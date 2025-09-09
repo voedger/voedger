@@ -173,17 +173,17 @@ func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFunc
 	return err
 }
 
-func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
+func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error) {
 	httpResp, err := f.post(relativeURL, body, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
 }
 
-func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
+func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error) {
 	httpResp, err := f.get(relativeURL, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
 }
 
-func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
+func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
 	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
@@ -302,3 +302,4 @@ func (f *implIFederation) WithRetry() IFederationWithRetry {
 		vvmCtx:             f.vvmCtx,
 	}
 }
+

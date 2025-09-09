@@ -370,20 +370,20 @@ func (vit *VIT) GetPrincipal(appQName appdef.AppQName, login string) *Principal 
 	return prn
 }
 
-func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithDefaultAuthorize(prn.Token))
 	return vit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
 }
 
-func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	opts = append(opts, coreutils.WithDefaultAuthorize(ws.Owner.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
 // PostWSSys is PostWS authorized by the System Token
-func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	sysPrn := vit.GetSystemPrincipal(ws.Owner.AppQName)
 	opts = append(opts, coreutils.WithDefaultAuthorize(sysPrn.Token))
@@ -445,7 +445,7 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 	return blobSUUID
 }
 
-func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
 	o = append(o, opts...)
@@ -522,12 +522,12 @@ func (vit *VIT) checkExpectationsInHTTPResp(httpResp *coreutils.HTTPResponse) {
 		return
 	}
 	vit.T.Helper()
-	var funcResponse *coreutils.FuncResponse
+	var funcResponse *federation.FuncResponse
 	require.NoError(vit.T, json.Unmarshal([]byte(httpResp.Body), &funcResponse))
 	vit.satisfySysErrorExpectations(funcResponse, httpResp.Opts)
 }
 
-func (vit *VIT) satisfySysErrorExpectations(funcResp *coreutils.FuncResponse, opts coreutils.IReqOpts) {
+func (vit *VIT) satisfySysErrorExpectations(funcResp *federation.FuncResponse, opts coreutils.IReqOpts) {
 	if len(opts.(*vitReqOpts).expectedMessages) == 0 {
 		return
 	}
@@ -545,7 +545,7 @@ func (vit *VIT) satisfySysErrorExpectations(funcResp *coreutils.FuncResponse, op
 	}
 }
 
-func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
 	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
@@ -557,7 +557,7 @@ func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName s
 	return funcResp
 }
 
-func (vit *VIT) WaitFor(consumer func() *coreutils.FuncResponse) *coreutils.FuncResponse {
+func (vit *VIT) WaitFor(consumer func() *federation.FuncResponse) *federation.FuncResponse {
 	vit.T.Helper()
 	start := time.Now()
 	for time.Since(start) < testTimeout {

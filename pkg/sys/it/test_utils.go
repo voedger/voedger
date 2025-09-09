@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/invite"
@@ -22,13 +23,13 @@ import (
 )
 
 func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...coreutils.ReqOptFunc) (token, code string) {
-	return InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
+	return InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, entity, field, email, targetWSID)
 		return vit.PostApp(prn.AppQName, prn.ProfileWSID, "q.sys.InitiateEmailVerification", body, opts...)
 	})
 }
 
-func InitiateEmailVerificationFunc(vit *it.VIT, f func() *coreutils.FuncResponse) (token, code string) {
+func InitiateEmailVerificationFunc(vit *it.VIT, f func() *federation.FuncResponse) (token, code string) {
 	resp := f()
 	emailMessage := vit.CaptureEmail()
 	r := regexp.MustCompile(`(?P<code>\d{6})`)
