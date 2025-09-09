@@ -26,6 +26,7 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 	require := require.New(t)
 	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(0))
 	require.NoError(err)
+	defer targetListener.Close()
 	targetPort := targetListener.Addr().(*net.TCPAddr).Port
 
 	cfg := it.NewOwnVITConfig(
