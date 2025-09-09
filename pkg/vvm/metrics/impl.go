@@ -18,7 +18,7 @@ import (
 )
 
 func (ms *metricsService) Prepare(interface{}) (err error) {
-	ms.listener, err = net.Listen("tcp", coreutils.PublicAddress(ms.port))
+	ms.listener, err = net.Listen("tcp", coreutils.ListenAddr(ms.port))
 	return err
 }
 

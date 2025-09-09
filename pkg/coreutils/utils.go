@@ -40,9 +40,10 @@ func IsDynamoDBStorage() bool {
 	return ok
 }
 
-// PublicAddress returns a server address that binds to all interfaces (public-facing)
-// Use this for production servers that need to accept external connections
-func PublicAddress(port int) string {
+func ListenAddr(port int) string {
+	if port == 0 {
+		return LocalhostDynamic()
+	}
 	return fmt.Sprintf(":%d", port)
 }
 
