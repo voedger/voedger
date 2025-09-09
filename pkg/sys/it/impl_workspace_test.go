@@ -16,6 +16,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -265,7 +266,7 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 }
 
 func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName,
-	resp *coreutils.FuncResponse, wsid istructs.WSID, token string) {
+	resp *federation.FuncResponse, wsid istructs.WSID, token string) {
 	require := require.New(vit.T)
 	blobs, _, err := workspace.ValidateTemplate(templateName, ep, wsKind)
 	require.NoError(err)

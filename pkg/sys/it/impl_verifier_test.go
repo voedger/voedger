@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -244,7 +245,7 @@ func TestForRegistry(t *testing.T) {
 	// funcs should be called in the user profile
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 
-	verificationToken, verificationCode := InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
+	verificationToken, verificationCode := InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"EmailField","Email":"%s","TargetWSID":%d,"ForRegistry":true},"elements":[{"fields":["VerificationToken"]}]}`,
 			it.QNameApp1_TestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID)
 		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)

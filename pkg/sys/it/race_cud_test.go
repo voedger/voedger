@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
@@ -360,7 +361,7 @@ func writeArt(ws *it.AppWorkspace, vit *it.VIT) (artNumber int) {
 	return
 }
 
-func readArt(vit *it.VIT, ws *it.AppWorkspace) *coreutils.FuncResponse {
+func readArt(vit *it.VIT, ws *it.AppWorkspace) *federation.FuncResponse {
 	body := `
 	{
 		"args":{

@@ -14,8 +14,8 @@ import (
 )
 
 type iFederationBase interface {
-	Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
-	Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
+	Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error)
+	Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error)
 	UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error)
 	UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
 		optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error)
@@ -26,7 +26,7 @@ type iFederationBase interface {
 	Port() int
 	N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...coreutils.ReqOptFunc) error
 	N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error)
-	AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
+	AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error)
 }
 
 type IFederation interface {

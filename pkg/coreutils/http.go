@@ -20,7 +20,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	retrier "github.com/voedger/voedger/pkg/goutils/retry"
-	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 )
 
@@ -453,40 +452,6 @@ func discardRespBody(resp *http.Response) error {
 		}
 	}
 	return nil
-}
-
-func (resp *FuncResponse) Len() int {
-	return resp.NumRows()
-}
-
-func (resp *FuncResponse) NumRows() int {
-	if resp.IsEmpty() {
-		return 0
-	}
-	return len(resp.Sections[0].Elements)
-}
-
-func (resp *FuncResponse) SectionRow(rowIdx ...int) []interface{} {
-	if len(rowIdx) > 1 {
-		panic("must be 0 or 1 rowIdx'es")
-	}
-	if len(resp.Sections) == 0 {
-		panic("empty response")
-	}
-	i := 0
-	if len(rowIdx) == 1 {
-		i = rowIdx[0]
-	}
-	return resp.Sections[0].Elements[i][0][0]
-}
-
-// returns a new ID for raw ID 1
-func (resp *FuncResponse) NewID() istructs.RecordID {
-	return resp.NewIDs["1"]
-}
-
-func (resp *FuncResponse) IsEmpty() bool {
-	return len(resp.Sections) == 0 && len(resp.QPv2Response) == 0
 }
 
 type implIHTTPClient struct {

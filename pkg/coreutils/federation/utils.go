@@ -74,7 +74,7 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 	return offsetsChan, channelID, func() { wg.Wait() }
 }
 
-func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (funcResp *coreutils.FuncResponse, err error) {
+func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (funcResp *FuncResponse, err error) {
 	if httpRespErr != nil && !errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode) {
 		return nil, httpRespErr
 	}
@@ -83,8 +83,8 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (fu
 		return nil, nil
 	}
 
-	funcResp = &coreutils.FuncResponse{
-		CommandResponse: coreutils.CommandResponse{
+	funcResp = &FuncResponse{
+		CommandResponse: CommandResponse{
 			NewIDs:    map[string]istructs.RecordID{},
 			CmdResult: map[string]interface{}{},
 		},
@@ -103,7 +103,7 @@ func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (fu
 		}
 		return funcResp, nil
 	}
-	
+
 	if !slices.Contains(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode) {
 		return nil, unexpectedStatusErr(httpResp.Opts.ExpectedHTTPCodes(), httpResp.HTTPResp.StatusCode, funcResp.SysError)
 	}

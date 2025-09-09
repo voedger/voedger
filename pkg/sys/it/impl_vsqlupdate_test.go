@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -170,7 +171,7 @@ func getLastPLogEvent(vit *it.VIT, ws *it.AppWorkspace) (plogOffset istructs.Off
 	return istructs.Offset(m["PlogOffset"].(float64)), m
 }
 
-func checkCorruptedEvent(require *require.Assertions, resp *coreutils.FuncResponse) {
+func checkCorruptedEvent(require *require.Assertions, resp *federation.FuncResponse) {
 	res := resp.SectionRow()[0].(string)
 	m := map[string]interface{}{}
 	require.NoError(json.Unmarshal([]byte(res), &m))

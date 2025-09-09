@@ -157,7 +157,7 @@ func (vit *VIT) GetCDocChildWorkspace(ws *AppWorkspace) (cdoc map[string]interfa
 	return vit.getCDoc(ws.Owner.AppQName, authnz.QNameCDocChildWorkspace, ws.Owner.ProfileWSID)
 }
 
-func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *coreutils.FuncResponse, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
+func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *federation.FuncResponse, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
 	const (
 		// respect linter
 		tmplNameIdx   = 3
@@ -261,13 +261,13 @@ func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQ
 }
 
 func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
-	return vit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *coreutils.FuncResponse {
+	return vit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *federation.FuncResponse {
 		return vit.PostProfile(owner, "q.sys.QueryChildWorkspaceByName", body)
 	}, expectWSInitErrorChunks...)
 }
 
 func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, opts ...coreutils.ReqOptFunc) (ws *AppWorkspace) {
-	return vit.waitForWorkspace(wsName, parentWS.Owner, func(owner *Principal, body string) *coreutils.FuncResponse {
+	return vit.waitForWorkspace(wsName, parentWS.Owner, func(owner *Principal, body string) *federation.FuncResponse {
 		return vit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body, opts...)
 	})
 }
