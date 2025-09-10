@@ -97,7 +97,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	emailCaptor := &implIEmailSender_captor{
 		emailCaptorCh: make(chan state.EmailMessage),
 	}
-	cfg.ActualizerStateConfig = state.StateConfig{EmailSender: emailCaptor}
+	cfg.EmailSender = emailCaptor
 
 	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 

@@ -116,7 +116,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	retryDelay := vvmConfig.AsyncActualizersRetryDelay
-	stateConfig := vvmConfig.ActualizerStateConfig
+	iEmailSender := vvmConfig.EmailSender
+	stateConfig := provideStateConfig(iEmailSender)
 	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, retryDelay, stateConfig)
 	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
@@ -305,6 +306,10 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 		return nil, err
 	}
 	return voedgerVM, nil
+}
+
+func provideStateConfig(emailSender state.IEmailSender) state.StateConfig {
+	return state.StateConfig{EmailSender: emailSender}
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {

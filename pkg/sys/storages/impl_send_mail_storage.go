@@ -35,9 +35,9 @@ func NewIEmailSenderSMTP() state.IEmailSender {
 }
 
 func NewIEmailSenderSMTPForTests() state.IEmailSender {
-	return &implIEmailSender_SMTP{
-		defaultOpts: []mail.Option{mail.WithTLSPolicy(mail.NoTLS)},
-	}
+	emailSender := NewIEmailSenderSMTP()
+	emailSender.(*implIEmailSender_SMTP).defaultOpts = []mail.Option{mail.WithTLSPolicy(mail.NoTLS)}
+	return emailSender
 }
 
 type mailKeyBuilder struct {
