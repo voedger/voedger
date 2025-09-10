@@ -25,7 +25,7 @@ func NewServer(opts ...Option) Server {
 		opt(ts)
 	}
 
-	l, err := net.Listen("tcp", coreutils.ServerAddress(0))
+	l, err := net.Listen("tcp", coreutils.LocalhostDynamic())
 	if err != nil {
 		panic(err)
 	}
