@@ -95,7 +95,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
 
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
-	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailSenderOverride(emailMessagesChan))
+	cfg.ActualizerStateConfig = state.StateConfig{MessagesSenderOverride: emailMessagesChan}
 
 	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 

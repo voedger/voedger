@@ -150,8 +150,8 @@ func Test_BasicUsage(t *testing.T) {
 	wlogOffsetFunc := func() istructs.Offset { return event.WLogOffset() }
 
 	// Create states for Command processor and Actualizer
-	actualizerState := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit)
-	cmdProcState := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
+	actualizerState := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit, state.NullOpts)
+	cmdProcState := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc, state.NullOpts)
 
 	// Create extension package from WASM
 	ctx := context.Background()
@@ -782,7 +782,7 @@ func Test_WithState(t *testing.T) {
 
 	// build app
 	appFunc := func() istructs.IAppStructs { return app }
-	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit)
+	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts)
 
 	// build packages
 	moduleURL := testModuleURL("./_testdata/basicusage/pkg.wasm")
@@ -855,7 +855,7 @@ func Test_StatePanic(t *testing.T) {
 			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
 		})
 	appFunc := func() istructs.IAppStructs { return app }
-	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit)
+	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts)
 
 	const extname = "wrongFieldName"
 	const undefinedPackage = "undefinedPackage"
