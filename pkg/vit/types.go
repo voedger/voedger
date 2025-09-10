@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -33,7 +33,7 @@ type VIT struct {
 	isOnSharedConfig     bool
 	initialGoroutinesNum int
 	configCleanupsAmount int
-	emailCaptor          emailCaptor
+	emailCaptor          *implISendEmailFacade_captor
 	httpClient           httpu.IHTTPClient
 	mockTime             testingu.IMockTime
 	vvmProblemCtx        context.Context
@@ -142,14 +142,11 @@ type signUpOpts struct {
 	reqOpts          []httpu.ReqOptFunc
 }
 
-type emailCaptor chan smtptest.Message
-
 type implVITISecretsReader struct {
 	secrets          map[string][]byte
 	underlyingReader isecrets.ISecretReader
 }
 
 type implISendEmailFacade_captor struct {
-	emailCaptorCh emailCaptor
+	emailCaptorCh chan state.EmailMessage
 }
-

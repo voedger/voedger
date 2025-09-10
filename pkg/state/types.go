@@ -7,7 +7,6 @@ package state
 import (
 	"context"
 	"io"
-	"net/mail"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -15,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/wneessen/go-mail"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 )
@@ -57,7 +57,16 @@ type IHTTPClient interface {
 }
 
 type ISendMailFacade interface {
-	Send(msg mail.Message, opts ...mail.Option) error
+	Send(host string, msg EmailMessage, opts ...mail.Option) error
+}
+
+type EmailMessage struct {
+	Subject string
+	From    string
+	To      []string
+	CC      []string
+	BCC     []string
+	Body    string
 }
 
 type StateConfig struct {

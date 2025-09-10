@@ -20,7 +20,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	ts := smtptest.NewServer(smtptest.WithCredentials("user", "pwd"))
 	defer ts.Close()
-	storage := NewSendMailStorage(nil)
+	storage := NewSendMailStorage(NewISendMailFacadeSMTPForTests())
 	k := storage.NewKeyBuilder(appdef.NullQName, nil)
 
 	k.PutInt32(sys.Storage_SendMail_Field_Port, ts.Port())
@@ -38,7 +38,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc1@email.com")
 	k.PutString(sys.Storage_SendMail_Field_Body, "Hello world")
 
-	verifyMsg := func(msg smtptest.Message) {
+	verifyMsg := func(msg state.EmailMessage) {
 		require.Equal("Greeting", msg.Subject)
 		require.Equal("from@email.com", msg.From)
 		require.Equal([]string{"to0@email.com", "to1@email.com"}, msg.To)

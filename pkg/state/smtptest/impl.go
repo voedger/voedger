@@ -10,14 +10,15 @@ import (
 
 	"github.com/emersion/go-smtp"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 func (b *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
-	return &session{ch: make(chan Message), server: b.server}, nil
+	return &session{ch: make(chan state.EmailMessage), server: b.server}, nil
 }
 
 func NewServer(opts ...Option) Server {
-	ts := &server{messages: make(map[credentials]chan Message)}
+	ts := &server{messages: make(map[credentials]chan state.EmailMessage)}
 	s := smtp.NewServer(&backend{server: ts})
 	ts.server = s
 

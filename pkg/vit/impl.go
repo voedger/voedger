@@ -42,7 +42,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	vvmpkg "github.com/voedger/voedger/pkg/vvm"
@@ -95,8 +94,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.Time = testingu.MockTime
 	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
 
-	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
-	cfg.ActualizerStateConfig = state.StateConfig{MessagesSenderOverride: emailMessagesChan}
+	emailCaptor := &implISendEmailFacade_captor{
+		emailCaptorCh: make(chan state.EmailMessage),
+	}
+	cfg.ActualizerStateConfig = state.StateConfig{SendMailFacade: emailCaptor}
 
 	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 
@@ -148,7 +149,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		lock:                 sync.Mutex{},
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
-		emailCaptor:          emailMessagesChan,
+		emailCaptor:          emailCaptor,
 		mockTime:             testingu.MockTime,
 	}
 	httpClient, httpClientCleanup := httpu.NewIHTTPClient()
@@ -634,11 +635,11 @@ func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName
 // CaptureEmail waits for and returns the next sent email
 // no emails during testEmailsAwaitingTimeout -> test failed
 // an email was sent but CaptureEmail is not called -> test will be failed on VIT.TearDown()
-func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
+func (vit *VIT) CaptureEmail() (msg state.EmailMessage) {
 	vit.T.Helper()
 	tmr := time.NewTimer(getTestEmailsAwaitingTimeout())
 	select {
-	case msg = <-vit.emailCaptor:
+	case msg = <-vit.emailCaptor.emailCaptorCh:
 		return msg
 	case <-tmr.C:
 		vit.T.Fatal("no email messages")
@@ -685,21 +686,6 @@ func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySe
 	}
 }
 
-func (ec emailCaptor) checkEmpty(t testing.TB) {
-	select {
-	case _, ok := <-ec:
-		if ok {
-			t.Log("unexpected email message received")
-			t.Fail()
-		}
-	default:
-	}
-}
-
-func (ec emailCaptor) shutDown() {
-	close(ec)
-}
-
 func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
 	if val, ok := sr.secrets[name]; ok {
 		return val, nil
@@ -727,14 +713,22 @@ func (vit *VIT) checkVVMProblemCtx() {
 	}
 }
 
-func (c *implISendEmailFacade_captor) Send(msg *mail.Msg, opts ...mail.Option) error {
-	c.emailCaptorCh <- smtptest.Message{
-		Subject: stringOrEmpty(msg.Subject),
-		From:    msg.From,
-		To:      msg.To,
-		CC:      msg.CC,
-		BCC:     msg.BCC,
-		Body:    stringOrEmpty(msg.Body),
-	}
+func (c *implISendEmailFacade_captor) Send(host string, msg state.EmailMessage, opts ...mail.Option) error {
+	c.emailCaptorCh <- msg
 	return nil
+}
+
+func (c *implISendEmailFacade_captor) checkEmpty(t testing.TB) {
+	select {
+	case _, ok := <-c.emailCaptorCh:
+		if ok {
+			t.Log("unexpected email message received")
+			t.Fail()
+		}
+	default:
+	}
+}
+
+func (c *implISendEmailFacade_captor) shutDown() {
+	close(c.emailCaptorCh)
 }
