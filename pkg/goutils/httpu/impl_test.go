@@ -3,11 +3,10 @@
  * @author Denis Gribanov
  */
 
-package coreutils
+package httpu
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -20,39 +19,16 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/voedger/voedger/pkg/appdef"
 )
-
-func TestNewHTTPError(t *testing.T) {
-	require := require.New(t)
-	t.Run("simple", func(t *testing.T) {
-		sysErr := NewHTTPError(http.StatusInternalServerError, errors.New("test error"))
-		require.Empty(sysErr.Data)
-		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
-		require.Equal("test error", sysErr.Message)
-		require.Equal(appdef.NullQName, sysErr.QName)
-		require.JSONEq(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON_APIV1())
-	})
-
-	t.Run("formatted", func(t *testing.T) {
-		sysErr := NewHTTPErrorf(http.StatusInternalServerError, "test ", "error")
-		require.Empty(sysErr.Data)
-		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
-		require.Equal("test error", sysErr.Message)
-		require.Equal(appdef.NullQName, sysErr.QName)
-		require.JSONEq(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON_APIV1())
-	})
-}
 
 func TestHTTP(t *testing.T) {
 	require := require.New(t)
 
-	listener, err := net.Listen("tcp", LocalhostDynamic())
+	listener, err := net.Listen("tcp", localhostDynamic)
 	require.NoError(err)
 	var handler func(w http.ResponseWriter, r *http.Request)
 	server := &http.Server{
-		Addr: LocalhostDynamic(),
+		Addr: localhostDynamic,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			handler(w, r)
 		}),
@@ -203,12 +179,12 @@ func TestHTTPReqWithOptions(t *testing.T) {
 	var handler func(w http.ResponseWriter, r *http.Request)
 
 	ts := http.Server{
-		Addr: LocalhostDynamic(),
+		Addr: localhostDynamic,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			handler(w, r)
 		}),
 	}
-	ln, err := net.Listen("tcp", LocalhostDynamic())
+	ln, err := net.Listen("tcp", localhostDynamic)
 	require.NoError(err)
 	go ts.Serve(ln) // nolint errcheck
 	defer func() { require.NoError(ts.Shutdown(context.Background())) }()
@@ -246,13 +222,13 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		}
 		_, _ = httpClient.Req(context.Background(), url, "body",
 			WithAuthorizeBy("tok"),
-			WithCookies(Authorization, "tok"),
+			WithCookies(authorization, "tok"),
 			WithoutAuth(),
 		)
 		require.NotNil(gotReq)
-		require.Empty(gotReq.Header.Get(Authorization))
+		require.Empty(gotReq.Header.Get(authorization))
 		for _, c := range gotReq.Cookies() {
-			require.NotEqual(Authorization, c.Name)
+			require.NotEqual(authorization, c.Name)
 		}
 	})
 
@@ -345,7 +321,7 @@ func TestContextCanceled(t *testing.T) {
 
 	count := 0
 	ts := http.Server{
-		Addr: LocalhostDynamic(),
+		Addr: localhostDynamic,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			count++
 			w.WriteHeader(http.StatusServiceUnavailable)
@@ -355,7 +331,7 @@ func TestContextCanceled(t *testing.T) {
 			cancel()
 		}),
 	}
-	ln, err := net.Listen("tcp", LocalhostDynamic())
+	ln, err := net.Listen("tcp", localhostDynamic)
 	require.NoError(err)
 	go ts.Serve(ln) // nolint errcheck
 	defer func() { require.NoError(ts.Shutdown(context.Background())) }()

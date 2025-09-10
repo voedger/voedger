@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -25,45 +26,45 @@ import (
 
 // wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
-func (f *implIFederation) post(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodPost))
+func (f *implIFederation) post(relativeURL string, body string, optFuncs ...httpu.ReqOptFunc) (*httpu.HTTPResponse, error) {
+	optFuncs = append(optFuncs, httpu.WithDefaultMethod(http.MethodPost))
 	return f.reqFederation(relativeURL, body, optFuncs...)
 }
 
-func (f *implIFederation) postReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodPost))
+func (f *implIFederation) postReader(relativeURL string, bodyReader io.Reader, optFuncs ...httpu.ReqOptFunc) (*httpu.HTTPResponse, error) {
+	optFuncs = append(optFuncs, httpu.WithDefaultMethod(http.MethodPost))
 	return f.reqReader(relativeURL, bodyReader, optFuncs...)
 }
 
-func (f *implIFederation) get(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithDefaultMethod(http.MethodGet))
+func (f *implIFederation) get(relativeURL string, optFuncs ...httpu.ReqOptFunc) (*httpu.HTTPResponse, error) {
+	optFuncs = append(optFuncs, httpu.WithDefaultMethod(http.MethodGet))
 	return f.reqFederation(relativeURL, "", optFuncs...)
 }
 
-func (f *implIFederation) reqFederation(apiPath string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+func (f *implIFederation) reqFederation(apiPath string, body string, optFuncs ...httpu.ReqOptFunc) (*httpu.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + apiPath
 	return f.reqURL(url, body, optFuncs...)
 }
 
-func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...httpu.ReqOptFunc) (*httpu.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
 	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
 	return f.httpClient.ReqReader(f.vvmCtx, url, bodyReader, optFuncs...)
 }
 
-func (f *implIFederation) reqURL(url string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+func (f *implIFederation) reqURL(url string, body string, optFuncs ...httpu.ReqOptFunc) (*httpu.HTTPResponse, error) {
 	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
 	return f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 }
 
 func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader, duration iblobstorage.DurationType,
-	optFuncs ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
+	optFuncs ...httpu.ReqOptFunc) (blobSUUID iblobstorage.SUUID, err error) {
 	ttl, ok := TemporaryBLOBDurationToURLTTL[duration]
 	if !ok {
 		return "", fmt.Errorf("unsupported duration: %d", duration)
 	}
 	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/tblobs", appQName.Owner(), appQName.Name(), wsid)
-	optFuncs = append(optFuncs, coreutils.WithHeaders(
+	optFuncs = append(optFuncs, httpu.WithHeaders(
 		coreutils.BlobName, blobReader.Name,
 		coreutils.ContentType, blobReader.ContentType,
 		"TTL", ttl,
@@ -91,10 +92,10 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 }
 
 func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobReader iblobstorage.BLOBReader,
-	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
+	optFuncs ...httpu.ReqOptFunc) (blobID istructs.RecordID, err error) {
 	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/docs/%s/blobs/%s",
 		appQName.Owner(), appQName.Name(), wsid, blobReader.OwnerRecord, blobReader.OwnerRecordField)
-	optFuncs = append(optFuncs, coreutils.WithHeaders(
+	optFuncs = append(optFuncs, httpu.WithHeaders(
 		coreutils.BlobName, blobReader.Name,
 		coreutils.ContentType, blobReader.ContentType,
 	))
@@ -126,9 +127,9 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 }
 
 func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
-	optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
+	optFuncs ...httpu.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
 	url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/docs/%s/%d/blobs/%s`, appQName.Owner(), appQName.Name(), wsid, ownerRecord, ownerID, ownerRecordField)
-	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
+	optFuncs = append(optFuncs, httpu.WithResponseHandler(func(httpResp *http.Response) {}))
 	resp, err := f.get(url, optFuncs...)
 	if err != nil {
 		return res, err
@@ -146,9 +147,9 @@ func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID,
 	return res, nil
 }
 
-func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
+func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...httpu.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
 	url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/tblobs/%s`, appQName.Owner(), appQName.Name(), wsid, blobSUUID)
-	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
+	optFuncs = append(optFuncs, httpu.WithResponseHandler(func(httpResp *http.Response) {}))
 	resp, err := f.get(url, optFuncs...)
 	if err != nil {
 		return res, err
@@ -166,32 +167,32 @@ func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.W
 	return res, nil
 }
 
-func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...coreutils.ReqOptFunc) error {
+func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...httpu.ReqOptFunc) error {
 	body := fmt.Sprintf(`{"App": "%s","Projection": "%s","WS": %d}`, key.App, key.Projection, key.WS)
-	optFuncs = append(optFuncs, coreutils.WithDiscardResponse())
+	optFuncs = append(optFuncs, httpu.WithDiscardResponse())
 	_, err := f.post(fmt.Sprintf("n10n/update/%d", val), body, optFuncs...)
 	return err
 }
 
-func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error) {
+func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...httpu.ReqOptFunc) (*FuncResponse, error) {
 	httpResp, err := f.post(relativeURL, body, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
 }
 
-func (f *implIFederation) Query(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error) {
+func (f *implIFederation) Query(relativeURL string, optFuncs ...httpu.ReqOptFunc) (*FuncResponse, error) {
 	httpResp, err := f.get(relativeURL, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
 }
 
-func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*FuncResponse, error) {
-	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
+func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...httpu.ReqOptFunc) (*FuncResponse, error) {
+	optFuncs = append(optFuncs, httpu.WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
 	optFuncs = append(slices.Clone(f.defaultReqOptFuncs), optFuncs...)
 	httpResp, err := f.httpClient.Req(f.vvmCtx, url, body, optFuncs...)
 	return HTTPRespToFuncResp(httpResp, err)
 }
 
-func getSysError(httpResp *coreutils.HTTPResponse) (sysError coreutils.SysError, err error) {
+func getSysError(httpResp *httpu.HTTPResponse) (sysError coreutils.SysError, err error) {
 	sysError = coreutils.SysError{
 		HTTPStatus: httpResp.HTTPResp.StatusCode,
 	}
@@ -257,7 +258,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		}`, projectionKey.WS, projectionKey.App, projectionKey.Projection, projectionKey.WS)
 	params := url.Values{}
 	params.Add("payload", query)
-	resp, err := f.get("n10n/channel?"+params.Encode(), coreutils.WithLongPolling())
+	resp, err := f.get("n10n/channel?"+params.Encode(), httpu.WithLongPolling())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -298,8 +299,7 @@ func (f *implIFederation) WithRetry() IFederationWithRetry {
 		httpClient:         f.httpClient,
 		federationURL:      f.federationURL,
 		adminPortGetter:    f.adminPortGetter,
-		defaultReqOptFuncs: []coreutils.ReqOptFunc{coreutils.WithRetryOn503()},
+		defaultReqOptFuncs: []httpu.ReqOptFunc{httpu.WithRetryOn503()},
 		vvmCtx:             f.vvmCtx,
 	}
 }
-

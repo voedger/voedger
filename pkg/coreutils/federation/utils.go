@@ -19,6 +19,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -74,8 +75,8 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 	return offsetsChan, channelID, func() { wg.Wait() }
 }
 
-func HTTPRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (funcResp *FuncResponse, err error) {
-	if httpRespErr != nil && !errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode) {
+func HTTPRespToFuncResp(httpResp *httpu.HTTPResponse, httpRespErr error) (funcResp *FuncResponse, err error) {
+	if httpRespErr != nil && !errors.Is(httpRespErr, httpu.ErrUnexpectedStatusCode) {
 		return nil, httpRespErr
 	}
 	if httpResp == nil {

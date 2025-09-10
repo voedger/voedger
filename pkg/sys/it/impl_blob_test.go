@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -39,7 +40,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	// [~server.apiv2.blobs/it.TestBlobsCreate~impl]
 	// write
 	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
-		it.QNameDocWithBLOB, it.Field_Blob, coreutils.WithAuthorizeBy(ws.Owner.Token))
+		it.QNameDocWithBLOB, it.Field_Blob, httpu.WithAuthorizeBy(ws.Owner.Token))
 	log.Println(blobID)
 
 	// check wdoc.sys.BLOB - OwnerRecordID is not filled yet
@@ -62,7 +63,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 
 	// read, authorize over headers
 	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
-		coreutils.WithAuthorizeBy(ws.Owner.Token),
+		httpu.WithAuthorizeBy(ws.Owner.Token),
 	)
 
 	actualBLOBContent, err := io.ReadAll(blobReader)
@@ -74,7 +75,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	// [~server.apiv2.blobs/it.TestBlobsRead~impl]
 	// read, authorize over unescaped cookies
 	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
-		coreutils.WithCookies(coreutils.Authorization, "Bearer "+ws.Owner.Token),
+		httpu.WithCookies(coreutils.Authorization, "Bearer "+ws.Owner.Token),
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
@@ -84,7 +85,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 
 	// read, authorize over escaped cookies
 	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
-		coreutils.WithCookies(coreutils.Authorization, "Bearer%20"+ws.Owner.Token),
+		httpu.WithCookies(coreutils.Authorization, "Bearer%20"+ws.Owner.Token),
 	)
 	actualBLOBContent, err = io.ReadAll(blobReader)
 	require.NoError(err)
@@ -102,58 +103,58 @@ func TestBlobberErrors(t *testing.T) {
 
 	t.Run("403 forbidden on write without token", func(t *testing.T) {
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, []byte{},
-			it.QNameDocWithBLOB, it.Field_Blob, coreutils.Expect403(),
+			it.QNameDocWithBLOB, it.Field_Blob, httpu.Expect403(),
 		)
 	})
 
 	t.Run("403 forbidden on read without token", func(t *testing.T) {
 		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
-			it.QNameDocWithBLOB, it.Field_Blob, coreutils.WithAuthorizeBy(ws.Owner.Token))
-		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", blobID, coreutils.Expect403())
+			it.QNameDocWithBLOB, it.Field_Blob, httpu.WithAuthorizeBy(ws.Owner.Token))
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", blobID, httpu.Expect403())
 	})
 
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
 		bigBLOB := make([]byte, 150)
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, bigBLOB,
 			it.QNameDocWithBLOB, it.Field_Blob,
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403(),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect403(),
 		)
 	})
 
 	t.Run("404 not found on querying an unexsting blob", func(t *testing.T) {
 		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", 1,
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect404(),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect404(),
 		)
 	})
 
 	t.Run("400 on wrong Content-Type and name+mimeType query params", func(t *testing.T) {
 		t.Run("neither Content-Type nor name+mimeType query params are not provided", func(t *testing.T) {
 			vit.POST(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect400(),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.Expect400(),
 			).Println()
 		})
 		t.Run("no name+mimeType query params and non-(mutipart/form-data) Content-Type", func(t *testing.T) {
 			vit.POST(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
-				coreutils.Expect400(),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
+				httpu.Expect400(),
 			).Println()
 		})
 		t.Run("both name+mimeType query params and Conten-Type are specified", func(t *testing.T) {
 			vit.POST(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
-				coreutils.Expect400(),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithHeaders("Content-Type", "multipart/form-data"),
+				httpu.Expect400(),
 			).Println()
 		})
 		t.Run("boundary of multipart/form-data is not specified", func(t *testing.T) {
 			vit.POST(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
-				coreutils.Expect400(),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithHeaders("Content-Type", "multipart/form-data"),
+				httpu.Expect400(),
 			).Println()
 		})
 	})
@@ -162,8 +163,8 @@ func TestBlobberErrors(t *testing.T) {
 		t.Run("doc", func(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/unknown.doc/blobs/someField", ws.WSID),
 				"blobContent",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithHeaders(
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithHeaders(
 					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
@@ -173,8 +174,8 @@ func TestBlobberErrors(t *testing.T) {
 		t.Run("field", func(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocWithBLOB/blobs/someField", ws.WSID),
 				"blobContent",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithHeaders(
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithHeaders(
 					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
@@ -185,8 +186,8 @@ func TestBlobberErrors(t *testing.T) {
 		t.Run("field type", func(t *testing.T) {
 			vit.POST(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/docs/app1pkg.DocWithBLOB/blobs/IntFld", ws.WSID),
 				"blob",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithHeaders(
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithHeaders(
 					coreutils.BlobName, "newBlob",
 					coreutils.ContentType, coreutils.ContentType_ApplicationXBinary,
 				),
@@ -198,14 +199,14 @@ func TestBlobberErrors(t *testing.T) {
 	t.Run("read: wrong owner", func(t *testing.T) {
 		t.Run("doc", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, appdef.NewQName("unknown", "doc"), "Name", 1,
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
 				it.Expect400("document or record unknown.doc is not defined in Workspace «app1pkg.test_wsWS»"),
 			)
 		})
 
 		t.Run("id", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameApp1_CDocCountry, "Name", 1,
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
 				it.Expect404("document app1pkg.Country with ID 1 not found"),
 			)
 		})
@@ -216,14 +217,14 @@ func TestBlobberErrors(t *testing.T) {
 
 		t.Run("target field is not set", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", docWithBLOBID_noBLOB,
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
 				it.Expect400("no value for owner field Blob in blob owner doc app1pkg.DocWithBLOB"),
 			)
 		})
 
 		t.Run("non-blob field", func(t *testing.T) {
 			vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "IntFld", docWithBLOBID_noBLOB,
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
 				it.Expect400("owner field app1pkg.DocWithBLOB.IntFld is not of blob type"),
 			)
 		})
@@ -231,7 +232,7 @@ func TestBlobberErrors(t *testing.T) {
 
 	t.Run("update owner", func(t *testing.T) {
 		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
-			it.QNameDocWithBLOB, it.Field_Blob, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			it.QNameDocWithBLOB, it.Field_Blob, httpu.WithAuthorizeBy(ws.Owner.Token))
 		t.Run("403 forbidden on set blob to another owner record", func(t *testing.T) {
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","image":%d}}]}`, blobID)
 			vit.PostWS(ws, "c.sys.CUD", body, it.Expect403("intended for app1pkg.DocWithBLOB.Blob whereas it is being used in app1pkg.air_table_plan.image"))
@@ -261,7 +262,7 @@ func TestBlobberErrors(t *testing.T) {
 
 	t.Run("read from denied field", func(t *testing.T) {
 		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
-			it.QNameDocWithBLOB, it.Field_BlobReadDenied, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			it.QNameDocWithBLOB, it.Field_BlobReadDenied, httpu.WithAuthorizeBy(ws.Owner.Token))
 
 		// ok put the blob into the read-denied field
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocWithBLOB","BlobReadDenied":%d}}]}`, blobID)
@@ -269,8 +270,8 @@ func TestBlobberErrors(t *testing.T) {
 
 		// 403 on read the BLOB from read-denied field
 		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "BlobReadDenied", ownerID,
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect403(),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect403(),
 		)
 	})
 }
@@ -287,12 +288,12 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	// write
 	// [~server.apiv2.tblobs/it.TestTBlobsCreate~impl]
 	blobSUUID := vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
-		coreutils.WithAuthorizeBy(ws.Owner.Token))
+		httpu.WithAuthorizeBy(ws.Owner.Token))
 	log.Println(blobSUUID)
 
 	// read
 	// [~server.apiv2.blobs/it.TestTBlobsRead~impl]
-	blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, httpu.WithAuthorizeBy(ws.Owner.Token))
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
 	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)
@@ -308,7 +309,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 		// check the temp blob still exists
-		blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, coreutils.WithAuthorizeBy(ws.Owner.Token))
+		blobReader := vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID, httpu.WithAuthorizeBy(ws.Owner.Token))
 		actualBLOBContent, err := io.ReadAll(blobReader)
 		require.NoError(err)
 		require.Equal(expBLOB, actualBLOBContent)
@@ -318,8 +319,8 @@ func TestBasicUsage_Temporary(t *testing.T) {
 
 		// check the temp blob is disappeared
 		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, blobSUUID,
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect404(),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect404(),
 		)
 	})
 }
@@ -334,10 +335,10 @@ func TestTemporaryBLOBErrors(t *testing.T) {
 
 	// write
 	vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
-		coreutils.WithAuthorizeBy(ws.Owner.Token))
+		httpu.WithAuthorizeBy(ws.Owner.Token))
 
 	t.Run("404 on not found", func(t *testing.T) {
-		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "unknownSUUIDaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect404())
+		vit.ReadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "unknownSUUIDaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", httpu.WithAuthorizeBy(ws.Owner.Token), httpu.Expect404())
 	})
 }
 
@@ -351,13 +352,13 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write BLOB using APIv1
-	httpClient, cleanup := coreutils.NewIHTTPClient()
+	httpClient, cleanup := httpu.NewIHTTPClient()
 	defer cleanup()
 	uploadBLOBURL := fmt.Sprintf("%s/blob/test1/app1/%d?name=%s&mimeType=%s", vit.IFederation.URLStr(), ws.WSID,
 		url.QueryEscape(coreutils.BlobName), url.QueryEscape(coreutils.ContentType_ApplicationXBinary))
 	resp, err := httpClient.ReqReader(context.Background(), uploadBLOBURL, io.NopCloser(bytes.NewReader(expBLOB)),
-		coreutils.WithMethod(http.MethodPost),
-		coreutils.WithAuthorizeBy(ws.Owner.Token),
+		httpu.WithMethod(http.MethodPost),
+		httpu.WithAuthorizeBy(ws.Owner.Token),
 	)
 	require.NoError(err)
 	blobID, err := strconv.ParseUint(resp.Body, utils.DecimalBase, utils.BitSize64)
@@ -369,7 +370,7 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 
 	// the BLOB written via APIv1, should be ok to read via APIv2
 	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
-		coreutils.WithAuthorizeBy(ws.Owner.Token),
+		httpu.WithAuthorizeBy(ws.Owner.Token),
 	)
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
@@ -389,7 +390,7 @@ func TestODocWithBLOB(t *testing.T) {
 
 	// write BLOB
 	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ContentType_ApplicationXBinary, expBLOB,
-		it.QNameDocWithBLOB, it.Field_Blob, coreutils.WithAuthorizeBy(ws.Owner.Token))
+		it.QNameDocWithBLOB, it.Field_Blob, httpu.WithAuthorizeBy(ws.Owner.Token))
 	log.Println(blobID)
 
 	// set to ODoc
@@ -397,7 +398,7 @@ func TestODocWithBLOB(t *testing.T) {
 	ownerID := vit.PostWS(ws, "c.app1pkg.CmdODocWithBLOB", body).NewID()
 
 	// read from ODoc
-	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameODocWithBLOB, "Blob", ownerID, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameODocWithBLOB, "Blob", ownerID, httpu.WithAuthorizeBy(ws.Owner.Token))
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
 	require.Equal(coreutils.ContentType_ApplicationXBinary, blobReader.ContentType)

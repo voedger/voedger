@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -149,7 +150,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		emailCaptor:          emailMessagesChan,
 		mockTime:             testingu.MockTime,
 	}
-	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
+	httpClient, httpClientCleanup := httpu.NewIHTTPClient()
 	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
@@ -184,8 +185,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		// create logins and workspaces
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName,
-				WithReqOpt(coreutils.WithExpectedCode(http.StatusCreated)),
-				WithReqOpt(coreutils.WithExpectedCode(http.StatusConflict)),
+				WithReqOpt(httpu.WithExpectedCode(http.StatusCreated)),
+				WithReqOpt(httpu.WithExpectedCode(http.StatusConflict)),
 			)
 			prn := vit.SignIn(login)
 			appPrincipals, ok := vit.principals[app.name]
@@ -221,7 +222,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 				appWorkspaces = map[string]*AppWorkspace{}
 				vit.appWorkspaces[app.name] = appWorkspaces
 			}
-			newAppWS := vit.CreateWorkspace(wsd, owner, coreutils.WithExpectedCode(http.StatusOK), coreutils.WithExpectedCode(http.StatusConflict))
+			newAppWS := vit.CreateWorkspace(wsd, owner, httpu.WithExpectedCode(http.StatusOK), httpu.WithExpectedCode(http.StatusConflict))
 			newAppWS.childs = wsd.childs
 			newAppWS.docs = wsd.docs
 			newAppWS.subjects = wsd.subjects
@@ -239,7 +240,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string, token string) {
 	for doc, dataFactory := range appWS.docs {
-		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc), coreutils.WithAuthorizeBy(token)).IsEmpty() {
+		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc), httpu.WithAuthorizeBy(token)).IsEmpty() {
 			continue
 		}
 		data := dataFactory(verifiedValues)
@@ -249,7 +250,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 		bb, err := json.Marshal(data)
 		require.NoError(vit.T, err)
 
-		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(token))
+		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), httpu.WithAuthorizeBy(token))
 	}
 
 	createSubjects(vit, token, appWS.subjects, appWS.AppQName(), appWS.WSID)
@@ -279,7 +280,7 @@ func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.
 		}
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
 			subject.login, roles, subject.subjectKind, vit.principals[appQName][subject.login].ProfileWSID)
-		vit.PostApp(appQName, wsid, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
+		vit.PostApp(appQName, wsid, "c.sys.CUD", body, httpu.WithAuthorizeBy(token))
 	}
 }
 
@@ -370,28 +371,28 @@ func (vit *VIT) GetPrincipal(appQName appdef.AppQName, login string) *Principal 
 	return prn
 }
 
-func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
+func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultAuthorize(prn.Token))
+	opts = append(opts, httpu.WithDefaultAuthorize(prn.Token))
 	return vit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
 }
 
-func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
+func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultAuthorize(ws.Owner.Token))
+	opts = append(opts, httpu.WithDefaultAuthorize(ws.Owner.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
 // PostWSSys is PostWS authorized by the System Token
-func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
+func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	sysPrn := vit.GetSystemPrincipal(ws.Owner.AppQName)
-	opts = append(opts, coreutils.WithDefaultAuthorize(sysPrn.Token))
+	opts = append(opts, httpu.WithDefaultAuthorize(sysPrn.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
 func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte,
-	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
+	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...httpu.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
@@ -402,7 +403,7 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	o := []coreutils.ReqOptFunc{WithVITOpts()}
+	o := []httpu.ReqOptFunc{WithVITOpts()}
 	o = append(o, opts...)
 	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, o...)
 	require.NoError(vit.T, err)
@@ -413,7 +414,7 @@ func (vit *VIT) SQLQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) 
 
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
-	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(ws.Owner.Token))
 	res := []map[string]interface{}{}
 	for _, elem := range resp.Sections[0].Elements {
 		m := map[string]interface{}{}
@@ -429,7 +430,7 @@ func (vit *VIT) SQLQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[
 }
 
 func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte, duration iblobstorage.DurationType,
-	opts ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
+	opts ...httpu.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
@@ -438,16 +439,16 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	o := []coreutils.ReqOptFunc{WithVITOpts()}
+	o := []httpu.ReqOptFunc{WithVITOpts()}
 	o = append(o, opts...)
 	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, o...)
 	require.NoError(vit.T, err)
 	return blobSUUID
 }
 
-func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
+func (vit *VIT) Func(url string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
-	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
 	o = append(o, opts...)
 	httpResp, err := vit.httpClient.Req(context.Background(), vit.URLStr()+"/"+url, body, o...)
 	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
@@ -459,9 +460,9 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *fed
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
 func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
-	optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
+	optFuncs ...httpu.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
-	o := []coreutils.ReqOptFunc{WithVITOpts()}
+	o := []httpu.ReqOptFunc{WithVITOpts()}
 	o = append(o, optFuncs...)
 	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, o...)
 	require.NoError(vit.T, err)
@@ -488,7 +489,7 @@ func (vit *VIT) registerBLOBReaderCleanup(reader iblobstorage.BLOBReader) {
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
-func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
+func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...httpu.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
 	blobReader, err := vit.IFederation.ReadTempBLOB(appQName, wsid, blobSUUID, optFuncs...)
 	require.NoError(vit.T, err)
@@ -496,9 +497,9 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 	return blobReader
 }
 
-func (vit *VIT) GET(relativeURL string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+func (vit *VIT) GET(relativeURL string, opts ...httpu.ReqOptFunc) *httpu.HTTPResponse {
 	vit.T.Helper()
-	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodGet)}
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodGet)}
 	o = append(o, opts...)
 	url := vit.URLStr() + "/" + relativeURL
 	res, err := vit.httpClient.Req(context.Background(), url, "", o...)
@@ -506,9 +507,9 @@ func (vit *VIT) GET(relativeURL string, opts ...coreutils.ReqOptFunc) *coreutils
 	return res
 }
 
-func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+func (vit *VIT) POST(relativeURL string, body string, opts ...httpu.ReqOptFunc) *httpu.HTTPResponse {
 	vit.T.Helper()
-	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
 	o = append(o, opts...)
 	url := vit.URLStr() + "/" + relativeURL
 	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
@@ -517,7 +518,7 @@ func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFu
 	return httpResp
 }
 
-func (vit *VIT) checkExpectationsInHTTPResp(httpResp *coreutils.HTTPResponse) {
+func (vit *VIT) checkExpectationsInHTTPResp(httpResp *httpu.HTTPResponse) {
 	if len(httpResp.Opts.(*vitReqOpts).expectedMessages) == 0 {
 		return
 	}
@@ -527,7 +528,7 @@ func (vit *VIT) checkExpectationsInHTTPResp(httpResp *coreutils.HTTPResponse) {
 	vit.satisfySysErrorExpectations(funcResponse, httpResp.Opts)
 }
 
-func (vit *VIT) satisfySysErrorExpectations(funcResp *federation.FuncResponse, opts coreutils.IReqOpts) {
+func (vit *VIT) satisfySysErrorExpectations(funcResp *federation.FuncResponse, opts httpu.IReqOpts) {
 	if len(opts.(*vitReqOpts).expectedMessages) == 0 {
 		return
 	}
@@ -545,10 +546,10 @@ func (vit *VIT) satisfySysErrorExpectations(funcResp *federation.FuncResponse, o
 	}
 }
 
-func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *federation.FuncResponse {
+func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
-	o := []coreutils.ReqOptFunc{WithVITOpts(), coreutils.WithOptsValidator(coreutils.DenyGETAndDiscardResponse), coreutils.WithDefaultMethod(http.MethodPost)}
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
 	o = append(o, opts...)
 	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
 	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)

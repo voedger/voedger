@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -40,7 +41,7 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 	newName := vit.NextName()
 	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category.%d set name = '%s'"}}`, ws.WSID, categoryID, newName)
 	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
+		httpu.WithAuthorizeBy(sysPrn.Token)).Println()
 
 	// check the value is update in another app and another wsid
 	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
@@ -60,7 +61,7 @@ func TestVSqlUpdate_BasicUsage_InsertTable(t *testing.T) {
 	categoryName := vit.NextName()
 	body := fmt.Sprintf(`{"args": {"Query":"insert test1.app1.%d.app1pkg.category set name = '%s'"}}`, ws.WSID, categoryName)
 	resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-		coreutils.WithAuthorizeBy(sysPrn.Token))
+		httpu.WithAuthorizeBy(sysPrn.Token))
 
 	newID := int64(resp.CmdResult["NewID"].(float64))
 	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, newID)
@@ -103,7 +104,7 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 		// make wlog event corrupted
 		body = fmt.Sprintf(`{"args": {"Query":"update corrupted test1.app1.%d.sys.WLog.%d"}}`, ws.WSID, wlogOffset)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token))
+			httpu.WithAuthorizeBy(sysPrn.Token))
 
 		// check the wlog event is corrupted indeed
 		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, wlogOffset)
@@ -136,7 +137,7 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 		// update corrupted plog
 		body = fmt.Sprintf(`{"args": {"Query":"update corrupted test1.app1.%d.sys.PLog.%d"}}`, partitionID, lastPLogOffset)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token))
+			httpu.WithAuthorizeBy(sysPrn.Token))
 
 		// check the corrupted plog event
 		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.plog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, lastPLogOffset)
@@ -212,7 +213,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 		// unlogged update
 		newName := vit.NextName()
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = '%s' where IntFld = 43 and Dummy = 1"}}`, ws.WSID, newName)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, httpu.WithAuthorizeBy(sysPrn.Token))
 
 		// check values are updated
 		body = `{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = 43 and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`
@@ -233,7 +234,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	t.Run("not full key provided -> error 400", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 43"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect400("field is empty", "Dummy"),
 		)
 	})
@@ -241,7 +242,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	t.Run("update missing record -> error 400", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 1 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect400(fmt.Sprint(istructs.ErrRecordNotFound)), // `record not found`
 		)
 	})
@@ -249,7 +250,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	t.Run("update unexisting field -> error 400", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set unexistingField = 'any' where IntFld = 43 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect400(istructsmem.ErrNameNotFoundError.Error(), "unexistingField", "app1pkg.CategoryIdx"),
 		)
 	})
@@ -272,7 +273,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 		// unlogged update
 		newName := vit.NextName()
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set name = '%s', cat_external_id = 'cat value', int_fld1 = 44"}}`, ws.WSID, categoryID, newName)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, httpu.WithAuthorizeBy(sysPrn.Token))
 
 		// check new state
 		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where sys.ID = %d"}, "elements":[{"fields":["Result"]}]}`, categoryID)
@@ -296,7 +297,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 	t.Run("unlogged update unexisting record -> error 400", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set int_fld1 = 44"}}`, ws.WSID, istructs.NonExistingRecordID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect400(fmt.Sprintf("record ID %d does not exist", istructs.NonExistingRecordID)),
 		)
 	})
@@ -304,7 +305,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 	t.Run("unlogged update unexisting field -> error 400", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set unknownField = 44"}}`, ws.WSID, categoryID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect400(istructsmem.ErrNameNotFoundError.Error(), "unknownField", "app1pkg.category"),
 		)
 	})
@@ -329,7 +330,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		// unlogged insert a view record
 		newName := vit.NextName()
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, newName, intFld)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, httpu.WithAuthorizeBy(sysPrn.Token))
 
 		// check view values
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", bodySelect)
@@ -349,7 +350,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 	t.Run("not full key proivded -> error", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect400("is empty", "Dummy"),
 		)
 	})
@@ -358,11 +359,11 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		// insert new
 		intFld := 43 + vit.NextNumber()
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, intFld)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, httpu.WithAuthorizeBy(sysPrn.Token))
 
 		// insert the same again -> 409 conflict
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect409("view record already exists"),
 		)
 	})
@@ -372,7 +373,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		intFld := 43 + vit.NextNumber()
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1, Unexisting = 42"}}`, ws.WSID, newName, intFld)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
+			httpu.WithAuthorizeBy(sysPrn.Token),
 			it.Expect400(istructsmem.ErrNameNotFoundError.Error(), "Unexisting", "app1pkg.CategoryIdx"),
 		)
 	})
@@ -402,7 +403,7 @@ func TestDirectUpdateManyTypes(t *testing.T) {
 	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.DocManyTypes.%d `+
 		`set Int = 7, Int64 = 8, Float32 = 9.1, Float64 = 10.2, Str = 'str1', Bool = false, Bytes = 0x%x"}}`, ws.WSID, id, newBytes)
 	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
+		httpu.WithAuthorizeBy(sysPrn.Token)).Println()
 
 	// check the updated record
 	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.DocManyTypes where id = %d"},"elements":[{"fields":["Result"]}]}`, id)
@@ -435,7 +436,7 @@ func TestUpdateDifferentLocations(t *testing.T) {
 	sysPrn_Test1App1 := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.CurrentClusterID())
 	queryCDocLoginBody := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, loginID)
-	resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+	resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, httpu.WithAuthorizeBy(sysPrn_Test1App1.Token))
 	m := map[string]interface{}{}
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 	curentWSKID := m["WSKindInitializationData"].(string)
@@ -446,7 +447,7 @@ func TestUpdateDifferentLocations(t *testing.T) {
 		curentWSKIDEscaped := fmt.Sprintf("%q", curentWSKID)
 		curentWSKIDEscaped = curentWSKIDEscaped[1 : len(curentWSKIDEscaped)-1] // eliminate leading and trailing double quote because the value will be specified in single qoutes
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = '%s'"}}`, loginID, curentWSKIDEscaped)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, httpu.WithAuthorizeBy(sysPrn_ClusterApp.Token))
 	}
 
 	t.Run("hash", func(t *testing.T) {
@@ -454,10 +455,10 @@ func TestUpdateDifferentLocations(t *testing.T) {
 
 		// unlogged update by login hash
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = 'abc'"}}`, loginID)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, httpu.WithAuthorizeBy(sysPrn_ClusterApp.Token))
 
 		// check the result
-		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, httpu.WithAuthorizeBy(sysPrn_Test1App1.Token))
 		m = map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 		require.Equal("abc", m["WSKindInitializationData"].(string))
@@ -473,10 +474,10 @@ func TestUpdateDifferentLocations(t *testing.T) {
 
 		// unlogged update by app workspace number
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged update sys.registry.a%d.registry.Login.%d set WSKindInitializationData = 'def'"}}`, appWSNumber, loginID)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, httpu.WithAuthorizeBy(sysPrn_ClusterApp.Token))
 
 		// check the result
-		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, httpu.WithAuthorizeBy(sysPrn_Test1App1.Token))
 		m = map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 		require.Equal("def", m["WSKindInitializationData"].(string))
@@ -564,7 +565,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		t.Run(expectedError, func(t *testing.T) {
 			body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
 			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-				coreutils.WithAuthorizeBy(sysPrn.Token),
+				httpu.WithAuthorizeBy(sysPrn.Token),
 				it.Expect400(expectedError),
 			).Println()
 		})

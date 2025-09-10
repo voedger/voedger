@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/acl"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -134,14 +135,14 @@ func TestQueryProcessor2_Views(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	expectedOffset, _ := prepareDailyIdx(t, vit, ws)
 	t.Run("Read by PK with eq", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
 			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read by PK with in", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2024,2025]}}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2024,2025]}}`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 			{"Day":1,"Month":1,"StringValue":"2024-01-01","Year":2024,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
 			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
@@ -149,20 +150,20 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read by PK and CC with eq", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025,"Month":2}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025,"Month":2}`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read by PK and CC with eq", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025,"Day":1}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025,"Day":1}`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results": [
 			{"Day":1,"Month":1,"StringValue":"2025-01-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
 			{"Day":1,"Month":2,"StringValue":"2025-02-01","Year":2025,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"}
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read by PK and CC with in", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2022,2023]},"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2022,2023]},"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 			{"Day":3,"Month":2,"StringValue":"2022-02-03","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
 			{"Day":5,"Month":2,"StringValue":"2022-02-05","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
@@ -175,7 +176,7 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read without order", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
 			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
@@ -183,7 +184,7 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read with order desc", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&order=-Year`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&order=-Year`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 			{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
 			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
@@ -191,7 +192,7 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Read with order asc", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&order=Year`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&order=Year`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 			{"Day":2,"Month":1,"StringValue":"2021-01-02","Year":2021,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
 			{"Day":2,"Month":1,"StringValue":"2022-01-02","Year":2022,"offs":%[1]d,"sys.QName":"app1pkg.DailyIdx"},
@@ -199,7 +200,7 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		]}`, expectedOffset), resp.Body)
 	})
 	t.Run("Use keys constraint", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&keys=Year,Month,Day`, ws.WSID, it.QNameApp1_ViewDailyIdx), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[2021,2022,2023,2024,2025]},"Month":1,"Day":2}&keys=Year,Month,Day`, ws.WSID, it.QNameApp1_ViewDailyIdx), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
 			{"Day":2,"Month":1,"Year":2021},
 			{"Day":2,"Month":1,"Year":2022},
@@ -223,11 +224,11 @@ func TestQueryProcessor2_Views(t *testing.T) {
 
 		// LimitedAccessRole has no access to read all the fields
 		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
-			coreutils.WithAuthorizeBy(apiToken), coreutils.Expect403())
+			httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
 
 		// LimitedAccessRole has access to read only Year, Month, Day and offs fields
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}&keys=Year,Month,Day,offs`, ws.WSID, it.QNameApp1_ViewDailyIdx),
-			coreutils.WithAuthorizeBy(apiToken))
+			httpu.WithAuthorizeBy(apiToken))
 		require.NoError(err)
 		require.JSONEq(fmt.Sprintf(`{"results":[
 				{"Day":1,"Month":1,"Year":2025,"offs":%[1]d},
@@ -236,7 +237,7 @@ func TestQueryProcessor2_Views(t *testing.T) {
 
 		// LimitedAccessRole has no access to read CategoryIdx
 		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewCategoryIdx),
-			coreutils.WithAuthorizeBy(apiToken), coreutils.Expect403())
+			httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
 	})
 }
 
@@ -255,7 +256,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023,"Month":3}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023,"Month":3}`, ws.WSID), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":3,"StringValue":"2023-03-02","Year":2023},
 				{"Day":3,"Month":3,"StringValue":"2023-03-03","Year":2023},
@@ -264,7 +265,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with arg and filter", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&where={"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&where={"Month":{"$in":[2,4]},"Day":{"$in":[3,5]}}`, ws.WSID), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
 				{"Day":3,"Month":2,"StringValue":"2023-02-03","Year":2023},
 				{"Day":5,"Month":2,"StringValue":"2023-02-05","Year":2023},
@@ -273,7 +274,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order desc", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=-Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=-Month`, ws.WSID), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":4,"StringValue":"2023-04-02","Year":2023},
 				{"Day":5,"Month":4,"StringValue":"2023-04-05","Year":2023},
@@ -294,7 +295,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with order asc", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=Month`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&order=Month`, ws.WSID), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":1,"StringValue":"2023-01-02","Year":2023},
 				{"Day":3,"Month":1,"StringValue":"2023-01-03","Year":2023},
@@ -315,7 +316,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 			]}`, resp.Body)
 	})
 	t.Run("QryDailyIdx with keys", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&keys=Year,Month,Day`, ws.WSID), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryDailyIdx?args={"Year":2023}&keys=Year,Month,Day`, ws.WSID), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(`{"results":[
 				{"Day":2,"Month":1,"Year":2023},
 				{"Day":3,"Month":1,"Year":2023},
@@ -339,7 +340,7 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 	t.Run("void", func(t *testing.T) {
 		// just expecting no errors
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryVoid`, ws.WSID),
-			coreutils.WithAuthorizeBy(ws.Owner.Token))
+			httpu.WithAuthorizeBy(ws.Owner.Token))
 		resp.Println()
 	})
 
@@ -841,7 +842,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 
 	t.Run("View", func(t *testing.T) {
 		t.Run("Read by PK and include all", func(t *testing.T) {
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities`, ws.WSID, it.QNameApp1_ViewClients), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities`, ws.WSID, it.QNameApp1_ViewClients), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{"results":[{
 					"Client":{
 						"Country":{
@@ -886,12 +887,12 @@ func TestQueryProcessor2_Include(t *testing.T) {
 		})
 		t.Run("Expected error https://github.com/voedger/voedger/issues/3714", func(t *testing.T) {
 			vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=EpicFail`, ws.WSID, it.QNameApp1_ViewClients),
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
 				it.Expect400("field expression - 'EpicFail', 'EpicFail' - unexpected field"),
 			)
 		})
 		t.Run("Read by PK, include all and select some fields", func(t *testing.T) {
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities&keys=Day,Month,"sys.QName"",Client.DOB,Client."sys.ID",Client.FirstName,Client.Country.Name,Client.Wallet.Balance,Client.Wallet.Capabilities.Deposit,Client.Wallet.Currency.Code`, ws.WSID, it.QNameApp1_ViewClients), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Wallet.Currency,Client.Country,Client.Wallet.Capabilities&keys=Day,Month,"sys.QName"",Client.DOB,Client."sys.ID",Client.FirstName,Client.Country.Name,Client.Wallet.Balance,Client.Wallet.Capabilities.Deposit,Client.Wallet.Currency.Code`, ws.WSID, it.QNameApp1_ViewClients), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{"results":[{
 					"Client":{
 						"Country":{
@@ -930,7 +931,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"GroupB.GroupB.GroupB.Cfg",
 				"GroupB.GroupB.GroupB.GroupB.Cfg",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": {
 											"Name": "CfgBatch",
@@ -1148,7 +1149,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			include := []string{
 				"Cfg",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": {
 											"Name": "CfgBatch",
@@ -1166,7 +1167,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			include := []string{
 				"GroupA",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": 200024,
 										"GroupA": [
@@ -1200,7 +1201,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"Cfg",
 				"GroupA",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": {
 											"Name": "CfgBatch",
@@ -1238,7 +1239,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			include := []string{
 				"GroupA.Cfg",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": 200024,
 										"GroupA": [
@@ -1281,7 +1282,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			include := []string{
 				"GroupA.GroupA",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": 200024,
 										"GroupA": [
@@ -1346,7 +1347,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"GroupA.Cfg",
 				"GroupA.GroupA",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": 200024,
 										"GroupA": [
@@ -1420,7 +1421,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			include := []string{
 				"GroupB.GroupB.GroupB.GroupB.GroupB.GroupB.GroupB",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"Cfg": 200024,
 										"GroupB": [
@@ -1477,7 +1478,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 			include := []string{
 				"Level0",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token), httpu.Expect400())
 			require.JSONEq(`{"status":400,"message":"field expression - 'Level0', 'Level0' - unexpected field"}`, resp.Body)
 		})
 		t.Run("Read by ID and get unexpected field error on level 1", func(t *testing.T) {
@@ -1486,7 +1487,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"GroupA",
 				"GroupA.Level1",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token), httpu.Expect400())
 			require.JSONEq(`{"status":400,"message":"field expression - 'GroupA.Level1', 'Level1' - unexpected field"}`, resp.Body)
 		})
 		t.Run("Read by ID and get unexpected field error on level 2", func(t *testing.T) {
@@ -1501,7 +1502,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"GroupB.GroupB",
 				"GroupA.GroupA.Level2",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token), httpu.Expect400())
 			require.JSONEq(`{"status":400,"message":"field expression - 'GroupA.GroupA.Level2', 'Level2' - unexpected field"}`, resp.Body)
 		})
 		t.Run("Read by ID and get unexpected field error on level 3", func(t *testing.T) {
@@ -1522,7 +1523,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"GroupB.GroupB.GroupA.Cfg",
 				"GroupB.GroupB.GroupB.Level3",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token), httpu.Expect400())
 			require.JSONEq(`{"status":400,"message":"field expression - 'GroupB.GroupB.GroupB.Level3', 'Level3' - unexpected field"}`, resp.Body)
 		})
 		t.Run("Read by ID and get unexpected field error on level 4", func(t *testing.T) {
@@ -1545,7 +1546,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"GroupB.GroupB.GroupB.GroupB",
 				"GroupB.GroupB.GroupB.GroupB.Level4",
 			}
-			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), coreutils.WithAuthorizeBy(ws.Owner.Token), coreutils.Expect400())
+			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%[1]d/docs/%[2]s/%[3]d?include=%[4]s`, ws.WSID, it.QNameApp1_CDocBatch, batch101ID, strings.Join(include, ",")), httpu.WithAuthorizeBy(ws.Owner.Token), httpu.Expect400())
 			require.JSONEq(`{"status":400,"message":"field expression - 'GroupB.GroupB.GroupB.GroupB.Level4', 'Level4' - unexpected field"}`, resp.Body)
 		})
 	})
@@ -1563,7 +1564,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				"GroupB.GroupB.GroupB.GroupB.Cfg",
 			}
 			path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?include=%s`, ws.WSID, it.QNameApp1_CDocBatch, strings.Join(include, ","))
-			resp := vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(path, httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"results": [
 											{
@@ -2044,7 +2045,7 @@ func TestQueryProcessor2_Include(t *testing.T) {
 				`GroupB.GroupB.GroupB.GroupB.Cfg.Name`,
 			}
 			path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?include=%s&keys=%s`, ws.WSID, it.QNameApp1_CDocBatch, strings.Join(include, ","), strings.Join(keys, ","))
-			resp := vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(path, httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(`{
 										"results": [
 											{
@@ -2227,8 +2228,8 @@ func TestQueryProcessor2_Include(t *testing.T) {
 	})
 	t.Run("Expected error https://github.com/voedger/voedger/issues/3696", func(t *testing.T) {
 		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":{"$in":[1988]},"Month":{"$in":[1]}}&include=Client.Country.Name`, ws.WSID, it.QNameApp1_ViewClients),
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect400(),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect400(),
 		)
 	})
 }
@@ -2256,7 +2257,7 @@ func TestQueryProcessor2_Schemas(t *testing.T) {
 		require.NoError(err)
 		// fmt.Printf("Developer token: %s\n", tokenDeveloper)
 
-		resp := vit.GET(`api/v2/apps/test1/app1/schemas`, coreutils.WithAuthorizeBy(tokenDeveloper))
+		resp := vit.GET(`api/v2/apps/test1/app1/schemas`, httpu.WithAuthorizeBy(tokenDeveloper))
 		require.NoError(err)
 		require.Contains(resp.Body, `<h2>Package sys</h2>`)
 	})
@@ -2286,7 +2287,7 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 		require.NoError(err)
 		// fmt.Printf("Developer token: %s\n", tokenDeveloper)
 
-		resp := vit.GET(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles`, coreutils.WithAuthorizeBy(tokenDeveloper))
+		resp := vit.GET(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles`, httpu.WithAuthorizeBy(tokenDeveloper))
 		require.Contains(resp.Body, `<h2>Package sys</h2>`)
 		require.Contains(resp.Body, `sys.WorkspaceOwner`)
 	})
@@ -2297,7 +2298,7 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 	})
 
 	t.Run("unknown ws", func(t *testing.T) {
-		resp := vit.GET(`api/v2/apps/test1/app1/schemas/pkg.unknown/roles`, coreutils.Expect404())
+		resp := vit.GET(`api/v2/apps/test1/app1/schemas/pkg.unknown/roles`, httpu.Expect404())
 		require.JSONEq(`{"status":404,"message":"workspace pkg.unknown not found"}`, resp.Body)
 	})
 }
@@ -2313,7 +2314,7 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 
 	t.Run("read app workspace role in JSON", func(t *testing.T) {
 		resp := vit.GET(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole`,
-			coreutils.WithHeaders("Accept", "application/json"))
+			httpu.WithHeaders("Accept", "application/json"))
 		require.True(strings.HasPrefix(resp.Body, `{`))
 		require.Contains(resp.Body, currencyPath)
 		require.NotContains(resp.Body, initiateJoinWorkspacePath)
@@ -2329,7 +2330,7 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
 		require.NoError(err)
 		resp := vit.GET(`api/v2/apps/test1/app1/schemas/sys.Workspace/roles/sys.AuthenticatedUser`,
-			coreutils.WithHeaders("Accept", "application/json"), coreutils.WithAuthorizeBy(tokenDeveloper))
+			httpu.WithHeaders("Accept", "application/json"), httpu.WithAuthorizeBy(tokenDeveloper))
 		require.NoError(err)
 		require.True(strings.HasPrefix(resp.Body, `{`))
 		require.NotContains(resp.Body, currencyPath)
@@ -2337,20 +2338,20 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 	})
 	t.Run("not allowed to read system role with no Developer token", func(t *testing.T) {
 		vit.GET(`api/v2/apps/test1/app1/schemas/sys.Workspace/roles/sys.AuthenticatedUser`,
-			coreutils.WithHeaders("Accept", "application/json"), coreutils.Expect403())
+			httpu.WithHeaders("Accept", "application/json"), httpu.Expect403())
 	})
 	t.Run("read app workspace role in HTML", func(t *testing.T) {
 		resp := vit.GET(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.ApiRole`,
-			coreutils.WithHeaders("Accept", "text/html"))
+			httpu.WithHeaders("Accept", "text/html"))
 		require.True(strings.HasPrefix(resp.Body, `<`))
 	})
 	t.Run("unknown role", func(t *testing.T) {
-		resp := vit.GET(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.UnknownRole`, coreutils.Expect404())
+		resp := vit.GET(`api/v2/apps/test1/app1/schemas/app1pkg.test_wsWS/roles/app1pkg.UnknownRole`, httpu.Expect404())
 		require.JSONEq(`{"status":404,"message":"role app1pkg.UnknownRole not found in workspace app1pkg.test_wsWS"}`, resp.Body)
 	})
 
 	t.Run("unknown ws", func(t *testing.T) {
-		resp := vit.GET(`api/v2/apps/test1/app1/schemas/pkg.unknown/roles/app1pkg.ApiRole`, coreutils.Expect404())
+		resp := vit.GET(`api/v2/apps/test1/app1/schemas/pkg.unknown/roles/app1pkg.ApiRole`, httpu.Expect404())
 		require.JSONEq(`{"status":404,"message":"workspace pkg.unknown not found"}`, resp.Body)
 	})
 }
@@ -2366,7 +2367,7 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 
 	t.Run("read document", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, ids["1"])
-		resp := vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(path, httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"name":"Awesome food", "sys.ID":%d, "sys.IsActive":true, "sys.QName":"app1pkg.category"}`, ids["1"]), resp.Body)
 	})
 
@@ -2378,13 +2379,13 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 
 		t.Run("odoc", func(t *testing.T) {
 			path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameODoc1, odocID)
-			resp := vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(path, httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(fmt.Sprintf(`{"odocIntFld":42, "sys.ID":%d, "sys.QName":"app1pkg.odoc1"}`, odocID), resp.Body)
 		})
 
 		t.Run("orecord", func(t *testing.T) {
 			path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, appdef.NewQName("app1pkg", "orecord1"), orecordID)
-			resp := vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token))
+			resp := vit.GET(path, httpu.WithAuthorizeBy(ws.Owner.Token))
 			require.JSONEq(fmt.Sprintf(`{"orecord1IntFld":43, "sys.Container":"orecord1", "sys.ID":%d, "sys.ParentID":%d, "sys.QName":"app1pkg.orecord1"}`, orecordID, odocID),
 				resp.Body)
 		})
@@ -2392,12 +2393,12 @@ func TestQueryProcessor2_Docs(t *testing.T) {
 
 	t.Run("403 not authorized", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, ids["1"])
-		vit.GET(path, coreutils.Expect403())
+		vit.GET(path, httpu.Expect403())
 	})
 
 	t.Run("404 not found", func(t *testing.T) {
 		path := fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/docs/%s/%d`, ws.WSID, it.QNameApp1_CDocCategory, 123)
-		vit.GET(path, coreutils.WithAuthorizeBy(ws.Owner.Token), it.Expect404("document app1pkg.category with ID 123 not found"))
+		vit.GET(path, httpu.WithAuthorizeBy(ws.Owner.Token), it.Expect404("document app1pkg.category with ID 123 not found"))
 	})
 }
 
@@ -2453,15 +2454,15 @@ func TestQueryProcessor2_CDocs(t *testing.T) {
 	_, ids := prepareDailyIdx(t, vit, ws)
 
 	t.Run("Read documents", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s`, ws.WSID, it.QNameApp1_CDocCategory), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s`, ws.WSID, it.QNameApp1_CDocCategory), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[{"name":"Awesome food","sys.ID":%d,"sys.IsActive":true,"sys.QName":"app1pkg.category"}]}`, ids["1"]), resp.Body)
 	})
 	t.Run("Read documents and use keys constraint", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys=name,"sys.ID"`, ws.WSID, it.QNameApp1_CDocCategory), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys=name,"sys.ID"`, ws.WSID, it.QNameApp1_CDocCategory), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[{"name":"Awesome food","sys.ID":%d}]}`, ids["1"]), resp.Body)
 	})
 	t.Run("Read documents and use keys, order, skip and limit constraints", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys="sys.ID",Year,Month,Day&order=-Month&skip=6&limit=10`, ws.WSID, it.QNameApp1_CDocDaily), coreutils.WithAuthorizeBy(ws.Owner.Token))
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys="sys.ID",Year,Month,Day&order=-Month&skip=6&limit=10`, ws.WSID, it.QNameApp1_CDocDaily), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 				{"Day":4,"Month":4,"Year":2023,"sys.ID":%[1]d},
 				{"Day":3,"Month":4,"Year":2023,"sys.ID":%[2]d},
@@ -2546,7 +2547,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 		for _, c := range cases {
 			for _, body := range c.bodies {
 				t.Run(body, func(t *testing.T) {
-					resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, coreutils.Expect400())
+					resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, httpu.Expect400())
 					require.Contains(resp.Body, `"status":400`)
 					for _, expected := range c.expected {
 						require.Contains(resp.Body, expected)
@@ -2558,7 +2559,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 
 	t.Run("Login with incorrect password", func(t *testing.T) {
 		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login1.Name, "badpwd")
-		resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, coreutils.Expect401())
+		resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, httpu.Expect401())
 		require.JSONEq(`{"status":401,"message":"login or password is incorrect"}`, resp.Body)
 	})
 
@@ -2577,7 +2578,7 @@ func TestQueryProcessor2_AuthRefresh(t *testing.T) {
 	t.Run("Refresh", func(t *testing.T) {
 		// simulate delay to make the new token be different after referesh
 		vit.TimeAdd(time.Minute)
-		resp := vit.POST("api/v2/apps/test1/app1/auth/refresh", "", coreutils.WithAuthorizeBy(prn1.Token))
+		resp := vit.POST("api/v2/apps/test1/app1/auth/refresh", "", httpu.WithAuthorizeBy(prn1.Token))
 		require.Equal(200, resp.HTTPResp.StatusCode)
 		result := make(map[string]interface{})
 		err := json.Unmarshal([]byte(resp.Body), &result)
@@ -2590,13 +2591,13 @@ func TestQueryProcessor2_AuthRefresh(t *testing.T) {
 	})
 
 	t.Run("Empty token", func(t *testing.T) {
-		resp := vit.POST("api/v2/apps/test1/app1/auth/refresh", "", coreutils.Expect401())
+		resp := vit.POST("api/v2/apps/test1/app1/auth/refresh", "", httpu.Expect401())
 		require.JSONEq(`{"status":401,"message":"authorization header is empty"}`, resp.Body)
 	})
 
 	t.Run("Old token", func(t *testing.T) {
 		vit.TimeAdd(time.Hour * 2)
-		resp := vit.POST("api/v2/apps/test1/app1/auth/refresh", "", coreutils.WithAuthorizeBy(prn1.Token), coreutils.Expect401())
+		resp := vit.POST("api/v2/apps/test1/app1/auth/refresh", "", httpu.WithAuthorizeBy(prn1.Token), httpu.Expect401())
 		require.JSONEq(`{"status":401,"message":"token expired"}`, resp.Body)
 	})
 

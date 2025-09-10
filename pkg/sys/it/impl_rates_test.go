@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -28,8 +28,8 @@ func TestRates_BasicUsage(t *testing.T) {
 	}
 
 	// 3rd is failed because per-minute rate is exceeded
-	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, coreutils.Expect429())
-	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, coreutils.Expect429())
+	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
+	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
 
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
@@ -41,15 +41,15 @@ func TestRates_BasicUsage(t *testing.T) {
 	}
 
 	// next are failed again because per-minute rate is exceeded again
-	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, coreutils.Expect429())
-	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, coreutils.Expect429())
+	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
+	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
 
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
 
 	// next are failed again because per-hour rate is exceeded
-	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, coreutils.Expect429())
-	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, coreutils.Expect429())
+	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
+	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
 
 	// proceed to the next hour to restore per-hour rates
 	vit.TimeAdd(time.Hour)

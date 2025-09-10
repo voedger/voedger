@@ -29,6 +29,7 @@ func TestBasicUsage_SysError(t *testing.T) {
 		require.Empty(sysError.QName)
 		require.Equal("test", sysError.Error())
 		require.JSONEq(`{"sys.Error":{"HTTPStatus":500,"Message":"test"}}`, sysError.ToJSON_APIV1())
+		require.False(sysError.IsNil())
 	})
 
 	t.Run("nil on nil", func(t *testing.T) {
@@ -79,8 +80,30 @@ func TestBasicUsage_SysError(t *testing.T) {
 		require.Equal("100 Continue", sysErr.Error())
 	})
 
-	t.Run("empty", func(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
 		sysErr := SysError{}
 		require.Empty(sysErr.Error())
+		require.True(sysErr.IsNil())
+	})
+}
+
+func TestNewHTTPError(t *testing.T) {
+	require := require.New(t)
+	t.Run("simple", func(t *testing.T) {
+		sysErr := NewHTTPError(http.StatusInternalServerError, errors.New("test error"))
+		require.Empty(sysErr.Data)
+		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
+		require.Equal("test error", sysErr.Message)
+		require.Equal(appdef.NullQName, sysErr.QName)
+		require.JSONEq(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON_APIV1())
+	})
+
+	t.Run("formatted", func(t *testing.T) {
+		sysErr := NewHTTPErrorf(http.StatusInternalServerError, "test ", "error")
+		require.Empty(sysErr.Data)
+		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
+		require.Equal("test error", sysErr.Message)
+		require.Equal(appdef.NullQName, sysErr.QName)
+		require.JSONEq(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON_APIV1())
 	})
 }

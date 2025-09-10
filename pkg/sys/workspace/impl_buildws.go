@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -41,7 +42,7 @@ func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsK
 
 	cudBody := coreutils.JSONMapToCUDBody(wsTemplateData)
 	cudURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", targetAppQName.String(), newWSID)
-	if _, err := federation.Func(cudURL, cudBody, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
+	if _, err := federation.Func(cudURL, cudBody, httpu.WithAuthorizeBy(systemPrincipalToken), httpu.WithDiscardResponse()); err != nil {
 		return fmt.Errorf("c.sys.CUD failed: %w", err)
 	}
 	logger.Info(fmt.Sprintf("workspace %s build completed", wsName))
@@ -79,7 +80,7 @@ func uploadBLOBs(blobs []BLOBWorkspaceTemplateField, fed federation.IFederationW
 			},
 			ReadCloser: io.NopCloser(bytes.NewReader(blob.Content)),
 		}
-		newBLOBID, err := fed.UploadBLOB(appQName, wsid, blobReader, coreutils.WithAuthorizeBy(principalToken))
+		newBLOBID, err := fed.UploadBLOB(appQName, wsid, blobReader, httpu.WithAuthorizeBy(principalToken))
 		if err != nil {
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}

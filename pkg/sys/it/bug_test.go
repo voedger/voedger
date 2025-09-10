@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -55,7 +56,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	// send POST request
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
+	vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.WithResponseHandler(func(httpResp *http.Response) {
 		// read out the first part of the respoce (the serer will not send the next one before writing something in goOn)
 		entireResp := []byte{}
 		var err error
@@ -106,7 +107,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs_(t *testing.T) {
 		return nil
 	}
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	vit.PostWS(ws, "c.app1pkg.MockCmd", `{"args":{"Input":"Str"}}`, coreutils.Expect409()).Println()
+	vit.PostWS(ws, "c.app1pkg.MockCmd", `{"args":{"Input":"Str"}}`, httpu.Expect409()).Println()
 }
 
 // https://github.com/voedger/voedger/issues/2759
@@ -137,7 +138,7 @@ func TestWSNameCausesMaxPseudoWSID(t *testing.T) {
 	url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
 	body := fmt.Sprintf(`{"args":{"Login":"2062880497","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"1"}}`,
 		istructs.AppQName_test1_app1, istructs.SubjectKind_Device, istructs.CurrentClusterID())
-	resp := vit.Func(url, body, coreutils.WithMethod(http.MethodPost))
+	resp := vit.Func(url, body, httpu.WithMethod(http.MethodPost))
 	m := map[string]interface{}{}
 	require.NoError(vit.T, json.Unmarshal([]byte(resp.Body), &m))
 	deviceLogin := it.NewLogin("2062880497", "1", istructs.AppQName_test1_app1, istructs.SubjectKind_Device,

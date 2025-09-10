@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -34,7 +34,7 @@ type VIT struct {
 	initialGoroutinesNum int
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
-	httpClient           coreutils.IHTTPClient
+	httpClient           httpu.IHTTPClient
 	mockTime             testingu.IMockTime
 	vvmProblemCtx        context.Context
 }
@@ -139,7 +139,7 @@ type signInOpts struct {
 
 type signUpOpts struct {
 	profileClusterID istructs.ClusterID
-	reqOpts          []coreutils.ReqOptFunc
+	reqOpts          []httpu.ReqOptFunc
 }
 
 type emailCaptor chan smtptest.Message

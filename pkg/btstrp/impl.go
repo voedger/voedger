@@ -11,8 +11,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -84,8 +84,8 @@ func callDeployApp(federation federation.IFederation, sysToken string, app apppa
 	// Use Admin Endpoint to send requests
 	body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
 	_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
-		coreutils.WithDiscardResponse(),
-		coreutils.WithAuthorizeBy(sysToken),
+		httpu.WithDiscardResponse(),
+		httpu.WithAuthorizeBy(sysToken),
 	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to deploy app %s: %s", app.Name, err.Error()))

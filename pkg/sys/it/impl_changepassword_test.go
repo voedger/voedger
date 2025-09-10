@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -74,14 +74,14 @@ func TestChangePasswordErrors_APIv2(t *testing.T) {
 			`{"login":"abc","oldPassword": "1","newPassword": 2}`,
 		}
 		for _, body := range badRequests {
-			vit.POST("api/v2/apps/test1/app1/users/change-password", body, coreutils.Expect400()).Println()
+			vit.POST("api/v2/apps/test1/app1/users/change-password", body, httpu.Expect400()).Println()
 		}
 	})
 
 	t.Run("forward error from c.registry.ChangePassword, e.g. on an unknown login", func(t *testing.T) {
 		unknownLogin := vit.NextName()
 		body := fmt.Sprintf(`{"login":"%s","oldPassword": "1","newPassword": "2"}`, unknownLogin)
-		vit.POST("api/v2/apps/test1/app1/users/change-password", body, coreutils.Expect401()).Println()
+		vit.POST("api/v2/apps/test1/app1/users/change-password", body, httpu.Expect401()).Println()
 	})
 }
 
@@ -95,14 +95,14 @@ func TestChangePasswordErrors(t *testing.T) {
 		unexistingLogin := vit.NextName()
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"1","NewPassword":"2"}}`,
 			unexistingLogin, istructs.AppQName_test1_app1)
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, coreutils.Expect401())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401())
 	})
 
 	t.Run("wrong password", func(t *testing.T) {
 		vit.TimeAdd(time.Minute) // proceed to the next minute to avoid 429 too many requests
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, coreutils.Expect401())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401())
 	})
 
 	t.Run("rate limit exceed", func(t *testing.T) {
@@ -110,15 +110,15 @@ func TestChangePasswordErrors(t *testing.T) {
 
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, coreutils.Expect401()) // not 429, wrong password
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401()) // not 429, wrong password
 
 		// >1 calls per minute -> 429
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, coreutils.Expect429())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect429())
 
 		// proceed to the next minute -> able to change the password again
 		vit.TimeAdd(time.Minute)
 		body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, coreutils.Expect401()) // again not 429, wrong password
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401()) // again not 429, wrong password
 	})
 }

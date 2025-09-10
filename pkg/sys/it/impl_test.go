@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/collection"
@@ -33,44 +34,44 @@ func TestAuthorization(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {
 			sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Bearer "+sys.Token))
+			vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Bearer "+sys.Token))
 		})
 
 		t.Run("Basic scheme", func(t *testing.T) {
 			t.Run("token in username only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token + ":"))
-				vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token in password only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(":" + prn.Token))
-				vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token is splitted over username and password", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token[:len(prn.Token)/2] + ":" + prn.Token[len(prn.Token)/2:]))
-				vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 		})
 	})
 
 	t.Run("401 unauthorized", func(t *testing.T) {
 		t.Run("wrong Authorization token", func(t *testing.T) {
-			vit.PostProfile(prn, "c.sys.CUD", body, coreutils.WithAuthorizeBy("wrong"), coreutils.Expect401()).Println()
+			vit.PostProfile(prn, "c.sys.CUD", body, httpu.WithAuthorizeBy("wrong"), httpu.Expect401()).Println()
 		})
 
 		t.Run("unsupported Authorization header", func(t *testing.T) {
 			vit.PostProfile(prn, "c.sys.CUD", body,
-				coreutils.WithHeaders(coreutils.Authorization, `whatever w\o Bearer or Basic`), coreutils.Expect401()).Println()
+				httpu.WithHeaders(coreutils.Authorization, `whatever w\o Bearer or Basic`), httpu.Expect401()).Println()
 		})
 
 		t.Run("Basic authorization", func(t *testing.T) {
 			t.Run("non-base64 header value", func(t *testing.T) {
 				vit.PostProfile(prn, "c.sys.CUD", body,
-					coreutils.WithHeaders(coreutils.Authorization, `Basic non-base64-value`), coreutils.Expect401()).Println()
+					httpu.WithHeaders(coreutils.Authorization, `Basic non-base64-value`), httpu.Expect401()).Println()
 			})
 			t.Run("no colon between username and password", func(t *testing.T) {
 				headerValue := base64.RawStdEncoding.EncodeToString([]byte("some password"))
 				vit.PostProfile(prn, "c.sys.CUD", body,
-					coreutils.WithHeaders(coreutils.Authorization, "Basic "+headerValue), coreutils.Expect401()).Println()
+					httpu.WithHeaders(coreutils.Authorization, "Basic "+headerValue), httpu.Expect401()).Println()
 			})
 		})
 	})
@@ -78,7 +79,7 @@ func TestAuthorization(t *testing.T) {
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("missing Authorization token", func(t *testing.T) {
 			// c.sys.CUD has Owner authorization policy -> need to provide authorization header in PostFunc()
-			vit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.Expect403()).Println()
+			vit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, httpu.Expect403()).Println()
 		})
 	})
 }
@@ -135,7 +136,7 @@ func Test400BadRequests(t *testing.T) {
 				appQName, err = appdef.ParseAppQName(c.appName)
 				require.NoError(t, err)
 			}
-			vit.PostApp(appQName, ws.WSID, c.funcName, "", coreutils.Expect400()).Println()
+			vit.PostApp(appQName, ws.WSID, c.funcName, "", httpu.Expect400()).Println()
 		})
 	}
 }
@@ -158,14 +159,14 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()
-			vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
+			vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.WithAuthorizeBy(sys.Token))
 		}()
 
 		<-funcStarted
 	}
 
 	// one more request to any WSID -> 503 service unavailable
-	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, coreutils.Expect503(), coreutils.WithAuthorizeBy(sys.Token))
+	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token))
 
 	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
 		okToFinish <- nil
@@ -199,12 +200,12 @@ func TestCmdResult(t *testing.T) {
 
 	t.Run("missing required fields -> 500", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
-		vit.PostWS(ws, "c.app1pkg.TestCmd", body, coreutils.Expect500()).Println()
+		vit.PostWS(ws, "c.app1pkg.TestCmd", body, httpu.Expect500()).Println()
 	})
 
 	t.Run("wrong types -> 500", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 4)
-		vit.PostWS(ws, "c.app1pkg.TestCmd", body, coreutils.Expect500()).Println()
+		vit.PostWS(ws, "c.app1pkg.TestCmd", body, httpu.Expect500()).Println()
 	})
 }
 
@@ -218,12 +219,12 @@ func TestIsActiveValidation(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan"}}]}`
 		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false,"name":"newName"}}]}`, id)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
+		vit.PostWS(ws, "c.sys.CUD", body, httpu.Expect403()).Println()
 	})
 
 	t.Run("deny insert a deactivated record", func(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","sys.IsActive":false}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
+		vit.PostWS(ws, "c.sys.CUD", body, httpu.Expect403()).Println()
 	})
 }
 
@@ -357,18 +358,18 @@ func TestDeniedResourcesAuthorization(t *testing.T) {
 
 	t.Run("command", func(t *testing.T) {
 		body := `{}`
-		vit.PostWS(ws, "c.app1pkg.TestDeniedCmd", body, coreutils.Expect403())
+		vit.PostWS(ws, "c.app1pkg.TestDeniedCmd", body, httpu.Expect403())
 	})
 
 	t.Run("query", func(t *testing.T) {
 		body := `{}`
-		vit.PostWS(ws, "q.app1pkg.TestDeniedQuery", body, coreutils.Expect403())
+		vit.PostWS(ws, "q.app1pkg.TestDeniedQuery", body, httpu.Expect403())
 	})
 
 	t.Run("entire cdoc", func(t *testing.T) {
 		t.Skip("wait for ACL in VSQl for Air. Currently SElECT rule chechink is skipped in QP. See https://github.com/voedger/voedger/issues/3223")
 		body := `{"args":{"Schema":"app1pkg.TestDeniedCDoc"},"elements":[{"fields":["sys.ID"]}]}`
-		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+		vit.PostWS(ws, "q.sys.Collection", body, httpu.Expect403())
 	})
 
 	t.Run("cerain fields of cdoc", func(t *testing.T) {
@@ -377,10 +378,10 @@ func TestDeniedResourcesAuthorization(t *testing.T) {
 		vit.PostWS(ws, "q.sys.Collection", body)
 
 		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2"]}]}`
-		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+		vit.PostWS(ws, "q.sys.Collection", body, httpu.Expect403())
 
 		body = `{"args":{"Schema":"app1pkg.TestCDocWithDeniedFields"},"elements":[{"fields":["DeniedFld2","Fld1"]}]}`
-		vit.PostWS(ws, "q.sys.Collection", body, coreutils.Expect403())
+		vit.PostWS(ws, "q.sys.Collection", body, httpu.Expect403())
 	})
 }
 

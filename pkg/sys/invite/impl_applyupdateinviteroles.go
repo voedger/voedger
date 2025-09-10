@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -59,8 +60,8 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), event.ArgumentObject().AsString(Field_Roles)),
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
 		if err != nil {
 			return
 		}
@@ -69,8 +70,8 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d}}`, event.ArgumentObject().AsString(Field_Roles), event.Workspace()),
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
 		if err != nil {
 			return
 		}
@@ -100,7 +101,7 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 		if err != nil {
 			return err
 		}
-		
+
 		pwd := svAppSecretsStorage.AsString("")
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
@@ -113,8 +114,8 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d,"Roles":"%s"}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Joined, time.Now().UnixMilli(), event.ArgumentObject().AsString(Field_Roles)),
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
 
 		return err
 	}

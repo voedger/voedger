@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -206,7 +207,7 @@ func requestHandlerV2_changePassword(numsAppsWorkspaces map[appdef.AppQName]istr
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"%s","NewPassword":"%s"}}`,
 			login, busRequest.AppQName, oldPassword, newPassword)
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.ChangePassword", pseudoWSID)
-		if _, err = federation.Func(url, body, coreutils.WithMethod(http.MethodPost), coreutils.WithDiscardResponse()); err != nil { // null auth
+		if _, err = federation.Func(url, body, httpu.WithMethod(http.MethodPost), httpu.WithDiscardResponse()); err != nil { // null auth
 			replyErr(rw, err)
 			return
 		}
@@ -243,8 +244,8 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 			return
 		}
 		resp, err := federation.Func(url, body,
-			coreutils.WithAuthorizeBy(sysToken),
-			coreutils.WithMethod(http.MethodPost),
+			httpu.WithAuthorizeBy(sysToken),
+			httpu.WithMethod(http.MethodPost),
 		)
 		if err != nil {
 			replyErr(rw, err)
@@ -435,7 +436,7 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 			login, busRequest.AppQName, istructs.SubjectKind_Device, istructs.CurrentClusterID(), pwd)
-		_, err := federation.Func(url, body, coreutils.WithMethod(http.MethodPost))
+		_, err := federation.Func(url, body, httpu.WithMethod(http.MethodPost))
 		if err != nil {
 			replyErr(rw, err)
 			return
