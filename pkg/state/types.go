@@ -56,7 +56,7 @@ type IHTTPClient interface {
 	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
 }
 
-type ISendMailFacade interface {
+type IEmailSender interface {
 	Send(host string, msg EmailMessage, opts ...mail.Option) error
 }
 
@@ -70,7 +70,7 @@ type EmailMessage struct {
 }
 
 type StateConfig struct {
-	SendMailFacade           ISendMailFacade
+	EmailSender              IEmailSender
 	FederationCommandHandler FederationCommandHandler
 	FederationBlobHandler    FederationBlobHandler
 	CustomHTTPClient         IHTTPClient

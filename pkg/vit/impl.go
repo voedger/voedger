@@ -94,10 +94,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.Time = testingu.MockTime
 	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
 
-	emailCaptor := &implISendEmailFacade_captor{
+	emailCaptor := &implIEmailSender_captor{
 		emailCaptorCh: make(chan state.EmailMessage),
 	}
-	cfg.ActualizerStateConfig = state.StateConfig{SendMailFacade: emailCaptor}
+	cfg.ActualizerStateConfig = state.StateConfig{EmailSender: emailCaptor}
 
 	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 
@@ -713,12 +713,12 @@ func (vit *VIT) checkVVMProblemCtx() {
 	}
 }
 
-func (c *implISendEmailFacade_captor) Send(host string, msg state.EmailMessage, opts ...mail.Option) error {
+func (c *implIEmailSender_captor) Send(host string, msg state.EmailMessage, opts ...mail.Option) error {
 	c.emailCaptorCh <- msg
 	return nil
 }
 
-func (c *implISendEmailFacade_captor) checkEmpty(t testing.TB) {
+func (c *implIEmailSender_captor) checkEmpty(t testing.TB) {
 	select {
 	case _, ok := <-c.emailCaptorCh:
 		if ok {
@@ -729,6 +729,6 @@ func (c *implISendEmailFacade_captor) checkEmpty(t testing.TB) {
 	}
 }
 
-func (c *implISendEmailFacade_captor) shutDown() {
+func (c *implIEmailSender_captor) shutDown() {
 	close(c.emailCaptorCh)
 }

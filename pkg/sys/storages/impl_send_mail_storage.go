@@ -16,26 +16,26 @@ import (
 )
 
 type sendMailStorage struct {
-	sendMailFacade state.ISendMailFacade
+	emailSender state.IEmailSender
 	// messagesSenderOverride chan smtptest.Message // not nil in tests only
 }
 
-type implISendMailFacade_SMTP struct {
+type implIEmailSender_SMTP struct {
 	defaultOpts []mail.Option
 }
 
-func NewSendMailStorage(sendMailFacade state.ISendMailFacade) state.IStateStorage {
+func NewSendMailStorage(emailSender state.IEmailSender) state.IStateStorage {
 	return &sendMailStorage{
-		sendMailFacade: sendMailFacade,
+		emailSender: emailSender,
 	}
 }
 
-func NewISendMailFacadeSMTP() state.ISendMailFacade {
-	return &implISendMailFacade_SMTP{}
+func NewIEmailSenderSMTP() state.IEmailSender {
+	return &implIEmailSender_SMTP{}
 }
 
-func NewISendMailFacadeSMTPForTests() state.ISendMailFacade {
-	return &implISendMailFacade_SMTP{
+func NewIEmailSenderSMTPForTests() state.IEmailSender {
+	return &implIEmailSender_SMTP{
 		defaultOpts: []mail.Option{mail.WithTLSPolicy(mail.NoTLS)},
 	}
 }
@@ -170,26 +170,6 @@ func (s *sendMailStorage) Validate(items []state.ApplyBatchItem) (err error) {
 	return nil
 }
 func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
-	// msg := mail.NewMsg()
-	// msg.Subject(stringOrEmpty(k.subject))
-	// err := msg.From(k.from)
-	// if err != nil {
-	// 	return err
-	// }
-	// err = msg.To(k.to...)
-	// if err != nil {
-	// 	return err
-	// }
-	// err = msg.Cc(k.cc...)
-	// if err != nil {
-	// 	return err
-	// }
-	// err = msg.Bcc(k.bcc...)
-	// if err != nil {
-	// 	return err
-	// }
-	// msg.SetBodyString(mail.TypeTextHTML, stringOrEmpty(k.body))
-	// msg.SetCharset(mail.CharsetUTF8)
 
 	opts := []mail.Option{
 		mail.WithPort(int(k.port)),
@@ -198,46 +178,13 @@ func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
 		mail.WithSMTPAuth(mail.SMTPAuthPlain),
 	}
 
-	// if coreutils.IsTest() {
-	// 	opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
-	// }
-
 	logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s",
 		k.message.Subject, k.message.From, k.message.To, k.message.CC, k.message.BCC))
 
-	// 		Subject: stringOrEmpty(k.subject),
-	// 		From:    k.from,
-	// 		To:      k.to,
-	// 		CC:      k.cc,
-	// 		BCC:     k.bcc,
-	// 		Body:    stringOrEmpty(k.body),
-	// 	}
-
-	if err := s.sendMailFacade.Send(k.host, k.message, opts...); err != nil {
+	if err := s.emailSender.Send(k.host, k.message, opts...); err != nil {
 		return err
 	}
 
-	// if s.messagesSenderOverride != nil {
-	// 	// happens in tests only
-	// 	m := smtptest.Message{
-	// 		Subject: stringOrEmpty(k.subject),
-	// 		From:    k.from,
-	// 		To:      k.to,
-	// 		CC:      k.cc,
-	// 		BCC:     k.bcc,
-	// 		Body:    stringOrEmpty(k.body),
-	// 	}
-	// 	s.messagesSenderOverride <- m
-	// } else {
-	// 	c, e := mail.NewClient(k.host, opts...)
-	// 	if e != nil {
-	// 		return e
-	// 	}
-	// 	err = c.DialAndSend(msg)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
 	logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent",
 		k.message.Subject, k.message.From, k.message.To, k.message.CC, k.message.BCC))
 	return nil
@@ -293,7 +240,7 @@ func (s *sendMailStorage) Get(key istructs.IStateKeyBuilder) (istructs.IStateVal
 	return &sendMailValue{success: true}, nil
 }
 
-func (s *implISendMailFacade_SMTP) Send(host string, m state.EmailMessage, opts ...mail.Option) error {
+func (s *implIEmailSender_SMTP) Send(host string, m state.EmailMessage, opts ...mail.Option) error {
 	opts = append(opts, s.defaultOpts...)
 	client, err := mail.NewClient(host, opts...)
 	if err != nil {

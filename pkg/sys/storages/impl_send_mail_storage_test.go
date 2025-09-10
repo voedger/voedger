@@ -20,7 +20,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	ts := smtptest.NewServer(smtptest.WithCredentials("user", "pwd"))
 	defer ts.Close()
-	storage := NewSendMailStorage(NewISendMailFacadeSMTPForTests())
+	storage := NewSendMailStorage(NewIEmailSenderSMTPForTests())
 	k := storage.NewKeyBuilder(appdef.NullQName, nil)
 
 	k.PutInt32(sys.Storage_SendMail_Field_Port, ts.Port())

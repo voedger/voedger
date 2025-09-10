@@ -33,7 +33,7 @@ type VIT struct {
 	isOnSharedConfig     bool
 	initialGoroutinesNum int
 	configCleanupsAmount int
-	emailCaptor          *implISendEmailFacade_captor
+	emailCaptor          *implIEmailSender_captor
 	httpClient           httpu.IHTTPClient
 	mockTime             testingu.IMockTime
 	vvmProblemCtx        context.Context
@@ -147,6 +147,6 @@ type implVITISecretsReader struct {
 	underlyingReader isecrets.ISecretReader
 }
 
-type implISendEmailFacade_captor struct {
+type implIEmailSender_captor struct {
 	emailCaptorCh chan state.EmailMessage
 }
