@@ -116,8 +116,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	retryDelay := vvmConfig.AsyncActualizersRetryDelay
-	v4 := vvmConfig.ActualizerStateOpts
-	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, retryDelay, v4...)
+	stateConfig := vvmConfig.ActualizerStateConfig
+	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, retryDelay, stateConfig)
 	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
@@ -129,7 +129,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		Time:         iTime,
 	}
 	iSchedulerRunner := provideSchedulerRunner(basicSchedulerConfig)
-	v5, err := provideSidecarApps(vvmConfig)
+	v4, err := provideSidecarApps(vvmConfig)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -142,7 +142,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		IAppTokensFactory:   iAppTokensFactory,
 		IFederation:         iFederation,
 		ITime:               iTime,
-		SidecarApps:         v5,
+		SidecarApps:         v4,
 	}
 	builtInAppsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2)
 	if err != nil {
@@ -156,9 +156,9 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
-	v6 := provideSubjectGetterFunc()
+	v5 := provideSubjectGetterFunc()
 	isDeviceAllowedFuncs := provideIsDeviceAllowedFunc(v2)
-	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v6, isDeviceAllowedFuncs)
+	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v5, isDeviceAllowedFuncs)
 	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, iTime, in10nBroker, iMetrics, vvmName, iAuthenticator, iSecretReader)
 	operatorCommandProcessors := provideCommandProcessors(numCommandProcessors, commandChannelFactory, serviceFactory)
 	numQueryProcessors := vvmConfig.NumQueryProcessors
@@ -184,9 +184,9 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		return nil, nil, err
 	}
 	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
-	v7 := provideBuiltInApps(builtInAppsArtefacts, v5)
+	v6 := provideBuiltInApps(builtInAppsArtefacts, v4)
 	routerAppStoragePtr := provideRouterAppStoragePtr(iAppStorageProvider)
-	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, iTime, iAppPartitions, v7, v5, iTokens, iAppStorageProvider, blobAppStoragePtr, routerAppStoragePtr)
+	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, iTime, iAppPartitions, v6, v4, iTokens, iAppStorageProvider, blobAppStoragePtr, routerAppStoragePtr)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -203,10 +203,10 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType_V1 := provideProcessorChannelGroupIdxQuery_V1(vvmConfig)
 	queryProcessorsChannelGroupIdxType_V2 := provideProcessorChannelGroupIdxQuery_V2(vvmConfig)
-	vvmApps := provideVVMApps(v7)
+	vvmApps := provideVVMApps(v6)
 	requestHandler := provideRequestHandler(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType_V1, queryProcessorsChannelGroupIdxType_V2, numCommandProcessors, vvmApps)
 	iRequestSender := bus.NewIRequestSender(iTime, sendTimeout, requestHandler)
-	v8, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider, v5)
+	v7, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider, v4)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -214,15 +214,15 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(routerParams, sendTimeout, in10nBroker, iRequestHandler, quotas, wLimiterFactory, blobStorage, cache, iRequestSender, vvmPortSource, v8, iTokens, iFederation, iAppTokensFactory)
+	routerServices := provideRouterServices(routerParams, sendTimeout, in10nBroker, iRequestHandler, quotas, wLimiterFactory, blobStorage, cache, iRequestSender, vvmPortSource, v7, iTokens, iFederation, iAppTokensFactory)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
 	metricsServicePort := vvmConfig.MetricsServicePort
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
 	publicEndpointServiceOperator := providePublicEndpointServiceOperator(routerServices, metricsServiceOperator)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors_V1, operatorQueryProcessors_V2, operatorBLOBProcessors, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator, iAppStorageProvider)
-	v9 := provideMetricsServicePortGetter(metricsService)
-	v10 := provideBuiltInAppPackages(builtInAppsArtefacts)
+	v8 := provideMetricsServicePortGetter(metricsService)
+	v9 := provideBuiltInAppPackages(builtInAppsArtefacts)
 	iSysVvmStorage, err := provideIVVMAppTTLStorage(iAppStorageProvider)
 	if err != nil {
 		cleanup4()
@@ -237,8 +237,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		APIs:                apIs,
 		IAppPartitions:      iAppPartitions,
 		AppsExtensionPoints: v2,
-		MetricsServicePort:  v9,
-		BuiltInAppsPackages: v10,
+		MetricsServicePort:  v8,
+		BuiltInAppsPackages: v9,
 		TTLStorage:          ittlStorage,
 	}
 	return vvm, func() {
@@ -380,7 +380,7 @@ func provideBasicAsyncActualizerConfig(
 	broker in10n.IN10nBroker, federation2 federation.IFederation,
 
 	asyncActualizersRetryDelay actualizers.RetryDelay,
-	opts ...state.StateOptFunc,
+	stateCfg state.StateConfig,
 
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
@@ -390,7 +390,7 @@ func provideBasicAsyncActualizerConfig(
 		Metrics:       metrics2,
 		Broker:        broker,
 		Federation:    federation2,
-		Opts:          opts,
+		StateCfg:      stateCfg,
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
 		RetryDelay:    asyncActualizersRetryDelay,

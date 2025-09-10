@@ -294,15 +294,29 @@ func (ts *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
+		state := state.StateConfig{
+			CustomHTTPClient:         ts,
+			FederationCommandHandler: ts.emulateFederationCmd,
+			UniquesHandler:           ts.emulateUniquesHandler,
+			FederationBlobHandler:    ts.emulateFederationBlob,
+		}
 		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
-			IntentsLimit, BundlesLimit, state.WithCustomHTTPClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
+			IntentsLimit, BundlesLimit, state)
 	case ProcKind_CommandProcessor:
+		state := state.StateConfig{
+			UniquesHandler: ts.emulateUniquesHandler,
+		}
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
-			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state.WithUniquesHandler(ts.emulateUniquesHandler))
+			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state)
 	case ProcKind_QueryProcessor:
+		state := state.StateConfig{
+			CustomHTTPClient:         ts,
+			FederationCommandHandler: ts.emulateFederationCmd,
+			UniquesHandler:           ts.emulateUniquesHandler,
+			FederationBlobHandler:    ts.emulateFederationBlob,
+		}
 		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
-			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback,
-			state.WithCustomHTTPClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
+			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback, state)
 	}
 }
 

@@ -53,6 +53,8 @@ var (
 
 	// Deprecated: use sys.Storage_Uniq instead
 	Uniq = sys.Storage_Uniq
+
+	NullOpts = StateConfig{}
 )
 
 const (

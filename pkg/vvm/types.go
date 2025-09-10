@@ -51,7 +51,7 @@ type OperatorBLOBProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
-	tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator
+	tokens itokens.ITokens, federation federation.IFederation, stateCfg state.StateConfig) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx uint) commandprocessor.CommandChannel
 type QueryChannel_V1 iprocbus.ServiceChannel
@@ -156,7 +156,7 @@ type VVMConfig struct {
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
-	ActualizerStateOpts        []state.StateOptFunc
+	ActualizerStateConfig      state.StateConfig
 	SecretsReader              isecrets.ISecretReader
 	SMTPConfig                 smtp.Cfg
 	WSPostInitFunc             workspace.WSPostInitFunc

@@ -268,6 +268,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() istructs.ExecQueryCallback {
 					return qw.callbackFunc
 				},
+				state.NullOpts,
 			)
 			qw.execQueryArgs.State = qw.state
 			qw.execQueryArgs.Intents = qw.state

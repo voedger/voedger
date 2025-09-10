@@ -63,7 +63,9 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 		conf.N10nFunc,
 		conf.SecretReader,
 		service.getEvent,
-		conf.IntentsLimit)
+		conf.IntentsLimit,
+		state.NullOpts,
+	)
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector",
 			func(ctx context.Context, work pipeline.IWorkpiece) error {
