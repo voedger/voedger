@@ -16,6 +16,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/registry"
@@ -491,7 +492,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		// request to the different app -> use sys token to avoid 403
 		sysPrincipal := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
-		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysPrincipal.Token))
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
 	})
@@ -503,7 +504,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		// request to the different app -> use sys token to avoid 403
 		sysPrincipal := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.\"login\".registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, loginID)
-		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysPrincipal.Token))
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
 	})
@@ -538,18 +539,18 @@ func TestAuthnz(t *testing.T) {
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, ws.Owner.Name, istructs.CurrentClusterID())
 		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
-		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
 	})
 
 	t.Run("doc", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from app1pkg.TestDeniedCDoc.123"},"elements":[{"fields":["Result"]}]}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
 	})
 
 	t.Run("field", func(t *testing.T) {
 		// denied
 		body := `{"args":{"Query":"select DeniedFld2 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect403())
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
 
 		// allowed, just expect 400 not found
 		body = `{"args":{"Query":"select Fld1 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
@@ -576,8 +577,8 @@ func TestReadODocs(t *testing.T) {
 		"unloggedArgs":{"sys.ID":6}
 	}`
 	resp := vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
-		coreutils.WithMethod(http.MethodPost),
-		coreutils.WithAuthorizeBy(ws.Owner.Token),
+		httpu.WithMethod(http.MethodPost),
+		httpu.WithAuthorizeBy(ws.Owner.Token),
 	)
 	odoc1ID := resp.NewIDs["1"]
 	odoc1ORec11ID := resp.NewIDs["2"]
@@ -585,8 +586,8 @@ func TestReadODocs(t *testing.T) {
 
 	body = `{"args":{"sys.ID": 1,"odocIntFld": 47},"unloggedArgs":{"sys.ID":2}}`
 	resp = vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
-		coreutils.WithMethod(http.MethodPost),
-		coreutils.WithAuthorizeBy(ws.Owner.Token),
+		httpu.WithMethod(http.MethodPost),
+		httpu.WithAuthorizeBy(ws.Owner.Token),
 	)
 	odoc2ID := resp.NewID()
 

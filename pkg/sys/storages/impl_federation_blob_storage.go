@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -143,7 +144,7 @@ func (s *federationBlobStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBu
 func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io.ReadCloser, error) {
 	appqname := s.appStructs().AppQName()
 
-	opts := make([]coreutils.ReqOptFunc, 0)
+	opts := make([]httpu.ReqOptFunc, 0)
 
 	kb := key.(*federationBlobKeyBuilder)
 
@@ -155,7 +156,7 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 		if err != nil {
 			return nil, err
 		}
-		opts = append(opts, coreutils.WithExpectedCode(code))
+		opts = append(opts, httpu.WithExpectedCode(code))
 	}
 
 	if kb.ownerID == 0 {
@@ -204,14 +205,14 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 		readCloser = io.NopCloser(bytes.NewReader(result))
 	} else {
 		if kb.token != "" {
-			opts = append(opts, coreutils.WithAuthorizeBy(kb.token))
+			opts = append(opts, httpu.WithAuthorizeBy(kb.token))
 		} else {
 			appQName := appdef.NewAppQName(owner, appname)
 			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
 			if err != nil {
 				return nil, err
 			}
-			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
+			opts = append(opts, httpu.WithAuthorizeBy(systemPrincipalToken))
 		}
 		blobReader, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, kb.ownerRecord, kb.ownerRecordField,
 			kb.ownerID, opts...)

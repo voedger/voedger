@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -86,7 +87,7 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 		if err != nil {
 			return err
 		}
-		
+
 		pwd := svAppSecretsStorage.AsString("")
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
@@ -105,8 +106,8 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"VerificationCode":"%s","Updated":%d}}]}`, svViewInviteIndex.AsRecordID(field_InviteID), State_Invited, verificationCode, time.Now().UnixMilli()),
-			coreutils.WithAuthorizeBy(authToken),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(authToken),
+			httpu.WithDiscardResponse())
 
 		return err
 	}

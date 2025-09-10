@@ -9,15 +9,15 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type implIFederation struct {
-	httpClient         coreutils.IHTTPClient
+	httpClient         httpu.IHTTPClient
 	federationURL      func() *url.URL
 	adminPortGetter    func() int
-	defaultReqOptFuncs []coreutils.ReqOptFunc
+	defaultReqOptFuncs []httpu.ReqOptFunc
 	vvmCtx             context.Context
 }
 
@@ -49,7 +49,7 @@ func (r QPv2Response) ResultRow(rowNum int) map[string]interface{} {
 
 // implements json.Unmarshaler
 type FuncResponse struct {
-	coreutils.HTTPResponse
+	httpu.HTTPResponse
 	CommandResponse
 	QueryResponse
 	SysError error

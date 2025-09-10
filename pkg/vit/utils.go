@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -34,7 +35,7 @@ import (
 
 func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
-	blobReader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, coreutils.WithAuthorizeBy(token))
+	blobReader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, httpu.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
 	blobContent, err := io.ReadAll(blobReader)
 	require.NoError(vit.T, err)
@@ -45,7 +46,7 @@ func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecor
 	}
 }
 
-func (vit *VIT) signUp(login Login, opts ...coreutils.ReqOptFunc) {
+func (vit *VIT) signUp(login Login, opts ...httpu.ReqOptFunc) {
 	vit.T.Helper()
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login.Name, istructs.CurrentClusterID())
 	as, err := vit.IAppStructsProvider.BuiltIn(login.AppQName)
@@ -70,7 +71,7 @@ func WithClusterID(clusterID istructs.ClusterID) signUpOptFunc {
 	}
 }
 
-func WithReqOpt(reqOpt coreutils.ReqOptFunc) signUpOptFunc {
+func WithReqOpt(reqOpt httpu.ReqOptFunc) signUpOptFunc {
 	return func(opts *signUpOpts) {
 		opts.reqOpts = append(opts.reqOpts, reqOpt)
 	}
@@ -112,7 +113,7 @@ func (vit *VIT) GetCDocLoginID(login Login) int64 {
 	body := fmt.Sprintf(`{"args":{"Query":"select CDocLoginID from registry.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
 		appWSID, login.AppQName, registry.GetLoginHash(login.Name))
 	sys := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
-	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sys.Token))
+	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sys.Token))
 	m := map[string]interface{}{}
 	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 	return int64(m["CDocLoginID"].(float64))
@@ -140,7 +141,7 @@ func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istru
 	}
 	body.WriteString("]}]}")
 	sys := vit.GetSystemPrincipal(appQName)
-	resp := vit.PostApp(appQName, wsid, "q.sys.Collection", body.String(), coreutils.WithAuthorizeBy(sys.Token))
+	resp := vit.PostApp(appQName, wsid, "q.sys.Collection", body.String(), httpu.WithAuthorizeBy(sys.Token))
 	if len(resp.Sections) == 0 {
 		vit.T.Fatalf("no CDoc<%s> at workspace id %d", qName.String(), wsid)
 	}
@@ -232,7 +233,7 @@ func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQ
 	sysToken, err := payloads.GetSystemPrincipalToken(vit.ITokens, istructs.AppQName_sys_registry)
 	require.NoError(vit.T, err)
 	for time.Now().Before(deadline) {
-		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysToken))
+		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, httpu.WithAuthorizeBy(sysToken))
 		m := map[string]interface{}{}
 		require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 		wsError := m["WSError"].(string)
@@ -266,7 +267,7 @@ func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal, expectWSInitEr
 	}, expectWSInitErrorChunks...)
 }
 
-func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, opts ...coreutils.ReqOptFunc) (ws *AppWorkspace) {
+func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, opts ...httpu.ReqOptFunc) (ws *AppWorkspace) {
 	return vit.waitForWorkspace(wsName, parentWS.Owner, func(owner *Principal, body string) *federation.FuncResponse {
 		return vit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body, opts...)
 	})
@@ -289,7 +290,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
 		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login.Name, login.Pwd)
-		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body, coreutils.Expect409(), coreutils.WithExpectedCode(http.StatusOK))
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body, httpu.Expect409(), httpu.WithExpectedCode(http.StatusOK))
 		if resp.HTTPResp.StatusCode == http.StatusConflict {
 			time.Sleep(workspaceQueryDelay)
 			continue
@@ -314,7 +315,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 }
 
 // owner could be *vit.Principal or *vit.AppWorkspace
-func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}, opts ...coreutils.ReqOptFunc) {
+func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}, opts ...httpu.ReqOptFunc) {
 	vit.T.Helper()
 	body := fmt.Sprintf(`{
 		"args": {
@@ -346,7 +347,7 @@ func SimpleWSParams(wsName string) WSParams {
 	}
 }
 
-func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal, opts ...coreutils.ReqOptFunc) *AppWorkspace {
+func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal, opts ...httpu.ReqOptFunc) *AppWorkspace {
 	vit.InitChildWorkspace(wsp, owner, opts...)
 	ws := vit.WaitForWorkspace(wsp.Name, owner)
 	require.Empty(vit.T, ws.WSError)
@@ -381,7 +382,7 @@ func (vit *VIT) SubscribeForN10nUnsubscribe(pk in10n.ProjectionKey) (offsetsChan
 	return offsetsChan, unsubscribe
 }
 
-func (vit *VIT) MetricsRequest(client coreutils.IHTTPClient, opts ...coreutils.ReqOptFunc) (resp string) {
+func (vit *VIT) MetricsRequest(client httpu.IHTTPClient, opts ...httpu.ReqOptFunc) (resp string) {
 	vit.T.Helper()
 	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", vit.VoedgerVM.MetricsServicePort())
 	res, err := client.Req(context.Background(), url, "", opts...)

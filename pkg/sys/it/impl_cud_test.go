@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -136,7 +136,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 					}
 				]
 			}`, istructs.NonExistingRecordID)
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect404())
+		vit.PostWS(ws, "c.sys.CUD", body, httpu.Expect404())
 	})
 }
 
@@ -211,7 +211,7 @@ func TestBasicUsage_Singletons(t *testing.T) {
 	require.Empty(resp.NewIDs) // nothing passed through ID generator
 
 	// create again -> error
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409()).Println()
+	vit.PostWS(ws, "c.sys.CUD", body, httpu.Expect409()).Println()
 
 	// query ID using collection
 	body = `{
@@ -483,7 +483,7 @@ func TestDenyCreateNonRawIDs(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": %d,"sys.QName": "app1pkg.options"}}]}`, istructs.FirstBaseUserWSID)
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
+	vit.PostWS(ws, "c.sys.CUD", body, httpu.Expect400())
 }
 
 func TestSelectFromNestedTables(t *testing.T) {

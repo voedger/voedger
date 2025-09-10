@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -39,17 +40,17 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 
 	// 410 Gone on work in an inactive workspace
 	bodyCmd := `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
-	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.Expect410()).Println()
+	vit.PostWS(ws, "c.sys.CUD", bodyCmd, httpu.Expect410()).Println()
 	bodyQry := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`
-	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.Expect410()).Println()
+	vit.PostWS(ws, "q.sys.Collection", bodyQry, httpu.Expect410()).Println()
 
 	// still able to work in an inactive workspace with the system token
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-	vit.PostWS(ws, "q.sys.Collection", bodyQry, coreutils.WithAuthorizeBy(sysToken.Token))
-	vit.PostWS(ws, "c.sys.CUD", bodyCmd, coreutils.WithAuthorizeBy(sysToken.Token))
+	vit.PostWS(ws, "q.sys.Collection", bodyQry, httpu.WithAuthorizeBy(sysToken.Token))
+	vit.PostWS(ws, "c.sys.CUD", bodyCmd, httpu.WithAuthorizeBy(sysToken.Token))
 
 	// 409 conflict on deactivate an already deactivated worksace
-	vit.PostWS(ws, "c.sys.InitiateDeactivateWorkspace", "{}", coreutils.WithAuthorizeBy(sysToken.Token), coreutils.Expect409())
+	vit.PostWS(ws, "c.sys.InitiateDeactivateWorkspace", "{}", httpu.WithAuthorizeBy(sysToken.Token), httpu.Expect409())
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
@@ -78,7 +79,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 
 	// check prn2 could not work in ws1
 	body := `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
-	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token), coreutils.Expect403())
+	vit.PostWS(newWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(prn2.Token), httpu.Expect403())
 
 	// join login TestEmail2 to ws1
 	expireDatetime := vit.Now().UnixMilli()
@@ -94,7 +95,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 
 	// check prn2 could work in ws1
 	body = `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
-	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn2.Token))
+	vit.PostWS(newWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(prn2.Token))
 
 	// deactivate
 	vit.PostWS(newWS, "c.sys.InitiateDeactivateWorkspace", "{}")
@@ -109,12 +110,12 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	body = fmt.Sprintf(`{"args":{"Query":"select IDOfCDocWorkspaceID from sys.WorkspaceIDIdx where OwnerWSID = %d and WSName = '%s'"}, "elements":[{"fields":["Result"]}]}`,
 		prn1.ProfileWSID, newWS.Name)
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-	resp := vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysToken.Token))
+	resp := vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysToken.Token))
 	viewWorkspaceIDIdx := map[string]interface{}{}
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &viewWorkspaceIDIdx))
 	idOfCDocWorkspaceID := int64(viewWorkspaceIDIdx["IDOfCDocWorkspaceID"].(float64))
 	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, idOfCDocWorkspaceID)
-	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.GetCDoc", body, coreutils.WithAuthorizeBy(sysToken.Token))
+	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.GetCDoc", body, httpu.WithAuthorizeBy(sysToken.Token))
 	jsonBytes := []byte(resp.SectionRow()[0].(string))
 	cdocWorkspaceID := map[string]interface{}{}
 	require.NoError(json.Unmarshal(jsonBytes, &cdocWorkspaceID))

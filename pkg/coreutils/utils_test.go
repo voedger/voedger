@@ -8,7 +8,6 @@ package coreutils
 import (
 	"errors"
 	"os"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -79,14 +78,6 @@ func TestSplitErrors(t *testing.T) {
 	require.Nil(SplitErrors(nil))
 	wrapped := errUnwrapper{[]error{err, err}}
 	require.Equal([]error{err, err}, SplitErrors(wrapped))
-}
-
-func TestIsWSAEError(t *testing.T) {
-	require := require.New(t)
-	err := &os.SyscallError{Err: syscall.Errno(123)}
-	require.True(IsWSAEError(err, 123))
-	require.False(IsWSAEError(err, 124))
-	require.False(IsWSAEError(errors.New("x"), 123))
 }
 
 func TestNilAdminPortGetter(t *testing.T) {

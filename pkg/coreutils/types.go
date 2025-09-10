@@ -6,11 +6,8 @@
 package coreutils
 
 import (
-	"context"
 	"encoding/json"
-	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 
@@ -21,26 +18,6 @@ type EmbedFS interface {
 	Open(name string) (fs.File, error)
 	ReadDir(name string) ([]fs.DirEntry, error)
 	ReadFile(name string) ([]byte, error)
-}
-
-type HTTPResponse struct {
-	Body     string
-	HTTPResp *http.Response
-	Opts     IReqOpts
-}
-
-type IReqOpts interface {
-	Append(ReqOptFunc)
-	ExpectedHTTPCodes() []int
-	httpOpts() *reqOpts
-}
-
-type ReqOptFunc func(opts IReqOpts)
-
-type IHTTPClient interface {
-	Req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
-	ReqReader(ctx context.Context, urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
-	CloseIdleConnections()
 }
 
 type PathReader struct {
@@ -97,4 +74,3 @@ type IReadFS interface {
 	fs.ReadDirFS
 	fs.ReadFileFS
 }
-

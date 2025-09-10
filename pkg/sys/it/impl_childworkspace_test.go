@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -39,7 +39,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 					}
 				]
 			}`, wsName)
-		resp := vit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body, coreutils.Expect404())
+		resp := vit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body, httpu.Expect404())
 		resp.Println()
 	})
 
@@ -71,7 +71,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 
 		t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
 			body := fmt.Sprintf(`{"args": {"WSName": %q,"WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
-			resp := vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
+			resp := vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body, httpu.Expect409())
 			resp.Println()
 		})
 	})
@@ -108,7 +108,7 @@ func TestForeignAuthorization(t *testing.T) {
 	t.Run("subjects", func(t *testing.T) {
 		// try to execute an operation by the foreign login, expect 403
 		cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
-		vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.Expect403(), coreutils.WithAuthorizeBy(newPrn.Token))
+		vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.Expect403(), httpu.WithAuthorizeBy(newPrn.Token))
 
 		// make this new foreign login a subject in the existing workspace
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
@@ -116,13 +116,13 @@ func TestForeignAuthorization(t *testing.T) {
 		vit.PostWS(parentWS, "c.sys.CUD", body)
 
 		// now the foreign login could work in the workspace
-		vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token))
+		vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.WithAuthorizeBy(newPrn.Token))
 	})
 
 	t.Run("enrich principal token", func(t *testing.T) {
 		// 403 forbidden on try to execute a stricted operation in the child workspace using the non-enriched token
 		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
-		vit.PostWS(childWS, "c.sys.CUD", body, coreutils.Expect403())
+		vit.PostWS(childWS, "c.sys.CUD", body, httpu.Expect403())
 
 		// create cdoc.sys.Subject with a role the custom func execution could be authorized with
 		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "login","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
@@ -138,13 +138,13 @@ func TestForeignAuthorization(t *testing.T) {
 		// ok to execute a stricted operation in the child workspace using the enriched token
 		// expect no errors
 		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
-		vit.PostWS(childWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(enrichedToken))
+		vit.PostWS(childWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(enrichedToken))
 	})
 
 	t.Run("API token", func(t *testing.T) {
 		// 403 forbidden on try to execute a stricted operation in the child workspace
 		body = `{"args":{"Schema":"app1pkg.articles"},"elements":[{"fields":["sys.ID"]}]}`
-		vit.PostWS(childWS, "q.sys.Collection", body, coreutils.Expect403())
+		vit.PostWS(childWS, "q.sys.Collection", body, httpu.Expect403())
 
 		// issue an API token
 		as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
@@ -158,6 +158,6 @@ func TestForeignAuthorization(t *testing.T) {
 		require.NoError(err)
 
 		// API token has role.app1pkg.SpecialAPITokenRole, q.sys.Collection is allowed for that role according to grants in vsql -> the request should be successful
-		vit.PostWS(childWS, "q.sys.Collection", body, coreutils.WithAuthorizeBy(apiToken))
+		vit.PostWS(childWS, "q.sys.Collection", body, httpu.WithAuthorizeBy(apiToken))
 	})
 }

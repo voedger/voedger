@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -58,14 +59,14 @@ func TestIntiateResetPasswordErrors(t *testing.T) {
 
 	t.Run("400 bad request on bad appQName", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"AppName":"wrong app","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, prn.Name)
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect400()).Println()
 	})
 
 	// note: test "called in non-AppWS" is senceless because now func is taken from the workspace -> 400 bad request + "func does not exist in the workspace" anyway
 
 	t.Run("400 bad request on an unknown login", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"unknown"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1)
-		vit.PostApp(istructs.AppQName_sys_registry, coreutils.GetPseudoWSID(istructs.NullWSID, "unknown", istructs.CurrentClusterID()), "q.registry.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, coreutils.GetPseudoWSID(istructs.NullWSID, "unknown", istructs.CurrentClusterID()), "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect400()).Println()
 	})
 }
 
@@ -78,7 +79,7 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 		unknownLogin := "unknown"
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, unknownLogin, istructs.CurrentClusterID())
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, unknownLogin)
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect400()).Println()
 	})
 
 	profileWSID := istructs.WSID(0)
@@ -94,7 +95,7 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 			token, code, profileWSID)
 		// note: was at profileWSID. It does not works since https://github.com/voedger/voedger/issues/1311
 		// because sys/registry:profileWSID workspace is not initialized -> call at pseudoProfileWSID
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", body, coreutils.Expect400()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", body, httpu.Expect400()).Println()
 	})
 }
 
@@ -124,7 +125,7 @@ func TestResetPasswordLimits(t *testing.T) {
 
 		// 2nd call -> limit exceeded
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, coreutils.Expect429())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect429())
 
 		// proceed to the next minute to restore rates
 		vit.TimeAdd(time.Minute)
@@ -154,15 +155,15 @@ func TestResetPasswordLimits(t *testing.T) {
 			istructs.AppQName_test1_app1)
 
 		// 1st call with wrong code -> 400 bad request
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, coreutils.Expect400())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, httpu.Expect400())
 
 		// 2nd call with wrong code -> mocked limit exceeded, 429 Too many reuqets
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, coreutils.Expect429())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, httpu.Expect429())
 
 		// next calls with correct code -> 429 anyway
 		goodCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
 			istructs.AppQName_test1_app1)
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", goodCodeBody, coreutils.Expect429())
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", goodCodeBody, httpu.Expect429())
 
 		// proceed to the next minute to restore rates
 		vit.TimeAdd(time.Minute)

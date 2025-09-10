@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
@@ -247,7 +247,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Leave workspace
-	vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", coreutils.WithAuthorizeBy(login2Prn.Token))
+	vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", httpu.WithAuthorizeBy(login2Prn.Token))
 
 	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeLeft, invite.State_Left)
 
@@ -308,7 +308,7 @@ func TestInactiveCDocSubject(t *testing.T) {
 
 	// try to execute an operation by the foreign login, expect 403
 	cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
-	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.Expect403(), coreutils.WithAuthorizeBy(newPrn.Token))
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.Expect403(), httpu.WithAuthorizeBy(newPrn.Token))
 
 	// make this new foreign login a subject in the existing workspace
 	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
@@ -316,14 +316,14 @@ func TestInactiveCDocSubject(t *testing.T) {
 	cdocSubjectID := vit.PostWS(parentWS, "c.sys.CUD", body).NewID()
 
 	// now the foreign login could work in the workspace
-	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token))
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.WithAuthorizeBy(newPrn.Token))
 
 	// deactivate cdoc.Subject
 	body = fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.IsActive": false}}]}`, cdocSubjectID)
 	vit.PostWS(parentWS, "c.sys.CUD", body)
 
 	// try again to work in the foreign workspace -> should fail
-	vit.PostWS(parentWS, "c.sys.CUD", cudBody, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect403())
+	vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.WithAuthorizeBy(newPrn.Token), httpu.Expect403())
 }
 
 func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID istructs.RecordID) (verificationCode string) {
@@ -378,7 +378,7 @@ func TestWrongEmail(t *testing.T) {
 	for _, wrongEmail := range wrongEmails {
 		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 			wrongEmail, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
-		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, coreutils.Expect400()).Println()
+		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, httpu.Expect400()).Println()
 	}
 }
 

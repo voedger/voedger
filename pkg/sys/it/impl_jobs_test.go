@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -61,7 +61,7 @@ func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 	fired := false
 	for time.Since(start) < 3*time.Second {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from a1.app2pkg.Jobs where RunUnixMilli = %d"},"elements":[{"fields":["Result"]}]}`, vit.Now().UnixMilli())
-		resp := vit.PostApp(istructs.AppQName_test1_app2, anyAppWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sysToken))
+		resp := vit.PostApp(istructs.AppQName_test1_app2, anyAppWSID, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysToken))
 		if !resp.IsEmpty() {
 			fired = true
 			break
@@ -118,7 +118,7 @@ func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token 
 	currentInstant := instant
 	for time.Since(start) < 5*time.Second {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from a1.app2pkg.Jobs where RunUnixMilli = %d"},"elements":[{"fields":["Result"]}]}`, currentInstant)
-		resp := vit.PostApp(istructs.AppQName_test1_app2, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
+		resp := vit.PostApp(istructs.AppQName_test1_app2, wsid, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(token))
 		if waitForFire {
 			if !resp.IsEmpty() {
 				return true
@@ -138,7 +138,7 @@ func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, exp
 	lastValue := 0
 	for time.Since(start) < 5*time.Second {
 		body := `{"args":{"Query":"select * from a0.sidecartestapp.JobStateView where Pk = 1 and Cc = 1"},"elements":[{"fields":["Result"]}]}`
-		resp := vit.PostApp(istructs.AppQName_test2_app1, wsid, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(token))
+		resp := vit.PostApp(istructs.AppQName_test2_app1, wsid, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(token))
 		if resp.IsEmpty() {
 			time.Sleep(100 * time.Millisecond)
 			vit.TimeAdd(testJobFireInterval) // force job to fire

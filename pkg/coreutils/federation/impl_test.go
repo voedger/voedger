@@ -18,6 +18,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -82,7 +83,7 @@ func TestFederationFunc(t *testing.T) {
 			name        string
 			handler     func(body string, w http.ResponseWriter, r *http.Request)
 			expectedErr error
-			opts        []coreutils.ReqOptFunc
+			opts        []httpu.ReqOptFunc
 		}{
 			{
 				name: "basic error",
@@ -148,7 +149,7 @@ func TestFederationFunc(t *testing.T) {
 				_, err = w.Write([]byte(`{"sys.Error":{"HTTPStatus":500,"Message":"something gone wrong","QName":"sys.SomeErrorQName","Data":"additional data"}}`))
 				require.NoError(err)
 			}
-			resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError))
+			resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, httpu.WithExpectedCode(http.StatusInternalServerError))
 			require.NoError(err)
 			resp.Println()
 		})
@@ -162,7 +163,7 @@ func TestFederationFunc(t *testing.T) {
 			_, err = w.Write([]byte(`{"sections":[{"type":"","elements":[[[["Hello", "world"]]],[[["next"]]]]}]}`))
 			require.NoError(err)
 		}
-		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithExpectedCode(http.StatusInternalServerError))
+		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, httpu.WithExpectedCode(http.StatusInternalServerError))
 		require.NoError(err)
 		resp.Println()
 		require.Equal("Hello", resp.SectionRow()[0].(string))
@@ -176,7 +177,7 @@ func TestFederationFunc(t *testing.T) {
 			require.NoError(err)
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
-		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.Expect503())
+		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, httpu.Expect503())
 		require.NoError(err)
 	})
 
@@ -188,7 +189,7 @@ func TestFederationFunc(t *testing.T) {
 			_, err = w.Write([]byte(`{"sections":[{"type":"","elements":[[[["Hello", "world"]]],[[["next"]]]]}]}`))
 			require.NoError(err)
 		}
-		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithDiscardResponse())
+		resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, httpu.WithDiscardResponse())
 		require.NoError(err)
 		require.Nil(resp)
 	})
@@ -207,7 +208,7 @@ func TestFederationFunc(t *testing.T) {
 			}
 			cancel()
 		}
-		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, coreutils.WithRetryOn503())
+		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, httpu.WithRetryOn503())
 		require.ErrorIs(err, context.Canceled)
 	})
 }
@@ -223,6 +224,6 @@ func TestPanicOnGETAndDiscardResponse(t *testing.T) {
 
 	require.Panics(func() {
 		//nolint errcheck
-		federation.Func("abc", "", coreutils.WithMethod(http.MethodGet), coreutils.WithDiscardResponse())
+		federation.Func("abc", "", httpu.WithMethod(http.MethodGet), httpu.WithDiscardResponse())
 	})
 }

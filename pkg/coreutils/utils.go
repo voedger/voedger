@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
@@ -62,17 +61,6 @@ func SplitErrors(joinedError error) (errs []error) {
 		return []error{joinedError}
 	}
 	return
-}
-
-func IsWSAEError(err error, errno syscall.Errno) bool {
-	var sysCallErr *os.SyscallError
-	if errors.As(err, &sysCallErr) {
-		var syscallErrno syscall.Errno
-		if errors.As(sysCallErr.Err, &syscallErrno) {
-			return syscallErrno == errno
-		}
-	}
-	return false
 }
 
 func NilAdminPortGetter() int { panic("to be tested") }

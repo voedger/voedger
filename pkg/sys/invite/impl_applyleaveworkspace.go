@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -63,8 +63,8 @@ func applyLeaveWorkspace(time timeu.ITime, federation federation.IFederation, to
 			if _, err = federation.Func(
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
-				coreutils.WithAuthorizeBy(token),
-				coreutils.WithDiscardResponse()); err != nil {
+				httpu.WithAuthorizeBy(token),
+				httpu.WithDiscardResponse()); err != nil {
 				return err
 			}
 
@@ -72,8 +72,8 @@ func applyLeaveWorkspace(time timeu.ITime, federation federation.IFederation, to
 			if _, err = federation.Func(
 				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
-				coreutils.WithAuthorizeBy(token),
-				coreutils.WithDiscardResponse()); err != nil {
+				httpu.WithAuthorizeBy(token),
+				httpu.WithDiscardResponse()); err != nil {
 				return err
 			}
 
@@ -81,8 +81,8 @@ func applyLeaveWorkspace(time timeu.ITime, federation federation.IFederation, to
 			if _, err = federation.Func(
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 				fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, rec.ID(), State_Left, time.Now().UnixMilli()),
-				coreutils.WithAuthorizeBy(token),
-				coreutils.WithDiscardResponse()); err != nil {
+				httpu.WithAuthorizeBy(token),
+				httpu.WithDiscardResponse()); err != nil {
 				return err
 			}
 		}

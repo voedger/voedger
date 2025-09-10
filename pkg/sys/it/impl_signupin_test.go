@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -135,7 +136,7 @@ func TestCreateLoginErrors(t *testing.T) {
 	vit.SignIn(newLogin)
 
 	t.Run("create an existing login again", func(t *testing.T) {
-		vit.SignUp(login, "1", istructs.AppQName_test1_app1, it.WithReqOpt(coreutils.Expect409()))
+		vit.SignUp(login, "1", istructs.AppQName_test1_app1, it.WithReqOpt(httpu.Expect409()))
 	})
 
 	t.Run("subject name constraint violation", func(t *testing.T) {
@@ -176,7 +177,7 @@ func TestSignInErrors(t *testing.T) {
 	t.Run("unknown login", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
 			login, istructs.AppQName_test1_app1.String())
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, coreutils.Expect401()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, httpu.Expect401()).Println()
 	})
 
 	newLogin := vit.SignUp(login, "1", istructs.AppQName_test1_app1)
@@ -186,7 +187,7 @@ func TestSignInErrors(t *testing.T) {
 	t.Run("wrong password", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "wrongPass","AppName": "%s"},"elements":[{"fields":[]}]}`,
 			login, istructs.AppQName_test1_app1.String())
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, coreutils.Expect401()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, httpu.Expect401()).Println()
 	})
 
 	t.Run("wrong TTL", func(t *testing.T) {
@@ -232,7 +233,7 @@ func TestCreateDevice(t *testing.T) {
 
 	t.Run("400 bad request on an unexpected body", func(t *testing.T) {
 		vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), "body",
-			coreutils.Expect400()).Println()
+			httpu.Expect400()).Println()
 	})
 }
 
@@ -249,7 +250,7 @@ func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
 
 	// new login can not work in the profile of the existingLogin
 	body := `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
-	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.Expect403(), coreutils.WithAuthorizeBy(newLoginPrn.Token))
+	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, httpu.Expect403(), httpu.WithAuthorizeBy(newLoginPrn.Token))
 
 	// now enrich the token of the newLogin: make it ProfileOwner in the profile of the existingLogin
 
@@ -267,7 +268,7 @@ func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
 
 	// no newLogin is able to work in the profile of the existingLogin role.sys.ProfileOwner principal is emitted for him there
 	body = `{"args":{"Schema":"sys.UserProfile"},"elements":[{"fields":["sys.ID", "DisplayName"]}]}`
-	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, coreutils.WithAuthorizeBy(enrichedToken))
+	vit.PostApp(istructs.AppQName_test1_app1, existingLoginPrn.ProfileWSID, "q.sys.Collection", body, httpu.WithAuthorizeBy(enrichedToken))
 }
 
 // [~server.authnz.groles/it.TestGlobalRoles~impl]
@@ -291,20 +292,20 @@ func TestGlobalRoles(t *testing.T) {
 
 	// view is not available for the user without global roles
 	vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
-		coreutils.WithAuthorizeBy(prn.Token), coreutils.Expect403())
+		httpu.WithAuthorizeBy(prn.Token), httpu.Expect403())
 
 	// update global roles not allowed by default
 	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
-	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.Expect403())
+	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.Expect403())
 
 	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
 	// incorrect role name
 	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
-	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.WithAuthorizeBy(sysRegistryToken), coreutils.Expect400())
+	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken), httpu.Expect400())
 
 	// update global roles allowed for the System principal
 	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
-	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, coreutils.WithAuthorizeBy(sysRegistryToken))
+	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken))
 
 	// now global roles are in the new token
 	prn2 := vit.SignIn(login)
@@ -317,6 +318,6 @@ func TestGlobalRoles(t *testing.T) {
 
 	// now user can work with the view
 	vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/views/%s?keys=Year,Month,Day&where={"Year":2025}`, ws.WSID, it.QNameApp1_ViewDailyIdx),
-		coreutils.WithAuthorizeBy(prn2.Token))
+		httpu.WithAuthorizeBy(prn2.Token))
 
 }

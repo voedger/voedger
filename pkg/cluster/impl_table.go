@@ -11,8 +11,8 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -32,8 +32,8 @@ func updateTable(update update, federation federation.IFederation, itokens itoke
 		return err
 	}
 	_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.AppQName, update.wsid), cudBody,
-		coreutils.WithAuthorizeBy(sysToken),
-		coreutils.WithDiscardResponse(),
+		httpu.WithAuthorizeBy(sysToken),
+		httpu.WithDiscardResponse(),
 	)
 	return err
 }
@@ -52,7 +52,7 @@ func insertTable(update update, federation federation.IFederation, itokens itoke
 		// notest
 		return err
 	}
-	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.AppQName, update.wsid), cudBody, coreutils.WithAuthorizeBy(sysToken))
+	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.AppQName, update.wsid), cudBody, httpu.WithAuthorizeBy(sysToken))
 	if err != nil {
 		return err
 	}
