@@ -8,22 +8,29 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/wneessen/go-mail"
 )
 
 type sendMailStorage struct {
-	messagesSenderOverride chan smtptest.Message // not nil in tests only
+	sendMailFacade ISendMailFacade
+	// messagesSenderOverride chan smtptest.Message // not nil in tests only
 }
 
-func NewSendMailStorage(messages chan smtptest.Message) state.IStateStorage {
+type ISendMailFacade interface {
+	Send(msg *mail.Msg, opts ...mail.Option) error
+}
+
+type implISendMailFacade_SMTP struct {
+	
+}
+
+func NewSendMailStorage(sendMailFacade ISendMailFacade) state.IStateStorage {
 	return &sendMailStorage{
-		messagesSenderOverride: messages,
+		sendMailFacade: sendMailFacade,
 	}
 }
 
@@ -199,33 +206,37 @@ func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
 		mail.WithSMTPAuth(mail.SMTPAuthPlain),
 	}
 
-	if coreutils.IsTest() {
-		opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
-	}
+	// if coreutils.IsTest() {
+	// 	opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
+	// }
 
 	logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
 
-	if s.messagesSenderOverride != nil {
-		// happens in tests only
-		m := smtptest.Message{
-			Subject: stringOrEmpty(k.subject),
-			From:    k.from,
-			To:      k.to,
-			CC:      k.cc,
-			BCC:     k.bcc,
-			Body:    stringOrEmpty(k.body),
-		}
-		s.messagesSenderOverride <- m
-	} else {
-		c, e := mail.NewClient(k.host, opts...)
-		if e != nil {
-			return e
-		}
-		err = c.DialAndSend(msg)
-		if err != nil {
-			return err
-		}
+	if err := s.sendMailFacade.Send(msg, opts...); err != nil {
+		return err
 	}
+
+	// if s.messagesSenderOverride != nil {
+	// 	// happens in tests only
+	// 	m := smtptest.Message{
+	// 		Subject: stringOrEmpty(k.subject),
+	// 		From:    k.from,
+	// 		To:      k.to,
+	// 		CC:      k.cc,
+	// 		BCC:     k.bcc,
+	// 		Body:    stringOrEmpty(k.body),
+	// 	}
+	// 	s.messagesSenderOverride <- m
+	// } else {
+	// 	c, e := mail.NewClient(k.host, opts...)
+	// 	if e != nil {
+	// 		return e
+	// 	}
+	// 	err = c.DialAndSend(msg)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 	logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
 	return nil
 }
