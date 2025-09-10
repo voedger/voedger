@@ -186,7 +186,8 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		a.conf.Federation,
 		a.conf.IntentsLimit,
 		a.conf.BundlesLimit,
-		a.conf.Opts...)
+		a.conf.StateCfg,
+	)
 
 	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.PartitionID)
 

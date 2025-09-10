@@ -34,7 +34,7 @@ type BasicAsyncActualizerConfig struct {
 	Broker       in10n.IN10nBroker
 	Federation   federation.IFederation
 
-	Opts []state.StateOptFunc
+	StateCfg state.StateConfig
 
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc

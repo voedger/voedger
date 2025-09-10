@@ -104,7 +104,7 @@ func (a *scheduler) runJob() {
 		a.conf.Federation,
 		func() int64 { return a.conf.Time.Now().Unix() },
 		a.conf.IntentsLimit,
-		a.conf.Opts...)
+		a.conf.stateCfg)
 
 	if err = borrowedPartition.Invoke(a.ctx, a.job, state, state); err != nil {
 		return
