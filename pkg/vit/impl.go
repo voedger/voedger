@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
+	"github.com/wneessen/go-mail"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -724,4 +725,16 @@ func (vit *VIT) checkVVMProblemCtx() {
 		vit.T.Fatal("vvmProblemCtx is closed but no error on vvm.Shutdown()")
 	default:
 	}
+}
+
+func (c *implISendEmailFacade_captor) Send(msg *mail.Msg, opts ...mail.Option) error {
+	c.emailCaptorCh <- smtptest.Message{
+		Subject: stringOrEmpty(msg.Subject),
+		From:    msg.From,
+		To:      msg.To,
+		CC:      msg.CC,
+		BCC:     msg.BCC,
+		Body:    stringOrEmpty(msg.Body),
+	}
+	return nil
 }

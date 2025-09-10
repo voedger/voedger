@@ -148,3 +148,8 @@ type implVITISecretsReader struct {
 	secrets          map[string][]byte
 	underlyingReader isecrets.ISecretReader
 }
+
+type implISendEmailFacade_captor struct {
+	emailCaptorCh emailCaptor
+}
+

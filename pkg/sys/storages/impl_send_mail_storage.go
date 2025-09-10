@@ -16,19 +16,14 @@ import (
 )
 
 type sendMailStorage struct {
-	sendMailFacade ISendMailFacade
+	sendMailFacade state.ISendMailFacade
 	// messagesSenderOverride chan smtptest.Message // not nil in tests only
 }
 
-type ISendMailFacade interface {
-	Send(msg *mail.Msg, opts ...mail.Option) error
-}
-
 type implISendMailFacade_SMTP struct {
-	
 }
 
-func NewSendMailStorage(sendMailFacade ISendMailFacade) state.IStateStorage {
+func NewSendMailStorage(sendMailFacade state.ISendMailFacade) state.IStateStorage {
 	return &sendMailStorage{
 		sendMailFacade: sendMailFacade,
 	}

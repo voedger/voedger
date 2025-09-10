@@ -7,6 +7,7 @@ package state
 import (
 	"context"
 	"io"
+	"net/mail"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -14,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
-	"github.com/voedger/voedger/pkg/state/smtptest"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 )
@@ -56,8 +56,12 @@ type IHTTPClient interface {
 	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
 }
 
+type ISendMailFacade interface {
+	Send(msg mail.Message, opts ...mail.Option) error
+}
+
 type StateConfig struct {
-	MessagesSenderOverride   chan smtptest.Message
+	SendMailFacade           ISendMailFacade
 	FederationCommandHandler FederationCommandHandler
 	FederationBlobHandler    FederationBlobHandler
 	CustomHTTPClient         IHTTPClient
