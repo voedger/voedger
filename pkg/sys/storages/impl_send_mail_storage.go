@@ -17,7 +17,6 @@ import (
 
 type sendMailStorage struct {
 	emailSender state.IEmailSender
-	// messagesSenderOverride chan smtptest.Message // not nil in tests only
 }
 
 type implIEmailSender_SMTP struct {
