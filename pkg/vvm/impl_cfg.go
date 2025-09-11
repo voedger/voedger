@@ -22,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
-	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/router"
 )
 
@@ -64,9 +63,6 @@ func NewVVMDefaultConfig() VVMConfig {
 
 		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
-	}
-	if coreutils.IsTest() {
-		res.SecretsReader = itokensjwt.ProvideTestSecretsReader(res.SecretsReader)
 	}
 	return res
 }

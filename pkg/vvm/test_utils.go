@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
@@ -58,6 +59,7 @@ func GetTestVVMCfg(ip net.IP) *VVMConfig {
 	})
 	vvmCfg.VVMAppsBuilder.Add(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, 1))
 	vvmCfg.VVMAppsBuilder.Add(istructs.AppQName_sys_cluster, clusterapp.Provide())
+	vvmCfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(vvmCfg.SecretsReader)
 
 	return &vvmCfg
 }
