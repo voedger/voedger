@@ -41,7 +41,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	vvmpkg "github.com/voedger/voedger/pkg/vvm"
@@ -94,7 +93,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.Time = testingu.MockTime
 	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
 
-	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
+	emailMessagesChan := make(chan state.EmailMessage, 1) // must be buffered
 	cfg.ActualizerStateConfig = state.StateConfig{MessagesSenderOverride: emailMessagesChan}
 
 	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
@@ -633,7 +632,7 @@ func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName
 // CaptureEmail waits for and returns the next sent email
 // no emails during testEmailsAwaitingTimeout -> test failed
 // an email was sent but CaptureEmail is not called -> test will be failed on VIT.TearDown()
-func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
+func (vit *VIT) CaptureEmail() (msg state.EmailMessage) {
 	vit.T.Helper()
 	tmr := time.NewTimer(getTestEmailsAwaitingTimeout())
 	select {

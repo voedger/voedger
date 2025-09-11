@@ -11,17 +11,18 @@ import (
 
 	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 type Server interface {
 	Port() int32
-	Messages(username, password string) chan Message
+	Messages(username, password string) chan state.EmailMessage
 	Close() error
 }
 
 type server struct {
 	port     int32
-	messages map[credentials]chan Message
+	messages map[credentials]chan state.EmailMessage
 	server   *smtp.Server
 }
 
@@ -47,7 +48,7 @@ func (s *session) Auth(mech string) (sasl.Server, error) {
 }
 
 func (s *server) Port() int32 { return s.port }
-func (s *server) Messages(username, password string) chan Message {
+func (s *server) Messages(username, password string) chan state.EmailMessage {
 	return s.messages[credentials{
 		username: username,
 		password: password,
@@ -66,7 +67,7 @@ type credentials struct {
 }
 
 type session struct {
-	ch         chan Message
+	ch         chan state.EmailMessage
 	recipients []string
 	data       string
 	server     *server
@@ -90,11 +91,10 @@ func (s *session) Data(r io.Reader) error {
 	s.data = string(bb)
 	return nil
 }
-func (s *session) message() Message {
-	msg := Message{
-		ccMap: make(map[string]bool),
-		toMap: make(map[string]bool),
-	}
+func (s *session) message() state.EmailMessage {
+	ccMap := make(map[string]bool)
+	toMap := make(map[string]bool)
+	msg := state.EmailMessage{}
 	var bodyStartLine int
 
 	lines := strings.Split(s.data, "\r\n")
@@ -113,22 +113,22 @@ func (s *session) message() Message {
 			for _, to := range strings.Split(pair[1], ",") {
 				to = strings.Trim(to, " <>")
 				msg.To = append(msg.To, to)
-				msg.toMap[to] = true
+				toMap[to] = true
 			}
 		case "Cc":
 			for _, cc := range strings.Split(pair[1], ",") {
 				cc = strings.Trim(cc, " <>")
 				msg.CC = append(msg.CC, cc)
-				msg.ccMap[cc] = true
+				ccMap[cc] = true
 			}
 		}
 	}
 
 	for _, recipient := range s.recipients {
-		if msg.toMap[recipient] {
+		if toMap[recipient] {
 			continue
 		}
-		if msg.ccMap[recipient] {
+		if ccMap[recipient] {
 			continue
 		}
 		msg.BCC = append(msg.BCC, recipient)
@@ -143,17 +143,6 @@ func (s *session) message() Message {
 	return msg
 }
 
-type Message struct {
-	Subject string
-	From    string
-	To      []string
-	CC      []string
-	BCC     []string
-	Body    string
-	ccMap   map[string]bool
-	toMap   map[string]bool
-}
-
 type Option func(s Server)
 
 func WithCredentials(username, password string) Option {
@@ -161,7 +150,7 @@ func WithCredentials(username, password string) Option {
 		s.(*server).messages[credentials{
 			username: username,
 			password: password,
-		}] = make(chan Message, defaultMessagesChannelSize)
+		}] = make(chan state.EmailMessage, defaultMessagesChannelSize)
 	}
 }
 
