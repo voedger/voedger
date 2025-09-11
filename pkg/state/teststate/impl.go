@@ -294,7 +294,7 @@ func (ts *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		state := state.StateConfig{
+		state := state.StateOpts{
 			CustomHTTPClient:         ts,
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,
@@ -303,13 +303,13 @@ func (ts *testState) buildState(processorKind int) {
 		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
 			IntentsLimit, BundlesLimit, state)
 	case ProcKind_CommandProcessor:
-		state := state.StateConfig{
+		state := state.StateOpts{
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state)
 	case ProcKind_QueryProcessor:
-		state := state.StateConfig{
+		state := state.StateOpts{
 			CustomHTTPClient:         ts,
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,

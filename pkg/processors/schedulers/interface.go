@@ -33,12 +33,13 @@ type BasicSchedulerConfig struct {
 	Federation   federation.IFederation
 	Time         timeu.ITime
 
-	stateCfg state.StateConfig
+	stateOpts state.StateOpts
 
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc
 	//IntentsLimit top limit per event, optional, default value is 100
 	IntentsLimit int
+	EmailSender  state.IEmailSender
 }
 
 type SchedulerConfig struct {

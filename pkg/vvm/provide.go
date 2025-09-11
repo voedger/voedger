@@ -225,7 +225,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		blobprocessor.NewIRequestHandler,
 		provideIVVMAppTTLStorage,
 		storage.NewElectionsTTLStorage,
-		provideStateConfig,
+		provideStateOpts,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -247,8 +247,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	))
 }
 
-func provideStateConfig(emailSender state.IEmailSender) state.StateConfig {
-	return state.StateConfig{EmailSender: emailSender}
+func provideStateOpts() state.StateOpts {
+	return state.StateOpts{}
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
@@ -324,8 +324,8 @@ func provideBasicAsyncActualizerConfig(
 	broker in10n.IN10nBroker,
 	federation federation.IFederation,
 	asyncActualizersRetryDelay actualizers.RetryDelay,
-	stateCfg state.StateConfig,
-
+	stateCfg state.StateOpts,
+	emailSender state.IEmailSender,
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
@@ -334,10 +334,11 @@ func provideBasicAsyncActualizerConfig(
 		Metrics:       metrics,
 		Broker:        broker,
 		Federation:    federation,
-		StateCfg:      stateCfg,
+		StateOpts:     stateCfg,
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
 		RetryDelay:    asyncActualizersRetryDelay,
+		EmailSender:   emailSender,
 	}
 }
 
