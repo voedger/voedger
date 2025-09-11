@@ -145,7 +145,7 @@ func newHostStateProvider(ctx context.Context, secretReader isecrets.ISecretRead
 	p := &hostStateProvider{}
 	p.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, p.getPartititonID,
 		p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, actualizers.DefaultIntentsLimit,
-		p.getCmdResultBuilder, p.getCmdPrepareArgs, p.getArgs, p.getUnloggedArgs, p.getWLogOffset)
+		p.getCmdResultBuilder, p.getCmdPrepareArgs, p.getArgs, p.getUnloggedArgs, p.getWLogOffset, state.NullOpts)
 	return p
 }
 
