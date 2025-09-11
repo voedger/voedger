@@ -1,29 +1,36 @@
-# httpu
+# Package httpu
 
-HTTP client utilities with configurable retry logic, authentication,
-and response handling for robust HTTP communication.
+HTTP client utilities with built-in retry logic, flexible request
+options, and robust error handling for production applications.
 
 ## Problem
 
-Standard HTTP clients require extensive boilerplate for common tasks
-like retry logic, authentication, and response validation.
+Standard HTTP clients require extensive boilerplate for common
+patterns like retries, authentication, and response handling.
 
 ## Features
 
-- **Retry logic** - Automatic retries with exponential backoff
-- **Authentication** - Built-in Bearer token and cookie support
-- **Response handling** - Configurable response processing and validation
-- **Status validation** - Expected status code checking with helpers
-- **Connection management** - Proper connection cleanup and linger settings
-- **Long polling** - Support for long-running HTTP requests
-- **Error matching** - Custom retry conditions based on error types
-- **Platform handling** - Windows socket error handling (WSAE errors)
+- **[Request builder](impl_opts.go#L17)** - Fluent API for HTTP
+  requests with method chaining
+- **[Automatic retries](impl.go#L112)** - Built-in retry logic for
+  network failures and 503 errors
+- **[Response handling](impl_opts.go#L17)** - Customizable response
+  processors and body management
+- **[Authentication](impl_opts.go#L81)** - Bearer token support with
+  flexible authorization options
+- **[Status validation](impl.go#L148)** - Expected status code
+  checking with detailed error reporting
+- **[Connection management](provide.go#L17)** - TCP connection tuning
+  with proper cleanup
+- **[Request options](impl_opts.go#L58)** - Headers, cookies, and
+  method configuration
+- **[Body streaming](types.go#L36)** - Support for both string and
+  io.Reader request bodies
+- **[Error matching](impl_opts.go#L133)** - Custom retry conditions
+  based on error patterns
+- **[Platform utilities](utils.go#L40)** - Windows socket error
+  detection and handling
 
-## Platform Support
-
-Includes Windows-specific socket error handling for WSAECONNRESET and
-WSAECONNREFUSED errors with automatic retry logic.
-
-## Usage Example
+## Use
 
 See [example usage](example_test.go)
