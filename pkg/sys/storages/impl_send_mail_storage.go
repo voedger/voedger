@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -17,13 +16,27 @@ import (
 )
 
 type sendMailStorage struct {
-	messagesSenderOverride chan state.EmailMessage // not nil in tests only
+	emailSender state.IEmailSender
 }
 
-func NewSendMailStorage(messages chan state.EmailMessage) state.IStateStorage {
+type implIEmailSender_SMTP struct {
+	defaultOpts []mail.Option
+}
+
+func NewSendMailStorage(emailSender state.IEmailSender) state.IStateStorage {
 	return &sendMailStorage{
-		messagesSenderOverride: messages,
+		emailSender: emailSender,
 	}
+}
+
+func NewIEmailSenderSMTP() state.IEmailSender {
+	return &implIEmailSender_SMTP{}
+}
+
+func NewIEmailSenderSMTPForTests() state.IEmailSender {
+	emailSender := NewIEmailSenderSMTP()
+	emailSender.(*implIEmailSender_SMTP).defaultOpts = []mail.Option{mail.WithTLSPolicy(mail.NoTLS)}
+	return emailSender
 }
 
 type mailKeyBuilder struct {
@@ -156,12 +169,6 @@ func (s *sendMailStorage) Validate(items []state.ApplyBatchItem) (err error) {
 	return nil
 }
 func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
-	stringOrEmpty := func(value string) string {
-		if value != "" {
-			return value
-		}
-		return ""
-	}
 
 	opts := []mail.Option{
 		mail.WithPort(int(k.port)),
@@ -170,46 +177,15 @@ func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
 		mail.WithSMTPAuth(mail.SMTPAuthPlain),
 	}
 
-	if coreutils.IsTest() {
-		opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
+	logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s",
+		k.message.Subject, k.message.From, k.message.To, k.message.CC, k.message.BCC))
+
+	if err := s.emailSender.Send(k.host, k.message, opts...); err != nil {
+		return err
 	}
 
-	logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k.message.Subject), k.message.From, k.message.To, k.message.CC, k.message.BCC))
-
-	if s.messagesSenderOverride != nil {
-		// happens in tests only
-		s.messagesSenderOverride <- k.message
-	} else {
-		c, e := mail.NewClient(k.host, opts...)
-		if e != nil {
-			return e
-		}
-		msg := mail.NewMsg()
-		msg.Subject(stringOrEmpty(k.message.Subject))
-		err := msg.From(k.message.From)
-		if err != nil {
-			return err
-		}
-		err = msg.To(k.message.To...)
-		if err != nil {
-			return err
-		}
-		err = msg.Cc(k.message.CC...)
-		if err != nil {
-			return err
-		}
-		err = msg.Bcc(k.message.BCC...)
-		if err != nil {
-			return err
-		}
-		msg.SetBodyString(mail.TypeTextHTML, stringOrEmpty(k.message.Body))
-		msg.SetCharset(mail.CharsetUTF8)
-		err = c.DialAndSend(msg)
-		if err != nil {
-			return err
-		}
-	}
-	logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent", stringOrEmpty(k.message.Subject), k.message.From, k.message.To, k.message.CC, k.message.BCC))
+	logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent",
+		k.message.Subject, k.message.From, k.message.To, k.message.CC, k.message.BCC))
 	return nil
 }
 func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
@@ -261,4 +237,29 @@ func (s *sendMailStorage) Get(key istructs.IStateKeyBuilder) (istructs.IStateVal
 		}, nil
 	}
 	return &sendMailValue{success: true}, nil
+}
+
+func (s *implIEmailSender_SMTP) Send(host string, m state.EmailMessage, opts ...mail.Option) error {
+	opts = append(opts, s.defaultOpts...)
+	client, err := mail.NewClient(host, opts...)
+	if err != nil {
+		return err
+	}
+	msg := mail.NewMsg()
+	msg.Subject(m.Subject)
+	if err = msg.From(m.From); err != nil {
+		return err
+	}
+	if err = msg.To(m.To...); err != nil {
+		return err
+	}
+	if err = msg.Cc(m.CC...); err != nil {
+		return err
+	}
+	if err = msg.Bcc(m.BCC...); err != nil {
+		return err
+	}
+	msg.SetBodyString(mail.TypeTextHTML, m.Body)
+	msg.SetCharset(mail.CharsetUTF8)
+	return client.DialAndSend(msg)
 }

@@ -225,6 +225,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		blobprocessor.NewIRequestHandler,
 		provideIVVMAppTTLStorage,
 		storage.NewElectionsTTLStorage,
+		provideStateConfig,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -238,12 +239,16 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"SendTimeout",
 			"VVMPort",
 			"MetricsServicePort",
-			"ActualizerStateConfig",
+			"EmailSender",
 			"SecretsReader",
 			"SequencesTrustLevel",
 			"AsyncActualizersRetryDelay",
 		),
 	))
+}
+
+func provideStateConfig(emailSender state.IEmailSender) state.StateConfig {
+	return state.StateConfig{EmailSender: emailSender}
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {

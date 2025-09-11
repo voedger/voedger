@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
+	"github.com/wneessen/go-mail"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -93,8 +94,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.Time = testingu.MockTime
 	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
 
-	emailMessagesChan := make(chan state.EmailMessage, 1) // must be buffered
-	cfg.ActualizerStateConfig = state.StateConfig{MessagesSenderOverride: emailMessagesChan}
+	emailCaptor := &implIEmailSender_captor{
+		emailCaptorCh: make(chan state.EmailMessage, 1), // must be buffered
+	}
+	cfg.EmailSender = emailCaptor
 
 	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 
@@ -146,7 +149,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		lock:                 sync.Mutex{},
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
-		emailCaptor:          emailMessagesChan,
+		emailCaptor:          emailCaptor,
 		mockTime:             testingu.MockTime,
 	}
 	httpClient, httpClientCleanup := httpu.NewIHTTPClient()
@@ -636,7 +639,7 @@ func (vit *VIT) CaptureEmail() (msg state.EmailMessage) {
 	vit.T.Helper()
 	tmr := time.NewTimer(getTestEmailsAwaitingTimeout())
 	select {
-	case msg = <-vit.emailCaptor:
+	case msg = <-vit.emailCaptor.emailCaptorCh:
 		return msg
 	case <-tmr.C:
 		vit.T.Fatal("no email messages")
@@ -683,21 +686,6 @@ func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySe
 	}
 }
 
-func (ec emailCaptor) checkEmpty(t testing.TB) {
-	select {
-	case _, ok := <-ec:
-		if ok {
-			t.Log("unexpected email message received")
-			t.Fail()
-		}
-	default:
-	}
-}
-
-func (ec emailCaptor) shutDown() {
-	close(ec)
-}
-
 func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
 	if val, ok := sr.secrets[name]; ok {
 		return val, nil
@@ -723,4 +711,24 @@ func (vit *VIT) checkVVMProblemCtx() {
 		vit.T.Fatal("vvmProblemCtx is closed but no error on vvm.Shutdown()")
 	default:
 	}
+}
+
+func (c *implIEmailSender_captor) Send(host string, msg state.EmailMessage, opts ...mail.Option) error {
+	c.emailCaptorCh <- msg
+	return nil
+}
+
+func (c *implIEmailSender_captor) checkEmpty(t testing.TB) {
+	select {
+	case _, ok := <-c.emailCaptorCh:
+		if ok {
+			t.Log("unexpected email message received")
+			t.Fail()
+		}
+	default:
+	}
+}
+
+func (c *implIEmailSender_captor) shutDown() {
+	close(c.emailCaptorCh)
 }

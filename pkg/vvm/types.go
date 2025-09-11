@@ -156,7 +156,7 @@ type VVMConfig struct {
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
-	ActualizerStateConfig      state.StateConfig
+	EmailSender                state.IEmailSender
 	SecretsReader              isecrets.ISecretReader
 	SMTPConfig                 smtp.Cfg
 	WSPostInitFunc             workspace.WSPostInitFunc

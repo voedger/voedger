@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
+	"github.com/voedger/voedger/pkg/sys/storages"
 
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"
@@ -59,6 +60,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		IP:            coreutils.LocalhostIP,
 		NumVVM:        1,
 		AdminPort:     DefaultAdminPort,
+		EmailSender:   storages.NewIEmailSenderSMTP(),
 
 		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
