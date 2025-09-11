@@ -1,43 +1,29 @@
 # httpu
 
-HTTP client utility with configurable request options, automatic
-retry logic, and robust error handling.
+HTTP client utilities with configurable retry logic, authentication,
+and response handling for robust HTTP communication.
 
 ## Problem
 
-Standard HTTP clients require repetitive boilerplate for common
-patterns like retries, authentication, and response handling.
+Standard HTTP clients require extensive boilerplate for common tasks
+like retry logic, authentication, and response validation.
 
 ## Features
 
-- **Request options** - Configurable headers, cookies, methods
-- **Automatic retries** - Built-in retry logic for network errors
-- **Response handling** - Custom response processors and validators
-- **Authentication** - Bearer token and authorization helpers
-- **Error recovery** - Windows socket error detection and handling
-- **Concurrent safe** - Thread-safe client operations
-- **Timeout control** - Request timeout and retry duration limits
+- **Retry logic** - Automatic retries with exponential backoff
+- **Authentication** - Built-in Bearer token and cookie support
+- **Response handling** - Configurable response processing and validation
+- **Status validation** - Expected status code checking with helpers
+- **Connection management** - Proper connection cleanup and linger settings
+- **Long polling** - Support for long-running HTTP requests
+- **Error matching** - Custom retry conditions based on error types
+- **Platform handling** - Windows socket error handling (WSAE errors)
 
 ## Platform Support
 
-Includes Windows-specific socket error handling (WSAECONNRESET,
-WSAECONNREFUSED) for improved network resilience on Windows systems.
+Includes Windows-specific socket error handling for WSAECONNRESET and
+WSAECONNREFUSED errors with automatic retry logic.
 
 ## Usage Example
 
-```go
-client, cleanup := NewIHTTPClient()
-defer cleanup()
-
-resp, err := client.Req(context.Background(), 
-    "https://api.example.com/data", 
-    "request body",
-    WithMethod("POST"),
-    WithHeaders("Content-Type", "application/json"),
-    WithAuthorizeBy("your-token"),
-    WithExpectedCode(201))
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Println(resp.Body)
-```
+See [example usage](example_test.go)
