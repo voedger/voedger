@@ -95,7 +95,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
 
 	emailCaptor := &implIEmailSender_captor{
-		emailCaptorCh: make(chan state.EmailMessage),
+		emailCaptorCh: make(chan state.EmailMessage, 1), // must be buffered
 	}
 	cfg.EmailSender = emailCaptor
 
