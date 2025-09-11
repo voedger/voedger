@@ -179,13 +179,12 @@ func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
 
 	logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s",
 		k.message.Subject, k.message.From, k.message.To, k.message.CC, k.message.BCC))
-
 	if err := s.emailSender.Send(k.host, k.message, opts...); err != nil {
 		return err
 	}
-
 	logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent",
 		k.message.Subject, k.message.From, k.message.To, k.message.CC, k.message.BCC))
+		
 	return nil
 }
 func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {

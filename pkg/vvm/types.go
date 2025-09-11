@@ -51,7 +51,7 @@ type OperatorBLOBProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
-	tokens itokens.ITokens, federation federation.IFederation, stateCfg state.StateConfig) pipeline.ISyncOperator
+	tokens itokens.ITokens, federation federation.IFederation, stateOpts state.StateOpts) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx uint) commandprocessor.CommandChannel
 type QueryChannel_V1 iprocbus.ServiceChannel

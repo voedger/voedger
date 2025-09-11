@@ -116,9 +116,9 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	retryDelay := vvmConfig.AsyncActualizersRetryDelay
+	stateOpts := provideStateOpts()
 	iEmailSender := vvmConfig.EmailSender
-	stateConfig := provideStateConfig(iEmailSender)
-	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, retryDelay, stateConfig)
+	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, retryDelay, stateOpts, iEmailSender)
 	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
@@ -308,8 +308,8 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	return voedgerVM, nil
 }
 
-func provideStateConfig(emailSender state.IEmailSender) state.StateConfig {
-	return state.StateConfig{EmailSender: emailSender}
+func provideStateOpts() state.StateOpts {
+	return state.StateOpts{}
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
@@ -385,8 +385,8 @@ func provideBasicAsyncActualizerConfig(
 	broker in10n.IN10nBroker, federation2 federation.IFederation,
 
 	asyncActualizersRetryDelay actualizers.RetryDelay,
-	stateCfg state.StateConfig,
-
+	stateCfg state.StateOpts,
+	emailSender state.IEmailSender,
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
@@ -395,10 +395,11 @@ func provideBasicAsyncActualizerConfig(
 		Metrics:       metrics2,
 		Broker:        broker,
 		Federation:    federation2,
-		StateCfg:      stateCfg,
+		StateOpts:     stateCfg,
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
 		RetryDelay:    asyncActualizersRetryDelay,
+		EmailSender:   emailSender,
 	}
 }
 

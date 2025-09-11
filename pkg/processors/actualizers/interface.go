@@ -34,7 +34,7 @@ type BasicAsyncActualizerConfig struct {
 	Broker       in10n.IN10nBroker
 	Federation   federation.IFederation
 
-	StateCfg state.StateConfig
+	StateOpts state.StateOpts
 
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc
@@ -49,7 +49,8 @@ type BasicAsyncActualizerConfig struct {
 	// FlushPositionInterval specifies how often actualizer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInterval time.Duration
 
-	RetryDelay RetryDelay
+	RetryDelay  RetryDelay
+	EmailSender state.IEmailSender
 }
 
 type AsyncActualizerConf struct {

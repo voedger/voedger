@@ -52,6 +52,7 @@ type testState struct {
 	federationCmdHandler  state.FederationCommandHandler
 	federationBlobHandler state.FederationBlobHandler
 	uniquesHandler        state.UniquesHandler
+	emailSender           state.IEmailSender
 	principals            []iauthnz.Principal
 	token                 string
 	queryWsid             istructs.WSID
@@ -209,6 +210,10 @@ func (ts *testState) PutUniquesHandler(emu state.UniquesHandler) {
 	ts.uniquesHandler = emu
 }
 
+func (ts *testState) PutEmailSender(emu state.IEmailSender) {
+	ts.emailSender = emu
+}
+
 func (ts *testState) emulateUniquesHandler(entity appdef.QName, wsid istructs.WSID, data map[string]interface{}) (istructs.RecordID, error) {
 	if ts.uniquesHandler == nil {
 		panic("uniques handler not set")
@@ -294,22 +299,22 @@ func (ts *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		state := state.StateConfig{
+		state := state.StateOpts{
 			CustomHTTPClient:         ts,
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
 		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
-			IntentsLimit, BundlesLimit, state)
+			IntentsLimit, BundlesLimit, state, ts.emailSender)
 	case ProcKind_CommandProcessor:
-		state := state.StateConfig{
+		state := state.StateOpts{
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state)
 	case ProcKind_QueryProcessor:
-		state := state.StateConfig{
+		state := state.StateOpts{
 			CustomHTTPClient:         ts,
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,
