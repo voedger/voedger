@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -99,7 +99,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	inviteID3 := InitiateInvitationByEMail(vit, ws, expireDatetime, email3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 
 	// need to gather email first because
-	actualEmails := []smtptest.Message{vit.CaptureEmail(), vit.CaptureEmail(), vit.CaptureEmail()}
+	actualEmails := []state.EmailMessage{vit.CaptureEmail(), vit.CaptureEmail(), vit.CaptureEmail()}
 
 	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
 	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeInvited, invite.State_Invited)
@@ -126,30 +126,24 @@ func TestInvite_BasicUsage(t *testing.T) {
 			verificationCodeEmail3 = actualEmail.Body[:6]
 		}
 	}
-	expectedEmails := []smtptest.Message{
+	expectedEmails := []state.EmailMessage{
 		{
 			Subject: inviteEmailSubject,
 			From:    it.TestSMTPCfg.GetFrom(),
 			To:      []string{email1},
 			Body:    fmt.Sprintf("%s;%d;%d;%s;%s", verificationCodeEmail, inviteID, ws.WSID, wsName, email1),
-			CC:      []string{},
-			BCC:     []string{},
 		},
 		{
 			Subject: inviteEmailSubject,
 			From:    it.TestSMTPCfg.GetFrom(),
 			To:      []string{email2},
 			Body:    fmt.Sprintf("%s;%d;%d;%s;%s", verificationCodeEmail2, inviteID2, ws.WSID, wsName, email2),
-			CC:      []string{},
-			BCC:     []string{},
 		},
 		{
 			Subject: inviteEmailSubject,
 			From:    it.TestSMTPCfg.GetFrom(),
 			To:      []string{email3},
 			Body:    fmt.Sprintf("%s;%d;%d;%s;%s", verificationCodeEmail3, inviteID3, ws.WSID, wsName, email3),
-			CC:      []string{},
-			BCC:     []string{},
 		},
 	}
 	require.Equal(expectedEmails, actualEmails)

@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -142,7 +142,7 @@ type signUpOpts struct {
 	reqOpts          []httpu.ReqOptFunc
 }
 
-type emailCaptor chan smtptest.Message
+type emailCaptor chan state.EmailMessage
 
 type implVITISecretsReader struct {
 	secrets          map[string][]byte
