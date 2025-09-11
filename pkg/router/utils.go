@@ -16,24 +16,25 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 )
 
 var onBeforeWriteResponse func(w http.ResponseWriter) // not nil in tests only
 
 func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
-	w.Header().Set(coreutils.ContentType, "text/plain")
+	w.Header().Set(httpu.ContentType, "text/plain")
 	w.WriteHeader(code)
 	writeResponse(w, msg)
 }
 
 func ReplyCommonError(w http.ResponseWriter, msg string, code int) {
-	w.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
 	w.WriteHeader(code)
 	writeCommonError(w, msg, code)
 }
 
 func ReplyJSON(w http.ResponseWriter, data string, code int) {
-	w.Header().Set(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
 	w.WriteHeader(code)
 	writeResponse(w, data)
 }

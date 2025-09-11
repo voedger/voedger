@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
@@ -55,7 +56,7 @@ func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
 	bw.writer = bw.blobMessageRead.okResponseIniter(
-		coreutils.ContentType, bw.blobState.Descr.ContentType,
+		httpu.ContentType, bw.blobState.Descr.ContentType,
 		coreutils.BlobName, bw.blobState.Descr.Name,
 	)
 	return nil
@@ -94,7 +95,7 @@ func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err erro
 		AppQName: bw.blobMessageRead.appQName,
 		Header:   bw.blobMessageRead.header,
 		Body:     []byte(`{}`),
-		Host:     coreutils.LocalhostIP.String(),
+		Host:     httpu.LocalhostIP.String(),
 		APIPath:  int(processors.APIPath_Queries),
 		IsAPIV2:  true,
 		QName:    downloadPersistentBLOBFuncQName,
@@ -134,7 +135,7 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error)
 		APIPath:  int(processors.APIPath_Docs),
 		DocID:    istructs.IDType(bw.blobMessageRead.ownerID),
 		QName:    bw.blobMessageRead.ownerRecord,
-		Host:     coreutils.LocalhostIP.String(),
+		Host:     httpu.LocalhostIP.String(),
 		IsAPIV2:  true,
 		Query: map[string]string{
 			"keys": bw.blobMessageRead.ownerRecordField,

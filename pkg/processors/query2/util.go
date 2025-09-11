@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -192,6 +193,6 @@ func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
 			responder:          qw.msg.Responder(),
 			rowsProcessorErrCh: qw.rowsProcessorErrCh,
 		},
-		contentType: coreutils.ContentType_ApplicationJSON,
+		contentType: httpu.ContentType_ApplicationJSON,
 	}
 }

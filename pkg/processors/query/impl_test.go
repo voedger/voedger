@@ -24,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
@@ -163,7 +164,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	})
 	responseCh, respMeta, responseErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+	require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)
 	for elem := range responseCh {
 		bb, err := json.Marshal(elem)
@@ -407,7 +408,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	})
 	respCh, respMeta, respErr, err := requestSender.SendRequest(processorCtx, bus.Request{})
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+	require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)
 	for elem := range respCh {
 		bb, err := json.Marshal(elem)
@@ -481,7 +482,7 @@ func TestRawMode(t *testing.T) {
 
 	responseCh, respMeta, responseErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 	require.NoError(err)
-	require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+	require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 	require.Equal(http.StatusOK, respMeta.StatusCode)
 	for elem := range responseCh {
 		bb, err := json.Marshal(elem)
@@ -1186,7 +1187,7 @@ func TestRateLimiter(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
-		require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+		require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 
 		for range respCh {
 		}
@@ -1227,7 +1228,7 @@ func TestAuthnz(t *testing.T) {
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 
 		require.NoError(err)
-		require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+		require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 		require.Equal(http.StatusForbidden, respMeta.StatusCode)
 		for range respCh {
 		}
@@ -1245,7 +1246,7 @@ func TestAuthnz(t *testing.T) {
 		})
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
-		require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+		require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 		require.Equal(http.StatusUnauthorized, respMeta.StatusCode)
 		for range respCh {
 		}
@@ -1261,7 +1262,7 @@ func TestAuthnz(t *testing.T) {
 		})
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
-		require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+		require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 		require.Equal(http.StatusForbidden, respMeta.StatusCode)
 		for range respCh {
 		}

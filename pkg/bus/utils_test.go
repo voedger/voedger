@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
@@ -95,7 +96,7 @@ func TestReplyError(t *testing.T) {
 				})
 				cmdRespMeta, _, err := GetCommandResponse(context.Background(), requestSender, Request{})
 				require.Equal(c.expected.error, err)
-				require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
+				require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
 			})
 		}
@@ -128,7 +129,7 @@ func TestReplyError(t *testing.T) {
 				meta, _, err := GetCommandResponse(context.Background(), requestSender, Request{})
 				var sysError coreutils.SysError
 				require.ErrorAs(err, &sysError)
-				require.Equal(coreutils.ContentType_ApplicationJSON, meta.ContentType)
+				require.Equal(httpu.ContentType_ApplicationJSON, meta.ContentType)
 				require.Equal(c.statusCode, sysError.HTTPStatus)
 				require.Equal(expectedMessage, sysError.Message)
 			})
@@ -149,7 +150,7 @@ func TestReplyError(t *testing.T) {
 		for elem := range responseCh {
 			require.Zero(counter)
 			require.Equal(http.StatusOK, responseMeta.StatusCode)
-			require.Equal(coreutils.ContentType_ApplicationJSON, responseMeta.ContentType)
+			require.Equal(httpu.ContentType_ApplicationJSON, responseMeta.ContentType)
 			require.Equal(testObj, elem)
 			counter++
 		}

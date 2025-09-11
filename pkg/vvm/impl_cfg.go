@@ -9,7 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -56,7 +56,7 @@ func NewVVMDefaultConfig() VVMConfig {
 			return mem.Provide(time), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
-		IP:            coreutils.LocalhostIP,
+		IP:            httpu.LocalhostIP,
 		NumVVM:        1,
 		AdminPort:     DefaultAdminPort,
 		EmailSender:   storages.NewIEmailSenderSMTP(),

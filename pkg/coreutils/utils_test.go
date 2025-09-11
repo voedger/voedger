@@ -50,22 +50,6 @@ func TestIsDynamoDBStorage(t *testing.T) {
 	require.True(t, IsDynamoDBStorage())
 }
 
-func TestServerAddress(t *testing.T) {
-	require := require.New(t)
-
-	t.Run("LocalhostAddress binds to localhost:0 only", func(t *testing.T) {
-		require.Equal("127.0.0.1:0", LocalhostDynamic())
-	})
-
-	t.Run("ListenAddr returns localhost:0 for port 0", func(t *testing.T) {
-		require.Equal("127.0.0.1:0", ListenAddr(0))
-	})
-
-	t.Run("ListenAddr returns public address for non-zero port", func(t *testing.T) {
-		require.Equal(":8080", ListenAddr(8080))
-	})
-}
-
 type errUnwrapper struct{ errs []error }
 
 func (e errUnwrapper) Error() string   { return "wrapped" }

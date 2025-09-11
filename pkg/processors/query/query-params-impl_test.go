@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -272,7 +272,7 @@ func TestWrongTypes(t *testing.T) {
 			})
 			respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 			require.NoError(err)
-			require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+			require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 			require.Equal(http.StatusBadRequest, respMeta.StatusCode)
 			for range respCh {
 			}

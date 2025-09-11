@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
@@ -90,7 +91,7 @@ func ReplyErrf(responder IResponder, status int, args ...interface{}) {
 //nolint:errorlint
 func ReplyErrDef(responder IResponder, err error, defaultStatusCode int) {
 	res := coreutils.WrapSysErrorToExact(err, defaultStatusCode)
-	if err := responder.Respond(ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: res.HTTPStatus}, res); err != nil {
+	if err := responder.Respond(ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: res.HTTPStatus}, res); err != nil {
 		logger.Error(err)
 	}
 }
@@ -100,7 +101,7 @@ func ReplyErr(responder IResponder, err error) {
 }
 
 func ReplyJSON(responder IResponder, httpCode int, obj any) {
-	if err := responder.Respond(ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: httpCode}, obj); err != nil {
+	if err := responder.Respond(ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: httpCode}, obj); err != nil {
 		logger.Error(err)
 	}
 }
@@ -141,12 +142,12 @@ func GetTestSendTimeout() SendTimeout {
 }
 
 func GetPrincipalToken(request Request) (token string, err error) {
-	authHeader := request.Header[coreutils.Authorization]
+	authHeader := request.Header[httpu.Authorization]
 	if len(authHeader) == 0 {
 		return "", nil
 	}
-	if strings.HasPrefix(authHeader, coreutils.BearerPrefix) {
-		return strings.ReplaceAll(authHeader, coreutils.BearerPrefix, ""), nil
+	if strings.HasPrefix(authHeader, httpu.BearerPrefix) {
+		return strings.ReplaceAll(authHeader, httpu.BearerPrefix, ""), nil
 	}
 	if strings.HasPrefix(authHeader, "Basic ") {
 		return getBasicAuthToken(authHeader)

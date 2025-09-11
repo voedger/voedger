@@ -30,6 +30,7 @@ import (
 	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
@@ -147,7 +148,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		resource := "q.EchoQuery"
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
-		body := testApp.post("/api/"+path, coreutils.ContentType_ApplicationJSON, testText, nil)
+		body := testApp.post("/api/"+path, httpu.ContentType_ApplicationJSON, testText, nil)
 		require.JSONEq(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
 	})
 
@@ -268,7 +269,7 @@ func TestReverseProxy(t *testing.T) {
 	defer tearDown(testApp)
 
 	testAppPort := testApp.processor.ListeningPort()
-	targetListener, err := net.Listen("tcp", coreutils.LocalhostDynamic())
+	targetListener, err := net.Listen("tcp", httpu.LocalhostDynamic())
 	require.NoError(err)
 	targetListenerPort := targetListener.Addr().(*net.TCPAddr).Port
 

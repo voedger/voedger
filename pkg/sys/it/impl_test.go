@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
@@ -34,21 +33,21 @@ func TestAuthorization(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {
 			sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-			vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Bearer "+sys.Token))
+			vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(httpu.Authorization, "Bearer "+sys.Token))
 		})
 
 		t.Run("Basic scheme", func(t *testing.T) {
 			t.Run("token in username only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token + ":"))
-				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(httpu.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token in password only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(":" + prn.Token))
-				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(httpu.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token is splitted over username and password", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token[:len(prn.Token)/2] + ":" + prn.Token[len(prn.Token)/2:]))
-				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostWS(ws, "c.sys.CUD", body, httpu.WithHeaders(httpu.Authorization, "Basic "+basicAuthHeader))
 			})
 		})
 	})
@@ -60,18 +59,18 @@ func TestAuthorization(t *testing.T) {
 
 		t.Run("unsupported Authorization header", func(t *testing.T) {
 			vit.PostProfile(prn, "c.sys.CUD", body,
-				httpu.WithHeaders(coreutils.Authorization, `whatever w\o Bearer or Basic`), httpu.Expect401()).Println()
+				httpu.WithHeaders(httpu.Authorization, `whatever w\o Bearer or Basic`), httpu.Expect401()).Println()
 		})
 
 		t.Run("Basic authorization", func(t *testing.T) {
 			t.Run("non-base64 header value", func(t *testing.T) {
 				vit.PostProfile(prn, "c.sys.CUD", body,
-					httpu.WithHeaders(coreutils.Authorization, `Basic non-base64-value`), httpu.Expect401()).Println()
+					httpu.WithHeaders(httpu.Authorization, `Basic non-base64-value`), httpu.Expect401()).Println()
 			})
 			t.Run("no colon between username and password", func(t *testing.T) {
 				headerValue := base64.RawStdEncoding.EncodeToString([]byte("some password"))
 				vit.PostProfile(prn, "c.sys.CUD", body,
-					httpu.WithHeaders(coreutils.Authorization, "Basic "+headerValue), httpu.Expect401()).Println()
+					httpu.WithHeaders(httpu.Authorization, "Basic "+headerValue), httpu.Expect401()).Println()
 			})
 		})
 	})

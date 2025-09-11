@@ -80,7 +80,7 @@ func WithExpectedCode(expectedHTTPCode int) ReqOptFunc {
 // has priority over WithAuthorizeByIfNot
 func WithAuthorizeBy(token string) ReqOptFunc {
 	return func(opts IReqOpts) {
-		opts.httpOpts().headers[authorization] = bearerPrefix + token
+		opts.httpOpts().headers[Authorization] = BearerPrefix + token
 	}
 }
 
@@ -104,8 +104,8 @@ func WithSkipRetryOn503() ReqOptFunc {
 
 func WithDefaultAuthorize(principalToken string) ReqOptFunc {
 	return func(opts IReqOpts) {
-		if _, ok := opts.httpOpts().headers[authorization]; !ok {
-			opts.httpOpts().headers[authorization] = bearerPrefix + principalToken
+		if _, ok := opts.httpOpts().headers[Authorization]; !ok {
+			opts.httpOpts().headers[Authorization] = BearerPrefix + principalToken
 		}
 	}
 }

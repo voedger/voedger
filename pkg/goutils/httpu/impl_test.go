@@ -222,13 +222,13 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		}
 		_, _ = httpClient.Req(context.Background(), url, "body",
 			WithAuthorizeBy("tok"),
-			WithCookies(authorization, "tok"),
+			WithCookies(Authorization, "tok"),
 			WithoutAuth(),
 		)
 		require.NotNil(gotReq)
-		require.Empty(gotReq.Header.Get(authorization))
+		require.Empty(gotReq.Header.Get(Authorization))
 		for _, c := range gotReq.Cookies() {
-			require.NotEqual(authorization, c.Name)
+			require.NotEqual(Authorization, c.Name)
 		}
 	})
 

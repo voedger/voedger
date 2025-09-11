@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -176,7 +175,7 @@ func TestBasicUsage_POST(t *testing.T) {
 	})
 
 	t.Run("low-level POST with authorization by header", func(t *testing.T) {
-		httpResp = vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, httpu.WithHeaders(coreutils.Authorization, "Bearer "+ws.Owner.Token))
+		httpResp = vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, httpu.WithHeaders(httpu.Authorization, "Bearer "+ws.Owner.Token))
 		httpResp.Println()
 	})
 
