@@ -26,7 +26,7 @@ import (
 func TestFederationFunc(t *testing.T) {
 	require := require.New(t)
 
-	listener, err := net.Listen("tcp", coreutils.LocalhostDynamic())
+	listener, err := net.Listen("tcp", httpu.LocalhostDynamic())
 	require.NoError(err)
 	var handler func(w http.ResponseWriter, r *http.Request)
 	server := &http.Server{

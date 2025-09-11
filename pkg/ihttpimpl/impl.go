@@ -24,6 +24,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
@@ -62,7 +63,7 @@ type redirectionRoute struct {
 
 func (p *httpProcessor) Prepare() (err error) {
 	if p.isHTTPS() {
-		acmeAddr := coreutils.ListenAddr(defaultHTTPPort)
+		acmeAddr := httpu.ListenAddr(defaultHTTPPort)
 		p.certManager = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: p.hostPolicy,
@@ -83,7 +84,7 @@ func (p *httpProcessor) Prepare() (err error) {
 		}
 	}
 
-	if p.listener, err = net.Listen("tcp", coreutils.ListenAddr(p.params.Port)); err == nil {
+	if p.listener, err = net.Listen("tcp", httpu.ListenAddr(p.params.Port)); err == nil {
 		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 	}
 

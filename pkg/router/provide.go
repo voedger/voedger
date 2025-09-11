@@ -12,8 +12,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
@@ -28,9 +28,9 @@ import (
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHTTPService("HTTP server", coreutils.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
+	httpServ := getHTTPService("HTTP server", httpu.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
 		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
-	adminEndpoint := fmt.Sprintf("%s:%d", coreutils.LocalhostIP, rp.AdminPort)
+	adminEndpoint := fmt.Sprintf("%s:%d", httpu.LocalhostIP, rp.AdminPort)
 	adminSrv = getHTTPService("Admin HTTP server", adminEndpoint, RouterParams{
 		WriteTimeout:     rp.WriteTimeout,
 		ReadTimeout:      rp.ReadTimeout,

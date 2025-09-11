@@ -9,7 +9,7 @@ import (
 	"net"
 
 	"github.com/emersion/go-smtp"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -26,7 +26,7 @@ func NewServer(opts ...Option) Server {
 		opt(ts)
 	}
 
-	l, err := net.Listen("tcp", coreutils.LocalhostDynamic())
+	l, err := net.Listen("tcp", httpu.LocalhostDynamic())
 	if err != nil {
 		panic(err)
 	}

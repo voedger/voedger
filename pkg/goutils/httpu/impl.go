@@ -95,8 +95,8 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 		urlStr = netURL.String()
 	}
 	if opts.withoutAuth {
-		delete(opts.headers, authorization)
-		delete(opts.cookies, authorization)
+		delete(opts.headers, Authorization)
+		delete(opts.cookies, Authorization)
 	}
 
 	for _, v := range opts.validators {

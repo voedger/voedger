@@ -16,7 +16,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -24,7 +24,7 @@ import (
 
 func TestBasicUsage_ReverseProxy(t *testing.T) {
 	require := require.New(t)
-	targetListener, err := net.Listen("tcp", coreutils.LocalhostDynamic())
+	targetListener, err := net.Listen("tcp", httpu.LocalhostDynamic())
 	require.NoError(err)
 	defer targetListener.Close()
 	targetPort := targetListener.Addr().(*net.TCPAddr).Port

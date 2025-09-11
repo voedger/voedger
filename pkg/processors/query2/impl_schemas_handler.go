@@ -12,7 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 )
 
 func schemasHandler() apiPathHandler {
@@ -82,5 +82,5 @@ func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 	}
 	generatedHTML += "</body></html>"
 
-	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_TextHTML, StatusCode: http.StatusOK}, generatedHTML)
+	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_TextHTML, StatusCode: http.StatusOK}, generatedHTML)
 }

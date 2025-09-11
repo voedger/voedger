@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
@@ -62,7 +63,7 @@ func authLoginHandler() apiPathHandler {
 				"%s": %d,
 				"%s": %d
 			}`, fieldPrincipalToken, token, fieldExpiresInSeconds, int(expiresInSeconds), fieldProfileWSID, int(wsid))
-			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
+			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
 		},
 	}
 }

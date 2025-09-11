@@ -8,7 +8,6 @@ package coreutils
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -37,19 +36,6 @@ func IsCassandraStorage() bool {
 func IsDynamoDBStorage() bool {
 	_, ok := os.LookupEnv("DYNAMODB_TESTS_ENABLED")
 	return ok
-}
-
-func ListenAddr(port int) string {
-	if port == 0 {
-		return LocalhostDynamic()
-	}
-	return fmt.Sprintf(":%d", port)
-}
-
-// LocalhostDynamic returns a server address that binds only to localhost (127.0.0.1:0)
-// Use this for tests, admin interfaces, or services that should only be locally accessible
-func LocalhostDynamic() string {
-	return fmt.Sprintf("%s:0", LocalhostIP.String())
 }
 
 func SplitErrors(joinedError error) (errs []error) {

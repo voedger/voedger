@@ -16,6 +16,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 )
 
 func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error,
@@ -93,7 +94,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 
 		elemsCount++
 
-		if isCmd || contentType == coreutils.ContentType_TextPlain {
+		if isCmd || contentType == httpu.ContentType_TextPlain {
 			sendSuccess = writeResponse(w, elem.(string))
 			continue
 		}

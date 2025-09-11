@@ -24,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -140,7 +141,7 @@ func TestBasicUsage_Respond(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 				go func() {
-					err := responder.Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, c.obj)
+					err := responder.Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, c.obj)
 					require.NoError(err)
 				}()
 			}, bus.DefaultSendTimeout)
@@ -171,7 +172,7 @@ func TestBeginResponseTimeout(t *testing.T) {
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Equal(t, bus.ErrSendTimeoutExpired.Error(), string(respBodyBytes))
-	expectResp(t, resp, coreutils.ContentType_TextPlain, http.StatusServiceUnavailable)
+	expectResp(t, resp, httpu.ContentType_TextPlain, http.StatusServiceUnavailable)
 }
 
 type testObject struct {

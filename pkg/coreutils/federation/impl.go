@@ -66,7 +66,7 @@ func (f *implIFederation) UploadTempBLOB(appQName appdef.AppQName, wsid istructs
 	uploadBLOBURL := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/tblobs", appQName.Owner(), appQName.Name(), wsid)
 	optFuncs = append(optFuncs, httpu.WithHeaders(
 		coreutils.BlobName, blobReader.Name,
-		coreutils.ContentType, blobReader.ContentType,
+		httpu.ContentType, blobReader.ContentType,
 		"TTL", ttl,
 	))
 	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
@@ -97,7 +97,7 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 		appQName.Owner(), appQName.Name(), wsid, blobReader.OwnerRecord, blobReader.OwnerRecordField)
 	optFuncs = append(optFuncs, httpu.WithHeaders(
 		coreutils.BlobName, blobReader.Name,
-		coreutils.ContentType, blobReader.ContentType,
+		httpu.ContentType, blobReader.ContentType,
 	))
 	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
 	if err != nil {
@@ -140,7 +140,7 @@ func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID,
 	res = iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
 			Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
-			ContentType: resp.HTTPResp.Header.Get(coreutils.ContentType),
+			ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
 		},
 		ReadCloser: resp.HTTPResp.Body,
 	}
@@ -160,7 +160,7 @@ func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.W
 	res = iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
 			Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
-			ContentType: resp.HTTPResp.Header.Get(coreutils.ContentType),
+			ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
 		},
 		ReadCloser: resp.HTTPResp.Body,
 	}

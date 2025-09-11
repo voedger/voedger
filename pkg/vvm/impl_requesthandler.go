@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -66,7 +66,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				}
 
 				iqm := query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, *queryParams, request.DocID, processors.APIPath(request.APIPath), request.QName,
-					partitionID, request.Host, token, request.WorkspaceQName, request.Header[coreutils.Accept])
+					partitionID, request.Host, token, request.WorkspaceQName, request.Header[httpu.Accept])
 				if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
 					bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v2 processors available")
 				}

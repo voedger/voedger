@@ -25,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -141,7 +142,7 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(*respErr)
 		log.Println(respData)
 		require.Equal(http.StatusOK, respMeta.StatusCode)
-		require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+		require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 		// check that command is handled and notifications were sent
 		<-check
 		<-check
@@ -161,7 +162,7 @@ func TestBasicUsage(t *testing.T) {
 		for elem := range respCh {
 			require.Zero(counter)
 			require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
-			require.Equal(coreutils.ContentType_ApplicationJSON, respMeta.ContentType)
+			require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 			require.Equal(coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: "fire error"}, elem) // nolint:errorlint
 			counter++
 		}
@@ -356,7 +357,7 @@ func TestCUDUpdate(t *testing.T) {
 	cmdRespMeta, cmdResp, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 	require.NoError(sysErr)
 	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
-	require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
+	require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	require.Empty(cmdResp.CmdResult)
 	newID := cmdResp.NewIDs["1"]
 	require.NotZero(newID)
@@ -366,7 +367,7 @@ func TestCUDUpdate(t *testing.T) {
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
 		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
-		require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
+		require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	})
 
 	t.Run("404 not found on update not existing", func(t *testing.T) {
@@ -374,7 +375,7 @@ func TestCUDUpdate(t *testing.T) {
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.Error(err)
 		require.Equal(http.StatusNotFound, cmdRespMeta.StatusCode)
-		require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
+		require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	})
 }
 
@@ -423,7 +424,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 			}
 			cmdRespMeta, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.Equal(http.StatusBadRequest, cmdRespMeta.StatusCode, c.desc)
-			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
 			if sysErr != nil {
 				var sysError coreutils.SysError
 				require.ErrorAs(sysErr, &sysError)
@@ -503,7 +504,7 @@ func TestErrors(t *testing.T) {
 			}
 			cmdRespMeta, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 			require.Equal(c.expectedStatusCode, cmdRespMeta.StatusCode, c.desc)
-			require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
+			require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType, c.desc)
 			if sysErr != nil {
 				var sysError coreutils.SysError
 				require.ErrorAs(sysErr, &sysError)
@@ -598,7 +599,7 @@ func TestAuthnz(t *testing.T) {
 
 func getAuthHeader(token string) map[string]string {
 	return map[string]string{
-		coreutils.Authorization: "Bearer " + token,
+		httpu.Authorization: "Bearer " + token,
 	}
 }
 
@@ -629,7 +630,7 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.NoError(err)
 	require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
-	require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
+	require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 	<-ch
 }
 
@@ -781,7 +782,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 			return
 		}
 		token := ""
-		if authHeader, ok := request.Header[coreutils.Authorization]; ok {
+		if authHeader, ok := request.Header[httpu.Authorization]; ok {
 			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
 		icm := NewCommandMessage(vvmCtx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "")
