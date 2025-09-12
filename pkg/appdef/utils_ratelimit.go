@@ -8,7 +8,7 @@ package appdef
 import (
 	"strings"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 // Renders an RateScope in human-readable form, without `RateScope_` prefix,
@@ -23,7 +23,7 @@ func (o LimitFilterOption) MarshalText() ([]byte, error) {
 	if o < LimitFilterOption_count {
 		s = o.String()
 	} else {
-		s = utils.UintToString(o)
+		s = strconvu.UintToString(o)
 	}
 	return []byte(s), nil
 }

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 // *********************************************************************************************************
@@ -119,7 +119,7 @@ func (k ResourceKindType) MarshalText() ([]byte, error) {
 	if k < ResourceKind_FakeLast {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }
@@ -134,7 +134,7 @@ func (k RateLimitKind) MarshalText() ([]byte, error) {
 	if k < RateLimitKind_FakeLast {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }

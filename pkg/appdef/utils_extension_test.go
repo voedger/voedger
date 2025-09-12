@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 func TestExtensionEngineKind_MarshalText(t *testing.T) {
@@ -28,7 +28,7 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 		},
 		{name: `ExtensionEngineKind_count —> <number>`,
 			k:    appdef.ExtensionEngineKind_count,
-			want: utils.UintToString(appdef.ExtensionEngineKind_count),
+			want: strconvu.UintToString(appdef.ExtensionEngineKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -46,7 +46,7 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover ExtensionEngineKind.String()", func(t *testing.T) {
 		const tested = appdef.ExtensionEngineKind_count + 1
-		want := "ExtensionEngineKind(" + utils.UintToString(tested) + ")"
+		want := "ExtensionEngineKind(" + strconvu.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(ExtensionEngineKind_count + 1).String() = %v, want %v", got, want)

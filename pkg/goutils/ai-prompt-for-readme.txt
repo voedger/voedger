@@ -15,6 +15,11 @@ You are an AI system specialized in analyzing Go packages and generating concise
    - Each feature: **2–3 word name** + short description
    - No trailing periods
    - Each name of key architecture point is not longer than 2-3 words
+   - CRITICAL: Only include architecture points that represent significant design decisions, core algorithms, or essential structural elements. Do NOT include:
+     - Unexported constants or variables
+     - Trivial helper values
+     - Implementation details that don't affect the public API or core functionality
+   - Focus on: main function logic, type constraints, validation algorithms, error handling strategies, core data structures
 
 ### Platform-Specific Logic
    If the code has platform-specific behavior (e.g. build tags, OS-specific imports), add a `## Platform Support` section describing it.
@@ -26,7 +31,7 @@ You are an AI system specialized in analyzing Go packages and generating concise
    Always include a `## Use` section:
 
    - If a `*_test.go` file contains `TestBasicUsage`, `TestUsage`, or `ExampleBasic`, include a markdown link to that test file.
-   - Else, if a package-level `Example()` function exists in `example_test.go`, link to that file.
+   - Else, if **any** `Example*` functions exist in `example_test.go`, link to that file.
    - Otherwise, generate a **minimal usage snippet** that directly illustrates the core value of the package.
 
      - ≤8 lines
@@ -66,7 +71,7 @@ You are an AI system specialized in analyzing Go packages and generating concise
    - If test file exists:
      See [basic usage example](path/to/test_file.go)
 
-   - Else if package-level Example exists:
+   - Else if any Example functions exist:
      See [example usage](path/to/example_test.go)
 
    - Otherwise:

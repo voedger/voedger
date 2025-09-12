@@ -8,7 +8,7 @@ package appdef
 import (
 	"strings"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
@@ -16,7 +16,7 @@ func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
 	if k < ExtensionEngineKind_count {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }

@@ -8,7 +8,7 @@ package appdef
 import (
 	"strconv"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 func (o Occurs) String() string {
@@ -16,7 +16,7 @@ func (o Occurs) String() string {
 	case Occurs_Unbounded:
 		return Occurs_UnboundedStr
 	default:
-		return utils.UintToString(o)
+		return strconvu.UintToString(o)
 	}
 }
 
