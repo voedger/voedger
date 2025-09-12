@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 func TestRateScopeTrimString(t *testing.T) {
@@ -46,7 +46,7 @@ func Test_LimitFilterOption_MarshalText(t *testing.T) {
 		},
 		{name: `LimitFilterOption_count —> <number>`,
 			o:    appdef.LimitFilterOption_count,
-			want: utils.UintToString(appdef.LimitFilterOption_count),
+			want: strconvu.UintToString(appdef.LimitFilterOption_count),
 		},
 	}
 	for _, tt := range tests {
@@ -64,7 +64,7 @@ func Test_LimitFilterOption_MarshalText(t *testing.T) {
 
 	t.Run("100% cover LimitFilterOption.String()", func(t *testing.T) {
 		const tested = appdef.LimitFilterOption_count + 1
-		want := "LimitFilterOption(" + utils.UintToString(tested) + ")"
+		want := "LimitFilterOption(" + strconvu.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(LimitFilterOption_count + 1).String() = %v, want %v", got, want)

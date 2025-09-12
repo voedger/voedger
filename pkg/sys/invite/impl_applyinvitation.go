@@ -11,8 +11,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -59,8 +59,8 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 
 		replacer := strings.NewReplacer(
 			EmailTemplatePlaceholder_VerificationCode, verificationCode,
-			EmailTemplatePlaceholder_InviteID, utils.UintToString(svViewInviteIndex.AsRecordID(field_InviteID)),
-			EmailTemplatePlaceholder_WSID, utils.UintToString(event.Workspace()),
+			EmailTemplatePlaceholder_InviteID, strconvu.UintToString(svViewInviteIndex.AsRecordID(field_InviteID)),
+			EmailTemplatePlaceholder_WSID, strconvu.UintToString(event.Workspace()),
 			EmailTemplatePlaceholder_WSName, svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName),
 			EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(field_Email),
 		)

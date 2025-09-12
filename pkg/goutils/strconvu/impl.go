@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2020-present unTill Pro, Ltd.
+ * Copyright (c) 2025-present unTill Software Development Group B.V.
  * @author Denis Gribanov
  */
 
-package utils
+package strconvu
 
 import (
 	"errors"
@@ -12,11 +12,11 @@ import (
 )
 
 func UintToString[T ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64](n T) string {
-	return strconv.FormatUint(uint64(n), DecimalBase)
+	return strconv.FormatUint(uint64(n), decimalBase)
 }
 
 func IntToString[T ~int | ~int8 | ~int16 | ~int32 | ~int64](n T) string {
-	return strconv.FormatInt(int64(n), DecimalBase)
+	return strconv.FormatInt(int64(n), decimalBase)
 }
 
 func StringToUint8(s string) (uint8, error) {

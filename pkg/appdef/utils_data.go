@@ -8,7 +8,7 @@ package appdef
 import (
 	"strings"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 // Returns name of system data type by data kind.
@@ -97,7 +97,7 @@ func (k DataKind) MarshalText() ([]byte, error) {
 	if k < DataKind_FakeLast {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }
@@ -114,7 +114,7 @@ func (k ConstraintKind) MarshalText() ([]byte, error) {
 	if k < ConstraintKind_count {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }

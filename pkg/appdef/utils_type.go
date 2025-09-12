@@ -9,8 +9,8 @@ import (
 	"iter"
 	"strings"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/set"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 // Returns CDoc by name.
@@ -403,7 +403,7 @@ func (k TypeKind) MarshalText() ([]byte, error) {
 	if k < TypeKind_count {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }

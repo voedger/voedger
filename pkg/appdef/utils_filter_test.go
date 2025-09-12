@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -83,7 +83,7 @@ func TestFilterKind_MarshalText(t *testing.T) {
 		},
 		{name: `FilterKind_count —> <number>`,
 			k:    appdef.FilterKind_count,
-			want: utils.UintToString(appdef.FilterKind_count),
+			want: strconvu.UintToString(appdef.FilterKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -101,7 +101,7 @@ func TestFilterKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover FilterKind.String()", func(t *testing.T) {
 		const tested = appdef.FilterKind_count + 1
-		want := "FilterKind(" + utils.UintToString(tested) + ")"
+		want := "FilterKind(" + strconvu.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(FilterKind_count + 1).String() = %v, want %v", got, want)

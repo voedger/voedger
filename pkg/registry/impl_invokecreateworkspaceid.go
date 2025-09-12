@@ -11,7 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -29,7 +29,7 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederationWithRetry
 				continue
 			}
 			loginHash := rec.AsString(authnz.Field_LoginHash)
-			wsName := utils.UintToString(crc32.ChecksumIEEE([]byte(loginHash)))
+			wsName := strconvu.UintToString(crc32.ChecksumIEEE([]byte(loginHash)))
 			var wsKind appdef.QName
 			switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
 			case istructs.SubjectKind_Device:

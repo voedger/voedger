@@ -13,7 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
@@ -150,7 +150,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 			references[rkv.AsQName(appdef.SystemField_QName).String()] = recmap
 		}
 
-		recKey := utils.UintToString(recordID)
+		recKey := strconvu.UintToString(recordID)
 		if _, ok := recmap[recKey]; !ok {
 			child := newCollectionObject(rkv.(istructs.IStateRecordValue).AsRecord())
 			obj, err := convert(child, appDef, nil, istructs.NullRecordID)

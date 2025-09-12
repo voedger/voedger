@@ -8,7 +8,7 @@ package appdef
 import (
 	"strings"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 // Returns all types that match the filter.
@@ -38,7 +38,7 @@ func (k FilterKind) MarshalText() ([]byte, error) {
 	if k < FilterKind_count {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }
