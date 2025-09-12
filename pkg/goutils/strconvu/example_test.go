@@ -51,7 +51,7 @@ func ExampleIntToString() {
 	var i16 int16 = -32768
 	var i32 int32 = -2147483648
 	var i64 int64 = -9223372036854775808
-	var i int = -42
+	i := -42
 
 	fmt.Println("int8:", IntToString(i8))
 	fmt.Println("int16:", IntToString(i16))
