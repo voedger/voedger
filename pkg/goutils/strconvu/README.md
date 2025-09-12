@@ -1,21 +1,23 @@
 # strconvu
 
-Type-safe string conversion utilities for Go integer types with
-generic support and validation.
+Type-safe string conversion utilities for Go integer types using generics.
 
 ## Problem
 
-Standard library string conversion requires explicit type casting
-and lacks validation for specific numeric ranges like uint8.
+Standard library string conversions require explicit type casting and 
+lack compile-time type safety for custom integer types.
 
 ## Features
 
-- **Generic conversion** - Convert any integer type to string
-  - [Generic type constraints: impl.go#L14](pkg/goutils/strconvu/impl.go#L14)
-  - [Generic type constraints: impl.go#L18](pkg/goutils/strconvu/impl.go#L18)
-- **Validated parsing** - Parse strings to uint8 with range checking
-  - [Range validation logic: impl.go#L27](pkg/goutils/strconvu/impl.go#L27)
-  - [Error handling strategy: impl.go#L28](pkg/goutils/strconvu/impl.go#L28)
+- **[UintToString](impl.go#L14)** - Generic unsigned integer to string conversion
+  - [Generic type constraints: impl.go#L14](impl.go#L14)
+  - [Decimal base formatting: impl.go#L15](impl.go#L15)
+- **[IntToString](impl.go#L18)** - Generic signed integer to string conversion
+  - [Generic type constraints: impl.go#L18](impl.go#L18)
+  - [Decimal base formatting: impl.go#L19](impl.go#L19)
+- **[StringToUint8](impl.go#L22)** - String to uint8 with range validation
+  - [Range validation logic: impl.go#L27](impl.go#L27)
+  - [Error handling strategy: impl.go#L28](impl.go#L28)
 
 ## Use
 
