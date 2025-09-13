@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 )
@@ -20,7 +19,7 @@ import (
 // otherwise few VVMs will use the same map from appStorageFactory, but RWMutex'es are different per each appStorage instance!
 // see https://github.com/voedger/voedger/issues/3447
 type storageWithLock struct {
-	data map[string]map[string]coreutils.DataWithExpiration
+	data map[string]map[string]istorage.DataWithExpiration
 	lock sync.RWMutex
 }
 
@@ -43,7 +42,7 @@ func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 		return istorage.ErrStorageAlreadyExists
 	}
 	s.storages[appName.String()] = &storageWithLock{
-		data: map[string]map[string]coreutils.DataWithExpiration{},
+		data: map[string]map[string]istorage.DataWithExpiration{},
 		lock: sync.RWMutex{},
 	}
 
@@ -57,7 +56,7 @@ func (s *appStorageFactory) Time() timeu.ITime {
 func (s *appStorageFactory) StopGoroutines() {}
 
 type appStorage struct {
-	storage      map[string]map[string]coreutils.DataWithExpiration
+	storage      map[string]map[string]istorage.DataWithExpiration
 	lock         *sync.RWMutex
 	testDelayGet time.Duration // used in tests only
 	testDelayPut time.Duration // used in tests only
@@ -74,7 +73,7 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 
 	p := s.storage[string(pKey)]
 	if p == nil {
-		p = make(map[string]coreutils.DataWithExpiration)
+		p = make(map[string]istorage.DataWithExpiration)
 		s.storage[string(pKey)] = p
 	}
 
@@ -91,7 +90,7 @@ func (s *appStorage) InsertIfNotExists(pKey []byte, cCols []byte, newValue []byt
 	if ttlSeconds > 0 {
 		expireAt = now.Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 	}
-	p[string(cCols)] = coreutils.DataWithExpiration{
+	p[string(cCols)] = istorage.DataWithExpiration{
 		Data:     copySlice(newValue),
 		ExpireAt: expireAt,
 	}
@@ -126,7 +125,7 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 		if ttlSeconds > 0 {
 			expireAt = now.Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
-		p[string(cCols)] = coreutils.DataWithExpiration{
+		p[string(cCols)] = istorage.DataWithExpiration{
 			Data:     copySlice(newValue),
 			ExpireAt: expireAt,
 		}
@@ -227,10 +226,10 @@ func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 
 	p := s.storage[string(pKey)]
 	if p == nil {
-		p = make(map[string]coreutils.DataWithExpiration)
+		p = make(map[string]istorage.DataWithExpiration)
 		s.storage[string(pKey)] = p
 	}
-	p[string(cCols)] = coreutils.DataWithExpiration{Data: copySlice(value)}
+	p[string(cCols)] = istorage.DataWithExpiration{Data: copySlice(value)}
 
 	return
 }
@@ -259,7 +258,7 @@ func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	return nil
 }
 
-func (s *appStorage) readPartSort(ctx context.Context, part map[string]coreutils.DataWithExpiration, startCCols, finishCCols []byte) (sortKeys []string) {
+func (s *appStorage) readPartSort(ctx context.Context, part map[string]istorage.DataWithExpiration, startCCols, finishCCols []byte) (sortKeys []string) {
 	sortKeys = make([]string, 0)
 	for col := range part {
 		if ctx.Err() != nil {
@@ -294,7 +293,7 @@ func (s *appStorage) readPart(ctx context.Context, pKey []byte, startCCols, fini
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	var (
-		v  map[string]coreutils.DataWithExpiration
+		v  map[string]istorage.DataWithExpiration
 		ok bool
 	)
 	if v, ok = s.storage[string(pKey)]; !ok {

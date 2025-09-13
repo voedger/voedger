@@ -139,7 +139,7 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -248,7 +248,7 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -289,7 +289,7 @@ func (s *appStorageType) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, 
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -322,7 +322,7 @@ func (s *appStorageType) Put(pKey []byte, cCols []byte, value []byte) (err error
 		if err != nil {
 			return err
 		}
-		d := coreutils.DataWithExpiration{Data: value}
+		d := istorage.DataWithExpiration{Data: value}
 
 		bucket, err := dataBucket.CreateBucketIfNotExists(pKey)
 		if err != nil {
@@ -347,7 +347,7 @@ func (s *appStorageType) PutBatch(items []istorage.BatchItem) (err error) {
 				return err
 			}
 
-			d := coreutils.DataWithExpiration{Data: items[i].Value}
+			d := istorage.DataWithExpiration{Data: items[i].Value}
 			if err := bucket.Put(items[i].CCols, d.ToBytes()); err != nil {
 				return err
 			}
@@ -454,7 +454,7 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 			k, v = cr.Seek(safeKey(startCCols))
 		}
 
-		var d coreutils.DataWithExpiration
+		var d istorage.DataWithExpiration
 		for (k != nil) && (finishCCols == nil || string(k) <= string(finishCCols)) {
 
 			if ctx.Err() != nil {
@@ -500,7 +500,7 @@ func (s *appStorageType) findValue(pKey, cCols, value []byte) (found bool, err e
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -529,7 +529,7 @@ func (s *appStorageType) putValue(tx *bolt.Tx, pKey, cCols, value []byte, ttlSec
 		return err
 	}
 
-	d := coreutils.DataWithExpiration{Data: value}
+	d := istorage.DataWithExpiration{Data: value}
 	if ttlSeconds > 0 {
 		d.ExpireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 	}

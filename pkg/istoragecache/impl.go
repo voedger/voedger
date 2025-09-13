@@ -11,7 +11,6 @@ import (
 	"github.com/VictoriaMetrics/fastcache"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -141,7 +140,7 @@ func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []
 			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
 
-		d := coreutils.DataWithExpiration{Data: value, ExpireAt: expireAt}
+		d := istorage.DataWithExpiration{Data: value, ExpireAt: expireAt}
 		s.cache.Set(makeKey(pKey, cCols), d.ToBytes())
 	}
 
@@ -166,7 +165,7 @@ func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, n
 			expireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 		}
 
-		d := coreutils.DataWithExpiration{Data: newValue, ExpireAt: expireAt}
+		d := istorage.DataWithExpiration{Data: newValue, ExpireAt: expireAt}
 		s.cache.Set(makeKey(pKey, cCols), d.ToBytes())
 	}
 
@@ -205,7 +204,7 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	cachedData, found := s.cache.HasGet(*data, key)
 
 	if found {
-		d := coreutils.ReadWithExpiration(cachedData)
+		d := istorage.ReadWithExpiration(cachedData)
 
 		if d.IsExpired(s.iTime.Now()) {
 			s.cache.Del(key)
@@ -250,7 +249,7 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 	err = s.storage.Put(pKey, cCols, value)
 
 	if err == nil {
-		data := coreutils.DataWithExpiration{Data: value}
+		data := istorage.DataWithExpiration{Data: value}
 		s.cache.Set(makeKey(pKey, cCols), data.ToBytes())
 	}
 
@@ -268,7 +267,7 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	err = s.storage.PutBatch(items)
 	if err == nil {
 		for _, i := range items {
-			data := coreutils.DataWithExpiration{Data: i.Value}
+			data := istorage.DataWithExpiration{Data: i.Value}
 			s.cache.Set(makeKey(i.PKey, i.CCols), data.ToBytes())
 		}
 	}
@@ -302,7 +301,7 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		return false, err
 	}
 
-	d := coreutils.DataWithExpiration{}
+	d := istorage.DataWithExpiration{}
 	if ok {
 		d.Data = *data
 	}
@@ -344,7 +343,7 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 	}
 
 	for _, item := range items {
-		d := coreutils.DataWithExpiration{}
+		d := istorage.DataWithExpiration{}
 		if item.Ok {
 			d.Data = *item.Data
 		}
