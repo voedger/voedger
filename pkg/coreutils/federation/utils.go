@@ -13,14 +13,13 @@ import (
 	"fmt"
 	"io"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -61,7 +60,7 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 				channelID = in10n.ChannelID(data)
 				close(subscribed)
 			} else {
-				offset, err := strconv.ParseUint(data, utils.DecimalBase, utils.BitSize64)
+				offset, err := strconvu.ParseUint64(data)
 				if err != nil {
 					// notest
 					panic(fmt.Sprint("failed to parse offset", data, err))

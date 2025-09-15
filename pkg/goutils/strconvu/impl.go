@@ -29,3 +29,11 @@ func StringToUint8(s string) (uint8, error) {
 	}
 	return uint8(value), nil
 }
+
+func ParseUint64(s string) (uint64, error) {
+	return strconv.ParseUint(s, decimalBase, bitSize64)
+}
+
+func ParseInt64(s string) (int64, error) {
+	return strconv.ParseInt(s, decimalBase, bitSize64)
+}

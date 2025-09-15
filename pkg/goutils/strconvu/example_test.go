@@ -129,3 +129,75 @@ func ExampleStringToUint8() {
 	// Error for '256': out of range: value must be between 0 and 255
 	// Error for 'abc': strconv.Atoi: parsing "abc": invalid syntax
 }
+
+// ExampleParseUint64 demonstrates parsing strings to uint64 values
+func ExampleParseUint64() {
+	// Valid conversions
+	validStrings := []string{"0", "42", "18446744073709551615"}
+
+	for _, s := range validStrings {
+		if value, err := ParseUint64(s); err == nil {
+			fmt.Printf("'%s' -> %d\n", s, value)
+		}
+	}
+
+	// Invalid conversions - negative numbers
+	if _, err := ParseUint64("-1"); err != nil {
+		fmt.Println("Error for '-1':", err)
+	}
+
+	// Invalid conversions - out of range
+	if _, err := ParseUint64("18446744073709551616"); err != nil {
+		fmt.Println("Error for '18446744073709551616':", err)
+	}
+
+	// Invalid conversions - non-numeric
+	if _, err := ParseUint64("abc"); err != nil {
+		fmt.Println("Error for 'abc':", err)
+	}
+
+	// Output:
+	// '0' -> 0
+	// '42' -> 42
+	// '18446744073709551615' -> 18446744073709551615
+	// Error for '-1': strconv.ParseUint: parsing "-1": invalid syntax
+	// Error for '18446744073709551616': strconv.ParseUint: parsing "18446744073709551616": value out of range
+	// Error for 'abc': strconv.ParseUint: parsing "abc": invalid syntax
+}
+
+// ExampleParseInt64 demonstrates parsing strings to int64 values
+func ExampleParseInt64() {
+	// Valid conversions
+	validStrings := []string{"-9223372036854775808", "-42", "0", "42", "9223372036854775807"}
+
+	for _, s := range validStrings {
+		if value, err := ParseInt64(s); err == nil {
+			fmt.Printf("'%s' -> %d\n", s, value)
+		}
+	}
+
+	// Invalid conversions - out of range (positive)
+	if _, err := ParseInt64("9223372036854775808"); err != nil {
+		fmt.Println("Error for '9223372036854775808':", err)
+	}
+
+	// Invalid conversions - out of range (negative)
+	if _, err := ParseInt64("-9223372036854775809"); err != nil {
+		fmt.Println("Error for '-9223372036854775809':", err)
+	}
+
+	// Invalid conversions - non-numeric
+	if _, err := ParseInt64("xyz"); err != nil {
+		fmt.Println("Error for 'xyz':", err)
+	}
+
+	// Output:
+	// '-9223372036854775808' -> -9223372036854775808
+	// '-42' -> -42
+	// '0' -> 0
+	// '42' -> 42
+	// '9223372036854775807' -> 9223372036854775807
+	// Error for '9223372036854775808': strconv.ParseInt: parsing "9223372036854775808": value out of range
+	// Error for '-9223372036854775809': strconv.ParseInt: parsing "-9223372036854775809": value out of range
+	// Error for 'xyz': strconv.ParseInt: parsing "xyz": invalid syntax
+}
