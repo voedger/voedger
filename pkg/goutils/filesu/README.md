@@ -1,13 +1,16 @@
-# filesu
+# Filesu
 
-File system utilities for Go applications.
+Simplifies file and directory copying operations with flexible options
+and filesystem abstraction support.
 
 ## Problem
 
-Copying files and directories in Go requires verbose boilerplate code with manual error handling, directory creation, and permission management.
+Standard Go file operations require verbose boilerplate for common
+copying tasks and lack built-in support for advanced options like
+filtering, renaming, or handling existing files.
 
 <details>
-<summary>Before filesu</summary>
+<summary>Without filesu</summary>
 
 ```go
 // Copy a single file - lots of boilerplate
@@ -58,40 +61,50 @@ func copyDir(src, dst string) error {
     // error handling, permission copying...
     // Easy to get wrong, hard to maintain
 }
+
+srcInfo, err := srcFile.Stat()
+if err != nil {
+    return err
+}
+return os.Chmod(dstPath, srcInfo.Mode()) // Easy to forget
 ```
 </details>
 
 <details>
-<summary>Now filesu</summary>
+<summary>With filesu</summary>
 
 ```go
-// Copy a single file - one line
-err := filesu.CopyFile("source.txt", "/destination/dir")
+// Copy a single file
+err := filesu.CopyFile("source.txt", "dest")
 
-// Copy entire directory - one line
-err := filesu.CopyDir("/source/dir", "/destination/dir")
-
-// Copy with options - still simple
-err := filesu.CopyFile("source.txt", "/dest",
+// Copy with options
+err = filesu.CopyFile("source.txt", "dest",
     filesu.WithSkipExisting(),
     filesu.WithFileMode(0644))
+
+// Copy entire directory
+err = filesu.CopyDir("srcdir", "dstdir")
 ```
 </details>
 
 ## Features
 
-- **[CopyFile](impl.go#L37)** - Copy single files with automatic directory creation
-- **[CopyDir](impl.go#L45)** - Recursively copy entire directories
-- **CopyFS operations** - Copy from embedded or custom filesystems
-  - [CopyFileFS: copy single file from fs.FS](impl.go#L29)
-  - [CopyDirFS: copy directory from custom filesystem](impl.go#L20)
-  - [IReadFS interface: filesystem abstraction](types.go#L10)
-- **Configuration options** - Flexible copying behavior
-  - [WithFileMode: set custom file permissions](impl.go#L161)
-  - [WithSkipExisting: avoid overwriting files](impl.go#L167)
-  - [WithNewName: rename during copy](impl.go#L173)
-  - [WithFilterFilesWithRelativePaths: selective copying](impl.go#L179)
-- **[Exists](impl.go#L151)** - Safe file existence checking
+- **[CopyFile](impl.go#L37)** - Copy individual files with options
+  - [File existence validation: impl.go#L99](impl.go#L99)
+  - [Automatic directory creation: impl.go#L117](impl.go#L117)
+  - [Permission preservation: impl.go#L142](impl.go#L142)
+- **[CopyDir](impl.go#L45)** - Recursively copy directories
+  - [Recursive directory traversal: impl.go#L69](impl.go#L69)
+  - [Directory structure preservation: impl.go#L72](impl.go#L72)
+- **[CopyFileFS](impl.go#L29)** - Copy from filesystem abstractions
+  - [Filesystem abstraction support: types.go#L10](types.go#L10)
+- **[CopyDirFS](impl.go#L20)** - Copy directories from filesystem abstractions
+- **[Exists](impl.go#L151)** - Check file/directory existence safely
+- **Copy options** - Flexible configuration
+  - [WithSkipExisting: impl.go#L167](impl.go#L167)
+  - [WithFileMode: impl.go#L161](impl.go#L161)
+  - [WithNewName: impl.go#L173](impl.go#L173)
+  - [WithFilterFilesWithRelativePaths: impl.go#L179](impl.go#L179)
 
 ## Use
 
