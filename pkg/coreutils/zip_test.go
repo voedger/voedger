@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -27,14 +28,14 @@ func TestZipAndUnzip(t *testing.T) {
 	}
 
 	for _, fileToZip := range filesToZip {
-		err := os.MkdirAll(filepath.Join(srcDir, filepath.Dir(fileToZip)), FileMode_rwxrwxrwx)
+		err := os.MkdirAll(filepath.Join(srcDir, filepath.Dir(fileToZip)), filesu.FileMode_DefaultForDir)
 		require.NoError(err)
-		err = os.WriteFile(filepath.Join(srcDir, fileToZip), []byte(content), FileMode_rw_rw_rw_)
+		err = os.WriteFile(filepath.Join(srcDir, fileToZip), []byte(content), filesu.FileMode_DefaultForFile)
 		require.NoError(err)
 	}
 
 	// Test zipping and unzipping
-	err := os.Mkdir(unzippedDir, FileMode_rwxrwxrwx)
+	err := os.Mkdir(unzippedDir, filesu.FileMode_DefaultForDir)
 	require.NoError(err)
 
 	// Test zipping

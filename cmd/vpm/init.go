@@ -18,8 +18,8 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/sys"
 )
@@ -69,7 +69,7 @@ func execGoModTidy(dir string) error {
 
 func checkGoModFileExists(dir string) error {
 	goModFilePath := filepath.Join(dir, goModFileName)
-	exists, err := coreutils.Exists(goModFilePath)
+	exists, err := filesu.Exists(goModFilePath)
 	if err != nil {
 		return err
 	}
@@ -80,12 +80,12 @@ func checkGoModFileExists(dir string) error {
 }
 
 func createWasmDir(dir string) error {
-	exists, err := coreutils.Exists(filepath.Join(dir, wasmDirName))
+	exists, err := filesu.Exists(filepath.Join(dir, wasmDirName))
 	if err != nil {
 		return err
 	}
 	if !exists {
-		if err := os.Mkdir(filepath.Join(dir, wasmDirName), coreutils.FileMode_rwxrwxrwx); err != nil {
+		if err := os.Mkdir(filepath.Join(dir, wasmDirName), filesu.FileMode_DefaultForDir); err != nil {
 			return err
 		}
 	}
@@ -103,7 +103,7 @@ func createGoMod(dir, modulePath string) error {
 
 	filePath := filepath.Join(dir, goModFileName)
 
-	exists, err := coreutils.Exists(filePath)
+	exists, err := filesu.Exists(filePath)
 	if err != nil {
 		// notest
 		return err
@@ -112,7 +112,7 @@ func createGoMod(dir, modulePath string) error {
 	// if go.mod file does not exist, create it
 	if !exists {
 		goModContent := fmt.Sprintf(goModContentTemplate, modulePath, goVersionNumber)
-		if err := os.WriteFile(filePath, []byte(goModContent), coreutils.FileMode_rw_rw_rw_); err != nil {
+		if err := os.WriteFile(filePath, []byte(goModContent), filesu.FileMode_DefaultForFile); err != nil {
 			return err
 		}
 	}
@@ -126,7 +126,7 @@ func checkGoVersion(goVersionNumber string) bool {
 
 func checkPackageGenFileExists(dir string) (bool, error) {
 	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
-	return coreutils.Exists(packagesGenFilePath)
+	return filesu.Exists(packagesGenFilePath)
 }
 
 func createPackagesGen(imports []string, dir, modulePath string, recreate bool) error {
@@ -158,7 +158,7 @@ func createPackagesGen(imports []string, dir, modulePath string, recreate bool) 
 		return err
 	}
 
-	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, coreutils.FileMode_rw_rw_rw_); err != nil {
+	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, filesu.FileMode_DefaultForFile); err != nil {
 		return err
 	}
 

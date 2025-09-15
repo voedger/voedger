@@ -69,8 +69,3 @@ type CUD struct {
 	ID     istructs.RecordID      `json:"sys.ID,omitempty"`
 	Fields map[string]interface{} `json:"fields"`
 }
-
-type IReadFS interface {
-	fs.ReadDirFS
-	fs.ReadFileFS
-}

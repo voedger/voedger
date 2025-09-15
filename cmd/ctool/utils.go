@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
@@ -107,12 +107,12 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 		commandDirName = filepath.Join(dryRunDir, commandDirName)
 	}
 
-	err := os.MkdirAll(commandDirName, coreutils.FileMode_rwxrwxrwx)
+	err := os.MkdirAll(commandDirName, filesu.FileMode_DefaultForDir)
 	if err == nil {
 		fName := filepath.Join(commandDirName, s+".log")
 		logFile, err = os.Create(fName)
 		if err == nil {
-			logFile, err = os.OpenFile(fName, os.O_RDWR, coreutils.FileMode_rw_rw_rw_)
+			logFile, err = os.OpenFile(fName, os.O_RDWR, filesu.FileMode_DefaultForFile)
 		}
 	}
 	return err
@@ -133,7 +133,7 @@ func createScriptsTempDir() error {
 		return err
 	}
 	scriptsTempDir = dir
-	if err = os.Chmod(scriptsTempDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+	if err = os.Chmod(scriptsTempDir, filesu.FileMode_DefaultForDir); err != nil {
 		return err
 	}
 
@@ -141,7 +141,7 @@ func createScriptsTempDir() error {
 }
 
 func scriptTempDirExists() (bool, error) {
-	return coreutils.Exists(scriptsTempDir)
+	return filesu.Exists(scriptsTempDir)
 }
 
 // deletes the temporary scripts folder, if it exists

@@ -29,7 +29,7 @@ import (
 
 	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttp"
@@ -477,7 +477,7 @@ func makeTmpContent(require *require.Assertions, pattern string) (dir string, fi
 
 	fileName = "tmpcontext.txt"
 
-	err = os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), coreutils.FileMode_rw_rw_rw_)
+	err = os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), filesu.FileMode_DefaultForFile)
 	require.NoError(err)
 
 	return dir, fileName

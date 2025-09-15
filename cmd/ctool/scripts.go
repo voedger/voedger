@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"golang.org/x/term"
 )
 
@@ -177,8 +177,8 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
-	err = coreutils.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
-		coreutils.WithSkipExisting(), coreutils.WithFileMode(coreutils.FileMode_rwxrwxrwx))
+	err = filesu.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, filesu.WithFilterFilesWithRelativePaths(scriptFileNames),
+		filesu.WithSkipExisting(), filesu.WithFileMode(filesu.FileMode_DefaultForDir))
 	if err != nil {
 		loggerError(err.Error())
 		return err
@@ -221,7 +221,7 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 
 	destFilename := filepath.Join(scriptsTempDir, scriptFileName)
 
-	exists, err := coreutils.Exists(destFilename)
+	exists, err := filesu.Exists(destFilename)
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 	}
 	defer destFile.Close()
 
-	err = destFile.Chmod(coreutils.FileMode_rw_rw_rw_)
+	err = destFile.Chmod(filesu.FileMode_DefaultForFile)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 		return err
 	}
 
-	if err = os.WriteFile(destFilename, output.Bytes(), coreutils.FileMode_rw_rw_rw_); err != nil {
+	if err = os.WriteFile(destFilename, output.Bytes(), filesu.FileMode_DefaultForFile); err != nil {
 		return err
 	}
 

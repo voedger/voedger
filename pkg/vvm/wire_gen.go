@@ -11,6 +11,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"runtime/debug"
+	"slices"
+	"strconv"
+	"strings"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -41,35 +49,28 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
-	"github.com/voedger/voedger/pkg/itokens-payloads"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	"github.com/voedger/voedger/pkg/metrics"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
-	"github.com/voedger/voedger/pkg/processors/blobber"
-	"github.com/voedger/voedger/pkg/processors/command"
-	"github.com/voedger/voedger/pkg/processors/query"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
+	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
+	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/processors/query2"
 	"github.com/voedger/voedger/pkg/processors/schedulers"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
-	"github.com/voedger/voedger/pkg/vvm/builtin"
-	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
+	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"github.com/voedger/voedger/pkg/vvm/storage"
 	"golang.org/x/crypto/acme/autocert"
-	"net/url"
-	"os"
-	"path/filepath"
-	"runtime/debug"
-	"slices"
-	"strconv"
-	"strings"
 )
 
 // Injectors from provide.go:
@@ -661,7 +662,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, out_extModuleURLs m
 		}
 	}
 
-	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(coreutils.IReadFS), ".")
+	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(filesu.IReadFS), ".")
 	if err == nil {
 		asts = append(asts, dirAST)
 	} else if !errors.Is(err, parser.ErrDirContainsNoSchemaFiles) {
@@ -905,6 +906,5 @@ func provideServicePipeline(
 	publicEndpoint PublicEndpointServiceOperator,
 	appStorageProvider istorage.IAppStorageProvider,
 ) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors_v1), pipeline.ForkBranch(opQueryProcessors_v2), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint),
-	)
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors_v1), pipeline.ForkBranch(opQueryProcessors_v2), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint))
 }

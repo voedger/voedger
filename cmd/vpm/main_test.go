@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
@@ -190,7 +191,7 @@ func TestCompileErrors(t *testing.T) {
 		tempDir = t.TempDir()
 	}
 
-	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "myapperr"), tempDir)
+	err = filesu.CopyDir(filepath.Join(wd, "testdata", "myapperr"), tempDir)
 	require.NoError(err)
 	// go up to the root of the project.
 	localVoedgerDir := filepath.Join(wd, "..", "..")
@@ -285,7 +286,7 @@ func TestOrmBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "genorm"), tempDir)
+	err = filesu.CopyDir(filepath.Join(wd, "testdata", "genorm"), tempDir)
 	require.NoError(err)
 
 	tests := []struct {
@@ -343,7 +344,7 @@ func TestBuildExample2(t *testing.T) {
 	require.NoError(err)
 
 	airVarFile := filepath.Join(wd, "../../examples/airs-bp2/air/air.var")
-	exists, err := coreutils.Exists(airVarFile)
+	exists, err := filesu.Exists(airVarFile)
 	require.NoError(err)
 	if exists {
 		require.NoError(os.Remove(airVarFile))
@@ -402,7 +403,7 @@ func TestTidyBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
+	err = filesu.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
 	require.NoError(err)
 
 	dir := filepath.Join(tempDir, "appcomplex")
@@ -456,7 +457,7 @@ func TestBuildBasicUsage(t *testing.T) {
 	// go up to the root of the project.
 	localVoedgerDir := filepath.Join(wd, "..", "..")
 
-	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
+	err = filesu.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
 	require.NoError(err)
 
 	testCases := []struct {
@@ -500,7 +501,7 @@ func TestBuildBasicUsage(t *testing.T) {
 				require.Equal(tc.errMsg, err.Error())
 			} else {
 				require.FileExists(filepath.Join(dir, "qwerty.var"))
-				err = os.Mkdir(filepath.Join(dir, "unzipped"), coreutils.FileMode_rwxrwxrwx)
+				err = os.Mkdir(filepath.Join(dir, "unzipped"), filesu.FileMode_DefaultForDir)
 				require.NoError(err)
 
 				err = coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
@@ -533,7 +534,7 @@ func TestGenOrmTestItAndBuildApp(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
+	err = filesu.CopyDir(filepath.Join(wd, "testdata", "build"), tempDir)
 	require.NoError(err)
 
 	// test runs in the temp directory

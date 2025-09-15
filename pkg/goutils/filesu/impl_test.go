@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package coreutils
+package filesu
 
 import (
 	"os"
@@ -21,18 +21,18 @@ func TestCopy_BasicUsage(t *testing.T) {
 	dir1 := filepath.Join(tempDirSrc, "dir1")
 	dir2 := filepath.Join(tempDirSrc, "dir2")
 	dir1dir3 := filepath.Join(dir1, "dir3")
-	require.NoError(os.MkdirAll(dir1, FileMode_rwxrwxrwx))
-	require.NoError(os.MkdirAll(dir2, FileMode_rwxrwxrwx))
-	require.NoError(os.MkdirAll(dir1dir3, FileMode_rwxrwxrwx))
+	require.NoError(os.MkdirAll(dir1, FileMode_DefaultForDir))
+	require.NoError(os.MkdirAll(dir2, FileMode_DefaultForDir))
+	require.NoError(os.MkdirAll(dir1dir3, FileMode_DefaultForDir))
 	file0 := filepath.Join(tempDirSrc, "file0.txt")
 	file1 := filepath.Join(dir1, "file1.txt")
 	file2 := filepath.Join(dir2, "file2.txt")
 	file3 := filepath.Join(dir1dir3, "file3.txt")
 
-	require.NoError(os.WriteFile(file0, []byte("file0 content"), FileMode_rw_rw_rw_))
-	require.NoError(os.WriteFile(file1, []byte("file1 content"), FileMode_rw_rw_rw_))
-	require.NoError(os.WriteFile(file2, []byte("file2 content"), FileMode_rw_rw_rw_))
-	require.NoError(os.WriteFile(file3, []byte("file3 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file0, []byte("file0 content"), FileMode_DefaultForFile))
+	require.NoError(os.WriteFile(file1, []byte("file1 content"), FileMode_DefaultForFile))
+	require.NoError(os.WriteFile(file2, []byte("file2 content"), FileMode_DefaultForFile))
+	require.NoError(os.WriteFile(file3, []byte("file3 content"), FileMode_DefaultForFile))
 
 	t.Run("CopyDir", func(t *testing.T) {
 		tempDirDst := t.TempDir()
@@ -121,23 +121,23 @@ func TestCopyOptions(t *testing.T) {
 	dir1 := filepath.Join(tempDirSrc, "dir1")
 	dir2 := filepath.Join(tempDirSrc, "dir2")
 	dir1dir3 := filepath.Join(dir1, "dir3")
-	require.NoError(os.MkdirAll(dir1, FileMode_rwxrwxrwx))
-	require.NoError(os.MkdirAll(dir2, FileMode_rwxrwxrwx))
-	require.NoError(os.MkdirAll(dir1dir3, FileMode_rwxrwxrwx))
+	require.NoError(os.MkdirAll(dir1, FileMode_DefaultForDir))
+	require.NoError(os.MkdirAll(dir2, FileMode_DefaultForDir))
+	require.NoError(os.MkdirAll(dir1dir3, FileMode_DefaultForDir))
 	file0 := filepath.Join(tempDirSrc, "file0.txt")
 	file1 := filepath.Join(dir1, "file1.txt")
 	file2 := filepath.Join(dir2, "file2.txt")
 	file3 := filepath.Join(dir1dir3, "file3.txt")
 
-	require.NoError(os.WriteFile(file0, []byte("file0 content"), FileMode_rw_rw_rw_))
-	require.NoError(os.WriteFile(file1, []byte("file1 content"), FileMode_rw_rw_rw_))
-	require.NoError(os.WriteFile(file2, []byte("file2 content"), FileMode_rw_rw_rw_))
-	require.NoError(os.WriteFile(file3, []byte("file3 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file0, []byte("file0 content"), FileMode_DefaultForFile))
+	require.NoError(os.WriteFile(file1, []byte("file1 content"), FileMode_DefaultForFile))
+	require.NoError(os.WriteFile(file2, []byte("file2 content"), FileMode_DefaultForFile))
+	require.NoError(os.WriteFile(file3, []byte("file3 content"), FileMode_DefaultForFile))
 
 	file2 = strings.ReplaceAll(file2, tempDirSrc, tempDirDst)
 	dir2dst := filepath.Join(tempDirDst, "dir2")
-	require.NoError(os.MkdirAll(dir2dst, FileMode_rwxrwxrwx))
-	require.NoError(os.WriteFile(file2, []byte("file2 existing content"), FileMode_rw_rw_rw_))
+	require.NoError(os.MkdirAll(dir2dst, FileMode_DefaultForDir))
+	require.NoError(os.WriteFile(file2, []byte("file2 existing content"), FileMode_DefaultForFile))
 
 	err := CopyDir(tempDirSrc, tempDirDst, WithFilterFilesWithRelativePaths(
 		[]string{"dir1/file1.txt", "dir2/file2.txt"}), WithSkipExisting())
@@ -166,7 +166,7 @@ func TestCopyOptions(t *testing.T) {
 func TestExists(t *testing.T) {
 	require := require.New(t)
 	t.Run("file", func(t *testing.T) {
-		exists, err := Exists("files_test.go")
+		exists, err := Exists("impl_test.go")
 		require.NoError(err)
 		require.True(exists)
 

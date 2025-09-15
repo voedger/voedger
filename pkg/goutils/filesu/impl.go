@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package coreutils
+package filesu
 
 import (
 	"fmt"
@@ -56,7 +56,7 @@ func copyDirFSOpts(srcFS IReadFS, src, dst string, opts *copyOpts) error {
 
 	// TODO: src is "." -> srcinfo.Mode() is weak -> permission deined on create dst within temp dir created with more strong FileMode
 	_ = srcinfo
-	if err = os.MkdirAll(dst, FileMode_rwxrwxrwx); err != nil {
+	if err = os.MkdirAll(dst, FileMode_DefaultForDir); err != nil {
 		return err
 	}
 
@@ -114,7 +114,7 @@ func copyFileFSOpts(srcFS fs.FS, srcFileName, dstDir string, opts *copyOpts) err
 		return err
 	}
 	if !existsDstDir {
-		if err := os.MkdirAll(dstDir, FileMode_rwxrwxrwx); err != nil {
+		if err := os.MkdirAll(dstDir, FileMode_DefaultForDir); err != nil {
 			// notest
 			return err
 		}
@@ -157,15 +157,6 @@ func Exists(filePath string) (exists bool, err error) {
 	}
 	return false, err
 }
-
-type copyOpts struct {
-	fm             fs.FileMode
-	skipExisting   bool
-	files          []string
-	targetFileName string
-}
-
-type CopyOpt func(co *copyOpts)
 
 func WithFileMode(fm fs.FileMode) CopyOpt {
 	return func(co *copyOpts) {

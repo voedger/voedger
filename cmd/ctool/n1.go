@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 )
 
 var ceSuccessPhrases = map[string]string{
@@ -125,7 +125,7 @@ func copyCtoolToCeNode(node *nodeType) error {
 
 	ctoolPath, err := os.Executable()
 
-	ok, e := coreutils.Exists(node.cluster.configFileName)
+	ok, e := filesu.Exists(node.cluster.configFileName)
 
 	if e != nil {
 		return e

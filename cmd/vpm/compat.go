@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdefcompat"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
@@ -87,7 +88,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	var errs []error
 
 	pkgDirPath := filepath.Join(baselineDir, pkgDirName)
-	pkgDirPathExists, err := coreutils.Exists(pkgDirPath)
+	pkgDirPathExists, err := filesu.Exists(pkgDirPath)
 	if err != nil {
 		// notest
 		return nil, err
@@ -96,7 +97,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 		return nil, fmt.Errorf("baseline directory does not contain %s subdirectory", pkgDirName)
 	}
 	baselineJSONFilePath := filepath.Join(baselineDir, baselineInfoFileName)
-	baselineJSONFilePathExists, err := coreutils.Exists(baselineJSONFilePath)
+	baselineJSONFilePathExists, err := filesu.Exists(baselineJSONFilePath)
 	if err != nil {
 		// notest
 		return nil, err
