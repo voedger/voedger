@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"testing"
 	"time"
 
@@ -20,8 +19,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -361,7 +360,7 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 		httpu.WithAuthorizeBy(ws.Owner.Token),
 	)
 	require.NoError(err)
-	blobID, err := strconv.ParseUint(resp.Body, utils.DecimalBase, utils.BitSize64)
+	blobID, err := strconvu.ParseUint64(resp.Body)
 	require.NoError(err)
 
 	// put the blob into the owner field

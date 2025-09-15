@@ -58,7 +58,7 @@ func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {
 		}
 	}
 
-	uint8Val, err := strconvu.StringToUint8(text)
+	uint8Val, err := strconvu.ParseUint8(text)
 	if err == nil {
 		*k = VerificationKind(uint8Val)
 	}

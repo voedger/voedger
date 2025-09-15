@@ -6,8 +6,6 @@
 package strconvu
 
 import (
-	"errors"
-	"math"
 	"strconv"
 )
 
@@ -19,13 +17,15 @@ func IntToString[T ~int | ~int8 | ~int16 | ~int32 | ~int64](n T) string {
 	return strconv.FormatInt(int64(n), decimalBase)
 }
 
-func StringToUint8(s string) (uint8, error) {
-	value, err := strconv.Atoi(s)
-	if err != nil {
-		return 0, err
-	}
-	if value < 0 || value > math.MaxUint8 {
-		return 0, errors.New("out of range: value must be between 0 and 255")
-	}
-	return uint8(value), nil
+func ParseUint8(s string) (uint8, error) {
+	uint64Val, err := strconv.ParseUint(s, decimalBase, bitSize8)
+	return uint8(uint64Val), err
+}
+
+func ParseUint64(s string) (uint64, error) {
+	return strconv.ParseUint(s, decimalBase, bitSize64)
+}
+
+func ParseInt64(s string) (int64, error) {
+	return strconv.ParseInt(s, decimalBase, bitSize64)
 }
