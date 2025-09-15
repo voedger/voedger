@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 func (k ProcessorKind) MarshalText() ([]byte, error) {
@@ -17,7 +17,7 @@ func (k ProcessorKind) MarshalText() ([]byte, error) {
 	if k < ProcessorKind_Count {
 		s = k.String()
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }

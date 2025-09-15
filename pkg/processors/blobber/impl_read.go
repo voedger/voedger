@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -158,7 +159,7 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error)
 	if !ok {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("owner field %s.%s is not of blob type", bw.blobMessageRead.ownerRecord, bw.blobMessageRead.ownerRecordField))
 	}
-	bw.blobMessageRead.existingBLOBIDOrSUUID = utils.UintToString(blobID)
+	bw.blobMessageRead.existingBLOBIDOrSUUID = strconvu.UintToString(blobID)
 	return nil
 }
 

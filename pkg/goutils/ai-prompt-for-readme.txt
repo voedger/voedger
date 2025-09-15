@@ -9,12 +9,23 @@ You are an AI system specialized in analyzing Go packages and generating concise
    Provide a short (1–2 sentences) explanation of the problem this package solves or why it exists. Ensure this is conceptually distinct from the description.
 
 ### Features Section
-   Use bullet points to list the fundamental capabilities (not implementation details). Under each bullet point should be a set of key architecture points with links to according code points that implement the feature, up to 5 links.
+   Use bullet points to list the fundamental features (not implementation details). Under each bullet point should be a set of key architecture points with links to according code points that implement the feature, up to 5 links.
+     - If the package looks like a lib of util funcs that rea not linked to each other then consider each func as a fundamental feature
 
    - Each feature line ≤72 characters
    - Each feature: **2–3 word name** + short description
    - No trailing periods
-   - Each name of key architecture point is not longer than 2-3 words
+   - If the feature has single entry point then make the feature name be the link to the code
+   - If the feature is large and has multiple architecture points, then provide key implementation architecture points under the feature:
+     - List under each feature should look like:
+       - [{Architecture point 1 description: fileName1.go#L21](link to key architecture code point)
+       - [{Architecture point 1 description: fileName1.go#L21](link to key architecture code point)
+     - CRITICAL: Only include architecture points that represent significant design decisions, core algorithms, or essential structural elements. Do NOT include:
+       - Unexported constants or variables
+       - Trivial helper values
+       - Implementation details that don't affect the public API or core functionality
+     - Focus on: main function logic, type constraints, validation algorithms, error handling strategies, core data structures
+     - Up to 5 links
 
 ### Platform-Specific Logic
    If the code has platform-specific behavior (e.g. build tags, OS-specific imports), add a `## Platform Support` section describing it.
@@ -26,7 +37,7 @@ You are an AI system specialized in analyzing Go packages and generating concise
    Always include a `## Use` section:
 
    - If a `*_test.go` file contains `TestBasicUsage`, `TestUsage`, or `ExampleBasic`, include a markdown link to that test file.
-   - Else, if a package-level `Example()` function exists in `example_test.go`, link to that file.
+   - Else, if **any** `Example*` functions exist in `example_test.go`, link to that file.
    - Otherwise, generate a **minimal usage snippet** that directly illustrates the core value of the package.
 
      - ≤8 lines
@@ -56,6 +67,7 @@ You are an AI system specialized in analyzing Go packages and generating concise
      - [{Architecture point 2 description: fileName2.go#L59](link to key architecture code point)
    - **Feature name** - Short description
      - [{Architecture point 1 description: fileName3.go#L123](link to key architecture code point)
+   - **[Feature name](link to the simple feature in code)** - Short description
 
    ## Platform Support
 
@@ -64,10 +76,10 @@ You are an AI system specialized in analyzing Go packages and generating concise
    ## Use
 
    - If test file exists:
-     See [basic usage example](path/to/test_file.go)
+     See [basic usage example](test_file.go)
 
-   - Else if package-level Example exists:
-     See [example usage](path/to/example_test.go)
+   - Else if any Example functions exist:
+     See [example usage](example_test.go)
 
    - Otherwise:
      ```go

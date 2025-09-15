@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 // Returns is string is valid field name and error if not
@@ -34,7 +34,7 @@ func (k VerificationKind) MarshalJSON() ([]byte, error) {
 	if k < VerificationKind_FakeLast {
 		s = strconv.Quote(k.String())
 	} else {
-		s = utils.UintToString(k)
+		s = strconvu.UintToString(k)
 	}
 	return []byte(s), nil
 }
@@ -58,7 +58,7 @@ func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {
 		}
 	}
 
-	uint8Val, err := utils.StringToUint8(text)
+	uint8Val, err := strconvu.StringToUint8(text)
 	if err == nil {
 		*k = VerificationKind(uint8Val)
 	}

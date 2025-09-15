@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -225,7 +225,7 @@ func TestResourceKindType_MarshalText(t *testing.T) {
 		},
 		{name: `ResourceKind_FakeLast —> 3`,
 			k:    istructs.ResourceKind_FakeLast,
-			want: utils.UintToString(istructs.ResourceKind_FakeLast),
+			want: strconvu.UintToString(istructs.ResourceKind_FakeLast),
 		},
 	}
 	for _, tt := range tests {
@@ -243,7 +243,7 @@ func TestResourceKindType_MarshalText(t *testing.T) {
 
 	t.Run("100% cover ResourceKindType.String()", func(t *testing.T) {
 		const tested = istructs.ResourceKind_FakeLast + 1
-		want := "ResourceKindType(" + utils.UintToString(tested) + ")"
+		want := "ResourceKindType(" + strconvu.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(ResourceKind_FakeLast + 1).String() = %v, want %v", got, want)

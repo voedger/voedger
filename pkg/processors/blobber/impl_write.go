@@ -16,9 +16,9 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -230,7 +230,7 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 func replySuccess_V1(bw *blobWorkpiece) (err error) {
 	writer := bw.blobMessageWrite.okResponseIniter(httpu.ContentType, "text/plain")
 	if bw.isPersistent() {
-		_, err = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+		_, err = writer.Write([]byte(strconvu.UintToString(bw.newBLOBID)))
 	} else {
 		_, err = writer.Write([]byte(bw.newSUUID))
 	}
