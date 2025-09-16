@@ -1,41 +1,47 @@
 # strconvu
 
-Type-safe string conversion utilities for Go integer types using
-generics.
+Type-safe string conversion utilities with generic support for all
+integer types and comprehensive validation.
 
 ## Problem
 
-Standard library string conversions require verbose type casting and
-lack compile-time type safety for custom integer types.
+Go's standard library requires verbose type casting and manual
+validation when converting between strings and various integer types.
 
 <details>
 <summary>Without strconvu</summary>
 
 ```go
-type UserID uint64
-type OrderID int64
+// Converting different integer types to strings - boilerplate everywhere
+func processNumbers(u8 uint8, u16 uint16, i32 int32, i64 int64) []string {
+    results := make([]string, 4)
 
-func processOrder(userStr, orderStr string) error {
-    // Verbose casting for custom types - boilerplate here
-    userVal, err := strconv.ParseUint(userStr, 10, 64)
+    // Each type needs explicit casting to uint64/int64
+    results[0] = strconv.FormatUint(uint64(u8), 10)  // boilerplate cast
+    results[1] = strconv.FormatUint(uint64(u16), 10) // boilerplate cast
+    results[2] = strconv.FormatInt(int64(i32), 10)   // boilerplate cast
+    results[3] = strconv.FormatInt(i64, 10)
+
+    return results
+}
+
+// String to uint8 with validation - error-prone manual checks
+func parseConfig(s string) (uint8, error) {
+    value, err := strconv.Atoi(s)
     if err != nil {
-        return fmt.Errorf("invalid user ID: %w", err)
+        return 0, err
     }
-    userID := UserID(userVal) // Manual casting required
-
-    // Different functions for different sizes - easy to get wrong
-    orderVal, err := strconv.ParseInt(orderStr, 10, 64)
-    if err != nil {
-        return fmt.Errorf("invalid order ID: %w", err)
+    // Easy to forget range validation or get bounds wrong
+    if value < 0 || value > 255 { // common mistake: hardcoded bounds
+        return 0, errors.New("out of range")
     }
-    orderID := OrderID(orderVal) // More manual casting
+    return uint8(value), nil
+}
 
-    // Converting back requires more casting
-    log.Printf("User %s placed order %s",
-        strconv.FormatUint(uint64(userID), 10), // Verbose conversion
-        strconv.FormatInt(int64(orderID), 10))  // More verbose conversion
-
-    return nil
+// Custom types require even more boilerplate
+type Port uint16
+func (p Port) String() string {
+    return strconv.FormatUint(uint64(p), 10) // repetitive casting
 }
 ```
 </details>
@@ -44,39 +50,43 @@ func processOrder(userStr, orderStr string) error {
 <summary>With strconvu</summary>
 
 ```go
-type UserID uint64
-type OrderID int32
+import "github.com/voedger/voedger/pkg/goutils/strconvu"
 
-func processOrder(userStr, orderStr string) error {
-    userID, err := ParseUint64(userStr)
-    if err != nil {
-        return fmt.Errorf("invalid user ID: %w", err)
+// Clean, type-safe conversions for any integer type
+func processNumbers(u8 uint8, u16 uint16, i32 int32, i64 int64) []string {
+    return []string{
+        strconvu.UintToString(u8),
+        strconvu.UintToString(u16),
+        strconvu.IntToString(i32),
+        strconvu.IntToString(i64),
     }
+}
 
-    orderID, err := ParseInt64(orderStr)
-    if err != nil {
-        return fmt.Errorf("invalid order ID: %w", err)
-    }
+// Built-in validation with proper error messages
+func parseConfig(s string) (uint8, error) {
+    return strconvu.StringToUint8(s) // handles range validation automatically
+}
 
-    log.Printf("User %s placed order %s",
-        UintToString(UserID(userID)), IntToString(OrderID(orderID)))
-
-    return nil
+// Custom types work seamlessly with generics
+type Port uint16
+func (p Port) String() string {
+    return strconvu.UintToString(p) // no casting needed
 }
 ```
 </details>
 
 ## Features
 
-- **[UintToString](impl.go#L14)** - Generic unsigned integer to string
-  - [Generic type constraints: impl.go#L14](impl.go#L14)
-- **[IntToString](impl.go#L18)** - Generic signed integer to string
-  - [Generic type constraints: impl.go#L18](impl.go#L18)
-- **[StringToUint8](impl.go#L22)** - String to uint8 with validation
-  - [Range validation logic: impl.go#L27](impl.go#L27)
-- **[ParseUint64](impl.go#L33)** - String to uint64 parsing
-- **[ParseInt64](impl.go#L37)** - String to int64 parsing
+- **[UintToString](impl.go#L12)** - Generic
+  unsigned integer to string conversion
+- **[IntToString](impl.go#L16)** - Generic
+  signed integer to string conversion
+- **[StringToUint8](impl.go#L20)** - String to
+  uint8 with automatic range validation
+- **[ParseUint64](impl.go#L30)** - String to
+  uint64 parsing with error handling
+- **[ParseInt64](impl.go#L33)** - String to int64 parsing with error handling
 
 ## Use
 
-See [example usage](example_test.go)
+See [example](example_test.go)
