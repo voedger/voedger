@@ -6,11 +6,13 @@ package query2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -78,14 +80,20 @@ func docsAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
 	}
 	// TODO: what to do with included objects?
 	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-	ok := oldacl.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedFields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
-	if !ok {
-		if ok, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, qw.resultType.QName(), requestedFields, qw.roles); err != nil {
+	oldACLOk := oldacl.IsOperationAllowed(appdef.OperationKind_Select, qw.resultType.QName(), requestedFields, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+	newACLOk := true
+	newACLCalculated := true
+	if newACLOk, err = qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Select, qw.resultType.QName(), requestedFields, qw.roles); err != nil {
+		if !errors.Is(err, appdef.ErrNotFoundError) || !oldACLOk {
 			return err
 		}
+		newACLCalculated = false
 	}
-	if !ok {
+	if !newACLOk && !oldACLOk {
 		return coreutils.NewSysError(http.StatusForbidden)
+	}
+	if newACLCalculated && !newACLOk && oldACLOk {
+		logger.Verbose("newACL not ok, but oldACL ok.", appdef.OperationKind_Select, qw.resultType.QName(), qw.roles)
 	}
 	return nil
 }

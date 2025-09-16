@@ -417,16 +417,17 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		ws = cmd.iCommand.Workspace()
 	}
 
-	ok, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdQName, nil, cmd.roles)
+	newACLOk, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdQName, nil, cmd.roles)
 	if err != nil {
 		return err
 	}
-	if !ok {
-		// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-		ok = oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdQName, nil, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
-	}
-	if !ok {
+	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+	oldACLOk := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdQName, nil, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
+	if !newACLOk && !oldACLOk {
 		return coreutils.NewHTTPErrorf(http.StatusForbidden)
+	}
+	if !newACLOk && oldACLOk {
+		logger.Verbose("newACL not ok, but oldACL ok.", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
 	}
 	return nil
 }
@@ -795,16 +796,17 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, work pipeline.IW
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
 
-		ok, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		newACLOk, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
 			return err
 		}
-		if !ok {
-			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-			ok = oldacl.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
-		}
-		if !ok {
+		// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+		oldACLOk := oldacl.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
+		if !newACLOk && !oldACLOk {
 			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+		}
+		if !newACLOk && oldACLOk {
+			logger.Verbose("newACL not ok, but oldACL ok.", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
 		}
 	}
 	return
