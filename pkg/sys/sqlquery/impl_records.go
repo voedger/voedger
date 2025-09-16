@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -36,14 +37,14 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		}
 		switch compExpr.Operator {
 		case sqlparser.EqualStr:
-			id, err := parseUint64(compExpr.Right.(*sqlparser.SQLVal).Val)
+			id, err := strconvu.ParseUint64(string(compExpr.Right.(*sqlparser.SQLVal).Val))
 			if err != nil {
 				return err
 			}
 			whereIDs = append(whereIDs, istructs.RecordID(id))
 		case sqlparser.InStr:
 			for _, v := range compExpr.Right.(sqlparser.ValTuple) {
-				id, err := parseUint64(v.(*sqlparser.SQLVal).Val)
+				id, err := strconvu.ParseUint64(string(v.(*sqlparser.SQLVal).Val))
 				if err != nil {
 					return err
 				}

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -19,9 +18,9 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -481,7 +480,7 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 		vars := mux.Vars(req)
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
-		ownerID, err := strconv.ParseUint(vars[URLPlaceholder_id], utils.DecimalBase, utils.BitSize64)
+		ownerID, err := strconvu.ParseUint64(vars[URLPlaceholder_id])
 		if err != nil {
 			// notest: checked by router url rule
 			panic(err)
@@ -590,7 +589,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(req.Method, data, req)
 		if recordIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
-			docID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
+			docID, err := strconvu.ParseUint64(recordIDStr)
 			if err != nil {
 				// notest
 				panic(err)
