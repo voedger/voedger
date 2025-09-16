@@ -13,7 +13,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
@@ -331,7 +331,7 @@ fi
 		require.NoError(err)
 	}()
 
-	err = os.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), coreutils.FileMode_rw_rw_rw_)
+	err = os.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), filesu.FileMode_DefaultForFile)
 	require.NoError(err)
 
 	err = os.Setenv("TEST_VAR", "test_value")
@@ -349,7 +349,7 @@ fi
 
 func deleteClusterJson() error {
 	fname := "cluster.json"
-	exists, err := coreutils.Exists(fname)
+	exists, err := filesu.Exists(fname)
 	if err != nil {
 		// notest
 		return err
@@ -362,7 +362,7 @@ func deleteClusterJson() error {
 }
 
 func deleteDryRunDir() error {
-	exists, err := coreutils.Exists(dryRunDir)
+	exists, err := filesu.Exists(dryRunDir)
 	if err != nil {
 		// notest
 		return err

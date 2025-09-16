@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 
 	"github.com/robfig/cron/v3"
 )
@@ -182,7 +182,7 @@ func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
 		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, cmd.Args[1], ErrHostNotFoundInCluster))
 	}
 
-	exists, errExists := coreutils.Exists(cmd.Args[3])
+	exists, errExists := filesu.Exists(cmd.Args[3])
 	if errExists != nil {
 		// notest
 		err = errors.Join(err, errExists)

@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -661,7 +662,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, out_extModuleURLs m
 		}
 	}
 
-	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(coreutils.IReadFS), ".")
+	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(filesu.IReadFS), ".")
 	if err == nil {
 		asts = append(asts, dirAST)
 	} else if !errors.Is(err, parser.ErrDirContainsNoSchemaFiles) {

@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -183,7 +183,7 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 
 	// generate .gitignore file
 	gitIgnoreFilePath := filepath.Join(dir, ".gitignore")
-	if err := os.WriteFile(gitIgnoreFilePath, []byte(gitignoreFileContent), coreutils.FileMode_rw_rw_rw_); err != nil {
+	if err := os.WriteFile(gitIgnoreFilePath, []byte(gitignoreFileContent), filesu.FileMode_DefaultForFile); err != nil {
 		return fmt.Errorf(errInGeneratingOrmFileFormat, gitIgnoreFilePath, err)
 	}
 
@@ -203,7 +203,7 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
-		if err := os.WriteFile(ormFile, formattedContent, coreutils.FileMode_rw_rw_rw_); err != nil {
+		if err := os.WriteFile(ormFile, formattedContent, filesu.FileMode_DefaultForFile); err != nil {
 			return err
 		}
 	}
@@ -220,7 +220,7 @@ func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (fileP
 		return filePath, err
 	}
 
-	if err := os.WriteFile(filePath, ormFileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
+	if err := os.WriteFile(filePath, ormFileContent, filesu.FileMode_DefaultForFile); err != nil {
 		return filePath, err
 	}
 
@@ -236,7 +236,7 @@ func generateUtilsFile(ormPkgData ormPackage, dir string) (filePath string, err 
 		return filePath, err
 	}
 
-	if err := os.WriteFile(filePath, ormFileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
+	if err := os.WriteFile(filePath, ormFileContent, filesu.FileMode_DefaultForFile); err != nil {
 		return filePath, err
 	}
 
@@ -561,7 +561,7 @@ func getHeaderFileContent(headerFilePath string) (string, error) {
 // createOrmDir creates a directory for the ORM files
 func createOrmDir(dir string) (string, error) {
 	ormDirPath := filepath.Join(dir, wasmDirName, ormDirName)
-	exists, err := coreutils.Exists(ormDirPath)
+	exists, err := filesu.Exists(ormDirPath)
 
 	if err != nil {
 		// notest
@@ -574,7 +574,7 @@ func createOrmDir(dir string) (string, error) {
 		}
 	}
 
-	return ormDirPath, os.MkdirAll(ormDirPath, coreutils.FileMode_rwxrwxrwx)
+	return ormDirPath, os.MkdirAll(ormDirPath, filesu.FileMode_DefaultForDir)
 }
 
 // normalizeName normalizes the name of the object

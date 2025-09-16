@@ -15,11 +15,11 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/parser"
 
 	"github.com/voedger/voedger/pkg/compile"
-	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func newBaselineCmd(params *vpmParams) *cobra.Command {
@@ -76,7 +76,7 @@ func saveBaselineInfo(compileRes *compile.Result, dir, targetDir string) error {
 	}
 
 	baselineInfoFilePath := filepath.Join(targetDir, baselineInfoFileName)
-	if err := os.WriteFile(baselineInfoFilePath, content, coreutils.FileMode_rw_rw_rw_); err != nil {
+	if err := os.WriteFile(baselineInfoFilePath, content, filesu.FileMode_DefaultForFile); err != nil {
 		return err
 	}
 	if logger.IsVerbose() {
@@ -88,13 +88,13 @@ func saveBaselineInfo(compileRes *compile.Result, dir, targetDir string) error {
 func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 	for qpn, files := range pkgFiles {
 		packageDir := filepath.Join(baselineDir, qpn)
-		if err := os.MkdirAll(packageDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+		if err := os.MkdirAll(packageDir, filesu.FileMode_DefaultForDir); err != nil {
 			return err
 		}
 		for _, file := range files {
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			if err := coreutils.CopyFile(file, packageDir, coreutils.WithNewName(fileNameExtensionless+parser.VSQLExt)); err != nil {
+			if err := filesu.CopyFile(file, packageDir, filesu.WithNewName(fileNameExtensionless+parser.VSQLExt)); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 			if logger.IsVerbose() {
@@ -107,7 +107,7 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 }
 
 func createBaselineDir(dir string) error {
-	exists, err := coreutils.Exists(dir)
+	exists, err := filesu.Exists(dir)
 	if err != nil {
 		// notest
 		return err
@@ -116,5 +116,5 @@ func createBaselineDir(dir string) error {
 		return fmt.Errorf("baseline directory already exists: %s", dir)
 	}
 	pkgDir := filepath.Join(dir, pkgDirName)
-	return os.MkdirAll(pkgDir, coreutils.FileMode_rwxrwxrwx)
+	return os.MkdirAll(pkgDir, filesu.FileMode_DefaultForDir)
 }

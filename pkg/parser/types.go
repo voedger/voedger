@@ -13,7 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 )
 
 type FileSchemaAST struct {
@@ -40,7 +40,7 @@ type AppSchemaAST struct {
 
 type PackageFS struct {
 	Path string
-	FS   coreutils.IReadFS
+	FS   filesu.IReadFS
 }
 
 type statementNode struct {
