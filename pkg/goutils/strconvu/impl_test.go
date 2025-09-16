@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func TestStringToUint8_edgeCases(t *testing.T) {
+func TestParseUint8_edgeCases(t *testing.T) {
 	require := require.New(t)
 	// Edge cases
 	t.Run("ok", func(t *testing.T) {
@@ -25,7 +25,7 @@ func TestStringToUint8_edgeCases(t *testing.T) {
 			{"007", 7},
 		}
 		for _, c := range cases {
-			actual, err := StringToUint8(c.str)
+			actual, err := ParseUint8(c.str)
 			require.NoError(err)
 			require.Equal(c.expected, actual)
 		}
@@ -37,7 +37,7 @@ func TestStringToUint8_edgeCases(t *testing.T) {
 			"",
 		}
 		for _, c := range cases {
-			actual, err := StringToUint8(c)
+			actual, err := ParseUint8(c)
 			require.Error(err)
 			require.Zero(actual)
 		}

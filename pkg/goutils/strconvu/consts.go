@@ -8,4 +8,5 @@ package strconvu
 const (
 	decimalBase = 10
 	bitSize64   = 64
+	bitSize8    = 8
 )

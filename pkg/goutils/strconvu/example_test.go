@@ -94,29 +94,29 @@ func ExampleIntToString() {
 	// CustomInt64: 2000
 }
 
-// ExampleStringToUint8 demonstrates converting strings to uint8 with validation
-func ExampleStringToUint8() {
+// ExampleParseUint8 demonstrates converting strings to uint8 with validation
+func ExampleParseUint8() {
 	// Valid conversions
 	validStrings := []string{"0", "1", "127", "255"}
 
 	for _, s := range validStrings {
-		if value, err := StringToUint8(s); err == nil {
+		if value, err := ParseUint8(s); err == nil {
 			fmt.Printf("'%s' -> %d\n", s, value)
 		}
 	}
 
 	// Invalid conversions - negative numbers
-	if _, err := StringToUint8("-1"); err != nil {
+	if _, err := ParseUint8("-1"); err != nil {
 		fmt.Println("Error for '-1':", err)
 	}
 
 	// Invalid conversions - out of range
-	if _, err := StringToUint8("256"); err != nil {
+	if _, err := ParseUint8("256"); err != nil {
 		fmt.Println("Error for '256':", err)
 	}
 
 	// Invalid conversions - non-numeric
-	if _, err := StringToUint8("abc"); err != nil {
+	if _, err := ParseUint8("abc"); err != nil {
 		fmt.Println("Error for 'abc':", err)
 	}
 
@@ -125,9 +125,9 @@ func ExampleStringToUint8() {
 	// '1' -> 1
 	// '127' -> 127
 	// '255' -> 255
-	// Error for '-1': out of range: value must be between 0 and 255
-	// Error for '256': out of range: value must be between 0 and 255
-	// Error for 'abc': strconv.Atoi: parsing "abc": invalid syntax
+	// Error for '-1': strconv.ParseUint: parsing "-1": invalid syntax
+	// Error for '256': strconv.ParseUint: parsing "256": value out of range
+	// Error for 'abc': strconv.ParseUint: parsing "abc": invalid syntax
 }
 
 // ExampleParseUint64 demonstrates parsing strings to uint64 values
