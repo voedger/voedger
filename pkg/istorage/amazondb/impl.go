@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -18,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -369,7 +367,7 @@ func (s *implIAppStorage) put(pKey []byte, cCols []byte, value []byte, ttlSecond
 
 	if ttlSeconds > 0 {
 		putItemParams.Item[expireAtAttributeName] = &types.AttributeValueMemberN{
-			Value: strconv.FormatInt(s.iTime.Now().Add(time.Duration(ttlSeconds)*time.Second).Unix(), utils.DecimalBase),
+			Value: strconvu.IntToString(s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).Unix()),
 		}
 	}
 	_, err = s.client.PutItem(context.Background(), &putItemParams)

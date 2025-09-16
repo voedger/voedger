@@ -6,7 +6,6 @@
 package utils
 
 const (
-	DecimalBase = 10
-	Uint64Size  = 8
-	Uint32Size  = 4
+	Uint64Size = 8
+	Uint32Size = 4
 )
