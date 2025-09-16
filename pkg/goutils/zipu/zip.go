@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package coreutils
+package zipu
 
 import (
 	"archive/zip"

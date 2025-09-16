@@ -20,10 +20,10 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/zipu"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
@@ -88,7 +88,7 @@ func build(compileRes *compile.Result, params *vpmParams) error {
 	tempDirWithoutBuild := filepath.Dir(tempDir)
 
 	// zip build info directory along with vsql and wasm files
-	return coreutils.Zip(tempDirWithoutBuild, varFile)
+	return zipu.Zip(tempDirWithoutBuild, varFile)
 }
 
 // buildDir creates a directory structure with vsql and wasm files

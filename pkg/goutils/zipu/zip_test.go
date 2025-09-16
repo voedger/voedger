@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package coreutils
+package zipu
 
 import (
 	"io/fs"
@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-func TestZipAndUnzip(t *testing.T) {
+func TestBasicUsage_ZipAndUnzip(t *testing.T) {
 	require := require.New(t)
 	tmpDir := t.TempDir()
 	srcDir := filepath.Join(tmpDir, "src")

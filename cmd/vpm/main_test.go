@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/zipu"
 )
 
 func TestCompileBasicUsage(t *testing.T) {
@@ -504,7 +505,7 @@ func TestBuildBasicUsage(t *testing.T) {
 				err = os.Mkdir(filepath.Join(dir, "unzipped"), filesu.FileMode_DefaultForDir)
 				require.NoError(err)
 
-				err = coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
+				err = zipu.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
 				require.NoError(err)
 				wasmFiles := findWasmFiles(filepath.Join(dir, "unzipped", buildDirName))
 				require.Len(wasmFiles, len(tc.expectedWasmFiles))
