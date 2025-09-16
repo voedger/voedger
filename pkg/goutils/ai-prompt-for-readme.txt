@@ -1,15 +1,55 @@
-You are an AI system specialized in analyzing Go packages and generating concise developer documentation. Your task is to **write a `README.md` file** for the specified package. Follow the instructions **exactly** and do not add extra commentary or assumptions beyond what can be inferred from the package code and tests.
+You are an AI system specialized in analyzing Go packages and generating concise developer documentation.
+Your task is to **write a `README.md` file** for the specified package.
+Follow the instructions **exactly** and do not add extra commentary or assumptions beyond what can be inferred from the package code and tests.
 
 ## Requirements
 
 ### Package Name
-   Write a concise (1–2 sentences) description explaining what the package does and its primary purpose. Focus on the conceptual role, not implementation details.
+   Write a concise (1–2 sentences) description explaining what the package does and its primary purpose.
+   To do this investigate comprehensively what the package is for and how it is used.
+   Focus on the conceptual role, not implementation details.
 
 ### Problem Statement ("Why")
    Provide a short (1–2 sentences) explanation of the problem this package solves or why it exists. Ensure this is conceptually distinct from the description.
+   Provide two collapsible code examples that demonstrate the pain point the package solves and how it provides relief:
+     - create 2 cuts:
+       - "Without [packagename]" cut:
+         - Show the verbose, error-prone code developers had to write before this package
+         - Include the most painful boilerplate patterns that the package eliminates
+         - Mark with comments common mistakes developers often make, "boilerplate here", etc
+         - Focus on common mistakes or complex patterns
+         - Keep it realistic but highlight the pain points
+         - Maximum 50 lines of code
+       - "With [packagename]" cut:
+         - Show the same functionality using the package
+         - Demonstrate dramatic simplification (ideally 1-5 lines vs many)
+         - Include both basic usage and one example with options/configuration
+         - Show how complex error handling becomes simple
+         - Maximum 20 lines of code
+     - Goal: Create a stark contrast that makes developers immediately understand the value proposition.
+       The "before" should make them think "ugh, I hate writing this" and the "after" should make them think "wow, that's so much cleaner!"
+     - Focus on: The most common, repetitive, error-prone patterns that your package eliminates, not edge cases or complex scenarios.
+     - Format:
+<details>
+<summary>Without [packagename]</summary>
+
+```go
+// Pain-inducing code here
+```
+</details>
+
+<details>
+<summary>With [packagename]</summary>
+
+```go
+// Happy, simple code snipped here
+// Make it easy to copy-paste: include necessary imports and use funcs through the package name
+```
+</details>
 
 ### Features Section
-   Use bullet points to list the fundamental features (not implementation details). Under each bullet point should be a set of key architecture points with links to according code points that implement the feature, up to 5 links.
+   Use bullet points to list the fundamental features (not implementation details). Under each bullet point should be a set of key architecture points
+   with links to according code points that implement the feature, up to 5 links.
      - If the package looks like a lib of util funcs that rea not linked to each other then consider each func as a fundamental feature
 
    - Each feature line ≤72 characters
@@ -59,6 +99,7 @@ You are an AI system specialized in analyzing Go packages and generating concise
    ## Problem
 
    Brief explanation.
+   2 cuts with before/after code.
 
    ## Features
 
@@ -76,10 +117,10 @@ You are an AI system specialized in analyzing Go packages and generating concise
    ## Use
 
    - If test file exists:
-     See [basic usage example](test_file.go)
+     See [basic usage test](test_file.go)
 
    - Else if any Example functions exist:
-     See [example usage](example_test.go)
+     See [example](example_test.go)
 
    - Otherwise:
      ```go

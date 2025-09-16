@@ -15,9 +15,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -63,7 +63,7 @@ func (s *httpService) blobHTTPRequestHandler_Read() http.HandlerFunc {
 
 func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appdef.AppQName, wsid istructs.WSID, headers map[string]string, ok bool) {
 	vars := mux.Vars(req)
-	wsidUint, err := strconv.ParseUint(vars[URLPlaceholder_wsid], utils.DecimalBase, utils.BitSize64)
+	wsidUint, err := strconvu.ParseUint64(vars[URLPlaceholder_wsid])
 	if err != nil {
 		// notest: checked by router url rule
 		panic(err)
