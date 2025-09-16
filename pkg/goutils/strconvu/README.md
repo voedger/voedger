@@ -1,12 +1,12 @@
-# strconvu
+# Package strconvu
 
 Type-safe string conversion utilities with generic support for all
 integer types and comprehensive validation.
 
 ## Problem
 
-Go's standard library requires verbose type casting and manual
-validation when converting between strings and various integer types.
+Go's standard library requires verbose type casting and magic numbers
+when converting between strings and various integer types.
 
 <details>
 <summary>Without strconvu</summary>
@@ -20,7 +20,7 @@ func processNumbers(u8 uint8, u16 uint16, i32 int32, i64 int64) []string {
     results[0] = strconv.FormatUint(uint64(u8), 10)  // boilerplate cast
     results[1] = strconv.FormatUint(uint64(u16), 10) // boilerplate cast
     results[2] = strconv.FormatInt(int64(i32), 10)   // boilerplate cast
-    results[3] = strconv.FormatInt(i64, 10)
+    results[3] = strconv.FormatInt(i64, 10)          // magic number 10
 
     return results
 }
@@ -40,6 +40,23 @@ type Port uint16
 func (p Port) String() string {
     return strconv.FormatUint(uint64(p), 10) // repetitive casting
 }
+
+// Multiple parsing functions with repeated validation logic
+func parseMultiple(s1, s2, s3 string) (uint8, uint64, int64, error) {
+    v1, err := strconv.ParseUint(s1, 10, 8)  // repeated base/bitSize
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    v2, err := strconv.ParseUint(s2, 10, 64) // repeated base/bitSize
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    v3, err := strconv.ParseInt(s3, 10, 64)  // repeated base/bitSize
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    return uint8(v1), v2, v3, nil // manual casting
+}
 ```
 
 </details>
@@ -53,10 +70,10 @@ import "github.com/voedger/voedger/pkg/goutils/strconvu"
 // Clean, type-safe conversions for any integer type
 func processNumbers(u8 uint8, u16 uint16, i32 int32, i64 int64) []string {
     return []string{
-        strconvu.UintToString(u8),
-        strconvu.UintToString(u16),
-        strconvu.IntToString(i32),
-        strconvu.IntToString(i64),
+        strconvu.UintToString(u8),   // no casting needed
+        strconvu.UintToString(u16),  // works with any uint type
+        strconvu.IntToString(i32),   // works with any int type
+        strconvu.IntToString(i64),   // consistent API
     }
 }
 
@@ -69,6 +86,23 @@ func parseConfig(s string) (uint8, error) {
 type Port uint16
 func (p Port) String() string {
     return strconvu.UintToString(p) // no casting needed
+}
+
+// Clean parsing with consistent error handling
+func parseMultiple(s1, s2, s3 string) (uint8, uint64, int64, error) {
+    v1, err := strconvu.ParseUint8(s1)  // type-specific validation
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    v2, err := strconvu.ParseUint64(s2) // consistent API
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    v3, err := strconvu.ParseInt64(s3)  // no magic numbers
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    return v1, v2, v3, nil // no manual casting
 }
 ```
 

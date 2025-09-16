@@ -9,10 +9,12 @@ import (
 	"strconv"
 )
 
+// UintToString converts an unsigned integer to its decimal string representation.
 func UintToString[T ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64](n T) string {
 	return strconv.FormatUint(uint64(n), decimalBase)
 }
 
+// IntToString converts a signed integer to its decimal string representation.
 func IntToString[T ~int | ~int8 | ~int16 | ~int32 | ~int64](n T) string {
 	return strconv.FormatInt(int64(n), decimalBase)
 }
