@@ -54,19 +54,6 @@ func copyFile(src, dst string) error {
     }
     return os.Chmod(dst, srcInfo.Mode())
 }
-
-// Copy directory recursively - even more complex
-func copyDir(src, dst string) error {
-    // 30+ lines of recursive directory walking,
-    // error handling, permission copying...
-    // Easy to get wrong, hard to maintain
-}
-
-srcInfo, err := srcFile.Stat()
-if err != nil {
-    return err
-}
-return os.Chmod(dstPath, srcInfo.Mode()) // Easy to forget
 ```
 </details>
 
@@ -74,37 +61,38 @@ return os.Chmod(dstPath, srcInfo.Mode()) // Easy to forget
 <summary>With filesu</summary>
 
 ```go
+import "github.com/voedger/voedger/pkg/goutils/filesu"
+
 // Copy a single file
 err := filesu.CopyFile("source.txt", "dest")
 
-// Copy with options
-err = filesu.CopyFile("source.txt", "dest",
-    filesu.WithSkipExisting(),
-    filesu.WithFileMode(0644))
+// Simple directory copy
+err := filesu.CopyDir("/path/to/source", "/path/to/destination")
 
-// Copy entire directory
-err = filesu.CopyDir("srcdir", "dstdir")
+// Copy with options - skip existing files and set custom permissions
+err = filesu.CopyDir(src, dst, 
+    filesu.WithSkipExisting(),
+    filesu.WithFileMode(0755))
+
+// Copy from embedded filesystem
+err = filesu.CopyDirFS(embedFS, "templates", "/output/dir")
 ```
 </details>
 
 ## Features
 
-- **[CopyFile](impl.go#L37)** - Copy individual files with options
-  - [File existence validation: impl.go#L99](impl.go#L99)
-  - [Automatic directory creation: impl.go#L117](impl.go#L117)
-  - [Permission preservation: impl.go#L142](impl.go#L142)
-- **[CopyDir](impl.go#L45)** - Recursively copy directories
-  - [Recursive directory traversal: impl.go#L69](impl.go#L69)
-  - [Directory structure preservation: impl.go#L72](impl.go#L72)
-- **[CopyFileFS](impl.go#L29)** - Copy from filesystem abstractions
-  - [Filesystem abstraction support: types.go#L10](types.go#L10)
-- **[CopyDirFS](impl.go#L20)** - Copy directories from filesystem abstractions
-- **[Exists](impl.go#L151)** - Check file/directory existence safely
-- **Copy options** - Flexible configuration
-  - [WithSkipExisting: impl.go#L167](impl.go#L167)
-  - [WithFileMode: impl.go#L161](impl.go#L161)
-  - [WithNewName: impl.go#L173](impl.go#L173)
-  - [WithFilterFilesWithRelativePaths: impl.go#L179](impl.go#L179)
+- **[CopyDir](impl.go#L49)** - Recursively copy directories on disk
+- **[CopyFile](impl.go#L39)** - Copy single files with auto directory creation
+- **Embedded filesystem support** - Copy from fs.FS implementations
+  - [CopyDirFS: embedded directory copying](impl.go#L21)
+  - [CopyFileFS: embedded file copying](impl.go#L29)
+  - [IReadFS: filesystem abstraction interface](types.go#L10)
+- **Configuration options** - Flexible copy behavior control
+  - [WithFileMode: custom file permissions](impl.go#L169)
+  - [WithSkipExisting: avoid overwrite conflicts](impl.go#L175)
+  - [WithNewName: rename during copy](impl.go#L181)
+  - [WithFilterFilesWithRelativePaths: selective copying](impl.go#L187)
+- **[Exists](impl.go#L157)** - Safe file/directory existence checking
 
 ## Use
 

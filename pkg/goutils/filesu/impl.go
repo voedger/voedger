@@ -15,17 +15,19 @@ import (
 	"slices"
 )
 
-// copies the specified dir from the provided FS to disk to path specified by dst
-// use "." src to copy the entire srcFS content
-func CopyDirFS(srcFS IReadFS, src, dst string, optFuncs ...CopyOpt) error {
+// CopyDirFS recursively copies a directory from a filesystem abstraction (e.g. embed FS)to disk.
+// srcDir is the source directory path within srcFS (use "." to copy entire srcFS content).
+// dstDir is created if it doesn't exist.
+func CopyDirFS(srcFS IReadFS, srcDir, dstDir string, optFuncs ...CopyOpt) error {
 	opts := &copyOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
-	return copyDirFSOpts(srcFS, src, dst, opts)
+	return copyDirFSOpts(srcFS, srcDir, dstDir, opts)
 }
 
-// copies the specified file from the provided FS to disk to path specified by dstDir
+// CopyFileFS copies a single file from a filesystem abstraction (e.g. embed FS) to disk.
+// dstDir is created if it doesn't exist).
 func CopyFileFS(srcFS fs.FS, srcFileName, dstDir string, optFuncs ...CopyOpt) error {
 	opts := &copyOpts{}
 	for _, optFunc := range optFuncs {
@@ -34,6 +36,8 @@ func CopyFileFS(srcFS fs.FS, srcFileName, dstDir string, optFuncs ...CopyOpt) er
 	return copyFileFSOpts(srcFS, srcFileName, dstDir, opts)
 }
 
+// CopyFile copies a single file from disk to another location on disk.
+// dstDir is created if it doesn't exist.
 func CopyFile(src, dstDir string, optFuncs ...CopyOpt) error {
 	dir, file := filepath.Split(filepath.Clean(src))
 	if len(dir) == 0 {
@@ -42,6 +46,8 @@ func CopyFile(src, dstDir string, optFuncs ...CopyOpt) error {
 	return CopyFileFS(os.DirFS(dir), file, dstDir, optFuncs...)
 }
 
+// CopyDir recursively copies a directory from one location to another on disk.
+// dst is created if it doesn't exist.
 func CopyDir(src, dst string, optFuncs ...CopyOpt) error {
 	readDirFS := os.DirFS(src).(IReadFS)
 	return CopyDirFS(readDirFS, ".", dst, optFuncs...)
@@ -148,6 +154,8 @@ func copyFileFSOpts(srcFS fs.FS, srcFileName, dstDir string, opts *copyOpts) err
 	return os.Chmod(dstFileNameWithPath, srcinfo.Mode())
 }
 
+// Exists checks whether a file or directory exists at the specified path.
+// Returns error only for unexpected filesystem errors (not for non-existence).
 func Exists(filePath string) (exists bool, err error) {
 	if _, err = os.Stat(filePath); err == nil {
 		return true, nil

@@ -25,6 +25,8 @@ Follow the instructions **exactly** and do not add extra commentary or assumptio
          - Demonstrate dramatic simplification (ideally 1-5 lines vs many)
          - Include both basic usage and one example with options/configuration
          - Show how complex error handling becomes simple
+         - Must be copy-pasteable: include necessary imports and use funcs through the package name
+           - CRITICAL: always check that it will at least compilable after copy-paste: check imports, funcs used throutg package name etc
          - Maximum 20 lines of code
      - Goal: Create a stark contrast that makes developers immediately understand the value proposition.
        The "before" should make them think "ugh, I hate writing this" and the "after" should make them think "wow, that's so much cleaner!"
@@ -61,7 +63,7 @@ Follow the instructions **exactly** and do not add extra commentary or assumptio
        - [{Architecture point 1 description: fileName1.go#L21](link to key architecture code point)
        - [{Architecture point 1 description: fileName1.go#L21](link to key architecture code point)
      - CRITICAL: Only include architecture points that represent significant design decisions, core algorithms, or essential structural elements. Do NOT include:
-       - Unexported constants or variables
+       - Unexported funcs, constants or variables
        - Trivial helper values
        - Implementation details that don't affect the public API or core functionality
      - Focus on: main function logic, type constraints, validation algorithms, error handling strategies, core data structures
