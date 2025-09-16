@@ -27,15 +27,12 @@ func processNumbers(u8 uint8, u16 uint16, i32 int32, i64 int64) []string {
 
 // String to uint8 with validation - error-prone manual checks
 func parseConfig(s string) (uint8, error) {
-    value, err := strconv.Atoi(s)
+    value, err := strconv.ParseUint(s, 10, 8) // magic numbers everywhere
     if err != nil {
         return 0, err
     }
-    // Easy to forget range validation or get bounds wrong
-    if value < 0 || value > 255 { // common mistake: hardcoded bounds
-        return 0, errors.New("out of range")
-    }
-    return uint8(value), nil
+    // Easy to forget proper casting or get bit sizes wrong
+    return uint8(value), nil // potential overflow if bitSize wrong
 }
 
 // Custom types require even more boilerplate
@@ -44,6 +41,7 @@ func (p Port) String() string {
     return strconv.FormatUint(uint64(p), 10) // repetitive casting
 }
 ```
+
 </details>
 
 <details>
@@ -64,7 +62,7 @@ func processNumbers(u8 uint8, u16 uint16, i32 int32, i64 int64) []string {
 
 // Built-in validation with proper error messages
 func parseConfig(s string) (uint8, error) {
-    return strconvu.StringToUint8(s) // handles range validation automatically
+    return strconvu.ParseUint8(s) // handles validation automatically
 }
 
 // Custom types work seamlessly with generics
@@ -73,19 +71,21 @@ func (p Port) String() string {
     return strconvu.UintToString(p) // no casting needed
 }
 ```
+
 </details>
 
 ## Features
 
-- **[UintToString](impl.go#L12)** - Generic
-  unsigned integer to string conversion
-- **[IntToString](impl.go#L16)** - Generic
-  signed integer to string conversion
-- **[StringToUint8](impl.go#L20)** - String to
-  uint8 with automatic range validation
-- **[ParseUint64](impl.go#L30)** - String to
-  uint64 parsing with error handling
-- **[ParseInt64](impl.go#L33)** - String to int64 parsing with error handling
+- **[UintToString](impl.go#L12)** - Generic unsigned integer to
+  string conversion
+- **[IntToString](impl.go#L16)** - Generic signed integer to string
+  conversion
+- **[ParseUint8](impl.go#L21)** - String to uint8 parsing with
+  automatic range validation
+- **[ParseUint64](impl.go#L30)** - String to uint64 parsing with
+  error handling
+- **[ParseInt64](impl.go#L35)** - String to int64 parsing with error
+  handling
 
 ## Use
 
