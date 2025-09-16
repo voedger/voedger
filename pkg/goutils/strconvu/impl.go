@@ -30,10 +30,12 @@ func StringToUint8(s string) (uint8, error) {
 	return uint8(value), nil
 }
 
+// ParseUint64 parses a string into a uint64 value treating it as a regular decimal number
 func ParseUint64(s string) (uint64, error) {
 	return strconv.ParseUint(s, decimalBase, bitSize64)
 }
 
+// ParseInt64 parses a string into an int64 value treating it as a regular decimal number
 func ParseInt64(s string) (int64, error) {
 	return strconv.ParseInt(s, decimalBase, bitSize64)
 }
