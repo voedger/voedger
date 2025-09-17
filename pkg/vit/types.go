@@ -154,7 +154,7 @@ type implIEmailSender_captor struct {
 
 // cache for sys/registry, sys/cluster
 // to make the constant schemas be reused among tests to speed up
-// other app schemas could be changed among tests so it is wron gto cache non-sys apps
+// other app schemas could be changed among tests so it is wrong to cache non-sys apps
 // normally should be used in VIT tests only
 // vvm.NullSchemasCache is default in VVM
 type implISchemasCache_sysApps struct {
