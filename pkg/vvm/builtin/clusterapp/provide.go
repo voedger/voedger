@@ -33,7 +33,6 @@ func Provide() builtinapps.Builder {
 				EnginePoolSize:   appparts.PoolSize(uint(ClusterAppNumPartitions), 1, uint(ClusterAppNumPartitions), 1),
 				NumAppWorkspaces: ClusterAppNumAppWS,
 			},
-			CacheAppSchemASTInTests: true,
 		}
 	}
 }

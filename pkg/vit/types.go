@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -149,4 +150,14 @@ type implVITISecretsReader struct {
 
 type implIEmailSender_captor struct {
 	emailCaptorCh chan state.EmailMessage
+}
+
+// cache for sys/registry, sys/cluster
+// to make the constant schemas be reused among tests to speed up
+// other app schemas could be changed among tests so it is wron gto cache non-sys apps
+// normally should be used in VIT tests only
+// vvm.NullSchemasCache is default in VVM
+type implISchemasCache_sysApps struct {
+	schemas map[appdef.AppQName]*parser.AppSchemaAST
+	lock    sync.Mutex
 }

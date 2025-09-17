@@ -60,6 +60,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		NumVVM:        1,
 		AdminPort:     DefaultAdminPort,
 		EmailSender:   storages.NewIEmailSenderSMTP(),
+		SchemasCache:  &NullSchemasCache{},
 
 		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
