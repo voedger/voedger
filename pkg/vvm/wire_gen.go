@@ -146,7 +146,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		ITime:               iTime,
 		SidecarApps:         v4,
 	}
-	builtInAppsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2)
+	iSchemasCache := vvmConfig.SchemasCache
+	builtInAppsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2, iSchemasCache)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -627,8 +628,8 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 }
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis builtinapps.APIs, cfgs AppConfigsTypeEmpty,
-	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (BuiltInAppsArtefacts, error) {
-	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint, schemasCache ISchemasCache) (BuiltInAppsArtefacts, error) {
+	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs, schemasCache)
 }
 
 // extModuleURLs is filled here

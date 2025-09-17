@@ -164,6 +164,7 @@ type VVMConfig struct {
 	MetricsServicePort         metrics.MetricsServicePort
 	AsyncActualizersRetryDelay actualizers.RetryDelay
 	AdminPort                  int
+	SchemasCache               ISchemasCache // normally NullSchemasCache in production, vit.SysAppsSchemasCache in VIT tests
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
@@ -231,3 +232,19 @@ type IVVMElections ielections.IElections[storage.TTLStorageImplKey, string]
 type ignition struct{}
 
 func (i ignition) Release() {}
+
+type ISchemasCache interface {
+	// @ConcurrentAccess
+	// must return nil if not found
+	Get(appQName appdef.AppQName) *parser.AppSchemaAST
+	// @ConcurrentAccess
+	Put(appQName appdef.AppQName, schema *parser.AppSchemaAST)
+}
+
+type NullSchemasCache struct{}
+
+func (*NullSchemasCache) Get(appQName appdef.AppQName) *parser.AppSchemaAST {
+	return nil
+}
+
+func (*NullSchemasCache) Put(appQName appdef.AppQName, schema *parser.AppSchemaAST) {}

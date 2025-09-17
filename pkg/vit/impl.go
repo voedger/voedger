@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/wneessen/go-mail"
 
@@ -47,6 +48,9 @@ import (
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	vvmpkg "github.com/voedger/voedger/pkg/vvm"
 )
+
+// shared among all VIT instances
+var sysAppsSchemasCache = &implISchemasCache_sysApps{schemas: map[appdef.AppQName]*parser.AppSchemaAST{}}
 
 func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
@@ -94,6 +98,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 	cfg.Time = testingu.MockTime
 	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
+	cfg.SchemasCache = sysAppsSchemasCache
 
 	emailCaptor := &implIEmailSender_captor{
 		emailCaptorCh: make(chan state.EmailMessage, 1), // must be buffered
