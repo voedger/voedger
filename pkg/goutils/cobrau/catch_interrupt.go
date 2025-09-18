@@ -29,7 +29,7 @@ func ExecCommandAndCatchInterrupt(cmd *cobra.Command) error {
 
 type signalChKeyType string
 
-var signalChKey signalChKeyType = "signals"
+const signalChKey signalChKeyType = "signals"
 
 func goAndCatchInterrupt(f func(ctx context.Context) error) (err error) {
 
