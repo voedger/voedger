@@ -7,7 +7,6 @@ package coreutils
 
 import (
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -101,12 +100,4 @@ func TestInt64ToRecordID(t *testing.T) {
 	require.Equal(istructs.RecordID(1), ok)
 	_, err = Int64ToRecordID(-1)
 	require.Error(err)
-}
-
-func withArgs(args []string, f func()) {
-	orig := make([]string, len(os.Args))
-	copy(orig, os.Args)
-	defer func() { os.Args = orig }()
-	os.Args = args
-	f()
 }
