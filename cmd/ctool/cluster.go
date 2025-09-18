@@ -417,9 +417,13 @@ func (c *cmdType) validate(cluster *clusterType) error {
 	}
 }
 
-// init [CE] [ipAddr1]
+// init n1 [ipAddr1]
 // or
-// init [SE] [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
+// init n5 [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
+// or
+// init ce [ipAddr1]
+// or
+// init se [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
 // nolint
 func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 
@@ -427,11 +431,23 @@ func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 		return ErrMissingCommandArguments
 	}
 
+	// Check if it's a valid edition type
 	if cmd.Args[0] != clusterEditionN1 && cmd.Args[0] != clusterEditionN5 {
 		return ErrInvalidClusterEdition
 	}
-	if cmd.Args[0] == clusterEditionN1 && len(cmd.Args) != 1+initCeArgCount {
-		return ErrInvalidNumberOfArguments
+
+	// For N1/CE commands, expect 1 or 2 arguments (edition + optional IP)
+	if cmd.Args[0] == clusterEditionN1 {
+		if len(cmd.Args) < 1 || len(cmd.Args) > 2 {
+			return ErrInvalidNumberOfArguments
+		}
+	}
+
+	// For N5/SE commands, expect exactly 6 arguments (edition + 5 IPs)
+	if cmd.Args[0] == clusterEditionN5 {
+		if len(cmd.Args) != 1+se5NodeCount {
+			return ErrInvalidNumberOfArguments
+		}
 	}
 
 	return nil
@@ -939,7 +955,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	// nolint
 	defer saveClusterToJson(c)
 
-	if cmd == initN1Cmd { // CE args
+	if cmd == initN1Cmd || cmd == initCeCmd { // N1/CE args
 		c.Edition = clusterEditionN1
 		c.Nodes = make([]nodeType, 1)
 		c.Nodes[0].NodeRole = nrN1Node
@@ -951,7 +967,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		} else {
 			c.Nodes[0].DesiredNodeState.Address = "0.0.0.0"
 		}
-	} else { // SE args
+	} else { // N5/SE args
 		skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
 		if err != nil {
 			fmt.Println("Error getting skip-stack values:", err)
