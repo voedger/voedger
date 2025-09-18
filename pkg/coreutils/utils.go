@@ -10,7 +10,6 @@ import (
 	"errors"
 	"os"
 	"strings"
-	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -18,10 +17,6 @@ import (
 
 func IsBlank(str string) bool {
 	return len(strings.TrimSpace(str)) == 0
-}
-
-func IsTest() bool {
-	return testing.Testing() || IsDebug()
 }
 
 func IsDebug() bool {
