@@ -25,11 +25,11 @@ func ceClusterControllerFunction(c *clusterType) error {
 	switch c.Cmd.Kind {
 	case ckInit, ckUpgrade, ckAcme:
 
-		if err = deployCeMonStack(); err != nil {
+		if err = deployCeMonStack(c); err != nil {
 			return err
 		}
 
-		if err = deployVoedgerCe(); err != nil {
+		if err = deployVoedgerCe(c); err != nil {
 			return err
 		}
 
@@ -59,16 +59,18 @@ func ceClusterControllerFunction(c *clusterType) error {
 	return err
 }
 
-func deployCeMonStack() error {
+func deployCeMonStack(c *clusterType) error {
 
 	loggerInfo("Deploying monitoring stack...")
-	return newScriptExecuter("", "").run("ce/mon-prepare.sh")
+	node := c.nodeByHost(n1NodeName)
+	return newScriptExecuter(c.sshKey, "").run("ce/mon-prepare.sh", node.address())
 }
 
-func deployVoedgerCe() error {
+func deployVoedgerCe(c *clusterType) error {
 
 	loggerInfo("Deploying voedger N1 cluster...")
-	return newScriptExecuter("", "").run("ce/ce-start.sh")
+	node := c.nodeByHost(n1NodeName)
+	return newScriptExecuter(c.sshKey, "").run("ce/ce-start.sh", node.address())
 }
 
 func addVoedgerUser(c *clusterType) error {
@@ -103,9 +105,15 @@ func ceNodeControllerFunction(n *nodeType) error {
 
 	n.newAttempt()
 
+	// Setup passwordless sudo if needed
+	loggerInfo(fmt.Sprintf("Setting up passwordless sudo on %s %s host...", n.nodeName(), n.address()))
+	if err := setupPasswordlessSudo(n); err != nil {
+		return err
+	}
+
 	loggerInfo(fmt.Sprintf("Deploying docker on a %s %s host...", n.nodeName(), n.address()))
 	if err := newScriptExecuter(n.cluster.sshKey, "").
-		run("ce/docker-install.sh"); err != nil {
+		run("ce/docker-install.sh", n.address()); err != nil {
 		return err
 	}
 
@@ -114,10 +122,6 @@ func ceNodeControllerFunction(n *nodeType) error {
 	}
 
 	n.success()
-	return nil
-}
-
-func deployCeCluster(*clusterType) error {
 	return nil
 }
 
@@ -150,4 +154,27 @@ func copyCtoolToCeNode(node *nodeType) error {
 	}
 
 	return nil
+}
+
+func setupPasswordlessSudo(n *nodeType) error {
+	// Check if passwordless sudo is already configured
+	if err := checkPasswordlessSudo(n); err == nil {
+		loggerInfo("Passwordless sudo is already configured")
+		return nil
+	}
+
+	loggerInfo("Configuring passwordless sudo (you may be prompted for password)...")
+	if err := newScriptExecuter(n.cluster.sshKey, "").
+		run("ce/setup-passwordless-sudo.sh", n.address()); err != nil {
+		return fmt.Errorf("failed to setup passwordless sudo: %v", err)
+	}
+
+	loggerInfo("Passwordless sudo configured successfully")
+	return nil
+}
+
+func checkPasswordlessSudo(n *nodeType) error {
+	// Try to run a simple sudo command without password
+	return newScriptExecuter(n.cluster.sshKey, "").
+		run("ce/check-passwordless-sudo.sh", n.address())
 }
