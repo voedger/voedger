@@ -31,15 +31,6 @@ func TestIsBlank(t *testing.T) {
 	}
 }
 
-func TestIsDebug(t *testing.T) {
-	withArgs([]string{"/tmp/__debug_bin"}, func() {
-		require.True(t, IsDebug())
-	})
-	withArgs([]string{"/tmp/normal_bin"}, func() {
-		require.False(t, IsDebug())
-	})
-}
-
 func TestIsCassandraStorage(t *testing.T) {
 	t.Setenv("CASSANDRA_TESTS_ENABLED", "1")
 	require.True(t, IsCassandraStorage())

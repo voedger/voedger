@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -132,13 +131,6 @@ func ReplyUnauthorized(responder IResponder, message string) {
 
 func ReplyInternalServerError(responder IResponder, message string, err error) {
 	ReplyErrf(responder, http.StatusInternalServerError, message, ": ", err)
-}
-
-func GetTestSendTimeout() SendTimeout {
-	if coreutils.IsDebug() {
-		return SendTimeout(time.Hour)
-	}
-	return DefaultSendTimeout
 }
 
 func GetPrincipalToken(request Request) (token string, err error) {

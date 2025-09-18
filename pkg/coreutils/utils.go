@@ -19,10 +19,6 @@ func IsBlank(str string) bool {
 	return len(strings.TrimSpace(str)) == 0
 }
 
-func IsDebug() bool {
-	return strings.Contains(os.Args[0], "__debug_bin")
-}
-
 func IsCassandraStorage() bool {
 	_, ok := os.LookupEnv("CASSANDRA_TESTS_ENABLED")
 	return ok
