@@ -1,51 +1,59 @@
-# exec
+# Exec
 
-Simplifies command execution and piping in Go with fluent API for
-chaining commands and capturing output.
+Unix-style command pipeline builder with fluent API for chaining shell
+commands and automatic pipe management.
 
 ## Problem
 
-Standard Go command execution requires verbose setup, manual pipe
-management, and complex error handling for command chains.
+Building command pipelines in Go requires manually connecting stdout/stdin
+pipes between processes, handling goroutines for concurrent execution,
+and managing complex error propagation across the chain.
 
 <details>
 <summary>Without exec</summary>
 
 ```go
-// Executing "printf '1\n2\n3' | grep 2" manually
-cmd1 := exec.Command("printf", "1\\n2\\n3")
-cmd2 := exec.Command("grep", "2")
+// Manual pipe setup for: echo "data" | grep "data" | wc -l
+cmd1 := exec.Command("echo", "data")
+cmd2 := exec.Command("grep", "data")
+cmd3 := exec.Command("wc", "-l")
 
-// Manual pipe setup - boilerplate here
-r, w := io.Pipe()
-cmd1.Stdout = w
-cmd2.Stdin = r
+// Create pipes manually - boilerplate here
+pipe1, err := cmd1.StdoutPipe()
+if err != nil {
+    return err // Common mistake: forgetting error checks
+}
+cmd2.Stdin = pipe1
 
-// Complex error handling and coordination
-var stdout, stderr bytes.Buffer
-cmd2.Stdout = &stdout
-cmd2.Stderr = &stderr
+pipe2, err := cmd2.StdoutPipe()
+if err != nil {
+    return err
+}
+cmd3.Stdin = pipe2
 
-// Start commands in correct order - easy to mess up
+// Start all commands in correct order - easy to mess up
 if err := cmd1.Start(); err != nil {
-    return "", "", err
+    return err
 }
 if err := cmd2.Start(); err != nil {
-    return "", "", err
+    return err
+}
+if err := cmd3.Start(); err != nil {
+    return err
 }
 
-// Close writer after first command starts
-go func() {
-    defer w.Close()
-    cmd1.Wait()
-}()
-
-// Wait for second command
-if err := cmd2.Wait(); err != nil {
-    return "", "", err
+// Wait for completion and handle errors - more boilerplate
+var firstErr error
+if err := cmd1.Wait(); err != nil && firstErr == nil {
+    firstErr = err
 }
-
-result := strings.TrimSpace(stdout.String())
+if err := cmd2.Wait(); err != nil && firstErr == nil {
+    firstErr = err
+}
+if err := cmd3.Wait(); err != nil && firstErr == nil {
+    firstErr = err
+}
+return firstErr
 ```
 </details>
 
@@ -55,29 +63,34 @@ result := strings.TrimSpace(stdout.String())
 ```go
 import "github.com/voedger/voedger/pkg/goutils/exec"
 
-// Same functionality in one fluent chain
+// Simple pipeline: echo "data" | grep "data" | wc -l
 stdout, stderr, err := new(exec.PipedExec).
-    Command("printf", "1\\n2\\n3").
-    Command("grep", "2").
+    Command("echo", "data").
+    Command("grep", "data").
+    Command("wc", "-l").
     RunToStrings()
+
+// With working directory and output redirection
+err = new(exec.PipedExec).
+    Command("tinygo", "build", "-o", "app.wasm").
+    WorkingDir("/project/dir").
+    Run(os.Stdout, os.Stderr)
 ```
 </details>
 
 ## Features
 
-- **[Command chaining](exec.go#L67)** - Fluent API for building
-  command pipes
-  - [Pipe setup automation: exec.go#L45](exec.go#L45)
-  - [Sequential command execution: exec.go#L108](exec.go#L108)
-- **[Output capture](exec.go#L125)** - Capture stdout/stderr to
-  strings or writers
-  - [Concurrent output reading: exec.go#L140](exec.go#L140)
-  - [Synchronized completion: exec.go#L165](exec.go#L165)
-- **[Working directory](exec.go#L77)** - Set working directory for
-  commands
-- **[Process management](exec.go#L83)** - Start and wait for command
-  completion
-  - [Error propagation: exec.go#L88](exec.go#L88)
+- **[Pipeline builder](exec.go#L32)** - Fluent API for command chaining
+  - [Command chaining: exec.go#L48](exec.go#L48)
+  - [Automatic pipe connection: exec.go#L53](exec.go#L53)
+  - [Working directory support: exec.go#L76](exec.go#L76)
+- **Execution modes** - Multiple output handling strategies
+  - [Stream to writers: exec.go#L120](exec.go#L120)
+  - [Capture to strings: exec.go#L129](exec.go#L129)
+  - [Async start/wait: exec.go#L95](exec.go#L95)
+- **Process control** - Advanced process management
+  - [Command access: exec.go#L66](exec.go#L66)
+  - [Error propagation: exec.go#L83](exec.go#L83)
 
 ## Use
 
