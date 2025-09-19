@@ -1,6 +1,11 @@
 # goutils
 Golang utilities
 
-## AI Prompt to Create a Brief README.md
+## Augment AI Manual Rule to Create a Brief README.md
 
-[see here](ai-prompt-for-readme.txt)
+[see here](../../.augment/rules/generate-readme.md)
+
+use prompt in the context of the package we're want the README:
+```
+@generate-readme
+```
