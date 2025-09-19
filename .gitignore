@@ -12,15 +12,17 @@ main
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 o
-.*/
+
 
 coverage.txt
 **/tmp.md
 
 go.work.sum
 
-# But not .github
+.*/
+# But not .github and .augment
 !/.github
+!/.augment
 
 # Other
 .DS_Store
