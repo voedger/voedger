@@ -52,7 +52,7 @@ func newInitCmd() *cobra.Command {
 
 	// CE command - alias for N1 (Community Edition, single node)
 	initCeCmd = &cobra.Command{
-		Use:   "ce [<ipaddr>...]",
+		Use:   "CE [<ipaddr>...]",
 		Short: "Deploy the CE cluster (alias for n1)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  initN1, // Use the same function as N1
@@ -60,7 +60,7 @@ func newInitCmd() *cobra.Command {
 
 	// SE command - alias for N5 (Standard Edition, 5 nodes)
 	initSeCmd = &cobra.Command{
-		Use:   "se [<ipaddr>...]",
+		Use:   "SE [<ipaddr>...]",
 		Short: "Deploy the SE cluster (alias for n5)",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != se5NodeCount {

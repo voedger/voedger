@@ -421,9 +421,9 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // or
 // init n5 [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
 // or
-// init ce [ipAddr1]
+// init CE [ipAddr1]
 // or
-// init se [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
+// init SE [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
 // nolint
 func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 

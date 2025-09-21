@@ -22,7 +22,7 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
 
 **Deploy a CE cluster (alias for n1)**
 
-    $ ./ctool init ce 10.0.0.21 --ssh-key ./adm.key
+    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
 
 
 ### Deploy N5 (Standard Edition)
@@ -38,7 +38,7 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
 
 **Deploy a SE cluster (alias for n5)**
 
-    $ ./ctool init se 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 --ssh-key ./adm.key
+    $ ./ctool init SE 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 --ssh-key ./adm.key
 
 ### Deploy N3
 
@@ -55,18 +55,18 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
 
 For backward compatibility with existing scripts and tests, ctool supports deprecated aliases:
 
-- `ce` - alias for `n1` (Community Edition, single node)
-- `se` - alias for `n5` (Standard Edition, 5 nodes)
+- `CE` - alias for `n1` (Community Edition, single node)
+- `SE` - alias for `n5` (Standard Edition, 5 nodes)
 
 These aliases work exactly the same as their modern equivalents:
 
     # These commands are equivalent:
     $ ./ctool init n1 10.0.0.21 --ssh-key ./adm.key
-    $ ./ctool init ce 10.0.0.21 --ssh-key ./adm.key
+    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
 
     # These commands are equivalent:
     $ ./ctool init n5 ip1 ip2 ip3 ip4 ip5 --ssh-key ./adm.key
-    $ ./ctool init se ip1 ip2 ip3 ip4 ip5 --ssh-key ./adm.key
+    $ ./ctool init SE ip1 ip2 ip3 ip4 ip5 --ssh-key ./adm.key
 
 **Repeat after error**
 

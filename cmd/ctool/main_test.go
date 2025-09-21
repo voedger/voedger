@@ -316,7 +316,7 @@ func TestCtoolCeSeAliases(t *testing.T) {
 		deleteClusterJson()
 
 		// Test CE command with single IP
-		err = execRootCmd([]string{"./ctool", "init", "ce", "10.0.0.21", "--dry-run", "--ssh-key", "key"}, version)
+		err = execRootCmd([]string{"./ctool", "init", "CE", "10.0.0.21", "--dry-run", "--ssh-key", "key"}, version)
 		require.NoError(err)
 
 		// Clean up after test
@@ -331,7 +331,7 @@ func TestCtoolCeSeAliases(t *testing.T) {
 		deleteClusterJson()
 
 		// Test SE command with 5 IPs
-		err = execRootCmd([]string{"./ctool", "init", "se", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
+		err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
 		require.NoError(err)
 
 		// Clean up after test
@@ -346,7 +346,7 @@ func TestCtoolCeSeAliases(t *testing.T) {
 		deleteClusterJson()
 
 		// Test SE command with wrong number of IPs (should fail)
-		err = execRootCmd([]string{"./ctool", "init", "se", "10.0.0.21", "10.0.0.22", "--dry-run", "--ssh-key", "key"}, version)
+		err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "--dry-run", "--ssh-key", "key"}, version)
 		require.Error(err)
 
 		// Clean up after test
@@ -361,7 +361,7 @@ func TestCtoolCeSeAliases(t *testing.T) {
 		deleteClusterJson()
 
 		// Test CE command with no IPs (should work)
-		err = execRootCmd([]string{"./ctool", "init", "ce", "--dry-run", "--ssh-key", "key"}, version)
+		err = execRootCmd([]string{"./ctool", "init", "CE", "--dry-run", "--ssh-key", "key"}, version)
 		require.NoError(err)
 
 		// Clean up after test
