@@ -176,7 +176,7 @@ Follow the instructions **exactly** and do not add extra commentary or assumptio
   1. Basic Usage test → link
   2. Example() in `example_test.go` → link
   3. Otherwise → generate snippet
-- **Generate snippets responsibly**: Minimal, idiomatic, directly usable code, without `package` or `import` statements.
+- **Generate snippets responsibly**: Minimal, idiomatic, directly usable code, with neccessary `import` statements.
 - **Strict format compliance**: Output only the README.md content in the requested structure.
 
 ### Package Purpose Discovery Process
