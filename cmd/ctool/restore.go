@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 )
 
 // nolint
@@ -95,7 +95,7 @@ func resoreCeNode(backupName string) error {
 func backupExists(cluster *clusterType, backupPath string) error {
 
 	if cluster.Edition == clusterEditionN1 {
-		exists, err := coreutils.Exists(backupPath)
+		exists, err := filesu.Exists(backupPath)
 		if err != nil {
 			return err
 		}

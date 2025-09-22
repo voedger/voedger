@@ -28,12 +28,7 @@ func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 
 func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, partitionIDFunc state.PartitionIDFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
 	secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
-	intentsLimit, bundlesLimit int, optFuncs ...state.StateOptFunc) state.IBundledHostState {
-
-	opts := &state.StateOpts{}
-	for _, optFunc := range optFuncs {
-		optFunc(opts)
-	}
+	intentsLimit, bundlesLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender) state.IBundledHostState {
 
 	state := &asyncActualizerState{
 		bundledHostState: &bundledHostState{
@@ -52,12 +47,12 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.A
 	state.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 	state.addStorage(sys.Storage_Event, storages.NewEventStorage(eventFunc), S_GET)
 	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET|S_READ)
-	state.addStorage(sys.Storage_SendMail, storages.NewSendMailStorage(opts.Messages), S_INSERT)
-	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(opts.CustomHTTPClient), S_READ)
-	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, opts.FederationCommandHandler), S_GET)
-	state.addStorage(sys.Storage_FederationBlob, storages.NewFederationBlobStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, opts.FederationBlobHandler), S_READ)
+	state.addStorage(sys.Storage_SendMail, storages.NewSendMailStorage(emailSender), S_GET|S_INSERT)
+	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(stateOpts.CustomHTTPClient), S_READ)
+	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, stateOpts.FederationCommandHandler), S_GET)
+	state.addStorage(sys.Storage_FederationBlob, storages.NewFederationBlobStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, stateOpts.FederationBlobHandler), S_READ)
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
-	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
+	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, stateOpts.UniquesHandler), S_GET)
 	state.addStorage(sys.Storage_Logger, storages.NewLoggerStorage(), S_INSERT)
 
 	return state

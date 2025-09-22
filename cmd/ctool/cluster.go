@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
@@ -71,14 +71,14 @@ func newCluster() *clusterType {
 	if cluster.dryRun {
 
 		dryRunDir := filepath.Join(dir, dryRunDir)
-		exists, err := coreutils.Exists(dryRunDir)
+		exists, err := filesu.Exists(dryRunDir)
 		if err != nil {
 			// notest
 			loggerError(err.Error())
 			return nil
 		}
 		if !exists {
-			err := os.Mkdir(dryRunDir, coreutils.FileMode_rwxrwxrwx)
+			err := os.Mkdir(dryRunDir, filesu.FileMode_DefaultForDir)
 			if err != nil {
 				loggerError(err.Error())
 				return nil
@@ -89,7 +89,7 @@ func newCluster() *clusterType {
 		// Remove the old dry run configuration file
 		// Under tests, you do not need to delete for the possibility of testing command sequences
 		if !testing.Testing() {
-			exists, err := coreutils.Exists(dryRunClusterConfigFileName)
+			exists, err := filesu.Exists(dryRunClusterConfigFileName)
 			if err != nil {
 				// notest
 				loggerError(err.Error())
@@ -100,14 +100,14 @@ func newCluster() *clusterType {
 			}
 		}
 
-		exists, err = coreutils.Exists(cluster.configFileName)
+		exists, err = filesu.Exists(cluster.configFileName)
 		if err != nil {
 			// notest
 			loggerError(err.Error())
 			return nil
 		}
 		if exists {
-			if err := coreutils.CopyFile(cluster.configFileName, dryRunClusterConfigFileName); err != nil {
+			if err := filesu.CopyFile(cluster.configFileName, dryRunClusterConfigFileName); err != nil {
 				loggerError(err.Error())
 				return nil
 			}
@@ -795,7 +795,7 @@ func (c *clusterType) saveToJSON() error {
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(c.configFileName, b, coreutils.FileMode_rwxrwxrwx)
+		err = os.WriteFile(c.configFileName, b, filesu.FileMode_DefaultForDir)
 	}
 	return err
 }
@@ -811,7 +811,7 @@ func (c *clusterType) addressInReplacedList(address string) bool {
 }
 
 func (c *clusterType) clusterConfigFileExists() (bool, error) {
-	return coreutils.Exists(c.configFileName)
+	return filesu.Exists(c.configFileName)
 }
 
 func (c *clusterType) loadFromJSON() error {

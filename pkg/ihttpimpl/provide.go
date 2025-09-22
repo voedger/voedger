@@ -11,7 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -28,7 +28,7 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 		certCache:   dbcertcache.ProvideDBCache(&routerAppStorage),
 		acmeDomains: &sync.Map{},
 		server: &http.Server{
-			Addr:              coreutils.ServerAddress(params.Port),
+			Addr:              httpu.ListenAddr(params.Port),
 			Handler:           r,
 			ReadHeaderTimeout: defaultReadHeaderTimeout,
 		},

@@ -23,14 +23,8 @@ type Builder func(apis APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.
 
 type Def struct {
 	appparts.AppDeploymentDescriptor
-	AppQName                appdef.AppQName
-	Packages                []parser.PackageFS
-
-	// true -> schema AST will be built once per process and then reused on the same app
-	// normally could be used for sys/registry, sys/cluster etc
-	// normally should not be used for e.g. test1/app1 because schemas for such apps differs from test to test
-	// ignored if !coreutils.IsTest()
-	CacheAppSchemASTInTests bool
+	AppQName appdef.AppQName
+	Packages []parser.PackageFS
 }
 
 type APIs struct {

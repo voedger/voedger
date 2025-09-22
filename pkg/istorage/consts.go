@@ -4,6 +4,8 @@
 
 package istorage
 
+import "regexp"
+
 const (
 	AppStorageStatus_Pending AppStorageStatus = iota
 	AppStorageStatus_Done
@@ -17,6 +19,5 @@ const (
 )
 
 var (
-	SysMetaSafeName = SafeAppName{name: "sysmeta"}
+	SafeAppNameRegexp = regexp.MustCompile("^[a-z0-9]+$")
 )
-

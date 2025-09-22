@@ -11,7 +11,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -58,8 +59,8 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 
 		replacer := strings.NewReplacer(
 			EmailTemplatePlaceholder_VerificationCode, verificationCode,
-			EmailTemplatePlaceholder_InviteID, utils.UintToString(svViewInviteIndex.AsRecordID(field_InviteID)),
-			EmailTemplatePlaceholder_WSID, utils.UintToString(event.Workspace()),
+			EmailTemplatePlaceholder_InviteID, strconvu.UintToString(svViewInviteIndex.AsRecordID(field_InviteID)),
+			EmailTemplatePlaceholder_WSID, strconvu.UintToString(event.Workspace()),
 			EmailTemplatePlaceholder_WSName, svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName),
 			EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(field_Email),
 		)
@@ -77,19 +78,17 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 		skbSendMail.PutInt32(sys.Storage_SendMail_Field_Port, smtpCfg.Port)
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Username, smtpCfg.Username)
 
-		pwd := ""
-		if !coreutils.IsTest() {
-			skbAppSecretsStorage, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
-			if err != nil {
-				return err
-			}
-			skbAppSecretsStorage.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
-			svAppSecretsStorage, err := s.MustExist(skbAppSecretsStorage)
-			if err != nil {
-				return err
-			}
-			pwd = svAppSecretsStorage.AsString("")
+		skbAppSecretsStorage, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
+		if err != nil {
+			return err
 		}
+		skbAppSecretsStorage.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
+		svAppSecretsStorage, err := s.MustExist(skbAppSecretsStorage)
+		if err != nil {
+			return err
+		}
+
+		pwd := svAppSecretsStorage.AsString("")
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
 		// Send invitation Email
@@ -107,8 +106,8 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"VerificationCode":"%s","Updated":%d}}]}`, svViewInviteIndex.AsRecordID(field_InviteID), State_Invited, verificationCode, time.Now().UnixMilli()),
-			coreutils.WithAuthorizeBy(authToken),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(authToken),
+			httpu.WithDiscardResponse())
 
 		return err
 	}

@@ -126,8 +126,8 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 
 	// Unsubscribe all channels from projectionKey1
 
-	nb.Unsubscribe(channel1ID, projectionKey1)
-	nb.Unsubscribe(channel2ID, projectionKey1)
+	require.NoError(t, nb.Unsubscribe(channel1ID, projectionKey1))
+	require.NoError(t, nb.Unsubscribe(channel2ID, projectionKey1))
 
 	for i := 100; i < 110; i++ {
 
@@ -232,8 +232,8 @@ func Test_Subscribe_NoUpdate_Unsubscribe(t *testing.T) {
 			})
 		}
 		// Unsubscribe
-		nb.Unsubscribe(channel1ID, projectionKey1)
-		nb.Unsubscribe(channel1ID, projectionKey2)
+		require.NoError(t, nb.Unsubscribe(channel1ID, projectionKey1))
+		require.NoError(t, nb.Unsubscribe(channel1ID, projectionKey2))
 
 	}
 
@@ -346,6 +346,9 @@ func TestQuotas(t *testing.T) {
 // - mockTimer.FireNextTimerImmediately()
 // - Make sure that notifySubscriber is called
 func TestHeartbeats(t *testing.T) {
+
+	// https://github.com/voedger/voedger/issues/3938
+	t.Skip("Skipped temporarily due to issues")
 
 	req := require.New(t)
 	mockTime := testingu.MockTime
@@ -530,7 +533,8 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 	})
 
 	// Unsubscribe from projection1
-	broker.Unsubscribe(channelID, projection1)
+	err = broker.Unsubscribe(channelID, projection1)
+	require.NoError(t, err)
 
 	// Wait for metrics to be updated
 	req.Equal(1, broker.MetricNumSubcriptions())

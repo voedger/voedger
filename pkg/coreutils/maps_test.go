@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,18 +65,49 @@ func TestMapToObject(t *testing.T) {
 		"str":      "str1",
 		"bool":     true,
 		"any":      nil, // will be ignored
+		"numInt":   json.Number("123"),
+		"numFloat": json.Number("123.45"),
 	}, o))
-	require.Len(o.Data, 7)
-	require.Equal(float64(42), o.Data["float64"])
-	require.Equal(float32(43), o.Data["float32"])
-	require.Equal(int32(44), o.Data["int32"])
-	require.Equal(int64(45), o.Data["int64"])
-	require.Equal(istructs.RecordID(46), o.Data["recordID"])
-
-	require.Equal("str1", o.Data["str"])
-	v, ok := o.Data["bool"].(bool)
-	require.True(ok)
+	require.Len(o.Data, 9)
+	require.Equal(float64(42), o.AsFloat64("float64"))
+	require.Equal(float32(43), o.AsFloat32("float32"))
+	require.Equal(int32(44), o.AsInt32("int32"))
+	require.Equal(int64(45), o.AsInt64("int64"))
+	require.Equal(istructs.RecordID(46), o.AsRecordID("recordID"))
+	require.Equal("str1", o.AsString("str"))
+	v := o.AsBool("bool")
 	require.True(v)
+	require.Equal(int32(123), o.AsInt32("numInt"))
+	require.Equal(float32(123.45), o.AsFloat32("numFloat"))
 
 	require.Error(MapToObject(map[string]interface{}{"fld": 42}, o))
+}
+
+func TestMergeMaps(t *testing.T) {
+	require := require.New(t)
+
+	t.Run("zero maps", func(t *testing.T) {
+		m := MergeMaps()
+		require.Empty(m)
+	})
+
+	t.Run("one map", func(t *testing.T) {
+		m1 := map[string]interface{}{"a": 1}
+		m := MergeMaps(m1)
+		require.Equal(map[string]interface{}{"a": 1}, m)
+	})
+
+	t.Run("multiple maps, overlapping keys", func(t *testing.T) {
+		m1 := map[string]interface{}{"a": 1}
+		m2 := map[string]interface{}{"b": 2, "a": 3}
+		m3 := map[string]interface{}{"c": 4}
+		m := MergeMaps(m1, m2, m3)
+		require.Equal(map[string]interface{}{"a": 3, "b": 2, "c": 4}, m)
+	})
+
+	t.Run("nil maps", func(t *testing.T) {
+		m1 := map[string]interface{}{"a": 1}
+		m := MergeMaps(nil, m1, nil)
+		require.Equal(map[string]interface{}{"a": 1}, m)
+	})
 }

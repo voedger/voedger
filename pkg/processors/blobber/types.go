@@ -90,6 +90,7 @@ type sendWriteResult struct {
 	pipeline.NOOP
 }
 
+// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_catchReadError~impl]
 type catchReadError struct {
 	pipeline.NOOP
 }

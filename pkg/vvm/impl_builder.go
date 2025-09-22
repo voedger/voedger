@@ -5,21 +5,14 @@
 package vvm
 
 import (
-	"sync"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 )
-
-// appQName->*parser.AppSchemaAST
-// used in tests only
-var testAppSchemaCache sync.Map = sync.Map{}
 
 func (ab VVMAppsBuilder) Add(appQName appdef.AppQName, builder builtinapps.Builder) {
 	if _, ok := ab[appQName]; ok {
@@ -28,15 +21,10 @@ func (ab VVMAppsBuilder) Add(appQName appdef.AppQName, builder builtinapps.Build
 	ab[appQName] = builder
 }
 
-func buildAppFromPackagesFS(appQName appdef.AppQName, fses []parser.PackageFS, adf appdef.IAppDefBuilder, cacheSchemas bool) (err error) {
-	var appSchemaAST *parser.AppSchemaAST
-	if cacheSchemas {
-		appSchemaASTIntf, ok := testAppSchemaCache.Load(appQName)
-		if ok {
-			appSchemaAST = appSchemaASTIntf.(*parser.AppSchemaAST)
-		}
-	}
+func buildAppFromPackagesFS(appQName appdef.AppQName, fses []parser.PackageFS, adf appdef.IAppDefBuilder, schemasCache ISchemasCache) (err error) {
+	appSchemaAST := schemasCache.Get(appQName)
 	if appSchemaAST == nil {
+		// not nil in VIT tests only
 		packageSchemaASTs := []*parser.PackageSchemaAST{}
 		for _, fs := range fses {
 			packageSchemaAST, err := parser.ParsePackageDir(fs.Path, fs.FS, ".")
@@ -49,15 +37,13 @@ func buildAppFromPackagesFS(appQName appdef.AppQName, fses []parser.PackageFS, a
 		if err != nil {
 			return err
 		}
-		if cacheSchemas {
-			testAppSchemaCache.Store(appQName, appSchemaAST)
-		}
+		schemasCache.Put(appQName, appSchemaAST)
 	}
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
 func (ab VVMAppsBuilder) BuildAppsArtefacts(apis builtinapps.APIs, emptyCfgs AppConfigsTypeEmpty,
-	appsEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (builtinAppsArtefacts BuiltInAppsArtefacts, err error) {
+	appsEPs map[appdef.AppQName]extensionpoints.IExtensionPoint, schemasCache ISchemasCache) (builtinAppsArtefacts BuiltInAppsArtefacts, err error) {
 	builtinAppsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {
 		appEPs := appsEPs[appQName]
@@ -65,8 +51,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis builtinapps.APIs, emptyCfgs App
 		cfg := builtinAppsArtefacts.AppConfigsType.AddBuiltInAppConfig(appQName, adb)
 		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		cfg.SetNumAppWorkspaces(builtInAppDef.NumAppWorkspaces)
-		cacheSchemas := builtInAppDef.CacheAppSchemASTInTests && coreutils.IsTest()
-		if err := buildAppFromPackagesFS(appQName, builtInAppDef.Packages, adb, cacheSchemas); err != nil {
+		if err := buildAppFromPackagesFS(appQName, builtInAppDef.Packages, adb, schemasCache); err != nil {
 			return builtinAppsArtefacts, err
 		}
 

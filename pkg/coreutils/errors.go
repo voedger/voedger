@@ -10,10 +10,9 @@ import (
 )
 
 var (
-	ErrFieldsMissed         = errors.New("fields are missed")
-	ErrFieldTypeMismatch    = errors.New("field type mismatch")
-	ErrUnexpectedStatusCode = errors.New("unexpected status code")
-	ErrNumberOverflow       = errors.New("number overflow")
+	ErrFieldsMissed      = errors.New("fields are missed")
+	ErrFieldTypeMismatch = errors.New("field type mismatch")
+	ErrNumberOverflow    = errors.New("number overflow")
 )
 
 func errFailedToCast(value any, to string, err error) error {

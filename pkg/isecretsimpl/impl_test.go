@@ -33,7 +33,7 @@ func TestBasicUsage(t *testing.T) {
 	bb2, err2 := sr.ReadSecret(" ")
 	bb3, err3 := sr.ReadSecret("file-not-exist")
 
-	require.Equal(`{"secret":"key"}`, string(bb))
+	require.JSONEq(`{"secret":"key"}`, string(bb))
 	require.ErrorIs(err1, isecrets.ErrSecretNameIsBlank)
 	require.ErrorIs(err2, isecrets.ErrSecretNameIsBlank)
 	require.ErrorIs(err3, fs.ErrNotExist)

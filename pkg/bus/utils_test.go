@@ -13,15 +13,18 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
 func TestReplyError(t *testing.T) {
 	require := require.New(t)
+	const sendTimeout = SendTimeout(10 * time.Second)
 
 	type expected struct {
 		code  int
@@ -90,14 +93,13 @@ func TestReplyError(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.desc, func(t *testing.T) {
-				requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+				requestSender := NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 					c.f(responder)
 				})
-				cmdRespMeta, cmdResp, err := GetCommandResponse(context.Background(), requestSender, Request{})
-				require.NoError(err)
-				require.Equal(coreutils.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
+				cmdRespMeta, _, err := GetCommandResponse(context.Background(), requestSender, Request{})
+				require.Equal(c.expected.error, err)
+				require.Equal(httpu.ContentType_ApplicationJSON, cmdRespMeta.ContentType)
 				require.Equal(c.expected.code, cmdRespMeta.StatusCode)
-				require.Equal(c.expected.error, cmdResp.SysError)
 			})
 		}
 
@@ -119,18 +121,19 @@ func TestReplyError(t *testing.T) {
 			name := runtime.FuncForPC(reflect.ValueOf(c.f).Pointer()).Name()
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
-				requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+				requestSender := NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 					go c.f(responder, "test message")
 				})
 				expectedMessage := "test message"
 				if len(c.expectedMessage) > 0 {
 					expectedMessage = c.expectedMessage
 				}
-				meta, resp, err := GetCommandResponse(context.Background(), requestSender, Request{})
-				require.NoError(err)
-				require.Equal(coreutils.ContentType_ApplicationJSON, meta.ContentType)
-				require.Equal(c.statusCode, resp.SysError.HTTPStatus)
-				require.Equal(expectedMessage, resp.SysError.Message)
+				meta, _, err := GetCommandResponse(context.Background(), requestSender, Request{})
+				var sysError coreutils.SysError
+				require.ErrorAs(err, &sysError)
+				require.Equal(httpu.ContentType_ApplicationJSON, meta.ContentType)
+				require.Equal(c.statusCode, sysError.HTTPStatus)
+				require.Equal(expectedMessage, sysError.Message)
 			})
 		}
 	})
@@ -140,7 +143,7 @@ func TestReplyError(t *testing.T) {
 			Fld1 int
 			Fld2 string
 		}{Fld1: 42, Fld2: "str"}
-		requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			ReplyJSON(responder, http.StatusOK, testObj)
 		})
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(context.Background(), Request{})
@@ -149,7 +152,7 @@ func TestReplyError(t *testing.T) {
 		for elem := range responseCh {
 			require.Zero(counter)
 			require.Equal(http.StatusOK, responseMeta.StatusCode)
-			require.Equal(coreutils.ContentType_ApplicationJSON, responseMeta.ContentType)
+			require.Equal(httpu.ContentType_ApplicationJSON, responseMeta.ContentType)
 			require.Equal(testObj, elem)
 			counter++
 		}

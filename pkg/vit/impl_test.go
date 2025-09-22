@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -62,7 +62,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 	t.Run("query", func(t *testing.T) {
 		body := `{"args": {"Text": "world"},"elements": [{"fields": ["Res"]}]}`
 		resp := vit.PostWS(ws, "q.sys.Echo", body)
-		require.Equal(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, resp.Body)
+		require.JSONEq(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, resp.Body)
 		require.Equal("world", resp.SectionRow()[0])
 		require.Equal("world", resp.Sections[0].Elements[0][0][0][0])
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
@@ -137,11 +137,12 @@ func TestBasicUsage_N10N(t *testing.T) {
 	n10nChan := vit.SubscribeForN10n(ws, QNameTestView)
 
 	// call test update to the view
-	vit.N10NUpdate(in10n.ProjectionKey{
+	err := vit.N10NUpdate(in10n.ProjectionKey{
 		App:        istructs.AppQName_test1_app1,
 		Projection: appdef.NewQName(app1PkgName, "View"),
 		WS:         ws.WSID,
 	}, 13)
+	require.NoError(err)
 
 	offset := <-n10nChan
 	log.Println(offset)
@@ -163,31 +164,31 @@ func TestBasicUsage_POST(t *testing.T) {
 	bodyEcho := `{"args": {"Text": "world"},"elements": [{"fields": ["Res"]}]}`
 	bodyCUD := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.air_table_plan","name":"test"}}]}`
 	httpResp := vit.Func("api/test1/app1/1/q.sys.Echo", bodyEcho) // HTTPResponse is returned
-	require.Equal(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, httpResp.Body)
+	require.JSONEq(`{"sections":[{"type":"","elements":[[[["world"]]]]}]}`, httpResp.Body)
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("low-level POST with authorization by token", func(t *testing.T) {
-		vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, coreutils.Expect403())
-		httpResp = vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, coreutils.WithAuthorizeBy(ws.Owner.Token))
+		vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, httpu.Expect403())
+		httpResp = vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, httpu.WithAuthorizeBy(ws.Owner.Token))
 		httpResp.Println()
 	})
 
 	t.Run("low-level POST with authorization by header", func(t *testing.T) {
-		httpResp = vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, coreutils.WithHeaders(coreutils.Authorization, "Bearer "+ws.Owner.Token))
+		httpResp = vit.Func(fmt.Sprintf("api/test1/app1/%d/c.sys.CUD", ws.WSID), bodyCUD, httpu.WithHeaders(httpu.Authorization, "Bearer "+ws.Owner.Token))
 		httpResp.Println()
 	})
 
 	t.Run("headers and cookies", func(t *testing.T) {
 		vit.PostWS(ws, "q.sys.Echo", bodyEcho,
-			coreutils.WithHeaders("Test-header", "Test header value"),
-			coreutils.WithCookies("Test-cookie", "test cookie value"),
+			httpu.WithHeaders("Test-header", "Test header value"),
+			httpu.WithCookies("Test-cookie", "test cookie value"),
 		)
 	})
 
 	t.Run("app-level POST with authorization", func(t *testing.T) {
-		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, coreutils.Expect403())
-		resp := vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, coreutils.WithAuthorizeBy(ws.Owner.Token)) // FuncResponse is returned
+		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, httpu.Expect403())
+		resp := vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, httpu.WithAuthorizeBy(ws.Owner.Token)) // FuncResponse is returned
 		require.Greater(resp.NewID(), istructs.NullRecordID)
 		require.Greater(resp.CurrentWLogOffset, istructs.Offset(0))
 		require.Empty(resp.Sections)                 // not used for commands
@@ -195,7 +196,7 @@ func TestBasicUsage_POST(t *testing.T) {
 	})
 
 	t.Run("custom response handler", func(t *testing.T) {
-		resp := vit.PostWS(ws, "q.sys.Echo", bodyEcho, coreutils.WithResponseHandler(func(httpResp *http.Response) {
+		resp := vit.PostWS(ws, "q.sys.Echo", bodyEcho, httpu.WithResponseHandler(func(httpResp *http.Response) {
 			bytes, err := io.ReadAll(httpResp.Body)
 			require.NoError(err)
 			log.Println(string(bytes))
@@ -240,7 +241,7 @@ func TestEmailExpectation(t *testing.T) {
 
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
 	s := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, nil, nil, nil, 1, 0,
-		state.WithEmailMessagesChan(vit.emailCaptor))
+		state.NullOpts, vit.emailCaptor)
 	k, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 	require.NoError(err)
 
@@ -293,7 +294,7 @@ func TestWithChildWorkspaceOfWorkspace(t *testing.T) {
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.options"}}]}`
 	prnTestEmail := vit.GetPrincipal(istructs.AppQName_test1_app1, TestEmail)
 	// allowed for login "123@123.com" despite he is not an owner of test_ws2
-	vit.PostWS(ws2, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prnTestEmail.Token))
+	vit.PostWS(ws2, "c.sys.CUD", body, httpu.WithAuthorizeBy(prnTestEmail.Token))
 }
 
 type nilAppStructs struct {

@@ -563,15 +563,15 @@ func rowsIsEqual(r1, r2 istructs.IRowReader) (ok bool, err error) {
 func (test *testEnvironment) testTestRow(t *testing.T, row istructs.IRowReader) {
 	require := require.New(t)
 
-	require.EqualValues(-2, row.AsInt8("int8"))
-	require.EqualValues(-1, row.AsInt16("int16"))
+	require.Equal(int8(-2), row.AsInt8("int8"))
+	require.Equal(int16(-1), row.AsInt16("int16"))
 	require.Equal(int32(1), row.AsInt32("int32"))
 	require.Equal(int64(2), row.AsInt64("int64"))
 	require.Equal(float32(3), row.AsFloat32("float32"))
 	require.Equal(float64(4), row.AsFloat64("float64"))
 	require.Equal([]byte{1, 2, 3, 4, 5}, row.AsBytes("bytes"))
 	require.Equal("test string", row.AsString("string"))
-	require.EqualValues(test.photoRawValue, row.AsBytes("raw"))
+	require.Equal(test.photoRawValue, row.AsBytes("raw"))
 
 	require.Equal(test.tablePhotos, row.AsQName("QName"))
 	require.True(row.AsBool("bool"))

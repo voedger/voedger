@@ -8,25 +8,24 @@ package actualizers
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type (
-	// actualizers is a set of actualizers for application partitions.
-	//
-	// # Implements:
-	//	- IActualizersService:
-	//	   + pipeline.IService
-	//	   + appparts.IActualizerFactory
-	actualizers struct {
-		cfg      BasicAsyncActualizerConfig
-		wait     sync.WaitGroup
-		appParts appparts.IAppPartitions
-	}
-)
+// actualizers is a set of actualizers for application partitions.
+//
+// # Implements:
+//
+//	appparts.IActualizerRunner
+type actualizers struct {
+	cfg      BasicAsyncActualizerConfig
+	wait     sync.WaitGroup
+	appParts appparts.IAppPartitions
+}
 
 func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 	return &actualizers{
@@ -46,34 +45,15 @@ func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part i
 			AppQName:                   app,
 			PartitionID:                part,
 		},
-		appParts: a.appParts,
+		appParts:   a.appParts,
+		retrierCfg: retrier.NewConfig(time.Duration(a.cfg.RetryDelay), time.Duration(a.cfg.RetryDelay)),
 	}
 	act.Prepare()
-
 	a.wait.Add(1)
 	act.Run(ctx)
 	a.wait.Done()
 }
 
-// # pipeline.IService.Prepare
-func (*actualizers) Prepare(interface{}) error { return nil }
-
-// # pipeline.IService.Run
-func (*actualizers) Run(context.Context) {
-	panic("not implemented")
-}
-
-// # pipeline.IServiceEx.RunEx
-func (a *actualizers) RunEx(_ context.Context, started func()) {
-	started()
-}
-
 func (a *actualizers) SetAppPartitions(ap appparts.IAppPartitions) {
 	a.appParts = ap
-}
-
-func (a *actualizers) Stop() {
-	// Cancellation has already been sent to the context by caller.
-	// Here we are just waiting while all async actualizers are stopped
-	a.wait.Wait()
 }

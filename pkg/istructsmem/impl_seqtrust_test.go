@@ -237,17 +237,18 @@ func TestEventReapplier(t *testing.T) {
 	err = app.Records().Apply(pLogEvent)
 	require.NoError(err)
 
-	app.Events().PutWlog(pLogEvent)
+	err = app.Events().PutWlog(pLogEvent)
 	require.NoError(err)
 
 	t.Run("ok to re-apply the event loaded from the db", func(t *testing.T) {
 		t.Run("plog cache", func(t *testing.T) {
 			var dbPLogEvent istructs.IPLogEvent
-			app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+			err = app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 				require.Nil(dbPLogEvent)
 				dbPLogEvent = event
 				return nil
 			})
+			require.NoError(err)
 			reapplier := app.GetEventReapplier(dbPLogEvent)
 			require.NoError(reapplier.ApplyRecords())
 			require.NoError(reapplier.PutWLog())
@@ -257,11 +258,12 @@ func TestEventReapplier(t *testing.T) {
 			app, err := provider.BuiltIn(appName)
 			require.NoError(err)
 			var dbPLogEvent istructs.IPLogEvent
-			app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+			err = app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 				require.Nil(dbPLogEvent)
 				dbPLogEvent = event
 				return nil
 			})
+			require.NoError(err)
 			reapplier := app.GetEventReapplier(dbPLogEvent)
 			require.NoError(reapplier.ApplyRecords())
 			require.NoError(reapplier.PutWLog())

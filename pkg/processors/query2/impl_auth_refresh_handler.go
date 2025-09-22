@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
@@ -24,7 +25,7 @@ func authRefreshHandler() apiPathHandler {
 
 			url := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/queries/sys.RefreshPrincipalToken", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(),
 				qw.principalPayload.ProfileWSID)
-			resp, err := qw.federation.QueryNoRetry(url, coreutils.WithAuthorizeBy(qw.msg.Token()))
+			resp, err := qw.federation.Query(url, httpu.WithAuthorizeBy(qw.msg.Token()))
 			if err != nil {
 				return err
 			}
@@ -45,7 +46,7 @@ func authRefreshHandler() apiPathHandler {
 			}
 			expiresInSeconds := gp.Duration.Seconds()
 			json := fmt.Sprintf(`{"%s": "%s", "%s": %d, "%s": %d}`, fieldPrincipalToken, newToken, fieldExpiresInSeconds, int(expiresInSeconds), fieldProfileWSID, qw.principalPayload.ProfileWSID)
-			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
+			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
 
 		},
 	}

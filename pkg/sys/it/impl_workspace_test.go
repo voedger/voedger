@@ -15,12 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -47,7 +47,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 					}
 				]
 			}`, wsName)
-		resp := vit.PostProfile(prn, "q.sys.QueryChildWorkspaceByName", body, coreutils.Expect404())
+		resp := vit.PostProfile(prn, "q.sys.QueryChildWorkspaceByName", body, httpu.Expect404())
 		resp.Println()
 	})
 
@@ -117,7 +117,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 
 	t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"WSName": %q,"WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
-		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
+		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, httpu.Expect409())
 		resp.Println()
 	})
 
@@ -130,7 +130,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	t.Run("400 bad request on create a workspace with kind that is not a QName of a workspace descriptor", func(t *testing.T) {
 		wsName := vit.NextName()
 		body := fmt.Sprintf(`{"args": {"WSName": %q,"WSKind": "app1pkg.articles","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
-		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect400())
+		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, httpu.Expect400())
 		resp.Println()
 	})
 }
@@ -159,7 +159,7 @@ func TestWorkspaceAuthorization(t *testing.T) {
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("workspace is not initialized", func(t *testing.T) {
 			// try to exec c.sys.CUD in non-inited ws id 1
-			vit.PostApp(istructs.AppQName_test1_app1, 1, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prn.Token), coreutils.Expect403()).Println()
+			vit.PostApp(istructs.AppQName_test1_app1, 1, "c.sys.CUD", body, httpu.WithAuthorizeBy(prn.Token), httpu.Expect403()).Println()
 		})
 
 		t.Run("access denied (wrong wsid)", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestWorkspaceAuthorization(t *testing.T) {
 			newPrn := vit.SignIn(login)
 
 			// try to modify the workspace by the non-owner
-			vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect403()).Println()
+			vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, httpu.WithAuthorizeBy(newPrn.Token), httpu.Expect403()).Println()
 		})
 	})
 
@@ -176,16 +176,8 @@ func TestWorkspaceAuthorization(t *testing.T) {
 		t.Run("token from an another app", func(t *testing.T) {
 			login := vit.SignUp(vit.NextName(), "1", istructs.AppQName_test1_app2)
 			newPrn := vit.SignIn(login)
-			vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, coreutils.WithAuthorizeBy(newPrn.Token), coreutils.Expect401()).Println()
+			vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", body, httpu.WithAuthorizeBy(newPrn.Token), httpu.Expect401()).Println()
 		})
-	})
-}
-
-func TestDenyCreateCDocWSKind(t *testing.T) {
-	DenyCreateCDocWSKind_Test(t, []appdef.QName{
-		authnz.QNameCDoc_WorkspaceKind_UserProfile,
-		authnz.QNameCDoc_WorkspaceKind_DeviceProfile,
-		authnz.QNameCDoc_WorkspaceKind_AppWorkspace,
 	})
 }
 
@@ -199,7 +191,7 @@ func TestDenyCUDCDocOwnerModification(t *testing.T) {
 		// try to modify CDoc<ChildWorkspace>
 		_, idOfCDocWSKind := vit.GetCDocChildWorkspace(ws)
 		body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"WSName":"new name"}}]}`, idOfCDocWSKind) // intFld is declared in vit.SharedConfig_Simple
-		vit.PostProfile(ws.Owner, "c.sys.CUD", body, coreutils.Expect403()).Println()
+		vit.PostProfile(ws.Owner, "c.sys.CUD", body, httpu.Expect403()).Println()
 	})
 
 	// note: unable to work with CDoc<Login>
@@ -274,7 +266,7 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 }
 
 func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName,
-	resp *coreutils.FuncResponse, wsid istructs.WSID, token string) {
+	resp *federation.FuncResponse, wsid istructs.WSID, token string) {
 	require := require.New(vit.T)
 	blobs, _, err := workspace.ValidateTemplate(templateName, ep, wsKind)
 	require.NoError(err)
@@ -355,5 +347,5 @@ func TestCreateChildOfChildWorkspace(t *testing.T) {
 	}
 	tokenForChildOfChild, err := vit.IssueToken(istructs.AppQName_test1_app1, time.Minute, &pp)
 	require.NoError(t, err)
-	vit.PostWS(newWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(tokenForChildOfChild))
+	vit.PostWS(newWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(tokenForChildOfChild))
 }

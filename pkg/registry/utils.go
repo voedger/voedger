@@ -80,6 +80,26 @@ func ChangePassword(login string, st istructs.IState, intents istructs.IIntents,
 	return ChangePasswordCDocLogin(cdocLogin, newPwd, intents, st)
 }
 
+func UpdateGlobalRoles(login string, st istructs.IState, intents istructs.IIntents, wsid istructs.WSID, appName string, globalRoles string) error {
+	cdocLogin, loginExists, err := GetCDocLogin(login, st, wsid, appName)
+	if err != nil {
+		return err
+	}
+	if !loginExists {
+		return errLoginDoesNotExist(login)
+	}
+	kb, err := st.KeyBuilder(sys.Storage_Record, appdef.NullQName)
+	if err != nil {
+		return err
+	}
+	loginUpdater, err := intents.UpdateValue(kb, cdocLogin)
+	if err != nil {
+		return err
+	}
+	loginUpdater.PutString(field_GlobalRoles, globalRoles)
+	return nil
+}
+
 func errLoginDoesNotExist(login string) error {
 	return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Errorf("login %s does not exist", login))
 }

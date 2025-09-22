@@ -36,7 +36,8 @@ func Test_BasicUsage(t *testing.T) {
 
 		require.Equal(UnknownVersion, versions.Get(key))
 
-		versions.Put(key, ver)
+		err = versions.Put(key, ver)
+		require.NoError(err)
 		require.Equal(ver, versions.Get(key))
 
 		t.Run("must be able to load early stored versions", func(t *testing.T) {

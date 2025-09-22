@@ -11,12 +11,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -94,13 +93,13 @@ func serveN10NChannel(ctx context.Context, rw http.ResponseWriter, flusher http.
 			ch <- unit
 		})
 	}()
-	defer logger.Info("serving n10n channel", channel,"finished")
+	defer logger.Info("serving n10n channel", channel, "finished")
 	for ctx.Err() == nil {
 		result, ok := <-ch
 		if !ok {
 			break
 		}
-		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), utils.UintToString(result.Offset))
+		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), strconvu.UintToString(result.Offset))
 		if _, err := fmt.Fprint(rw, sseMessage); err != nil {
 			logger.Error("failed to write sse message for subjectLogin", subjectLogin, "to client:", sseMessage, ":", err.Error())
 			break // WatchChannel will be finished on cancel()
@@ -192,7 +191,7 @@ func (s *httpService) updateHandler() http.HandlerFunc {
 
 		params := mux.Vars(req)
 		offset := params["offset"]
-		if off, err := strconv.ParseUint(offset, utils.DecimalBase, utils.BitSize64); err == nil {
+		if off, err := strconvu.ParseUint64(offset); err == nil {
 			s.n10n.Update(p, istructs.Offset(off))
 		}
 	}

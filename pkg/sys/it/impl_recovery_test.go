@@ -8,9 +8,10 @@ package sys_it
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
@@ -19,7 +20,7 @@ import (
 
 func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 	require := require.New(t)
-	keyspaceSuffix := uuid.NewString()
+	keyspaceSuffix := provider.NewTestKeyspaceIsolationSuffix()
 	var sharedStorageFactory istorage.IAppStorageFactory
 	counter := 1
 	cfg := it.NewOwnVITConfig(
@@ -33,25 +34,25 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 			case 1:
 				// 1st VVM launch
 				var err error
-				sharedStorageFactory, err = cfg.StorageFactory()
+				sharedStorageFactory, err = cfg.StorageFactory(cfg.Time)
 				require.NoError(err)
-				cfg.KeyspaceNameSuffix = keyspaceSuffix
-				cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+				cfg.KeyspaceIsolationSuffix = keyspaceSuffix
+				cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
 				}
 			case 2:
 				// 2nd VVM launch - the IDGenerator must be updated on recovery
-				cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+				cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 					return sharedStorageFactory, nil
 				}
-				cfg.KeyspaceNameSuffix = keyspaceSuffix
+				cfg.KeyspaceIsolationSuffix = keyspaceSuffix
 			}
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]}}`
+	body := `{"args":{"sys.ID": 1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]},"unloggedArgs":{"sys.ID":4}}`
 	resp := vit.PostWS(ws, "c.app1pkg.CmdODocOne", body)
 	resp.Println()
 
@@ -68,6 +69,7 @@ func TestCorrectIDsIssueAfterRecovery(t *testing.T) {
 	// 2nd launch - check if new ids issued correctly
 	counter++
 	vit = it.NewVIT(t, &cfg)
+	defer vit.TearDown()
 	ws = vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body = `{"cuds": [
 		{"fields":{"sys.ID": 1,"sys.QName": "app1pkg.Root", "FldRoot": 2}},

@@ -482,6 +482,10 @@ ALTERABLE WORKSPACE test_wsWS (
 		odocIntFld int32,
 		orecord1 TABLE orecord1(
 			orecord1IntFld int32,
+			refToCDoc1 ref(cdoc1),
+			refToORecord1 ref(orecord1),
+			refToAny ref,
+			refToCDoc1OrODoc1 ref(cdoc1, odoc1),
 			orecord2 TABLE orecord2(
 				orecord2IntFld int32
 			)
@@ -529,6 +533,12 @@ ALTERABLE WORKSPACE test_wsWS (
 		Int int32 NOT NULL,
 		Str text
 	);
+
+	VIEW ViewWithQName (
+		QName qname,
+		IntFld int32,
+		PRIMARY KEY ((IntFld), QName)
+	) AS RESULT OF ProjDummyQName WITH Tags=(WorkspaceOwnerTableTag);
 
 	VIEW View (
 		ViewIntFld int32 NOT NULL,
@@ -736,11 +746,12 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND TestDeniedCmd;
 		QUERY TestDeniedQuery() RETURNS TestCmdResult;
 
-		COMMAND CmdODocOne(odoc1) WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
+		COMMAND CmdODocOne(odoc1, UNLOGGED odoc1) WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2) WITH Tags=(WorkspaceOwnerFuncTag);
 
 		COMMAND TestCmdRawArg(sys.Raw) WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
+		PROJECTOR ProjDummyQName AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(ViewWithQName)); -- does nothing, only to define view.app1pkg.ViewQName
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx));
 		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
 		PROJECTOR ApplyClient AFTER INSERT ON (Client) INTENTS(sys.View(Clients));

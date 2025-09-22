@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
-	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/wneessen/go-mail"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 )
@@ -39,11 +39,11 @@ type PrepareArgsFunc func() istructs.PrepareArgs
 type ExecQueryCallbackFunc func() istructs.ExecQueryCallback
 type UnixTimeFunc func() int64
 type MockedStateFactory func(intentsLimit int, appStructsFunc AppStructsFunc) IHostState
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, execCmdArgsFunc CommandPrepareArgsFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc, opts ...StateOptFunc) IHostState
-type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int, opts ...StateOptFunc) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, execQueryArgsFunc PrepareArgsFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, opts ...StateOptFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, intentsLimit, bundlesLimit int, opts ...StateOptFunc) IBundledHostState
-type SchedulerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, tokensFunc itokens.ITokens, federationFunc federation.IFederation, unixTimeFunc UnixTimeFunc, intentsLimit int, optFuncs ...StateOptFunc) IHostState
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, execCmdArgsFunc CommandPrepareArgsFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc, stateOpts StateOpts) IHostState
+type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int, stateOpts StateOpts) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, execQueryArgsFunc PrepareArgsFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, stateOpts StateOpts) IHostState
+type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, intentsLimit, bundlesLimit int, stateOpts StateOpts, emailSender IEmailSender) IBundledHostState
+type SchedulerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, tokensFunc itokens.ITokens, federationFunc federation.IFederation, unixTimeFunc UnixTimeFunc, intentsLimit int, optFuncs StateOpts, emailSender IEmailSender) IHostState
 
 type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]istructs.RecordID, result string, err error)
 type FederationBlobHandler = func(owner, appname string, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID) (result []byte, err error)
@@ -52,48 +52,28 @@ type UniquesHandler = func(entity appdef.QName, wsid istructs.WSID, data map[str
 type EventsFunc func() istructs.IEvents
 type RecordsFunc func() istructs.IRecords
 
-type StateOptFunc func(opts *StateOpts)
-
 type IHTTPClient interface {
 	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
 }
 
+type IEmailSender interface {
+	Send(host string, msg EmailMessage, opts ...mail.Option) error
+}
+
+type EmailMessage struct {
+	Subject string
+	From    string
+	To      []string
+	CC      []string
+	BCC     []string
+	Body    string
+}
+
 type StateOpts struct {
-	Messages                 chan smtptest.Message
 	FederationCommandHandler FederationCommandHandler
 	FederationBlobHandler    FederationBlobHandler
 	CustomHTTPClient         IHTTPClient
 	UniquesHandler           UniquesHandler
-}
-
-func WithEmailMessagesChan(messages chan smtptest.Message) StateOptFunc {
-	return func(opts *StateOpts) {
-		opts.Messages = messages
-	}
-}
-
-func WithCustomHTTPClient(client IHTTPClient) StateOptFunc {
-	return func(opts *StateOpts) {
-		opts.CustomHTTPClient = client
-	}
-}
-
-func WithFedearationCommandHandler(handler FederationCommandHandler) StateOptFunc {
-	return func(opts *StateOpts) {
-		opts.FederationCommandHandler = handler
-	}
-}
-
-func WithFederationBlobHandler(handler FederationBlobHandler) StateOptFunc {
-	return func(opts *StateOpts) {
-		opts.FederationBlobHandler = handler
-	}
-}
-
-func WithUniquesHandler(handler UniquesHandler) StateOptFunc {
-	return func(opts *StateOpts) {
-		opts.UniquesHandler = handler
-	}
 }
 
 type ApplyBatchItem struct {

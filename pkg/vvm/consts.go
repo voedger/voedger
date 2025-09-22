@@ -30,6 +30,7 @@ const (
 	actualizerFlushInterval                                            = time.Millisecond * 500
 	DefaultLeadershipDurationSeconds                                   = ielections.LeadershipDurationSeconds(20)
 	DefaultLeadershipAcquisitionDuration                               = LeadershipAcquisitionDuration(120 * time.Second)
+	DefaultAdminPort                                                   = 55555
 )
 
 const (

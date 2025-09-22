@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -73,7 +74,7 @@ func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, 
 		// c.sys.SendEmailVerificationCode
 		body := fmt.Sprintf(`{"args":{"VerificationCode":"%s","Email":"%s","Reason":"%s","Language":"%s"}}`, verificationCode, email, verifyEmailReason, lng)
 		if _, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", as.AppQName(), args.WSID), body,
-			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(systemPrincipalToken)); err != nil {
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(systemPrincipalToken)); err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
 		}
 
@@ -104,19 +105,16 @@ func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg s
 		kb.PutString(sys.Storage_SendMail_Field_Host, smtpCfg.Host)
 		kb.PutInt32(sys.Storage_SendMail_Field_Port, smtpCfg.Port)
 		kb.PutString(sys.Storage_SendMail_Field_Username, smtpCfg.Username)
-		pwd := ""
-		if !coreutils.IsTest() {
-			kbSecret, err := st.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
-			if err != nil {
-				return err
-			}
-			kbSecret.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
-			sv, err := st.MustExist(kbSecret)
-			if err != nil {
-				return err
-			}
-			pwd = sv.AsString("")
+		kbSecret, err := st.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
+		if err != nil {
+			return err
 		}
+		kbSecret.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
+		sv, err := st.MustExist(kbSecret)
+		if err != nil {
+			return err
+		}
+		pwd := sv.AsString("")
 		kb.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
 		_, err = intents.NewValue(kb)

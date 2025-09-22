@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -58,8 +58,8 @@ func applyCancelAcceptedInvite(time timeu.ITime, federation federation.IFederati
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
 		if err != nil {
 			return
 		}
@@ -68,8 +68,8 @@ func applyCancelAcceptedInvite(time timeu.ITime, federation federation.IFederati
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
 		if err != nil {
 			return
 		}
@@ -78,8 +78,8 @@ func applyCancelAcceptedInvite(time timeu.ITime, federation federation.IFederati
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Cancelled, time.Now().UnixMilli()),
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
 
 		return err
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/vit"
 )
@@ -32,21 +33,23 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 
 	t.Run("query", func(t *testing.T) {
 		body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
-		resp := vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.ExpectSysError500())
+		resp := vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.Expect500())
 		require.Equal("world", resp.SectionRow()[0])
-		require.Equal(coreutils.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
+		require.Equal(httpu.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
 		resp.Println()
 	})
 
 	t.Run("command", func(t *testing.T) {
 		body := `{"args": {"Input": "1"}}`
-		resp := vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.Expect500())
-		require.Equal(coreutils.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
+		resp := vit.PostWS(ws, "c.app1pkg.MockCmd", body, httpu.Expect500())
+		require.Equal(httpu.ContentType_ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusInternalServerError, resp.HTTPResp.StatusCode)
-		require.Equal(http.StatusInternalServerError, resp.SysError.HTTPStatus)
-		require.Empty(resp.SysError.Data)
-		require.Empty(resp.SysError.QName)
+		var sysErr coreutils.SysError
+		require.ErrorAs(resp.SysError, &sysErr)
+		require.Equal(http.StatusInternalServerError, sysErr.HTTPStatus)
+		require.Empty(sysErr.Data)
+		require.Empty(sysErr.QName)
 		resp.Println()
 	})
 }

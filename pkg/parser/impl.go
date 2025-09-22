@@ -15,7 +15,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 )
 
 func parseImpl(fileName string, content string) (*SchemaAST, error) {
@@ -71,7 +71,7 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
 }
 
-func parseFSImpl(fs coreutils.IReadFS, dir string) (schemas []*FileSchemaAST, errs []error) {
+func parseFSImpl(fs filesu.IReadFS, dir string) (schemas []*FileSchemaAST, errs []error) {
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
 		return nil, []error{err}

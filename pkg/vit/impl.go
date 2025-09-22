@@ -6,6 +6,7 @@ package vit
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -14,32 +15,42 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/isequencer"
+	"github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
+	"github.com/wneessen/go-mail"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	vvmpkg "github.com/voedger/voedger/pkg/vvm"
 )
+
+// shared among all VIT instances
+var sysAppsSchemasCache = &implISchemasCache_sysApps{schemas: map[appdef.AppQName]*parser.AppSchemaAST{}}
 
 func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
@@ -80,17 +91,21 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	// only dynamic ports are used in tests
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
+	cfg.AdminPort = 0
 
 	// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
 
 	cfg.Time = testingu.MockTime
-	if !coreutils.IsTest() {
-		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
-	}
+	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
+	cfg.SchemasCache = sysAppsSchemasCache
 
-	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
-	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
+	emailCaptor := &implIEmailSender_captor{
+		emailCaptorCh: make(chan state.EmailMessage, 1), // must be buffered
+	}
+	cfg.EmailSender = emailCaptor
+
+	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 
 	vitPreConfig := &vitPreConfig{
 		vvmCfg:  &cfg,
@@ -99,7 +114,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	}
 
 	if useCas {
-		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+		cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragecas ", fmt.Sprint(cas.DefaultCasParams))
 			return cas.Provide(cas.DefaultCasParams)
 		}
@@ -113,7 +128,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		initFunc()
 	}
 
-	cfg.SecretsReader = &implVITISecretsReader{secrets: vitPreConfig.secrets, underlyingReader: cfg.SecretsReader}
+	cfg.SecretsReader = &implVITISecretsReader{secrets: vitPreConfig.secrets, underlyingReader: itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)}
 
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
@@ -140,10 +155,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		lock:                 sync.Mutex{},
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
-		emailCaptor:          emailMessagesChan,
+		emailCaptor:          emailCaptor,
 		mockTime:             testingu.MockTime,
 	}
-	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
+	httpClient, httpClientCleanup := httpu.NewIHTTPClient()
 	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
@@ -178,8 +193,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		// create logins and workspaces
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName,
-				WithReqOpt(coreutils.WithExpectedCode(http.StatusCreated)),
-				WithReqOpt(coreutils.WithExpectedCode(http.StatusConflict)),
+				WithReqOpt(httpu.WithExpectedCode(http.StatusCreated)),
+				WithReqOpt(httpu.WithExpectedCode(http.StatusConflict)),
 			)
 			prn := vit.SignIn(login)
 			appPrincipals, ok := vit.principals[app.name]
@@ -206,7 +221,6 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 			}
 		}
 
-		// time.Sleep(10 * time.Second)
 		sysToken, err := payloads.GetSystemPrincipalToken(vit, app.name)
 		require.NoError(vit.T, err)
 		for _, wsd := range app.ws {
@@ -216,7 +230,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 				appWorkspaces = map[string]*AppWorkspace{}
 				vit.appWorkspaces[app.name] = appWorkspaces
 			}
-			newAppWS := vit.CreateWorkspace(wsd, owner, coreutils.WithExpectedCode(http.StatusOK), coreutils.WithExpectedCode(http.StatusConflict))
+			newAppWS := vit.CreateWorkspace(wsd, owner, httpu.WithExpectedCode(http.StatusOK), httpu.WithExpectedCode(http.StatusConflict))
 			newAppWS.childs = wsd.childs
 			newAppWS.docs = wsd.docs
 			newAppWS.subjects = wsd.subjects
@@ -234,7 +248,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string, token string) {
 	for doc, dataFactory := range appWS.docs {
-		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc), coreutils.WithAuthorizeBy(token)).IsEmpty() {
+		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc), httpu.WithAuthorizeBy(token)).IsEmpty() {
 			continue
 		}
 		data := dataFactory(verifiedValues)
@@ -244,7 +258,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 		bb, err := json.Marshal(data)
 		require.NoError(vit.T, err)
 
-		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(token))
+		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), httpu.WithAuthorizeBy(token))
 	}
 
 	createSubjects(vit, token, appWS.subjects, appWS.AppQName(), appWS.WSID)
@@ -274,7 +288,7 @@ func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.
 		}
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
 			subject.login, roles, subject.subjectKind, vit.principals[appQName][subject.login].ProfileWSID)
-		vit.PostApp(appQName, wsid, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
+		vit.PostApp(appQName, wsid, "c.sys.CUD", body, httpu.WithAuthorizeBy(token))
 	}
 }
 
@@ -301,6 +315,7 @@ func (vit *VIT) WS(appQName appdef.AppQName, wsName string) *AppWorkspace {
 func (vit *VIT) TearDown() {
 	vit.T.Helper()
 	vit.isFinalized = true
+	vit.T.Log("goroutines num before cleanup:", runtime.NumGoroutine())
 	for _, cleanup := range vit.cleanups {
 		cleanup(vit)
 	}
@@ -364,28 +379,28 @@ func (vit *VIT) GetPrincipal(appQName appdef.AppQName, login string) *Principal 
 	return prn
 }
 
-func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostProfile(prn *Principal, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultAuthorize(prn.Token))
+	opts = append(opts, httpu.WithDefaultAuthorize(prn.Token))
 	return vit.PostApp(prn.AppQName, prn.ProfileWSID, funcName, body, opts...)
 }
 
-func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostWS(ws *AppWorkspace, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultAuthorize(ws.Owner.Token))
+	opts = append(opts, httpu.WithDefaultAuthorize(ws.Owner.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
 // PostWSSys is PostWS authorized by the System Token
-func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
 	sysPrn := vit.GetSystemPrincipal(ws.Owner.AppQName)
-	opts = append(opts, coreutils.WithDefaultAuthorize(sysPrn.Token))
+	opts = append(opts, httpu.WithDefaultAuthorize(sysPrn.Token))
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
 func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte,
-	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
+	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...httpu.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
@@ -396,17 +411,18 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-
-	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, opts...)
+	o := []httpu.ReqOptFunc{WithVITOpts()}
+	o = append(o, opts...)
+	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, o...)
 	require.NoError(vit.T, err)
 	return blobID
 }
 
-func (vit *VIT) SqlQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) []map[string]interface{} {
+func (vit *VIT) SQLQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) []map[string]interface{} {
 
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
-	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(ws.Owner.Token))
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(ws.Owner.Token))
 	res := []map[string]interface{}{}
 	for _, elem := range resp.Sections[0].Elements {
 		m := map[string]interface{}{}
@@ -416,14 +432,13 @@ func (vit *VIT) SqlQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) 
 	return res
 }
 
-func (vit *VIT) SqlQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[string]interface{} {
+func (vit *VIT) SQLQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[string]interface{} {
 	vit.T.Helper()
-	return vit.SqlQueryRows(ws, sqlQuery, fmtArgs...)[0]
+	return vit.SQLQueryRows(ws, sqlQuery, fmtArgs...)[0]
 }
 
-
 func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte, duration iblobstorage.DurationType,
-	opts ...coreutils.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
+	opts ...httpu.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
@@ -432,24 +447,32 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, opts...)
+	o := []httpu.ReqOptFunc{WithVITOpts()}
+	o = append(o, opts...)
+	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, o...)
 	require.NoError(vit.T, err)
 	return blobSUUID
 }
 
-func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) Func(url string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
-	res, err := vit.IFederation.Func(url, body, opts...)
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
+	o = append(o, opts...)
+	httpResp, err := vit.httpClient.Req(context.Background(), vit.URLStr()+"/"+url, body, o...)
+	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
 	require.NoError(vit.T, err)
-	return res
+	vit.satisfySysErrorExpectations(funcResp, httpResp.Opts)
+	return funcResp
 }
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
 func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
-	optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
+	optFuncs ...httpu.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
-	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, optFuncs...)
+	o := []httpu.ReqOptFunc{WithVITOpts()}
+	o = append(o, optFuncs...)
+	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, o...)
 	require.NoError(vit.T, err)
 	vit.registerBLOBReaderCleanup(reader)
 	return reader
@@ -474,7 +497,7 @@ func (vit *VIT) registerBLOBReaderCleanup(reader iblobstorage.BLOBReader) {
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
-func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...coreutils.ReqOptFunc) iblobstorage.BLOBReader {
+func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...httpu.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
 	blobReader, err := vit.IFederation.ReadTempBLOB(appQName, wsid, blobSUUID, optFuncs...)
 	require.NoError(vit.T, err)
@@ -482,24 +505,68 @@ func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobS
 	return blobReader
 }
 
-func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+func (vit *VIT) GET(relativeURL string, opts ...httpu.ReqOptFunc) *httpu.HTTPResponse {
 	vit.T.Helper()
-	opts = append(opts, coreutils.WithDefaultMethod(http.MethodPost))
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodGet)}
+	o = append(o, opts...)
 	url := vit.URLStr() + "/" + relativeURL
-	res, err := vit.httpClient.Req(url, body, opts...)
+	res, err := vit.httpClient.Req(context.Background(), url, "", o...)
 	require.NoError(vit.T, err)
 	return res
 }
 
-func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) POST(relativeURL string, body string, opts ...httpu.ReqOptFunc) *httpu.HTTPResponse {
 	vit.T.Helper()
-	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := vit.IFederation.Func(url, body, opts...)
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
+	o = append(o, opts...)
+	url := vit.URLStr() + "/" + relativeURL
+	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
 	require.NoError(vit.T, err)
-	return res
+	vit.checkExpectationsInHTTPResp(httpResp)
+	return httpResp
 }
 
-func (vit *VIT) WaitFor(consumer func() *coreutils.FuncResponse) *coreutils.FuncResponse {
+func (vit *VIT) checkExpectationsInHTTPResp(httpResp *httpu.HTTPResponse) {
+	if len(httpResp.Opts.(*vitReqOpts).expectedMessages) == 0 {
+		return
+	}
+	vit.T.Helper()
+	var funcResponse *federation.FuncResponse
+	require.NoError(vit.T, json.Unmarshal([]byte(httpResp.Body), &funcResponse))
+	vit.satisfySysErrorExpectations(funcResponse, httpResp.Opts)
+}
+
+func (vit *VIT) satisfySysErrorExpectations(funcResp *federation.FuncResponse, opts httpu.IReqOpts) {
+	if len(opts.(*vitReqOpts).expectedMessages) == 0 {
+		return
+	}
+	if funcResp == nil || funcResp.SysError == nil {
+		vit.T.Fatal("expected error messages", opts.(*vitReqOpts).expectedMessages, "but no response or no error in response")
+	}
+	var sysError coreutils.SysError
+	if !errors.As(funcResp.SysError, &sysError) {
+		require.NoError(vit.T, funcResp.SysError)
+	}
+	index := 0
+	for _, expectedMes := range opts.(*vitReqOpts).expectedMessages {
+		require.Containsf(vit.T, sysError.Message[index:], expectedMes, `actual message "%s", ordered expected %#v`, sysError.Message, opts.(*vitReqOpts).expectedMessages)
+		index = strings.Index(sysError.Message[index:], expectedMes) + len(expectedMes)
+	}
+}
+
+func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
+	vit.T.Helper()
+	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
+	o := []httpu.ReqOptFunc{WithVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
+	o = append(o, opts...)
+	httpResp, err := vit.httpClient.Req(context.Background(), url, body, o...)
+	funcResp, err := federation.HTTPRespToFuncResp(httpResp, err)
+	require.NoError(vit.T, err)
+	vit.satisfySysErrorExpectations(funcResp, httpResp.Opts)
+	return funcResp
+}
+
+func (vit *VIT) WaitFor(consumer func() *federation.FuncResponse) *federation.FuncResponse {
 	vit.T.Helper()
 	start := time.Now()
 	for time.Since(start) < testTimeout {
@@ -574,11 +641,11 @@ func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName
 // CaptureEmail waits for and returns the next sent email
 // no emails during testEmailsAwaitingTimeout -> test failed
 // an email was sent but CaptureEmail is not called -> test will be failed on VIT.TearDown()
-func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
+func (vit *VIT) CaptureEmail() (msg state.EmailMessage) {
 	vit.T.Helper()
 	tmr := time.NewTimer(getTestEmailsAwaitingTimeout())
 	select {
-	case msg = <-vit.emailCaptor:
+	case msg = <-vit.emailCaptor.emailCaptorCh:
 		return msg
 	case <-tmr.C:
 		vit.T.Fatal("no email messages")
@@ -625,21 +692,6 @@ func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySe
 	}
 }
 
-func (ec emailCaptor) checkEmpty(t testing.TB) {
-	select {
-	case _, ok := <-ec:
-		if ok {
-			t.Log("unexpected email message received")
-			t.Fail()
-		}
-	default:
-	}
-}
-
-func (ec emailCaptor) shutDown() {
-	close(ec)
-}
-
 func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
 	if val, ok := sr.secrets[name]; ok {
 		return val, nil
@@ -665,4 +717,24 @@ func (vit *VIT) checkVVMProblemCtx() {
 		vit.T.Fatal("vvmProblemCtx is closed but no error on vvm.Shutdown()")
 	default:
 	}
+}
+
+func (c *implIEmailSender_captor) Send(host string, msg state.EmailMessage, opts ...mail.Option) error {
+	c.emailCaptorCh <- msg
+	return nil
+}
+
+func (c *implIEmailSender_captor) checkEmpty(t testing.TB) {
+	select {
+	case _, ok := <-c.emailCaptorCh:
+		if ok {
+			t.Log("unexpected email message received")
+			t.Fail()
+		}
+	default:
+	}
+}
+
+func (c *implIEmailSender_captor) shutDown() {
+	close(c.emailCaptorCh)
 }

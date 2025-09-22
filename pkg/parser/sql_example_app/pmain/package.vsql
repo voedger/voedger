@@ -86,7 +86,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
             - sys.CDoc (Configuration)
             - sys.ODoc (Operational)
             - sys.WDoc (Workflow)
-            - sys.CSingleton (Configration singleton)
+            - sys.CSingleton (Configuration singleton)
             - sys.WSingleton (Workflow singleton)
 
         Nested tables must have one of the following tables as a root anchestor:
@@ -153,7 +153,7 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
 
 
     /*
-        CSingletones is a configration singleton.
+        CSingletones is a configuration singleton.
         These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
     */
     TABLE SubscriptionProfile INHERITS sys.CSingleton (
@@ -293,33 +293,33 @@ WORKSPACE MyWorkspace INHERITS air.AirAWorkspace (
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
     GRANT EXECUTE ON ALL COMMANDS WITH TAG PosTag TO main.LocationUser;
     GRANT SELECT ON ALL VIEWS WITH TAG PosTag TO LocationUser;
-    
+
     -- SPECIFIC STATEMENTS
     GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
     GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT SELECT ON TABLE untill.Prices TO LocationUser;
     GRANT SELECT(Price, sys.ID) ON TABLE untill.Prices TO LocationUser;
-    GRANT INSERT(Discount) ON TABLE untill.Promotions TO LocationManager; 
+    GRANT INSERT(Discount) ON TABLE untill.Promotions TO LocationManager;
     GRANT SELECT ON VIEW XZReports TO LocationUser;
     GRANT SELECT(Year,XZReportWDocID) ON VIEW XZReports TO LocationUser;
 
     -- REVOKEs
-    -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace    
+    -- ALL COMMANDS/QUERIES/TABLES/VIEWS - all resources in the workspace
     REVOKE ALL ON ALL TABLES FROM LocationGuest;
     REVOKE INSERT,UPDATE,SELECT ON ALL TABLES FROM LocationGuest; -- equivalent to REVOKE ALL ON ALL TABLES FROM LocationGuest;
     REVOKE EXECUTE ON ALL QUERIES FROM LocationGuest;
     REVOKE EXECUTE ON ALL COMMANDS FROM LocationGuest;
     REVOKE SELECT ON ALL VIEWS FROM LocationGuest;
-    
+
 
     -- ALL * WITH TAG - includes all statements in current or inherited workspaces
-    REVOKE ALL ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest;    
+    REVOKE ALL ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest;
     REVOKE INSERT,UPDATE,SELECT ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest; -- equivalent to REVOKE ALL ON ALL TABLES WITH TAG BackofficeTag FROM LocationGuest;
     REVOKE EXECUTE ON ALL QUERIES WITH TAG PosTag FROM LocationGuest;
     REVOKE EXECUTE ON ALL COMMANDS WITH TAG PosTag FROM LocationGuest;
     REVOKE SELECT ON ALL VIEWS WITH TAG PosTag FROM LocationGuest;
-    
-    
+
+
     -- SPECIFIC STATEMENTS
     REVOKE EXECUTE ON COMMAND NewOrder FROM LocationGuest;
     REVOKE EXECUTE ON QUERY Query1 FROM LocationGuest;
@@ -429,6 +429,6 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
             STATE (sys.Http, sys.AppSecret) INTENTS(sys.View(JobStateView));
 
 
-        JOB TestJob2 '@every 2m30s'; 
+        JOB TestJob2 '@every 2m30s';
     );
 )

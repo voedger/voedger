@@ -15,9 +15,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -63,7 +63,7 @@ func (s *httpService) blobHTTPRequestHandler_Read() http.HandlerFunc {
 
 func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appdef.AppQName, wsid istructs.WSID, headers map[string]string, ok bool) {
 	vars := mux.Vars(req)
-	wsidUint, err := strconv.ParseUint(vars[URLPlaceholder_wsid], utils.DecimalBase, utils.BitSize64)
+	wsidUint, err := strconvu.ParseUint64(vars[URLPlaceholder_wsid])
 	if err != nil {
 		// notest: checked by router url rule
 		panic(err)
@@ -72,10 +72,10 @@ func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appde
 	for k, v := range req.Header {
 		headers[k] = v[0]
 	}
-	if _, ok := headers[coreutils.Authorization]; !ok {
+	if _, ok := headers[httpu.Authorization]; !ok {
 		// no token among headers -> look among cookies
 		// no token among cookies as well -> just do nothing, 403 will happen on call helper commands further in BLOBs processor
-		cookie, err := req.Cookie(coreutils.Authorization)
+		cookie, err := req.Cookie(httpu.Authorization)
 		if !errors.Is(err, http.ErrNoCookie) {
 			if err != nil {
 				// notest
@@ -87,7 +87,7 @@ func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appde
 				return appQName, wsid, headers, false
 			}
 			// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
-			headers[coreutils.Authorization] = val
+			headers[httpu.Authorization] = val
 		}
 	}
 	appQName = appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName])

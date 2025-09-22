@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -551,7 +551,7 @@ func TestTypeKind_MarshalText(t *testing.T) {
 		},
 		{name: `TypeKind_FakeLast —> <number>`,
 			k:    appdef.TypeKind_count,
-			want: utils.UintToString(appdef.TypeKind_count),
+			want: strconvu.UintToString(appdef.TypeKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -569,7 +569,7 @@ func TestTypeKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover appdef.TypeKind.String()", func(t *testing.T) {
 		const tested = appdef.TypeKind_count + 1
-		want := "TypeKind(" + utils.UintToString(tested) + ")"
+		want := "TypeKind(" + strconvu.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(TypeKind_FakeLast + 1).String() = %v, want %v", got, want)

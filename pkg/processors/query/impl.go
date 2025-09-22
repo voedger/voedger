@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -254,16 +255,17 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			ws := qw.iWorkspace
 
-			ok, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
+			newACLOk, err := qw.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, qw.msg.QName(), nil, qw.roles)
 			if err != nil {
 				return err
 			}
-			if !ok {
-				// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-				ok = oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
-			}
-			if !ok {
+			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+			oldACLOk := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, qw.msg.QName(), nil, oldacl.EnrichPrincipals(qw.principals, qw.msg.WSID()))
+			if !newACLOk && !oldACLOk {
 				return coreutils.WrapSysError(errors.New(""), http.StatusForbidden)
+			}
+			if !newACLOk && oldACLOk {
+				logger.Verbose("newACL not ok, but oldACL ok.", appdef.OperationKind_Execute, qw.msg.QName(), qw.roles)
 			}
 			return nil
 		}),
@@ -322,6 +324,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() istructs.ExecQueryCallback {
 					return qw.callbackFunc
 				},
+				state.NullOpts,
 			)
 			qw.execQueryArgs.State = qw.state
 			qw.execQueryArgs.Intents = qw.state

@@ -339,7 +339,7 @@ func getWSDesc(_ context.Context, work pipeline.IWorkpiece) (err error) {
 func checkWSInitialized(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
-	if cmd.cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmd.cmdQName == builtin.QNameCommandInit { // nolint: SA1019
+	if cmd.cmdQName == workspacemgmt.QNameCommandCreateWorkspace || cmd.cmdQName == builtin.QNameCommandInit { // nolint SA1019
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -417,16 +417,17 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work pipeline.IWorkp
 		ws = cmd.iCommand.Workspace()
 	}
 
-	ok, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdQName, nil, cmd.roles)
+	newACLOk, err := cmd.appPart.IsOperationAllowed(ws, appdef.OperationKind_Execute, cmd.cmdQName, nil, cmd.roles)
 	if err != nil {
 		return err
 	}
-	if !ok {
-		// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-		ok = oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdQName, nil, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
-	}
-	if !ok {
+	// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+	oldACLOk := oldacl.IsOperationAllowed(appdef.OperationKind_Execute, cmd.cmdQName, nil, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
+	if !newACLOk && !oldACLOk {
 		return coreutils.NewHTTPErrorf(http.StatusForbidden)
+	}
+	if !newACLOk && oldACLOk {
+		logger.Verbose("newACL not ok, but oldACL ok.", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
 	}
 	return nil
 }
@@ -461,7 +462,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 	}
 
 	switch cmd.cmdQName {
-	case builtin.QNameCommandInit: // nolint: SA1019. kept to not to break existing events only
+	case builtin.QNameCommandInit: // nolint SA1019. kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
 				SyncedAt:                     istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
@@ -726,7 +727,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 
 func checkCUDsAllowedInCUDCmdOnly(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if len(cmd.parsedCUDs) > 0 && cmd.cmdQName != istructs.QNameCommandCUD && cmd.cmdQName != builtin.QNameCommandInit { // nolint: SA1019
+	if len(cmd.parsedCUDs) > 0 && cmd.cmdQName != istructs.QNameCommandCUD && cmd.cmdQName != builtin.QNameCommandInit { // nolint SA1019
 		return errors.New("CUDs allowed for c.sys.CUD command only")
 	}
 	return nil
@@ -795,16 +796,17 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, work pipeline.IW
 	for _, parsedCUD := range cmd.parsedCUDs {
 		fields := maps.Keys(parsedCUD.fields)
 
-		ok, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
+		newACLOk, err := cmd.appPart.IsOperationAllowed(ws, parsedCUD.opKind, parsedCUD.qName, fields, cmd.roles)
 		if err != nil {
 			return err
 		}
-		if !ok {
-			// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
-			ok = oldacl.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
-		}
-		if !ok {
+		// TODO: temporary solution. To be eliminated after implementing ACL in VSQL for Air
+		oldACLOk := oldacl.IsOperationAllowed(parsedCUD.opKind, parsedCUD.qName, fields, oldacl.EnrichPrincipals(cmd.principals, cmd.cmdMes.WSID()))
+		if !newACLOk && !oldACLOk {
 			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
+		}
+		if !newACLOk && oldACLOk {
+			logger.Verbose("newACL not ok, but oldACL ok.", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
 		}
 	}
 	return

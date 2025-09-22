@@ -90,6 +90,6 @@ func TestResourceEnumerator(t *testing.T) {
 			cnt++
 			require.NotNil(app.Resources().QueryResource(resName))
 		}
-		require.EqualValues(4, cnt)
+		require.Equal(4, cnt)
 	})
 }

@@ -11,7 +11,11 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		LoginHash varchar NOT NULL,
 		WSID int64,                                     -- to be written after workspace init
 		WSError varchar(1024),                          -- to be written after workspace init
-		WSKindInitializationData varchar(1024) NOT NULL
+		WSKindInitializationData varchar(1024) NOT NULL,
+			
+		-- Comma-separated list of global roles
+		-- [~server.authnz.groles/cmp.cdoc.registry.Login.GlobalRoles~impl]
+		GlobalRoles varchar(1024)   
 	);
 
 	TYPE CreateLoginParams (
@@ -99,11 +103,19 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		Password text NOT NULL
 	);
 
+	-- [~server.authnz.groles/cmp.c.registry.UpdateGlobalRoles~impl]
+	TYPE UpdateGlobalRolesParams (
+		Login text NOT NULL,
+		AppName text NOT NULL,
+	 	GlobalRoles text(1024)
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
 		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~server.users/cmp.registry.CreateEmailLogin.vsql~impl]
+		COMMAND UpdateGlobalRoles (UpdateGlobalRolesParams); -- [~server.authnz.groles/cmp.c.registry.UpdateGlobalRoles~impl]
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;

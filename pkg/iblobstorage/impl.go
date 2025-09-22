@@ -8,7 +8,7 @@ package iblobstorage
 import (
 	"encoding/binary"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 // nolint: revive
@@ -22,9 +22,8 @@ func (t *PersistentBLOBKeyType) Bytes() []byte {
 }
 
 func (t *PersistentBLOBKeyType) ID() string {
-	return utils.UintToString(t.BlobID)
+	return strconvu.UintToString(t.BlobID)
 }
-
 
 func (t *PersistentBLOBKeyType) IsPersistent() bool {
 	return true

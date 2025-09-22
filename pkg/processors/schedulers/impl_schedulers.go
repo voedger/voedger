@@ -10,14 +10,14 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 /*
 implements:
 
-	pipeline.IServiceEx
-	appparts.IProcessorRunner
+	appparts.ISchedulerRunner
 */
 type schedulers struct {
 	cfg      BasicSchedulerConfig
@@ -25,7 +25,7 @@ type schedulers struct {
 	appParts appparts.IAppPartitions
 }
 
-func newSchedulers(cfg BasicSchedulerConfig) ISchedulersService {
+func newSchedulers(cfg BasicSchedulerConfig) appparts.ISchedulerRunner {
 	return &schedulers{
 		cfg: cfg,
 	}
@@ -44,7 +44,8 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 			Workspace:            wsid,
 			AppWSIdx:             appWSIdx,
 		},
-		appParts: a.appParts,
+		appParts:   a.appParts,
+		retrierCfg: retrier.NewConfig(schedulerRetryDelay, schedulerRetryDelay),
 	}
 	act.Prepare()
 
@@ -53,25 +54,6 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 	a.wait.Done()
 }
 
-// # pipeline.IService.Prepare
-func (*schedulers) Prepare(interface{}) error { return nil }
-
-// # pipeline.IService.Run
-func (*schedulers) Run(context.Context) {
-	panic("not implemented")
-}
-
-// # pipeline.IServiceEx.RunEx
-func (a *schedulers) RunEx(_ context.Context, started func()) {
-	started()
-}
-
 func (a *schedulers) SetAppPartitions(ap appparts.IAppPartitions) {
 	a.appParts = ap
-}
-
-func (a *schedulers) Stop() {
-	// Cancellation has already been sent to the context by caller.
-	// Here we are just waiting while all async actualizers are stopped
-	a.wait.Wait()
 }

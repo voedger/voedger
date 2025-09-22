@@ -16,8 +16,9 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -93,16 +94,10 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 		Resource: "c.sys.CUD",
 		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
 		Header:   bw.blobMessageWrite.header,
-		Host:     coreutils.Localhost,
+		Host:     httpu.LocalhostIP.String(),
 	}
-	cudWDocBLOBUpdateMeta, cudWDocBLOBUpdateResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
-	if err != nil {
-		return fmt.Errorf("failed to exec c.sys.CUD: %w", err)
-	}
-	if cudWDocBLOBUpdateMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(cudWDocBLOBUpdateMeta.StatusCode, "c.sys.CUD returned error: ", cudWDocBLOBUpdateResp.SysError.Message)
-	}
-	return nil
+	_, _, err = bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
+	return err
 }
 
 func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
@@ -113,17 +108,14 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		AppQName: bw.blobMessageWrite.appQName,
 		Header:   bw.blobMessageWrite.header,
 		Body:     []byte(bw.registerFuncBody),
-		Host:     coreutils.Localhost,
+		Host:     httpu.LocalhostIP.String(),
 		APIPath:  int(processors.APIPath_Commands),
 		QName:    bw.registerFuncName,
 		IsAPIV2:  true,
 	}
-	blobHelperMeta, blobHelperResp, err := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
-	if err != nil {
-		return fmt.Errorf("failed to exec %s: %w", bw.registerFuncName, err)
-	}
-	if blobHelperMeta.StatusCode != http.StatusOK {
-		return coreutils.NewHTTPErrorf(blobHelperMeta.StatusCode, bw.registerFuncName.String()+" returned error: "+blobHelperResp.SysError.Data)
+	_, blobHelperResp, sysErr := bus.GetCommandResponse(bw.blobMessageWrite.requestCtx, bw.blobMessageWrite.requestSender, req)
+	if sysErr != nil {
+		return fmt.Errorf("%s failed: %w", bw.registerFuncName.String(), sysErr)
 	}
 	if bw.isPersistent() {
 		bw.newBLOBID = blobHelperResp.NewIDs["1"]
@@ -143,7 +135,7 @@ func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
 	if bw.blobMessageWrite.isAPIv2 {
 		bw.blobName = append(bw.blobName, bw.blobMessageWrite.header[coreutils.BlobName])
-		bw.blobContentType = append(bw.blobContentType, bw.blobMessageWrite.header[coreutils.ContentType])
+		bw.blobContentType = append(bw.blobContentType, bw.blobMessageWrite.header[httpu.ContentType])
 		// camelcased here because textproto.CanonicalMIMEHeaderKey() canonizes TTL to Ttl
 		if ttlHeader, ok := bw.blobMessageWrite.header["Ttl"]; ok {
 			bw.ttl = ttlHeader
@@ -160,7 +152,7 @@ func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 
 func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	bw := work.(*blobWorkpiece)
-	bw.contentType = bw.blobMessageWrite.header[coreutils.ContentType]
+	bw.contentType = bw.blobMessageWrite.header[httpu.ContentType]
 	if len(bw.contentType) == 0 {
 		return nil
 	}
@@ -211,8 +203,8 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	}
 
 	if isSingleBLOB {
-		if bw.contentType == coreutils.ContentType_MultipartFormData {
-			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, coreutils.ContentType_MultipartFormData)
+		if bw.contentType == httpu.ContentType_MultipartFormData {
+			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, httpu.ContentType_MultipartFormData)
 		}
 		bw.descr.Name = bw.blobName[0]
 		bw.descr.ContentType = bw.blobContentType[0]
@@ -224,21 +216,21 @@ func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 		return errors.New(`neither "name"+"mimeType" query params nor Content-Type header is not provided`)
 	}
 
-	if bw.mediaType != coreutils.ContentType_MultipartFormData {
+	if bw.mediaType != httpu.ContentType_MultipartFormData {
 		return errors.New("name+mimeType query params are not provided -> Content-Type must be mutipart/form-data but actual is " + bw.contentType)
 	}
 
 	if len(bw.boundary) == 0 {
-		return fmt.Errorf("boundary of %s is not specified", coreutils.ContentType_MultipartFormData)
+		return fmt.Errorf("boundary of %s is not specified", httpu.ContentType_MultipartFormData)
 	}
 
 	return nil
 }
 
 func replySuccess_V1(bw *blobWorkpiece) (err error) {
-	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, "text/plain")
+	writer := bw.blobMessageWrite.okResponseIniter(httpu.ContentType, "text/plain")
 	if bw.isPersistent() {
-		_, err = writer.Write([]byte(utils.UintToString(bw.newBLOBID)))
+		_, err = writer.Write([]byte(strconvu.UintToString(bw.newBLOBID)))
 	} else {
 		_, err = writer.Write([]byte(bw.newSUUID))
 	}
@@ -246,7 +238,7 @@ func replySuccess_V1(bw *blobWorkpiece) (err error) {
 }
 
 func replySuccess_V2(bw *blobWorkpiece) (err error) {
-	writer := bw.blobMessageWrite.okResponseIniter(coreutils.ContentType, coreutils.ContentType_ApplicationJSON)
+	writer := bw.blobMessageWrite.okResponseIniter(httpu.ContentType, httpu.ContentType_ApplicationJSON)
 	if bw.isPersistent() {
 		_, err = fmt.Fprintf(writer, `{"blobID":%d}`, bw.newBLOBID)
 	} else {

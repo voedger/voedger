@@ -68,7 +68,7 @@ jobs:
   call-workflow-create-issue:
     needs: build
     if: ${{ failure() }}
-    uses: untillpro/ci-action/.github/workflows/create_issue.yml@master
+    uses: untillpro/ci-action/.github/workflows/create_issue.yml@main
     with:
       repo: 'voedger/voedger'
       assignee: 'host6'

@@ -9,7 +9,6 @@ import (
 	"context"
 	"slices"
 	"sync"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -44,7 +43,7 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 		return // no application workspaces handled by this partition
 	}
 
-	ps.stopOlds(vvmCtx, appDef)
+	ps.stopOlds(appDef)
 	ps.startNews(vvmCtx, appDef, run)
 }
 
@@ -74,26 +73,8 @@ func (ps *PartitionSchedulers) Wait() {
 	ps.rtWG.Wait()
 }
 
-// Wait waits for all schedulers to finish.
-// Returns true if all schedulers finished before the timeout.
-// Returns false if the timeout is reached.
-func (ps *PartitionSchedulers) WaitTimeout(timeout time.Duration) (finished bool) {
-	done := make(chan struct{})
-	go func() {
-		ps.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		return true
-	case <-time.After(timeout):
-		return false
-	}
-}
-
 // start actualizer
-func (ps *PartitionSchedulers) start(vvmCtx context.Context, jws jWS, run Run, wg *sync.WaitGroup) {
+func (ps *PartitionSchedulers) start(vvmCtx context.Context, jws jWS, run Run) {
 	ctx, cancel := context.WithCancel(vvmCtx)
 	rt := newRuntime(cancel)
 
@@ -113,57 +94,24 @@ func (ps *PartitionSchedulers) start(vvmCtx context.Context, jws jWS, run Run, w
 
 		run(ctx, ps.appQName, ps.partitionID, jws.AppWorkspaceNumber, jws.WSID, jws.QName)
 	}()
-
-	select {
-	case <-done: // wait until scheduler is started
-	case <-vvmCtx.Done():
-	}
-
-	wg.Done()
+	<-done // wait until scheduler is started
 }
 
 // start new schedulers
 func (ps *PartitionSchedulers) startNews(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	news := make(map[jWS]struct{})
 	for job := range appdef.Jobs(appDef.Types()) {
 		name := job.QName()
 		for wsID, wsNum := range ps.wsNumbers {
 			jws := jWS{name, wsID, wsNum}
 			if _, exists := ps.rt.Load(jws); !exists {
-				news[jws] = struct{}{}
+				ps.start(vvmCtx, jws, run)
 			}
 		}
 	}
-
-	done := make(chan struct{})
-	go func() {
-		startWG := sync.WaitGroup{}
-		for jws := range news {
-			startWG.Add(1)
-			go ps.start(vvmCtx, jws, run, &startWG)
-		}
-		startWG.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-vvmCtx.Done():
-	}
-}
-
-// stop scheduler
-func (ps *PartitionSchedulers) stop(vvmCtx context.Context, rt *runtime, wg *sync.WaitGroup) {
-	rt.cancel()
-	select {
-	case <-rt.done: // wait until scheduler is finished
-	case <-vvmCtx.Done():
-	}
-	wg.Done()
 }
 
 // stop old schedulers
-func (ps *PartitionSchedulers) stopOlds(vvmCtx context.Context, appDef appdef.IAppDef) {
+func (ps *PartitionSchedulers) stopOlds(appDef appdef.IAppDef) {
 	olds := make([]*runtime, 0)
 	for jws, rt := range ps.rt.Range {
 		// TODO: compare if job properties changed (cron, states, intents, etc.)
@@ -173,21 +121,17 @@ func (ps *PartitionSchedulers) stopOlds(vvmCtx context.Context, appDef appdef.IA
 		}
 	}
 
-	done := make(chan struct{})
-	go func() {
-		stopWG := sync.WaitGroup{}
-		for _, rt := range olds {
-			stopWG.Add(1)
-			go ps.stop(vvmCtx, rt, &stopWG)
-		}
-		stopWG.Wait() // wait for all old actualizers to stop
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-vvmCtx.Done():
+	wg := sync.WaitGroup{}
+	for _, rt := range olds {
+		wg.Add(1)
+		go func() {
+			rt.cancel()
+			<-rt.done // wait until scheduler is finished
+			wg.Done()
+		}()
 	}
+	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
+	wg.Wait() // wait for all old actualizers to stop
 }
 
 type jWS struct {
@@ -198,12 +142,12 @@ type jWS struct {
 
 type runtime struct {
 	cancel context.CancelFunc
-	done   chan []struct{}
+	done   chan struct{}
 }
 
 func newRuntime(cancel context.CancelFunc) *runtime {
 	return &runtime{
 		cancel: cancel,
-		done:   make(chan []struct{}),
+		done:   make(chan struct{}),
 	}
 }

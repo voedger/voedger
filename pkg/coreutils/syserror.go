@@ -73,3 +73,19 @@ func (he SysError) ToJSON_APIV2() string {
 	b.WriteString("}")
 	return b.String()
 }
+
+func (he SysError) IsNil() bool {
+	return he.HTTPStatus == 0 && len(he.Data) == 0 && len(he.Message) == 0 && he.QName == appdef.NullQName
+}
+
+
+func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
+	return SysError{
+		HTTPStatus: httpStatus,
+		Message:    fmt.Sprint(args...),
+	}
+}
+
+func NewHTTPError(httpStatus int, err error) SysError {
+	return NewHTTPErrorf(httpStatus, err.Error())
+}

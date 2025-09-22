@@ -9,8 +9,8 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	ext "github.com/voedger/voedger/pkg/exttinygo"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 func floarToStr(f float64) string {
@@ -19,13 +19,13 @@ func floarToStr(f float64) string {
 
 func EqualInt32(expected, actual int32) {
 	if expected != actual {
-		panic("Int32 not equal. Expected: " + utils.IntToString(expected) + butGotPhrase + utils.IntToString(actual))
+		panic("Int32 not equal. Expected: " + strconvu.IntToString(expected) + butGotPhrase + strconvu.IntToString(actual))
 	}
 }
 
 func EqualInt64(expected, actual int64) {
 	if expected != actual {
-		panic("Int64 not equal. Expected: " + utils.IntToString(expected) + butGotPhrase + utils.IntToString(actual))
+		panic("Int64 not equal. Expected: " + strconvu.IntToString(expected) + butGotPhrase + strconvu.IntToString(actual))
 	}
 }
 

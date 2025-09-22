@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
@@ -32,7 +33,7 @@ func GetTestVVMCfg(ip net.IP) *VVMConfig {
 		sysPackageFS := sysprovide.Provide(cfg)
 		return builtinapps.Def{
 			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
-				NumParts:         10,
+				NumParts:         1,
 				EnginePoolSize:   appparts.PoolSize(10, 10, 20, 10),
 				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 			},
@@ -56,8 +57,9 @@ func GetTestVVMCfg(ip net.IP) *VVMConfig {
 			}, sysPackageFS},
 		}
 	})
-	vvmCfg.VVMAppsBuilder.Add(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, 10))
+	vvmCfg.VVMAppsBuilder.Add(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, 1))
 	vvmCfg.VVMAppsBuilder.Add(istructs.AppQName_sys_cluster, clusterapp.Provide())
+	vvmCfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(vvmCfg.SecretsReader)
 
 	return &vvmCfg
 }

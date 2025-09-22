@@ -8,12 +8,11 @@ package dml
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -66,7 +65,7 @@ func ParseQuery(query string) (op Op, err error) {
 
 	if offsetStr := parts[offsetOrIDIdx]; len(offsetStr) > 0 {
 		offsetStr = offsetStr[1:]
-		offsetUint, err := strconv.ParseUint(offsetStr, utils.DecimalBase, utils.BitSize64)
+		offsetUint, err := strconvu.ParseUint64(offsetStr)
 		if err != nil {
 			return op, err
 		}
@@ -115,14 +114,14 @@ func parseWorkspace(workspaceStr string) (workspace Workspace, err error) {
 	switch workspaceStr[:1] {
 	case "a":
 		appWSNumStr := workspaceStr[1:]
-		workspace.ID, err = strconv.ParseUint(appWSNumStr, utils.DecimalBase, utils.BitSize64)
+		workspace.ID, err = strconvu.ParseUint64(appWSNumStr)
 		workspace.Kind = WorkspaceKind_AppWSNum
 	case `"`:
 		login := workspaceStr[1 : len(workspaceStr)-1]
 		workspace.ID = uint64(coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID()))
 		workspace.Kind = WorkspaceKind_PseudoWSID
 	default:
-		workspace.ID, err = strconv.ParseUint(workspaceStr, utils.DecimalBase, utils.BitSize64)
+		workspace.ID, err = strconvu.ParseUint64(workspaceStr)
 		workspace.Kind = WorkspaceKind_WSID
 	}
 	return workspace, err

@@ -29,7 +29,8 @@ import (
 
 	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
@@ -147,8 +148,8 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		resource := "q.EchoQuery"
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
-		body := testApp.post("/api/"+path, coreutils.ContentType_ApplicationJSON, testText, nil)
-		require.Equal(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
+		body := testApp.post("/api/"+path, httpu.ContentType_ApplicationJSON, testText, nil)
+		require.JSONEq(fmt.Sprintf(`{"sections":[{"type":"","elements":["Hello, %s, {}"]}]}`, testText), string(body))
 	})
 
 	t.Run("call unknown app", func(t *testing.T) {
@@ -161,7 +162,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
 		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte("{\"sys.Error\":{\"HTTPStatus\":400,\"Message\":\"app is not deployed\"}}"), body)
+		require.JSONEq("{\"sys.Error\":{\"HTTPStatus\":400,\"Message\":\"app is not deployed\"}}", string(body))
 	})
 
 	t.Run("deploy the same app twice", func(t *testing.T) {
@@ -268,7 +269,7 @@ func TestReverseProxy(t *testing.T) {
 	defer tearDown(testApp)
 
 	testAppPort := testApp.processor.ListeningPort()
-	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(0))
+	targetListener, err := net.Listen("tcp", httpu.LocalhostDynamic())
 	require.NoError(err)
 	targetListenerPort := targetListener.Addr().(*net.TCPAddr).Port
 
@@ -476,7 +477,7 @@ func makeTmpContent(require *require.Assertions, pattern string) (dir string, fi
 
 	fileName = "tmpcontext.txt"
 
-	err = os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), coreutils.FileMode_rw_rw_rw_)
+	err = os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), filesu.FileMode_DefaultForFile)
 	require.NoError(err)
 
 	return dir, fileName

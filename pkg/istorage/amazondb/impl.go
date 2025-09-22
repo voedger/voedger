@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -18,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
 )
@@ -149,11 +148,7 @@ func (s *implIAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedVa
 			},
 		},
 	})
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return err == nil, err
 }
 
 func (s *implIAppStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, ok bool, err error) {
@@ -178,7 +173,7 @@ func (s *implIAppStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int,
 	}
 
 	// Parse expireAt timestamp
-	expireAtInSeconds, err := strconv.ParseInt(expireAtStr, utils.DecimalBase, utils.BitSize64)
+	expireAtInSeconds, err := strconvu.ParseInt64(expireAtStr)
 	if err != nil {
 		return 0, false, err
 	}
@@ -372,7 +367,7 @@ func (s *implIAppStorage) put(pKey []byte, cCols []byte, value []byte, ttlSecond
 
 	if ttlSeconds > 0 {
 		putItemParams.Item[expireAtAttributeName] = &types.AttributeValueMemberN{
-			Value: strconv.FormatInt(s.iTime.Now().Add(time.Duration(ttlSeconds)*time.Second).Unix(), utils.DecimalBase),
+			Value: strconvu.IntToString(s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).Unix()),
 		}
 	}
 	_, err = s.client.PutItem(context.Background(), &putItemParams)
@@ -540,7 +535,7 @@ func isExpired(expireAtValue types.AttributeValue, now time.Time) bool {
 		return false
 	}
 
-	expireAtInSeconds, err := strconv.ParseInt(expireAtValue.(*types.AttributeValueMemberN).Value, utils.DecimalBase, utils.BitSize64)
+	expireAtInSeconds, err := strconvu.ParseInt64(expireAtValue.(*types.AttributeValueMemberN).Value)
 	if err != nil {
 		return false
 	}

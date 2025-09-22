@@ -28,7 +28,7 @@ func TestHTTPStorage_BasicUsage(t *testing.T) {
 		require.Equal("application/json", r.Header.Get("Content-Type"))
 		bb, err := io.ReadAll(r.Body)
 		require.NoError(err)
-		require.Equal(`{"hello":"api"}`, string(bb))
+		require.JSONEq(`{"hello":"api"}`, string(bb))
 		_, _ = w.Write([]byte(`{"hello":"storage"}`))
 	}))
 	defer ts.Close()
@@ -45,8 +45,8 @@ func TestHTTPStorage_BasicUsage(t *testing.T) {
 		return
 	})
 	require.NoError(err)
-	require.Equal([]byte(`{"hello":"storage"}`), v.AsBytes(sys.Storage_HTTP_Field_Body))
-	require.Equal(`{"hello":"storage"}`, v.AsString(sys.Storage_HTTP_Field_Body))
+	require.Equal([]byte(`{"hello":"storage"}`), v.AsBytes(sys.Storage_HTTP_Field_Body)) // nolint testifylint
+	require.JSONEq(`{"hello":"storage"}`, v.AsString(sys.Storage_HTTP_Field_Body))
 	require.Equal(int32(http.StatusOK), v.AsInt32(sys.Storage_HTTP_Field_StatusCode))
 	require.Contains(v.AsString(sys.Storage_HTTP_Field_Header), "Content-Length: 19")
 	require.Contains(v.AsString(sys.Storage_HTTP_Field_Header), "Content-Type: text/plain")

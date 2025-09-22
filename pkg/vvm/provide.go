@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -206,9 +207,9 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideAppPartsCtlPipelineService,
 		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
-		actualizers.ProvideActualizers,    // projectors.IActualizersService
-		provideSchedulerRunner,            // appparts.IProcessorRunner
+		provideBasicAsyncActualizerConfig, // actualizers.BasicAsyncActualizerConfig
+		actualizers.ProvideActualizers,    // appparts.IActualizerRunner
+		provideSchedulerRunner,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -225,7 +226,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		blobprocessor.NewIRequestHandler,
 		provideIVVMAppTTLStorage,
 		storage.NewElectionsTTLStorage,
-		federation.NewForQP,
+		provideStateOpts,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -239,11 +240,17 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"SendTimeout",
 			"VVMPort",
 			"MetricsServicePort",
-			"ActualizerStateOpts",
+			"EmailSender",
 			"SecretsReader",
 			"SequencesTrustLevel",
+			"AsyncActualizersRetryDelay",
+			"SchemasCache",
 		),
 	))
+}
+
+func provideStateOpts() state.StateOpts {
+	return state.StateOpts{}
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
@@ -318,7 +325,9 @@ func provideBasicAsyncActualizerConfig(
 	metrics imetrics.IMetrics,
 	broker in10n.IN10nBroker,
 	federation federation.IFederation,
-	opts ...state.StateOptFunc,
+	asyncActualizersRetryDelay actualizers.RetryDelay,
+	stateCfg state.StateOpts,
+	emailSender state.IEmailSender,
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
@@ -327,9 +336,11 @@ func provideBasicAsyncActualizerConfig(
 		Metrics:       metrics,
 		Broker:        broker,
 		Federation:    federation,
-		Opts:          opts,
+		StateOpts:     stateCfg,
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
+		RetryDelay:    asyncActualizersRetryDelay,
+		EmailSender:   emailSender,
 	}
 }
 
@@ -362,7 +373,7 @@ func provideAppPartitions(
 	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
-	act actualizers.IActualizersService,
+	act appparts.IActualizerRunner,
 	sch appparts.ISchedulerRunner,
 	bf irates.BucketsFactoryType,
 	sr istructsmem.IStatelessResources,
@@ -422,12 +433,12 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 
 func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingProviderFactory {
 	return func() istorage.IAppStorageProvider {
-		return provider.Provide(factory, vvmCfg.KeyspaceNameSuffix)
+		return provider.Provide(factory, vvmCfg.KeyspaceIsolationSuffix)
 	}
 }
 
-func provideStorageFactory(vvmConfig *VVMConfig) (provider istorage.IAppStorageFactory, err error) {
-	return vvmConfig.StorageFactory()
+func provideStorageFactory(vvmConfig *VVMConfig, time timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
+	return vvmConfig.StorageFactory(time)
 }
 
 func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
@@ -514,8 +525,8 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) (federation.IFederation, func()) {
-	return federation.New(func() *url.URL {
+func provideIFederation(vvmCtx context.Context, cfg *VVMConfig, vvmPortSource *VVMPortSource) (federation.IFederation, func()) {
+	return federation.New(vvmCtx, func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL
 		}
@@ -558,8 +569,8 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 }
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis builtinapps.APIs, cfgs AppConfigsTypeEmpty,
-	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (BuiltInAppsArtefacts, error) {
-	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint, schemasCache ISchemasCache) (BuiltInAppsArtefacts, error) {
+	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs, schemasCache)
 }
 
 // extModuleURLs is filled here
@@ -593,7 +604,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, out_extModuleURLs m
 		}
 	}
 
-	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(coreutils.IReadFS), ".")
+	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(filesu.IReadFS), ".")
 	if err == nil {
 		asts = append(asts, dirAST)
 	} else if !errors.Is(err, parser.ErrDirContainsNoSchemaFiles) {
@@ -812,11 +823,11 @@ func provideQueryProcessors_V1(qpCount istructs.NumQueryProcessors, qc QueryChan
 
 func provideQueryProcessors_V2(qpCount istructs.NumQueryProcessors, qc QueryChannel_V2, appParts appparts.IAppPartitions, qpFactory query2.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
-	tokens itokens.ITokens, federation federation.IFederationForQP, federationForState federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V2 {
+	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V2 {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
-			string(vvm), authn, tokens, federation, federationForState, statelessResources, secretReader)))
+			string(vvm), authn, tokens, federation, statelessResources, secretReader)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
@@ -835,7 +846,6 @@ func provideServicePipeline(
 	opQueryProcessors_v1 OperatorQueryProcessors_V1,
 	opQueryProcessors_v2 OperatorQueryProcessors_V2,
 	opBLOBProcessors OperatorBLOBProcessors,
-	opAsyncActualizers actualizers.IActualizersService,
 	appPartsCtl IAppPartsCtlPipelineService,
 	bootstrapSyncOp BootstrapOperator,
 	adminEndpoint AdminEndpointServiceOperator,
@@ -848,7 +858,6 @@ func provideServicePipeline(
 			pipeline.ForkBranch(opQueryProcessors_v2),
 			pipeline.ForkBranch(opCommandProcessors),
 			pipeline.ForkBranch(opBLOBProcessors),
-			pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)), // is service to stop goroutines in bbolt driver
 		)),

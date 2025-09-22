@@ -6,14 +6,15 @@
 package router
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
@@ -27,26 +28,10 @@ import (
 // where is VVM RequestHandler? bus.RequestHandler
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
-	federation federation.IFederation, authnz iauthnz.IAuthenticator, asp istructs.IAppStructsProvider,
-	appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := &httpService{
-		RouterParams:       rp,
-		n10n:               broker,
-		requestSender:      requestSender,
-		numsAppsWorkspaces: numsAppsWorkspaces,
-		listenAddress:      coreutils.ServerAddress(rp.Port),
-		name:               "HTTP server",
-		blobRequestHandler: blobRequestHandler,
-		iTokens:            iTokens,
-		federation:         federation,
-		asp:                asp,
-		authnz:             authnz,
-		appTokensFactory:   appTokensFactory,
-	}
-
-	if coreutils.IsTest() {
-		adminEndpoint = "127.0.0.1:0"
-	}
+	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
+	httpServ := getHTTPService("HTTP server", httpu.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
+		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
+	adminEndpoint := fmt.Sprintf("%s:%d", httpu.LocalhostIP, rp.AdminPort)
 	adminSrv = &httpService{
 		RouterParams: RouterParams{
 			WriteTimeout:     rp.WriteTimeout,

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -48,7 +49,10 @@ import (
 var cocaColaDocID istructs.RecordID
 var qNameTestWSKind = appdef.NewQName(appdef.SysPackage, "test_ws")
 
-const maxPrepareQueries = 10
+const (
+	maxPrepareQueries = 10
+	sendTimeout       = bus.SendTimeout(10 * time.Second)
+)
 
 func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs istructs.IAppStructs, cleanup func(),
 	statelessResources istructsmem.IStatelessResources, idGen *TSidsGeneratorType) {
@@ -202,7 +206,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		SubscriptionsPerSubject: 10,
 	}, timeu.NewITime())
 
-	appParts, appPartsCleanup, err := appparts.New2(context.Background(), appStructsProvider,
+	vvmCtx, cancel := context.WithCancel(context.Background())
+	appParts, appPartsCleanup, err := appparts.New2(vvmCtx, appStructsProvider,
 		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		appparts.NullActualizerRunner,
 		appparts.NullSchedulerRunner,
@@ -226,6 +231,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	require.NoError(err)
 
 	cleanup = func() {
+		cancel()
 		appPartsCleanup()
 		n10nBrokerCleanup()
 	}
@@ -497,7 +503,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	sender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	sender := bus.NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, requestBody, qNameQueryCollection, "", sysToken)
 	})
 
@@ -612,7 +618,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	sender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	sender := bus.NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(requestBody), qNameQueryGetCDoc, "", sysToken)
 	})
 
@@ -730,7 +736,7 @@ func TestBasicUsage_State(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	sender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	sender := bus.NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
 			qNameQueryState, "", sysToken)
 	})
@@ -898,7 +904,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	sender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	sender := bus.NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, responder, []byte(`{"args":{"After":6},"elements":[{"fields":["State"]}]}`),
 			qNameQueryState, "", sysToken)
 	})

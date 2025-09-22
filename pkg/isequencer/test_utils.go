@@ -9,12 +9,11 @@ import (
 	"context"
 	"math"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-var actualizationTimeoutLimit = 1 * time.Second
+const actualizationTimeoutLimit = maxRetryDelay
 
 // waitForActualization waits for actualization to complete by repeatedly calling Start
 func WaitForStart(t *testing.T, seq ISequencer, wsKind WSKind, wsID WSID, shouldBeOk bool) PLogOffset {
@@ -215,4 +214,13 @@ func (m *MockStorage) AddPLogEntry(offset PLogOffset, wsid WSID, seqID SeqID, nu
 			Value: number,
 		},
 	)
+}
+
+func NewDefaultParams(seqTypes map[WSKind]map[SeqID]Number) Params {
+	return Params{
+		SeqTypes:                          seqTypes,
+		MaxNumUnflushedValues:             DefaultMaxNumUnflushedValues,
+		LRUCacheSize:                      DefaultLRUCacheSize,
+		BatcherDelayOnToBeFlushedOverflow: defaultBatcherDelayOnToBeFlushedOverflow,
+	}
 }

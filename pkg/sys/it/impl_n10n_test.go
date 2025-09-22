@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"testing"
@@ -14,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -46,6 +47,7 @@ func TestBasicUsage_n10n_APIv1(t *testing.T) {
 	require.False(t, offsetsChanOpened)
 }
 
+// [~server.n10n/it.CreateChannelSubscribeAndWatch~impl]
 func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -70,8 +72,8 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 		"expiresIn": 42
 	}`, ws.WSID)
 	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
-		coreutils.WithAuthorizeBy(token),
-		coreutils.WithLongPolling(),
+		httpu.WithAuthorizeBy(token),
+		httpu.WithLongPolling(),
 	)
 
 	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
@@ -82,22 +84,25 @@ func TestBasicUsage_n10n_APIv2(t *testing.T) {
 	body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":42}}]}`
 	resultOffsetOfDailyCUD := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
+	log.Println("resultOffsetOfCategoryCUD", resultOffsetOfCategoryCUD, "resultOffsetOfDailyCUD", resultOffsetOfDailyCUD)
+
 	// read events
 	waitForOffset(t, resultOffsetOfCategoryCUD, offsetsChan)
 	waitForOffset(t, resultOffsetOfDailyCUD, offsetsChan)
 
 	// unsubscribe
+	// [~server.n10n/it.Unsubscribe~impl]
 	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
 	vit.POST(url, "",
-		coreutils.WithMethod(http.MethodDelete),
-		coreutils.WithAuthorizeBy(token),
-		coreutils.Expect204(),
+		httpu.WithMethod(http.MethodDelete),
+		httpu.WithAuthorizeBy(token),
+		httpu.Expect204(),
 	)
 	url = fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
 	vit.POST(url, "",
-		coreutils.WithMethod(http.MethodDelete),
-		coreutils.WithAuthorizeBy(token),
-		coreutils.Expect204(),
+		httpu.WithMethod(http.MethodDelete),
+		httpu.WithAuthorizeBy(token),
+		httpu.Expect204(),
 	)
 
 	// force updates again to check that no new notifications arrived after unsubscribe
@@ -121,6 +126,7 @@ func waitForOffset(t *testing.T, expectedOffset istructs.Offset, offsetCh federa
 		if actualOffset == expectedOffset {
 			return
 		}
+		log.Println("received offset", actualOffset)
 		if time.Since(start) > 10*time.Second {
 			t.Fatal()
 		}
@@ -147,8 +153,8 @@ func TestChannelExpiration_V2(t *testing.T) {
 		"expiresIn": 3
 	}`, ws.WSID)
 	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
-		coreutils.WithAuthorizeBy(token),
-		coreutils.WithLongPolling(),
+		httpu.WithAuthorizeBy(token),
+		httpu.WithLongPolling(),
 	)
 
 	offsetsChan, _, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
@@ -174,14 +180,14 @@ func TestN10NSubscribeErrors(t *testing.T) {
 
 	t.Run("401 unauthorized", func(t *testing.T) {
 		t.Run("no token", func(t *testing.T) {
-			vit.POST("api/v2/apps/test1/app1/notifications", "{}", coreutils.Expect401()).Println()
+			vit.POST("api/v2/apps/test1/app1/notifications", "{}", httpu.Expect401()).Println()
 		})
 
 		t.Run("expired token", func(t *testing.T) {
 			testingu.MockTime.Add(24 * time.Hour)
 			vit.POST("api/v2/apps/test1/app1/notifications", "{}",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.Expect401(),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.Expect401(),
 			).Println()
 			vit.RefreshTokens()
 		})
@@ -210,8 +216,8 @@ func TestN10NSubscribeErrors(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.body, func(t *testing.T) {
 				vit.POST("api/v2/apps/test1/app1/notifications", c.body,
-					coreutils.WithAuthorizeBy(ws.Owner.Token),
-					coreutils.Expect400(c.expected),
+					httpu.WithAuthorizeBy(ws.Owner.Token),
+					it.Expect400(c.expected),
 				).Println()
 			})
 		}
@@ -238,23 +244,23 @@ func testSubscriptionErrors(t *testing.T, method string) {
 	// subscribe
 	body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
 	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
-		coreutils.WithAuthorizeBy(token),
-		coreutils.WithLongPolling(),
+		httpu.WithAuthorizeBy(token),
+		httpu.WithLongPolling(),
 	)
 	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
 	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdx", channelID, ws.WSID)
 
 	t.Run("401", func(t *testing.T) {
 		t.Run("no token", func(t *testing.T) {
-			vit.POST(url, "", coreutils.WithMethod(method), coreutils.Expect401())
+			vit.POST(url, "", httpu.WithMethod(method), httpu.Expect401())
 		})
 
 		t.Run("expired token", func(t *testing.T) {
 			testingu.MockTime.Add(24 * time.Hour)
 			vit.POST(url, "",
-				coreutils.WithAuthorizeBy(ws.Owner.Token),
-				coreutils.WithMethod(method),
-				coreutils.Expect401(),
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithMethod(method),
+				httpu.Expect401(),
 			).Println()
 			vit.RefreshTokens()
 		})
@@ -263,26 +269,26 @@ func testSubscriptionErrors(t *testing.T, method string) {
 	t.Run("404 on an unknown channel", func(t *testing.T) {
 		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/unknownChannelID/workspaces/%d/subscriptions/app1pkg.CategoryIdx", ws.WSID)
 		vit.POST(url, "",
-			coreutils.WithMethod(method),
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect404(),
+			httpu.WithMethod(method),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect404(),
 		).Println()
 	})
 
 	t.Run("400 on non-empty body", func(t *testing.T) {
 		vit.POST(url, "some body",
-			coreutils.WithMethod(method),
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect400(),
+			httpu.WithMethod(method),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect400(),
 		).Println()
 	})
 
 	t.Run("400 on malformed view", func(t *testing.T) {
 		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/malformedViewQName", channelID, ws.WSID)
 		vit.POST(url, "",
-			coreutils.WithMethod(method),
-			coreutils.WithAuthorizeBy(ws.Owner.Token),
-			coreutils.Expect400(),
+			httpu.WithMethod(method),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect400(),
 		).Println()
 	})
 
@@ -371,7 +377,8 @@ func TestSynthetic(t *testing.T) {
 	}()
 
 	// call a test method that updates the projection
-	vit.N10NUpdate(testProjectionKey, 13)
+	err = vit.N10NUpdate(testProjectionKey, 13)
+	require.NoError(err)
 
 	// unsubscribe to force offsetsChan to close
 	unsubscribe()
@@ -398,7 +405,8 @@ func TestChannelExpiration_V1(t *testing.T) {
 	testingu.MockTime.Add(25 * time.Hour)
 
 	// produce SSE event
-	vit.N10NUpdate(testProjectionKey, 13)
+	err = vit.N10NUpdate(testProjectionKey, 13)
+	require.NoError(err)
 
 	// the channel is closed on SSE event because it is expired
 	for range offsetsChan {
@@ -409,6 +417,7 @@ func TestChannelExpiration_V1(t *testing.T) {
 	unsubscribe()
 }
 
+// [~server.n10n/it.AddSubscription~impl]
 func TestN10NSubscribeToExtraView(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -421,8 +430,8 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	// subscribe to one view
 	body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
 	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
-		coreutils.WithAuthorizeBy(token),
-		coreutils.WithLongPolling(),
+		httpu.WithAuthorizeBy(token),
+		httpu.WithLongPolling(),
 	)
 
 	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
@@ -431,8 +440,8 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	body = ""
 	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
 	vit.POST(url, body,
-		coreutils.WithAuthorizeBy(token),
-		coreutils.WithMethod(http.MethodPut),
+		httpu.WithAuthorizeBy(token),
+		httpu.WithMethod(http.MethodPut),
 	)
 
 	// force projections update

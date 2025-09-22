@@ -11,14 +11,14 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 func (ms *metricsService) Prepare(interface{}) (err error) {
-	ms.listener, err = net.Listen("tcp", coreutils.ServerAddress(ms.port))
+	ms.listener, err = net.Listen("tcp", httpu.ListenAddr(ms.port))
 	return err
 }
 

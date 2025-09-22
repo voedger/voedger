@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -34,8 +35,7 @@ import (
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federationForQP federation.IFederationForQP,
-	federationForState federation.IFederation,
+	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federation federation.IFederation,
 	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService {
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -50,11 +50,11 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					metrics: metrics,
 				}
 				qpm.Increase(queryprocessor.Metric_QueriesTotal, 1.0)
-				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader, federationForQP)
+				qwork := newQueryWork(msg, appParts, maxPrepareQueries, qpm, secretReader, federation)
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, itokens, federationForState, statelessResources)
+						p = newQueryProcessorPipeline(ctx, authn, itokens, federation, statelessResources)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -99,7 +99,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						}
 						respWriter.Close(err)
 					} else if err != nil {
-						respondErr := qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: statusCode}, err)
+						respondErr := qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: statusCode}, err)
 						if respondErr != nil {
 							logger.Error(fmt.Sprintf("failed to send the error %s: %s", err.Error(), respondErr.Error()))
 						}
@@ -117,7 +117,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 
 // IStatelessResources need only for determine the exact result type of ANY
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator,
-	itokens itokens.ITokens, federationForState federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
+	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
@@ -235,7 +235,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						data: coreutils.FieldsToMap(queryResultWrapper{
 							IObject: o,
 							qName:   qw.appStructs.AppDef().Type(qw.iQuery.QName()).(appdef.IQuery).Result().QName(),
-						}, qw.appStructs.AppDef(), coreutils.WithAllFields()), // we do not know which fields are specified because `o` is different on each query -> read all fields of the result
+						},
+							qw.appStructs.AppDef(),
+							coreutils.WithAllFields(), // we do not know which fields are specified because `o` is different on each query -> read all fields of the result
+							coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+								// system fields like sys.QName, sys.Container are emitted due of WithAllFields
+								// skip them in the query result
+								return !appdef.IsSysField(name)
+							}),
+						),
 					}
 				}
 				return qw.rowsProcessor.SendAsync(o.(pipeline.IWorkpiece))
@@ -257,10 +265,11 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() istructs.IObjectBuilder {
 					return qw.appStructs.ObjectBuilder(qw.resultType.QName())
 				},
-				federationForState,
+				federation,
 				func() istructs.ExecQueryCallback {
 					return qw.callbackFunc
 				},
+				state.NullOpts,
 			)
 			qw.execQueryArgs.State = qw.state
 			qw.execQueryArgs.Intents = qw.state
@@ -276,7 +285,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			if qw.apiPathHandler.authorizeResult == nil {
 				return nil
 			}
-			return qw.apiPathHandler.authorizeResult(ctx, qw)
+			err = qw.apiPathHandler.authorizeResult(ctx, qw)
+			if errors.Is(err, appdef.ErrNotFoundError) {
+				// TODO: temporary solution. Such case must not happen after https://github.com/voedger/voedger/issues/3522
+				// to be eliminated in https://github.com/voedger/voedger/issues/4003
+				err = coreutils.WrapSysError(err, http.StatusBadRequest)
+			}
+			return err
 		}),
 		operator("build rows processor", func(ctx context.Context, qw *queryWork) error {
 			now := time.Now()

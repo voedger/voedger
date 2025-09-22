@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -44,11 +45,11 @@ func TestBasic(t *testing.T) {
 		vvmCfg1 := GetTestVVMCfg(net.IPv4(192, 168, 0, 1))
 
 		// make so that VVM launch on vvmCfg1 will store the resulting storage in sharedStorageFactory
-		suffix := t.Name() + uuid.NewString()
-		sharedStorageFactory, err := vvmCfg1.StorageFactory()
+		suffix := provider.NewTestKeyspaceIsolationSuffix()
+		sharedStorageFactory, err := vvmCfg1.StorageFactory(iTime)
 		require.NoError(t, err)
-		vvmCfg1.KeyspaceNameSuffix = suffix
-		vvmCfg1.StorageFactory = func() (istorage.IAppStorageFactory, error) {
+		vvmCfg1.KeyspaceIsolationSuffix = suffix
+		vvmCfg1.StorageFactory = func(timeu.ITime) (istorage.IAppStorageFactory, error) {
 			return sharedStorageFactory, nil
 		}
 
@@ -68,10 +69,10 @@ func TestBasic(t *testing.T) {
 			vvmCfg2 := GetTestVVMCfg(net.IPv4(192, 168, 0, 2))
 
 			// set vvmCfg2 storage factory to the one from vvm1
-			vvmCfg2.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+			vvmCfg2.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 				return sharedStorageFactory, nil
 			}
-			vvmCfg2.KeyspaceNameSuffix = suffix
+			vvmCfg2.KeyspaceIsolationSuffix = suffix
 
 			vvm2, err := Provide(vvmCfg2)
 			r.NoError(err)
@@ -161,7 +162,7 @@ func TestWrongLaunchAndShutdownUsage(t *testing.T) {
 
 	t.Run("panic on Launch() if launched already", func(t *testing.T) {
 		vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration)
-		defer vvm.Shutdown()
+		defer func() { require.NoError(vvm.Shutdown()) }()
 		require.Panics(func() { vvm.Launch(DefaultLeadershipDurationSeconds, DefaultLeadershipAcquisitionDuration) })
 	})
 }

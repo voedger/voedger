@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -80,7 +81,7 @@ type queryWork struct {
 	callbackFunc         istructs.ExecQueryCallback
 	responseWriterGetter func() bus.IResponseWriter
 	apiPathHandler       apiPathHandler
-	federation           federation.IFederationForQP
+	federation           federation.IFederation
 }
 
 var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece
@@ -123,7 +124,7 @@ func (qw *queryWork) isDocSingleton() bool {
 }
 
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
-	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader, federation federation.IFederationForQP) *queryWork {
+	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader, federation federation.IFederation) *queryWork {
 	return &queryWork{
 		msg:                msg,
 		appParts:           appParts,
@@ -192,6 +193,6 @@ func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
 			responder:          qw.msg.Responder(),
 			rowsProcessorErrCh: qw.rowsProcessorErrCh,
 		},
-		contentType: coreutils.ContentType_ApplicationJSON,
+		contentType: httpu.ContentType_ApplicationJSON,
 	}
 }

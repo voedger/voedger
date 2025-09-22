@@ -258,8 +258,9 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
-			break
+			return
 		case <-channel.cchan:
+			
 			if logger.IsTrace() {
 				logger.Trace("notified: ", channelID)
 			}

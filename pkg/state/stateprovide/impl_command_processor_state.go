@@ -38,12 +38,7 @@ func implProvideCommandProcessorState(
 	argFunc state.ArgFunc,
 	unloggedArgFunc state.UnloggedArgFunc,
 	wlogOffsetFunc state.WLogOffsetFunc,
-	options ...state.StateOptFunc) state.IHostState {
-
-	opts := &state.StateOpts{}
-	for _, optFunc := range options {
-		optFunc(opts)
-	}
+	stateOpts state.StateOpts) state.IHostState {
 
 	state := &commandProcessorState{
 		hostState:          newHostState("CommandProcessor", intentsLimit, appStructsFunc),
@@ -60,7 +55,7 @@ func implProvideCommandProcessorState(
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
 	state.addStorage(sys.Storage_RequestSubject, storages.NewSubjectStorage(principalsFunc, tokenFunc), S_GET)
 	state.addStorage(sys.Storage_Result, storages.NewResultStorage(cmdResultBuilderFunc), S_INSERT)
-	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
+	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, stateOpts.UniquesHandler), S_GET)
 	state.addStorage(sys.Storage_Response, storages.NewResponseStorage(), S_INSERT)
 	state.addStorage(sys.Storage_CommandContext, storages.NewCommandContextStorage(argFunc, unloggedArgFunc, wsidFunc, wlogOffsetFunc), S_GET)
 	state.addStorage(sys.Storage_Logger, storages.NewLoggerStorage(), S_INSERT)

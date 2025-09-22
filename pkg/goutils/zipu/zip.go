@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package coreutils
+package zipu
 
 import (
 	"archive/zip"
@@ -12,6 +12,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 )
 
 func Zip(sourceDir string, zipFileName string) error {
@@ -20,7 +22,7 @@ func Zip(sourceDir string, zipFileName string) error {
 		// notest
 		return err
 	}
-	exists, err := Exists(zipFileName)
+	exists, err := filesu.Exists(zipFileName)
 	if err != nil {
 		// notest
 		return err
@@ -119,7 +121,7 @@ func Unzip(zipFileName, destDir string) error {
 		}
 
 		destFilePath := filepath.Join(destDir, file.Name) // #nosec G305
-		if err := os.MkdirAll(filepath.Dir(destFilePath), FileMode_rwxrwxrwx); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destFilePath), filesu.FileMode_DefaultForDir); err != nil {
 			// notest
 			return err
 		}

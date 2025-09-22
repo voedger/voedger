@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -165,7 +166,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	csingleton := appdef.CDoc(app.Type, appdef.NewQName("main", "SubscriptionProfile"))
 	require.True(csingleton.Singleton())
-	require.Equal("CSingletones is a configration singleton.\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", csingleton.Comment())
+	require.Equal("CSingletones is a configuration singleton.\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", csingleton.Comment())
 
 	wsingletone := appdef.WDoc(app.Type, appdef.NewQName("main", "Transaction"))
 	require.True(wsingletone.Singleton())
@@ -277,7 +278,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	t.Run("Jobs", func(t *testing.T) {
 		job1 := appdef.Job(app.Type, appdef.NewQName("main", "TestJob1"))
-		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
+		require.Equal(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
 			for _, n := range proj.States().Names() {
@@ -298,7 +299,7 @@ func Test_BasicUsage(t *testing.T) {
 		})
 
 		job2 := appdef.Job(app.Type, appdef.NewQName("main", "TestJob2"))
-		require.EqualValues(`@every 2m30s`, job2.CronSchedule())
+		require.Equal(`@every 2m30s`, job2.CronSchedule())
 	})
 
 	cmd = appdef.Command(app.Type, appdef.NewQName("main", "NewOrder2"))
@@ -342,7 +343,8 @@ func (require *ParserAssertions) NoBuildError(sql string) {
 	schema, err := require.AppSchema(sql)
 	require.NoError(err)
 	builder := builder.New()
-	BuildAppDefs(schema, builder)
+	err = BuildAppDefs(schema, builder)
+	require.NoError(err)
 }
 
 func (require *ParserAssertions) Build(sql string) appdef.IAppDef {
@@ -419,7 +421,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 
 	inner1 := app.Type(appdef.NewQName("pkg1", "inner1"))
 	ref1 := inner1.(appdef.IWithFields).RefField("ref1")
-	require.EqualValues([]appdef.QName{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
+	require.Equal([]appdef.QName{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
 func Test_CircularReferencesTables(t *testing.T) {
@@ -1040,7 +1042,7 @@ func Test_Queries(t *testing.T) {
 
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
-	WORKSPACE Workspace (		
+	WORKSPACE Workspace (
 		EXTENSION ENGINE BUILTIN (
 			QUERY Qry();
 		);
@@ -2413,7 +2415,7 @@ func Test_Grants(t *testing.T) {
 					number int32,
 					name varchar
 				);
-				GRANT 
+				GRANT
 					SELECT(sys.ID, number, name),
 					UPDATE(number, name)
 				ON TABLE t TO role;
@@ -2431,11 +2433,11 @@ func Test_Grants(t *testing.T) {
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 			require.Equal("pkg.role", acl.Principal().QName().String())
 			if acl.Ops()[0] == appdef.OperationKind_Select {
-				require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Select}, acl.Ops())
-				require.EqualValues([]string{"sys.ID", "number", "name"}, acl.Filter().Fields())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Select}, acl.Ops())
+				require.Equal([]string{"sys.ID", "number", "name"}, acl.Filter().Fields())
 			} else {
-				require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Update}, acl.Ops())
-				require.EqualValues([]string{"number", "name"}, acl.Filter().Fields())
+				require.Equal([]appdef.OperationKind{appdef.OperationKind_Update}, acl.Ops())
+				require.Equal([]string{"number", "name"}, acl.Filter().Fields())
 			}
 		}
 	})
@@ -2462,8 +2464,8 @@ func Test_Grants(t *testing.T) {
 		for _, acl := range app.ACL() {
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 			require.Equal("pkg.role", acl.Principal().QName().String())
-			require.EqualValues([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, acl.Ops())
-			require.EqualValues([]string{"number", "name"}, acl.Filter().Fields())
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select}, acl.Ops())
+			require.Equal([]string{"number", "name"}, acl.Filter().Fields())
 		}
 	})
 }
@@ -2497,7 +2499,7 @@ func Test_Grants_Inherit(t *testing.T) {
 			require.Equal(appdef.PolicyKind_Allow, acl.Policy())
 
 			require.Equal(appdef.FilterKind_Types, acl.Filter().Kind())
-			require.EqualValues(
+			require.Equal(
 				[]appdef.TypeKind{appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_ODoc, appdef.TypeKind_WDoc,
 					appdef.TypeKind_GRecord, appdef.TypeKind_CRecord, appdef.TypeKind_ORecord, appdef.TypeKind_WRecord},
 				acl.Filter().Types())
@@ -2732,7 +2734,8 @@ func Test_RatesAndLimits(t *testing.T) {
 		typ := w.Type(appdef.NewQName("pkg", "r"))
 		r, ok := typ.(appdef.IRate)
 		require.True(ok)
-		require.NotNil(r)
+		require.EqualValues(1, r.Count())
+		require.Equal(time.Hour, r.Period())
 		require.True(r.Scope(appdef.RateScope_AppPartition))
 		require.False(r.Scope(appdef.RateScope_Workspace))
 		require.False(r.Scope(appdef.RateScope_IP))
@@ -2830,57 +2833,16 @@ func Test_RefsWorkspaces(t *testing.T) {
 	);`)
 }
 
-func Test_ScheduledProjectors(t *testing.T) {
-
-	t.Run("should be deprecated", func(t *testing.T) {
-		require := assertions(t)
-		require.AppSchemaError(
-			`APPLICATION test();
+func Test_ScheduledProjectorsDeprecated(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(
+		`APPLICATION test();
 				ALTER WORKSPACE sys.AppWorkspaceWS (
 					EXTENSION ENGINE BUILTIN (
 						PROJECTOR ScheduledProjector CRON '1 0 * * *';
 					);
 				);`,
-			"file.vsql:4:7: scheduled projector deprecated; use jobs instead")
-	})
-
-	t.Run("bad workspace", func(t *testing.T) {
-		t.Skip()
-		require := assertions(t)
-		require.AppSchemaError(`APPLICATION test();
-			WORKSPACE w2 (
-				EXTENSION ENGINE BUILTIN (
-					PROJECTOR Proj1 CRON '1 0 * * *';
-				);
-			);`, "file.vsql:4:6: scheduled projector must be in app workspace")
-	})
-
-	t.Run("bad cron and intents", func(t *testing.T) {
-		t.Skip()
-		require := assertions(t)
-		require.AppSchemaError(`APPLICATION test();
-			ALTER WORKSPACE AppWorkspaceWS (
-				VIEW test(
-					i int32,
-					PRIMARY KEY(i)
-				) AS RESULT OF Proj1;
-
-				EXTENSION ENGINE BUILTIN (
-					PROJECTOR Proj1 CRON 'blah' INTENTS (sys.View(test));
-				);
-			);`, "file.vsql:9:6: invalid cron schedule: blah", "file.vsql:9:6: scheduled projector cannot have intents")
-	})
-
-	t.Run("good cron", func(t *testing.T) {
-		t.Skip()
-		require := assertions(t)
-		require.NoAppSchemaError(`APPLICATION test();
-ALTER WORKSPACE sys.AppWorkspaceWS (
-	EXTENSION ENGINE BUILTIN (
-		PROJECTOR ScheduledProjector CRON '1 0 * * *';
-	);
-);`)
-	})
+		"file.vsql:4:7: scheduled projector deprecated; use jobs instead")
 }
 
 func Test_UseWorkspace(t *testing.T) {
@@ -2896,14 +2858,13 @@ func Test_UseWorkspace(t *testing.T) {
 func Test_Jobs(t *testing.T) {
 
 	t.Run("bad workspace", func(t *testing.T) {
-		t.Skip()
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE w2 (
 				EXTENSION ENGINE BUILTIN (
 					JOB Job1 '1 0 * * *';
 				);
-			);`, "file.vsql:4:6: job must be in app workspace")
+			);`, "file.vsql:4:6: JOB is only allowed in AppWorkspaceWS")
 	})
 
 	t.Run("bad cron", func(t *testing.T) {
@@ -3197,7 +3158,8 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
-	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+	vvmCtx, cancel := context.WithCancel(context.Background())
+	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -3206,7 +3168,10 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 			}, "vvmName", imetrics.Provide()),
 		irates.NullBucketsFactory)
 	require.NoError(err)
-	defer cleanup()
+	defer func() {
+		cancel()
+		cleanup()
+	}()
 	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
 	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
 	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)
@@ -3251,7 +3216,8 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
 	statelessResources := istructsmem.NewStatelessResources()
-	appParts, cleanup, err := appparts.New2(context.Background(), appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+	vvmCtx, cancel := context.WithCancel(context.Background())
+	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -3260,7 +3226,10 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 			}, "vvmName", imetrics.Provide()),
 		irates.NullBucketsFactory)
 	require.NoError(err)
-	defer cleanup()
+	defer func() {
+		cancel()
+		cleanup()
+	}()
 	appParts.DeployApp(appQName, nil, appDef, 1, [4]uint{1, 1, 1, 1}, 1)
 	appParts.DeployAppPartitions(appQName, []istructs.PartitionID{1})
 	borrowedAppPart, err := appParts.Borrow(appQName, 1, appparts.ProcessorKind_Command)

@@ -529,6 +529,8 @@ func analyzeRate(r *RateStmt, c *iterateCtx) {
 		if err := resolveInCtx(*r.Value.Variable, c, resolve); err != nil {
 			c.stmtErr(&r.Value.Variable.Pos, err)
 		}
+	} else if r.Value.Count != nil {
+		r.Value.count = *r.Value.Count
 	}
 	r.workspace = c.mustCurrentWorkspace()
 }

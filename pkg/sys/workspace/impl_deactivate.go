@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -224,7 +225,7 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 			// impossible to have logins from different apps among subjects (Michael said)
 			url := fmt.Sprintf(`api/%s/%d/c.sys.OnJoinedWorkspaceDeactivated`, appQName, profileWSID)
 			body := fmt.Sprintf(`{"args":{"InvitedToWSID":%d}}`, event.Workspace())
-			_, err = federation.Func(url, body, coreutils.WithAuthorizeBy(sysToken), coreutils.WithDiscardResponse())
+			_, err = federation.Func(url, body, httpu.WithAuthorizeBy(sysToken), httpu.WithDiscardResponse())
 			return err
 		})
 		if err != nil {
@@ -237,21 +238,21 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":%q}}`, ownerWSID, wsName)
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID()) // nolint G115
 		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, cdocWorkspaceIDWSID), body,
-			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)
 		}
 
 		// c.sys.OnChildWorkspaceDeactivated(ownerID))
 		body = fmt.Sprintf(`{"args":{"OwnerID":%d}}`, ownerID)
 		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnChildWorkspaceDeactivated", ownerApp, ownerWSID), body,
-			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("c.sys.OnChildWorkspaceDeactivated failed: %w", err)
 		}
 
 		// cdoc.sys.WorkspaceDescriptor.Status = Inactive
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Status":%d}}]}`, wsDesc.AsRecordID(appdef.SystemField_ID), authnz.WorkspaceStatus_Inactive)
 		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()), body,
-			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("cdoc.sys.WorkspaceDescriptor.Status=Inactive failed: %w", err)
 		}
 

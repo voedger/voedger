@@ -659,6 +659,27 @@ EXTENSION ENGINE BUILTIN (
 			Subject text
 			Body text
 
+		Value:
+			Success bool - true if mail was sent successfully
+			ErrorMessage text - error message if mail was not sent successfully
+		*/
+		GET SCOPE(PROJECTORS, JOBS),
+
+
+		/*
+  	@Deprecated: Use GET instead of INSERT. See https://github.com/voedger/voedger/issues/3560
+
+		Key:
+			From text
+			To text
+			CC text
+			BCC text
+			Host text - SMTP server
+			Port int32 - SMTP server
+			Username text - SMTP server
+			Password text - SMTP server
+			Subject text
+			Body text
 		*/
 		INSERT SCOPE(PROJECTORS, JOBS)
 	);

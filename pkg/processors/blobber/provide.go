@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
+// [~server.apiv2.blobs/cmp.blobber.ProvideService~impl]
 func ProvideService(serviceChannel BLOBServiceChannel, blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLimiterFactory) pipeline.IService {
 	return pipeline.NewService(func(vvmCtx context.Context) {
 		pipeline := providePipeline(vvmCtx, blobStorage, wLimiterFactory)

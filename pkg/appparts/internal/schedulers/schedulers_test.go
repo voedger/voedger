@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
@@ -91,44 +90,14 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 			},
 			schedulers.Enum())
 
-		// stop vvm from context, wait actualizers finished
+		// stop vvm from context
 		stop()
-
-		const timeout = 1 * time.Second
-		require.True(schedulers.WaitTimeout(timeout))
-		require.Empty(schedulers.Enum())
+		schedulers.Wait()
 
 		runCalls.Range(func(key, value any) bool {
-			require.Fail("scheduler %v was not run", key)
+			require.Fail(fmt.Sprintf("scheduler %#v was not run", key))
 			return true
 		})
-	})
-
-	t.Run("should timeout to wait infinite run schedulers", func(t *testing.T) {
-
-		if testing.Short() {
-			t.Skip("skipping test in short mode.")
-		}
-
-		ctx, stop := context.WithCancel(context.Background())
-
-		schedulers := New(appName, partCnt, wsCnt, partID)
-
-		app := appDef()
-
-		schedulers.Deploy(ctx, app,
-			func(context.Context, appdef.AppQName, istructs.PartitionID, istructs.AppWorkspaceNumber, istructs.WSID, appdef.QName) {
-				for {
-					time.Sleep(time.Millisecond) // infinite loop
-				}
-			})
-
-		// stop vvm from context, wait actualizers finished
-		stop()
-
-		const timeout = 1 * time.Second
-		require.False(schedulers.WaitTimeout(timeout))
-		require.Len(schedulers.Enum(), 2)
 	})
 }
 

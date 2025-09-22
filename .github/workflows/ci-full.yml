@@ -8,13 +8,13 @@ on:
 jobs:
   call-workflow-ci:
     if: github.repository == 'voedger/voedger'
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main
     with:
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       go_race: "true"
       short_test: "false"
       ignore_build: "true"
-      test_subfolders: "true" 
+      test_subfolders: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -34,7 +34,7 @@ jobs:
   call-workflow-create-issue:
     needs: notify_failure
     if: ${{ failure() }}
-    uses: untillpro/ci-action/.github/workflows/create_issue.yml@master
+    uses: untillpro/ci-action/.github/workflows/create_issue.yml@main
     with:
       repo: "voedger/voedger"
       assignee: "host6"

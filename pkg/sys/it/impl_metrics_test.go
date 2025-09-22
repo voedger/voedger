@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -38,19 +38,19 @@ func TestBasicUsage_Metrics(t *testing.T) {
 func TestMetricsService(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	client, cleanup := coreutils.NewIHTTPClient()
+	client, cleanup := httpu.NewIHTTPClient()
 	defer cleanup()
 
 	t.Run("service check", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(client, coreutils.WithRelativeURL("/metrics/check")))
+		log.Println(vit.MetricsRequest(client, httpu.WithRelativeURL("/metrics/check")))
 	})
 
 	t.Run("404 on wrong url", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(client, coreutils.WithRelativeURL("/unknown"), coreutils.Expect404()))
+		log.Println(vit.MetricsRequest(client, httpu.WithRelativeURL("/unknown"), httpu.Expect404()))
 	})
 
 	t.Run("404 on wrong method", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(client, coreutils.WithMethod(http.MethodPost), coreutils.Expect404()))
+		log.Println(vit.MetricsRequest(client, httpu.WithMethod(http.MethodPost), httpu.Expect404()))
 	})
 }
 
@@ -58,7 +58,7 @@ func TestCommandProcessorMetrics(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	require := require.New(t)
-	client, cleanup := coreutils.NewIHTTPClient()
+	client, cleanup := httpu.NewIHTTPClient()
 	defer cleanup()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
@@ -94,7 +94,7 @@ func handlePanic(r interface{}) error {
 func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
 	r.checkStarted()
 	select {
-	case r.responseMetaCh <- ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: statusCode}:
+	case r.responseMetaCh <- ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: statusCode}:
 	default:
 		// do nothing if no consumer already.
 		// will get ErrNoConsumer on the next Write()

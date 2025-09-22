@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -132,7 +133,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	var wsid istructs.WSID
 	var command appdef.QName
 	var body string
-	opts := make([]coreutils.ReqOptFunc, 0)
+	opts := make([]httpu.ReqOptFunc, 0)
 
 	kb := key.(*federationCommandKeyBuilder)
 
@@ -144,7 +145,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		if err != nil {
 			return nil, err
 		}
-		opts = append(opts, coreutils.WithExpectedCode(code))
+		opts = append(opts, httpu.WithExpectedCode(code))
 	}
 
 	if kb.owner != "" {
@@ -199,14 +200,14 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		}
 	} else {
 		if kb.token != "" {
-			opts = append(opts, coreutils.WithAuthorizeBy(kb.token))
+			opts = append(opts, httpu.WithAuthorizeBy(kb.token))
 		} else {
 			appQName := appdef.NewAppQName(owner, appname)
 			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
 			if err != nil {
 				return nil, err
 			}
-			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
+			opts = append(opts, httpu.WithAuthorizeBy(systemPrincipalToken))
 		}
 
 		resp, err := s.federation.Func(relativeURL, body, opts...)

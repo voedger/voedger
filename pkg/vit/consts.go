@@ -22,6 +22,8 @@ const (
 	field_Input                  = "Input"
 	testEmailsAwaitingTimeout    = 5 * time.Second
 	testTimeMillis               = 1649667286774
+	testRegistryPartsNum         = 2
+	testAppPartsNum              = 5
 )
 
 var (
@@ -43,7 +45,7 @@ var (
 		MaxAllowedPerDuration: 4,
 	}
 	TestAppDeploymentDescriptor = appparts.AppDeploymentDescriptor{
-		NumParts:         10,
+		NumParts:         testAppPartsNum,
 		EnginePoolSize:   DefaultTestAppEnginesPool,
 		NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 	}

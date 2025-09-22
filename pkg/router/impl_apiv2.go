@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -20,9 +19,10 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -38,100 +38,100 @@ func (s *httpService) registerHandlersV2() {
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
 		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces))).
-		Methods(http.MethodPost).Name("create")
+		Methods(http.MethodOptions, http.MethodPost).Name("create")
 
 	// update, deactivate, read single doc: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}/{%s:[0-9]+}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table,
 		URLPlaceholder_id),
 		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces))).
-		Methods(http.MethodPatch, http.MethodDelete, http.MethodGet).Name("update or read single")
+		Methods(http.MethodOptions, http.MethodPatch, http.MethodDelete, http.MethodGet).Name("update or read single")
 
 	// read collection: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/cdocs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/cdocs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
 		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_CDocs, s.numsAppsWorkspaces))).
-		Methods(http.MethodGet).Name("read collection")
+		Methods(http.MethodOptions, http.MethodGet).Name("read collection")
 
 	// execute cmd: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/commands/{pkg}.{command}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/commands/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_command),
 		corsHandler(requestHandlerV2_extension(s.requestSender, processors.APIPath_Commands, s.numsAppsWorkspaces))).
-		Methods(http.MethodPost).Name("exec cmd")
+		Methods(http.MethodOptions, http.MethodPost).Name("exec cmd")
 
 	// execute query: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/queries/{pkg}.{query}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/queries/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_query),
 		corsHandler(requestHandlerV2_extension(s.requestSender, processors.APIPath_Queries, s.numsAppsWorkspaces))).
-		Methods(http.MethodGet).Name("exec query")
+		Methods(http.MethodOptions, http.MethodGet).Name("exec query")
 
 	// view: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/views/{pkg}.{view}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/views/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_view),
 		corsHandler(requestHandlerV2_view(s.requestSender, s.numsAppsWorkspaces))).
-		Methods(http.MethodGet).Name("view")
+		Methods(http.MethodOptions, http.MethodGet).Name("view")
 
 	// blobs: create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
 		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
-		Methods(http.MethodPost).Name("blobs create")
+		Methods(http.MethodOptions, http.MethodPost).Name("blobs create")
 
 	// schemas: get workspace schema: /api/v2/apps/{owner}/{app}/schemas
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_schemas(s.requestSender, s.numsAppsWorkspaces))).
-		Methods(http.MethodGet).Name("schemas")
+		Methods(http.MethodOptions, http.MethodGet).Name("schemas")
 
 	// schemas, workspace roles: get workspace schema: /api/v2/apps/{owner}/{app}/schemas/{pkg}.{workspace}/roles
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas/{%s}.{%s}/roles",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_pkg, URLPlaceholder_workspaceName),
 		corsHandler(requestHandlerV2_schemas_wsRoles(s.requestSender, s.numsAppsWorkspaces))).
-		Methods(http.MethodGet).Name("schemas, workspace roles")
+		Methods(http.MethodOptions, http.MethodGet).Name("schemas, workspace roles")
 
 	// schemas, workspace role: get workspace schema: /api/v2/apps/{owner}/{app}/schemas/{pkg}.{workspace}/roles/{pkg}.{role}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas/{%s}.{%s}/roles/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_pkg, URLPlaceholder_workspaceName, URLPlaceholder_rolePkg, URLPlaceholder_role),
 		corsHandler(requestHandlerV2_schemas_wsRole(s.requestSender, s.numsAppsWorkspaces))).
-		Methods(http.MethodGet).Name("schemas, workspace role")
+		Methods(http.MethodOptions, http.MethodGet).Name("schemas, workspace role")
 
 	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/login",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_auth_login(s.requestSender, s.numsAppsWorkspaces))).
-		Methods(http.MethodPost).Name("auth login")
+		Methods(http.MethodOptions, http.MethodPost).Name("auth login")
 
 	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/refresh",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
-		Methods(http.MethodPost).Name("auth refresh")
+		Methods(http.MethodOptions, http.MethodPost).Name("auth refresh")
 
 	// create user /api/v2/apps/{owner}/{app}/users
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/users",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_create_user(s.numsAppsWorkspaces, s.iTokens, s.federation))).
-		Methods(http.MethodPost).Name("create user")
+		Methods(http.MethodOptions, http.MethodPost).Name("create user")
 
 	// change password user /api/v2/apps/{owner}/{app}/users/change-password
 	// [~server.users/cmp.routerUsersChangePasswordPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/users/change-password",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_changePassword(s.numsAppsWorkspaces, s.federation))).
-		Methods(http.MethodPost).Name("change password")
+		Methods(http.MethodOptions, http.MethodPost).Name("change password")
 
 	// create device /api/v2/apps/{owner}/{app}/devices
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/devices",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_create_device(s.numsAppsWorkspaces, s.federation))).
-		Methods(http.MethodPost).Name("create device")
+		Methods(http.MethodOptions, http.MethodPost).Name("create device")
 
 	// blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{doc}/blobs/{field}
 	// [~server.apiv2.blobs/cmp.routerBlobsCreatePathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/blobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table, URLPlaceholder_field),
 		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
-		Methods(http.MethodPost).Name("blobs create")
+		Methods(http.MethodOptions, http.MethodPost).Name("blobs create")
 
 	// blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}/blobs/{fieldName}
 	// [~server.apiv2.blobs/cmp.routerBlobsReadPathHandler~impl]
@@ -139,40 +139,43 @@ func (s *httpService) registerHandlersV2() {
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg,
 		URLPlaceholder_table, URLPlaceholder_id, URLPlaceholder_field),
 		corsHandler(requestHandlerV2_blobs_read(s.blobRequestHandler, s.requestSender))).
-		Methods(http.MethodGet).Name("blobs read")
+		Methods(http.MethodOptions, http.MethodGet).Name("blobs read")
 
 	// temp blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs
 	// [~server.apiv2.tblobs/cmp.routerTBlobsCreatePathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
 		corsHandler(requestHandlerV2_tempblobs_create(s.blobRequestHandler, s.requestSender))).
-		Methods(http.MethodPost).Name("temp blobs create")
+		Methods(http.MethodOptions, http.MethodPost).Name("temp blobs create")
 
 	// temp blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs/{suuid}
 	// [~server.apiv2.blobs/cmp.routerTBlobsReadPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
 		corsHandler(requestHandlerV2_tempblobs_read(s.blobRequestHandler, s.requestSender))).
-		Methods(http.MethodGet).Name("temp blobs read")
+		Methods(http.MethodOptions, http.MethodGet).Name("temp blobs read")
 
 	// notifications subscribe+watch /api/v2/apps/{owner}/{app}/notifications
+	// [~server.n10n/cmp.routerCreateChannelHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
 		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory, s.authnz,
 			s.asp))).
-		Methods(http.MethodPost).Name("notifications subscribe + watch")
+		Methods(http.MethodOptions, http.MethodPost).Name("notifications subscribe + watch")
 
 	// notifications unsubscribe /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
+	// [~server.n10n/cmp.routerUnsubscribeHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
 		corsHandler(requestHandlerV2_notifications_unsubscribe(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
-		Methods(http.MethodDelete).Name("notifications unsubscribe")
+		Methods(http.MethodOptions, http.MethodDelete).Name("notifications unsubscribe")
 
 	// notifications subscribe to an extra view /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
+	// [~server.n10n/cmp.routerAddSubscriptionHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
 		corsHandler(requestHandlerV2_notifications_subscribe(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory, s.asp, s.authnz))).
-		Methods(http.MethodPut).Name("notifications subscribe to an extra view")
+		Methods(http.MethodOptions, http.MethodPut).Name("notifications subscribe to an extra view")
 }
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
@@ -207,7 +210,7 @@ func requestHandlerV2_changePassword(numsAppsWorkspaces map[appdef.AppQName]istr
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"%s","NewPassword":"%s"}}`,
 			login, busRequest.AppQName, oldPassword, newPassword)
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.ChangePassword", pseudoWSID)
-		if _, err = federation.Func(url, body, coreutils.WithMethod(http.MethodPost), coreutils.WithDiscardResponse()); err != nil { // null auth
+		if _, err = federation.Func(url, body, httpu.WithMethod(http.MethodPost), httpu.WithDiscardResponse()); err != nil { // null auth
 			replyErr(rw, err)
 			return
 		}
@@ -244,8 +247,8 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 			return
 		}
 		resp, err := federation.Func(url, body,
-			coreutils.WithAuthorizeBy(sysToken),
-			coreutils.WithMethod(http.MethodPost),
+			httpu.WithAuthorizeBy(sysToken),
+			httpu.WithMethod(http.MethodPost),
 		)
 		if err != nil {
 			replyErr(rw, err)
@@ -270,7 +273,8 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		appTokens := appTokensFactory.New(busRequest.AppQName)
 		principalToken, err := bus.GetPrincipalToken(busRequest)
 		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			// [~server.n10n/err.routerCreateChannelInvalidToken~impl]
+			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
 			return
 		}
 		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
@@ -405,6 +409,8 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 		var pp payloads.PrincipalPayload
 		_, err = appTokens.ValidateToken(principalToken, &pp)
 		if err != nil {
+			// [~server.n10n/err.routerAddSubscriptionInvalidToken~impl]
+			// [~server.n10n/err.routerUnsubscribeInvalidToken~impl]
 			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -530,7 +536,7 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 			login, busRequest.AppQName, istructs.SubjectKind_Device, istructs.CurrentClusterID(), pwd)
-		_, err := federation.Func(url, body, coreutils.WithMethod(http.MethodPost))
+		_, err := federation.Func(url, body, httpu.WithMethod(http.MethodPost))
 		if err != nil {
 			replyErr(rw, err)
 			return
@@ -575,7 +581,7 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 		vars := mux.Vars(req)
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
-		ownerID, err := strconv.ParseUint(vars[URLPlaceholder_id], utils.DecimalBase, utils.BitSize64)
+		ownerID, err := strconvu.ParseUint64(vars[URLPlaceholder_id])
 		if err != nil {
 			// notest: checked by router url rule
 			panic(err)
@@ -684,7 +690,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(req.Method, data, req)
 		if recordIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
-			docID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
+			docID, err := strconvu.ParseUint64(recordIDStr)
 			if err != nil {
 				// notest
 				panic(err)

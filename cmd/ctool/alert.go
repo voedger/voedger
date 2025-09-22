@@ -14,7 +14,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/spf13/cobra"
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 )
 
 // nolint
@@ -164,7 +164,7 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s", webhook, host))
 	}
 
-	exists, e := coreutils.Exists(remoteFile)
+	exists, e := filesu.Exists(remoteFile)
 	if e != nil {
 		return e
 	}
@@ -174,7 +174,7 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 		}
 	}
 
-	if err = coreutils.CopyFile(filepath.Join(scriptsTempDir, localConfigFile), remoteDir); err != nil {
+	if err = filesu.CopyFile(filepath.Join(scriptsTempDir, localConfigFile), remoteDir); err != nil {
 		return err
 	}
 
@@ -314,7 +314,7 @@ func alertConfigsUpload(cmd *cobra.Command, args []string) error {
 	dir, _ := os.Getwd()
 	localFile := filepath.Join(dir, filepath.Base(alertManagerConfigFile))
 
-	exists, err := coreutils.Exists(localFile)
+	exists, err := filesu.Exists(localFile)
 	if err != nil {
 		return err
 	}
@@ -377,7 +377,7 @@ func (e *eventType) postAlert(cluster *clusterType) error {
 
 	fName := filepath.Join(dir, "post-alert.json")
 
-	if err = os.WriteFile(fName, eventJson, coreutils.FileMode_rwxrwxrwx); err != nil {
+	if err = os.WriteFile(fName, eventJson, filesu.FileMode_DefaultForDir); err != nil {
 		return err
 	}
 

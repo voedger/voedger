@@ -12,15 +12,14 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -89,7 +88,7 @@ func createBusRequest(reqMethod string, data validatedData, req *http.Request) b
 	}
 
 	if docIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
-		docIDUint64, err := strconv.ParseUint(docIDStr, utils.DecimalBase, utils.BitSize64)
+		docIDUint64, err := strconvu.ParseUint64(docIDStr)
 		if err != nil {
 			// notest: parsed already by route regexp
 			panic(err)

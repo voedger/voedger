@@ -18,8 +18,8 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -35,7 +35,7 @@ type appStorageFactory struct {
 
 func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage.IAppStorage, err error) {
 	dbName := filepath.Join(p.bboltParams.DBDir, appName.String()+".db")
-	exists, err := coreutils.Exists(dbName)
+	exists, err := filesu.Exists(dbName)
 	if err != nil {
 		// notest
 		return nil, err
@@ -43,7 +43,7 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 	if !exists {
 		return nil, istorage.ErrStorageDoesNotExist
 	}
-	db, err := bolt.Open(dbName, coreutils.FileMode_rw_rw_rw_, bolt.DefaultOptions)
+	db, err := bolt.Open(dbName, filesu.FileMode_DefaultForFile, bolt.DefaultOptions)
 	if err != nil {
 		// notest
 		return nil, err
@@ -63,7 +63,7 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 
 func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	dbName := filepath.Join(p.bboltParams.DBDir, appName.String()+".db")
-	exists, err := coreutils.Exists(dbName)
+	exists, err := filesu.Exists(dbName)
 	if err != nil {
 		// notest
 		return err
@@ -71,11 +71,11 @@ func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	if exists {
 		return istorage.ErrStorageAlreadyExists
 	}
-	if err = os.MkdirAll(p.bboltParams.DBDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+	if err = os.MkdirAll(p.bboltParams.DBDir, filesu.FileMode_DefaultForDir); err != nil {
 		// notest
 		return err
 	}
-	db, err := bolt.Open(dbName, coreutils.FileMode_rw_rw_rw_, bolt.DefaultOptions)
+	db, err := bolt.Open(dbName, filesu.FileMode_DefaultForFile, bolt.DefaultOptions)
 	if err != nil {
 		// notest
 		return err
@@ -139,7 +139,7 @@ func (s *appStorageType) InsertIfNotExists(pKey []byte, cCols []byte, value []by
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -248,7 +248,7 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -289,7 +289,7 @@ func (s *appStorageType) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int, 
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -322,7 +322,7 @@ func (s *appStorageType) Put(pKey []byte, cCols []byte, value []byte) (err error
 		if err != nil {
 			return err
 		}
-		d := coreutils.DataWithExpiration{Data: value}
+		d := istorage.DataWithExpiration{Data: value}
 
 		bucket, err := dataBucket.CreateBucketIfNotExists(pKey)
 		if err != nil {
@@ -347,7 +347,7 @@ func (s *appStorageType) PutBatch(items []istorage.BatchItem) (err error) {
 				return err
 			}
 
-			d := coreutils.DataWithExpiration{Data: items[i].Value}
+			d := istorage.DataWithExpiration{Data: items[i].Value}
 			if err := bucket.Put(items[i].CCols, d.ToBytes()); err != nil {
 				return err
 			}
@@ -454,7 +454,7 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 			k, v = cr.Seek(safeKey(startCCols))
 		}
 
-		var d coreutils.DataWithExpiration
+		var d istorage.DataWithExpiration
 		for (k != nil) && (finishCCols == nil || string(k) <= string(finishCCols)) {
 
 			if ctx.Err() != nil {
@@ -500,7 +500,7 @@ func (s *appStorageType) findValue(pKey, cCols, value []byte) (found bool, err e
 			return nil
 		}
 
-		d := coreutils.ReadWithExpiration(v)
+		d := istorage.ReadWithExpiration(v)
 		if d.IsExpired(s.iTime.Now()) {
 			return nil
 		}
@@ -529,7 +529,7 @@ func (s *appStorageType) putValue(tx *bolt.Tx, pKey, cCols, value []byte, ttlSec
 		return err
 	}
 
-	d := coreutils.DataWithExpiration{Data: value}
+	d := istorage.DataWithExpiration{Data: value}
 	if ttlSeconds > 0 {
 		d.ExpireAt = s.iTime.Now().Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
 	}

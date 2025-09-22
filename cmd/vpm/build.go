@@ -20,9 +20,10 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/filesu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/zipu"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
@@ -66,7 +67,7 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 func build(compileRes *compile.Result, params *vpmParams) error {
 	// temp directory to save the build info: vsql files, wasm files
 	tempDir := filepath.Join(os.TempDir(), uuid.New().String(), buildDirName)
-	if err := os.MkdirAll(tempDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+	if err := os.MkdirAll(tempDir, filesu.FileMode_DefaultForDir); err != nil {
 		return err
 	}
 	// create temp build info directory along with vsql and wasm files
@@ -87,7 +88,7 @@ func build(compileRes *compile.Result, params *vpmParams) error {
 	tempDirWithoutBuild := filepath.Dir(tempDir)
 
 	// zip build info directory along with vsql and wasm files
-	return coreutils.Zip(tempDirWithoutBuild, varFile)
+	return zipu.Zip(tempDirWithoutBuild, varFile)
 }
 
 // buildDir creates a directory structure with vsql and wasm files
@@ -95,7 +96,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 	wasmDirsToBuild := make([]string, 0, len(pkgFiles))
 	for qpn, files := range pkgFiles {
 		pkgBuildDir := filepath.Join(buildDirPath, qpn)
-		if err := os.MkdirAll(pkgBuildDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+		if err := os.MkdirAll(pkgBuildDir, filesu.FileMode_DefaultForDir); err != nil {
 			return err
 		}
 
@@ -103,7 +104,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 			// copy vsql files
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			if err := coreutils.CopyFile(file, pkgBuildDir, coreutils.WithNewName(fileNameExtensionless+parser.VSQLExt)); err != nil {
+			if err := filesu.CopyFile(file, pkgBuildDir, filesu.WithNewName(fileNameExtensionless+parser.VSQLExt)); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
@@ -116,7 +117,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				continue
 			}
 
-			exists, err := coreutils.Exists(wasmDirPath)
+			exists, err := filesu.Exists(wasmDirPath)
 			if err != nil {
 				return err
 			}
@@ -129,7 +130,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				// for controlling uniqueness of wasm directories
 				wasmDirsToBuild = append(wasmDirsToBuild, wasmDirPath)
 				// copy the wasm file to the build directory
-				if err := coreutils.CopyFile(wasmFilePath, pkgBuildDir); err != nil {
+				if err := filesu.CopyFile(wasmFilePath, pkgBuildDir); err != nil {
 					return fmt.Errorf(errFmtCopyFile, wasmFilePath, err)
 				}
 				// remove the wasm file after copying it to the build directory

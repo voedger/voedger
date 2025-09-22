@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -27,7 +28,7 @@ func TestQueryProcessorState(t *testing.T) {
 		}
 	}
 
-	qps := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, nil, nil, nil, nil, nil, nil, nil, istructs.NewNullObjectBuilder, nil, execQueryCallbackFunc)
+	qps := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, nil, nil, nil, nil, nil, nil, nil, istructs.NewNullObjectBuilder, nil, execQueryCallbackFunc, state.StateOpts{})
 	kb, err := qps.KeyBuilder(sys.Storage_Result, appdef.NullQName)
 	require.NoError(err)
 	require.NotNil(kb)

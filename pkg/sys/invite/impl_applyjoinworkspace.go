@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -86,8 +86,8 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":%q}}`,
 				svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse(),
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse(),
 		)
 		if err != nil {
 			return
@@ -131,7 +131,7 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 		resp, err := federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
-			coreutils.WithAuthorizeBy(token))
+			httpu.WithAuthorizeBy(token))
 		if err != nil {
 			return
 		}
@@ -148,8 +148,8 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
-			coreutils.WithAuthorizeBy(token),
-			coreutils.WithDiscardResponse())
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
 
 		return err
 	}

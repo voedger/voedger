@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/acl"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 )
 
 func swaggerUI(url string) string {
@@ -65,10 +66,10 @@ func schemasRoleExec(ctx context.Context, qw *queryWork) (err error) {
 		return coreutils.NewHTTPErrorf(http.StatusInternalServerError, err)
 	}
 
-	if strings.Contains(qw.msg.Accept(), coreutils.ContentType_TextHTML) {
+	if strings.Contains(qw.msg.Accept(), httpu.ContentType_TextHTML) {
 		url := fmt.Sprintf(`/api/v2/apps/%s/%s/schemas/%s/roles/%s`,
 			qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), wsQname.String(), qw.msg.QName().String())
-		return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_TextHTML, StatusCode: http.StatusOK}, swaggerUI(url))
+		return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_TextHTML, StatusCode: http.StatusOK}, swaggerUI(url))
 	}
-	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: coreutils.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, writer.Bytes())
+	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, writer.Bytes())
 }

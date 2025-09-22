@@ -4,6 +4,8 @@
 */
 package schedulers
 
-func ProvideSchedulers(cfg BasicSchedulerConfig) ISchedulersService {
+import "github.com/voedger/voedger/pkg/appparts"
+
+func ProvideSchedulers(cfg BasicSchedulerConfig) appparts.ISchedulerRunner {
 	return newSchedulers(cfg)
 }

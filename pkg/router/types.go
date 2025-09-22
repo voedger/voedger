@@ -29,6 +29,7 @@ import (
 
 type RouterParams struct {
 	Port                 int
+	AdminPort            int
 	WriteTimeout         int
 	ReadTimeout          int
 	ConnectionsLimit     int

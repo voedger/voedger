@@ -11,7 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -22,14 +22,14 @@ import (
 
 // sys/registry app, triggered by cdoc.registry.Login
 // at pseudoWSID translated to AppWSID
-func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		for rec := range event.CUDs {
 			if rec.QName() != QNameCDocLogin || !rec.IsNew() {
 				continue
 			}
 			loginHash := rec.AsString(authnz.Field_LoginHash)
-			wsName := utils.UintToString(crc32.ChecksumIEEE([]byte(loginHash)))
+			wsName := strconvu.UintToString(crc32.ChecksumIEEE([]byte(loginHash)))
 			var wsKind appdef.QName
 			switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
 			case istructs.SubjectKind_Device:

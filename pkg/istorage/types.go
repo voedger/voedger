@@ -26,3 +26,7 @@ type IStorageDelaySetter interface {
 	SetTestDelayPut(time.Duration)
 }
 
+type DataWithExpiration struct {
+	ExpireAt int64
+	Data     []byte
+}

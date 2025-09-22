@@ -7,6 +7,7 @@ package sys_it
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -15,17 +16,32 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
+	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func TestBasicUsage_ReverseProxy(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	targetListener, err := net.Listen("tcp", httpu.LocalhostDynamic())
+	require.NoError(err)
+	defer targetListener.Close()
+	targetPort := targetListener.Addr().(*net.TCPAddr).Port
+
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.Routes["/grafana"] = fmt.Sprintf("http://127.0.0.1:%d", targetPort)
+			cfg.RoutesRewrite["/grafana-rewrite"] = fmt.Sprintf("http://127.0.0.1:%d/rewritten", targetPort)
+			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", targetPort)
+			cfg.RouteDomains["localhost"] = fmt.Sprintf("http://127.0.0.1:%d", targetPort)
+		}),
+	)
+
+	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
-	targetListener, err := net.Listen("tcp", coreutils.ServerAddress(it.TestServicePort))
-	require.NoError(err)
 	errs := make(chan error)
 	targetHandler := targetHandler{t, &sync.Mutex{}, "", ""}
 	targetServer := http.Server{
