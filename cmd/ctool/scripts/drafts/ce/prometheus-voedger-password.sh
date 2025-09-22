@@ -18,7 +18,7 @@ source ../utils.sh
 NEW_PASSWORD=$1
 HASHED_PASSWORD=$2
 NODE=$3
-SSH_USER=${SSH_USER}
+SSH_USER=${SSH_USER:-$LOGNAME}
 USER_NAME="voedger"
 
 echo "Setting Prometheus password for user '$USER_NAME' on CE node $NODE..."

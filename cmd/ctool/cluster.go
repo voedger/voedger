@@ -436,26 +436,31 @@ func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 	}
 
 	// Check if it's a valid edition type
-	if cmd.Args[0] != clusterEditionN1 && cmd.Args[0] != clusterEditionN5 && cmd.Args[0] != clusterEditionN3 {
+	if cmd.Args[0] != clusterEditionN1 &&
+		cmd.Args[0] != clusterEditionN5 &&
+		cmd.Args[0] != clusterEditionN3 &&
+		cmd.Args[0] != clusterEditionCE &&
+		cmd.Args[0] != clusterEditionSE &&
+		cmd.Args[0] != clusterSubEditionSE3 {
 		return ErrInvalidClusterEdition
 	}
 
 	// For N1/CE commands, expect 1 or 2 arguments (edition + optional IP)
-	if cmd.Args[0] == clusterEditionN1 {
+	if cmd.Args[0] == clusterEditionN1 || cmd.Args[0] == clusterEditionCE {
 		if len(cmd.Args) < 1 || len(cmd.Args) > 2 {
 			return ErrInvalidNumberOfArguments
 		}
 	}
 
 	// For N3 commands, expect exactly 4 arguments (edition + 3 IPs)
-	if cmd.Args[0] == clusterEditionN3 {
+	if cmd.Args[0] == clusterEditionN3 || cmd.Args[0] == clusterSubEditionSE3 {
 		if len(cmd.Args) != 1+n3NodeCount {
 			return ErrInvalidNumberOfArguments
 		}
 	}
 
 	// For N5/SE commands, expect exactly 6 arguments (edition + 5 IPs)
-	if cmd.Args[0] == clusterEditionN5 {
+	if cmd.Args[0] == clusterEditionN5 || cmd.Args[0] == clusterEditionSE {
 		if len(cmd.Args) != 1+se5NodeCount {
 			return ErrInvalidNumberOfArguments
 		}

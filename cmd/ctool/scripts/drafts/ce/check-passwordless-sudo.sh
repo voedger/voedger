@@ -12,7 +12,7 @@ fi
 source ../utils.sh
 
 NODE=$1
-SSH_USER=${SSH_USER}
+SSH_USER=${SSH_USER:-$LOGNAME}
 
 # Set default SSH key if not provided
 if [ -z "${VOEDGER_SSH_KEY:-}" ]; then
