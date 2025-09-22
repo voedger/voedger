@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -2733,7 +2734,8 @@ func Test_RatesAndLimits(t *testing.T) {
 		typ := w.Type(appdef.NewQName("pkg", "r"))
 		r, ok := typ.(appdef.IRate)
 		require.True(ok)
-		require.NotNil(r)
+		require.EqualValues(1, r.Count())
+		require.Equal(time.Hour, r.Period())
 		require.True(r.Scope(appdef.RateScope_AppPartition))
 		require.False(r.Scope(appdef.RateScope_Workspace))
 		require.False(r.Scope(appdef.RateScope_IP))
