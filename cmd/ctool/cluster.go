@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -434,10 +435,8 @@ func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 	}
 
 	// Check if it's a valid edition type
-	if cmd.Args[0] != clusterEditionN1 &&
-		cmd.Args[0] != clusterEditionN5 &&
-		cmd.Args[0] != clusterEditionCE &&
-		cmd.Args[0] != clusterEditionSE {
+	validClusterEditions := []string{clusterEditionN1, clusterEditionN5, clusterEditionCE, clusterEditionSE}
+	if !slices.Contains(validClusterEditions, cmd.Args[0]) {
 		return ErrInvalidClusterEdition
 	}
 
