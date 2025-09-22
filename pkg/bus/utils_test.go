@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -23,6 +24,7 @@ import (
 
 func TestReplyError(t *testing.T) {
 	require := require.New(t)
+	const sendTimeout = SendTimeout(10 * time.Second)
 
 	type expected struct {
 		code  int
@@ -91,7 +93,7 @@ func TestReplyError(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.desc, func(t *testing.T) {
-				requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+				requestSender := NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 					c.f(responder)
 				})
 				cmdRespMeta, _, err := GetCommandResponse(context.Background(), requestSender, Request{})
@@ -119,7 +121,7 @@ func TestReplyError(t *testing.T) {
 			name := runtime.FuncForPC(reflect.ValueOf(c.f).Pointer()).Name()
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
-				requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+				requestSender := NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 					go c.f(responder, "test message")
 				})
 				expectedMessage := "test message"
@@ -141,7 +143,7 @@ func TestReplyError(t *testing.T) {
 			Fld1 int
 			Fld2 string
 		}{Fld1: 42, Fld2: "str"}
-		requestSender := NewIRequestSender(testingu.MockTime, GetTestSendTimeout(), func(requestCtx context.Context, request Request, responder IResponder) {
+		requestSender := NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			ReplyJSON(responder, http.StatusOK, testObj)
 		})
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(context.Background(), Request{})

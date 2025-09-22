@@ -772,7 +772,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 
 	// command processor works through ibus.SendResponse -> we need ibus implementation
 
-	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.SendTimeout(10*time.Second), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)

@@ -7,7 +7,6 @@ package coreutils
 
 import (
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,15 +28,6 @@ func TestIsBlank(t *testing.T) {
 	for idx := range cases {
 		require.Equal(cases[idx].out, IsBlank(cases[idx].in))
 	}
-}
-
-func TestIsDebug(t *testing.T) {
-	withArgs([]string{"/tmp/__debug_bin"}, func() {
-		require.True(t, IsDebug())
-	})
-	withArgs([]string{"/tmp/normal_bin"}, func() {
-		require.False(t, IsDebug())
-	})
 }
 
 func TestIsCassandraStorage(t *testing.T) {
@@ -110,12 +100,4 @@ func TestInt64ToRecordID(t *testing.T) {
 	require.Equal(istructs.RecordID(1), ok)
 	_, err = Int64ToRecordID(-1)
 	require.Error(err)
-}
-
-func withArgs(args []string, f func()) {
-	orig := make([]string, len(os.Args))
-	copy(orig, os.Args)
-	defer func() { os.Args = orig }()
-	os.Args = args
-	f()
 }

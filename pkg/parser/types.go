@@ -574,7 +574,7 @@ type RateValueTimeUnit struct {
 }
 
 type RateValue struct {
-	Count           *int              `parser:"(@Int"`
+	Count           *uint32              `parser:"(@Int"`
 	Variable        *DefQName         `parser:"| @@) 'PER'"`
 	TimeUnitAmounts *uint32           `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`

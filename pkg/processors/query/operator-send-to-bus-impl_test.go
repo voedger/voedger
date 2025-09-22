@@ -19,7 +19,7 @@ import (
 func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require := require.New(t)
 	errCh := make(chan error, 1)
-	requestSender := bus.NewIRequestSender(testingu.MockTime, bus.GetTestSendTimeout(), func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+	requestSender := bus.NewIRequestSender(testingu.MockTime, sendTimeout, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			operator := SendToBusOperator{
 				responder: responder,
