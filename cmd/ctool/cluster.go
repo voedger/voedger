@@ -182,7 +182,7 @@ func (n *nodeType) address() string {
 // nolint
 func (n *nodeType) nodeName() string {
 	if n.cluster.Edition == clusterEditionN5 {
-		if n.cluster.SubEdition == clusterSubEditionSE3 || n.cluster.SubEdition == clusterEditionN3 {
+		if n.cluster.SubEdition == clusterSubEditionSE3 {
 			return fmt.Sprintf("node-%d", n.idx)
 		} else {
 			switch n.idx {
@@ -201,6 +201,7 @@ func (n *nodeType) nodeName() string {
 
 			}
 		}
+
 	} else if n.cluster.Edition == clusterEditionN1 {
 		return n1NodeName
 	} else {
@@ -210,10 +211,9 @@ func (n *nodeType) nodeName() string {
 
 // nolint
 func (n *nodeType) hostNames() []string {
-	switch n.cluster.Edition {
-	case clusterSubEditionSE5, clusterEditionN5:
+	if n.cluster.SubEdition == clusterSubEditionSE5 {
 		return []string{n.nodeName()}
-	case clusterSubEditionSE3, clusterEditionN3:
+	} else if n.cluster.SubEdition == clusterSubEditionSE3 {
 		switch n.idx {
 		case 1:
 			return []string{"app-node-1", "db-node-1"}
@@ -301,7 +301,7 @@ func (n *nodeType) label(key string) []string {
 		}
 		return []string{"AppNode"}
 	case nrDBNode:
-		if n.cluster.SubEdition == clusterSubEditionSE3 || n.cluster.SubEdition == clusterEditionN3 {
+		if n.cluster.SubEdition == clusterSubEditionSE3 {
 			return []string{fmt.Sprintf("DBNode%d", n.idx)}
 		}
 
@@ -426,8 +426,6 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // init CE [ipAddr1]
 // or
 // init SE [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
-// or
-// init SE3 [ipAddr1] [ipAddr2] [ipAddr3]
 // nolint
 func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 
@@ -438,10 +436,8 @@ func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 	// Check if it's a valid edition type
 	if cmd.Args[0] != clusterEditionN1 &&
 		cmd.Args[0] != clusterEditionN5 &&
-		cmd.Args[0] != clusterEditionN3 &&
 		cmd.Args[0] != clusterEditionCE &&
-		cmd.Args[0] != clusterEditionSE &&
-		cmd.Args[0] != clusterSubEditionSE3 {
+		cmd.Args[0] != clusterEditionSE {
 		return ErrInvalidClusterEdition
 	}
 
@@ -452,15 +448,8 @@ func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 		}
 	}
 
-	// For N3 commands, expect exactly 4 arguments (edition + 3 IPs)
-	if cmd.Args[0] == clusterEditionN3 || cmd.Args[0] == clusterSubEditionSE3 {
-		if len(cmd.Args) != 1+n3NodeCount {
-			return ErrInvalidNumberOfArguments
-		}
-	}
-
 	// For N5/SE commands, expect exactly 6 arguments (edition + 5 IPs)
-	if cmd.Args[0] == clusterEditionN5 || cmd.Args[0] == clusterEditionSE {
+	if cmd.Args[0] == clusterEditionN5 {
 		if len(cmd.Args) != 1+se5NodeCount {
 			return ErrInvalidNumberOfArguments
 		}
@@ -676,8 +665,6 @@ func (c *clusterType) clusterControllerFunction() error {
 		return ceClusterControllerFunction(c)
 	case clusterEditionN5:
 		return seClusterControllerFunction(c)
-	case clusterEditionN3:
-		return n3ClusterControllerFunction(c)
 	default:
 		return ErrClusterControllerFunctionNotAssigned
 	}
@@ -703,7 +690,7 @@ func equalIPs(ip1, ip2 string) bool {
 
 func (c *clusterType) nodeByHost(addrOrHostName string) *nodeType {
 
-	if c.SubEdition == clusterSubEditionSE3 || c.SubEdition == clusterEditionN3 {
+	if c.SubEdition == clusterSubEditionSE3 {
 		switch {
 		case addrOrHostName == "app-node-1" || addrOrHostName == "db-node-1":
 			addrOrHostName = "node-1"
@@ -985,24 +972,6 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		} else {
 			c.Nodes[0].DesiredNodeState.Address = "0.0.0.0"
 		}
-	} else if cmd == initN3Cmd || cmd == initSe3Cmd { // N3/SE3 args
-		c.Edition = clusterEditionN3
-		c.Nodes = make([]nodeType, n3NodeCount)
-
-		// N3 cluster: 3 nodes with combined app/db roles
-		// Node 1: App + DB (app-node-1, db-node-1)
-		// Node 2: App + DB (app-node-2, db-node-2)
-		// Node 3: DB only (db-node-3)
-		for i := 0; i < n3NodeCount; i++ {
-			if i < 2 {
-				c.Nodes[i].NodeRole = nrAppDbNode // First two nodes have both app and db
-			} else {
-				c.Nodes[i].NodeRole = nrDBNode // Third node is DB only
-			}
-			c.Nodes[i].DesiredNodeState = newNodeState(args[i], c.DesiredClusterVersion)
-			c.Nodes[i].ActualNodeState = newNodeState("", "")
-			c.Nodes[i].cluster = c
-		}
 	} else { // N5/SE args
 		skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
 		if err != nil {
@@ -1049,7 +1018,7 @@ func (c *clusterType) validate() error {
 		}
 	}
 
-	if c.Edition != clusterEditionN1 && c.Edition != clusterEditionN5 && c.Edition != clusterEditionN3 {
+	if c.Edition != clusterEditionN1 && c.Edition != clusterEditionN5 {
 		err = errors.Join(err, ErrInvalidClusterEdition)
 	}
 
