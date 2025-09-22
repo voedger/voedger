@@ -148,7 +148,7 @@ func initN1(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, append([]string{"n1"}, args...))
+	c := newCmd(ckInit, append([]string{clusterEditionN1}, args...))
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())
 		return err
@@ -183,7 +183,7 @@ func initN5(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, append([]string{"n5"}, args...))
+	c := newCmd(ckInit, append([]string{clusterEditionN5}, args...))
 	c.SkipStacks = skipStacks
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())
