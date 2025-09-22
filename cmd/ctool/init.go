@@ -7,14 +7,13 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	initN1Cmd, initN5Cmd, initN3Cmd, initCeCmd, initSeCmd *cobra.Command
+	initN1Cmd, initN5Cmd, initN3Cmd, initCeCmd, initSeCmd, initSe3Cmd *cobra.Command
 )
 var skipStacks []string
 
@@ -71,13 +70,32 @@ func newInitCmd() *cobra.Command {
 		RunE: initN5, // Use the same function as N5
 	}
 
+	// SE3 command - alias for N3 (Standard Edition, 3 nodes)
+	initSe3Cmd = &cobra.Command{
+		Use:   "SE3 [<ipaddr>...]",
+		Short: "Deploy the SE3 cluster (alias for n3)",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != se3NodeCount {
+				return ErrInvalidNumberOfArguments
+			}
+			return nil
+		},
+		RunE: initN3, // Use the same function as N3
+	}
+
 	if !addSshKeyFlag(initN1Cmd) {
 		return nil
 	}
 	if !addSshKeyFlag(initN5Cmd) {
 		return nil
 	}
+	if !addSshKeyFlag(initN3Cmd) {
+		return nil
+	}
 	if !addSshKeyFlag(initSeCmd) {
+		return nil
+	}
+	if !addSshKeyFlag(initSe3Cmd) {
 		return nil
 	}
 	if !addSshKeyFlag(initCeCmd) {
@@ -85,7 +103,9 @@ func newInitCmd() *cobra.Command {
 	}
 
 	initN5Cmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
+	initN3Cmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 	initSeCmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
+	initSe3Cmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 
 	initCmd := &cobra.Command{
 		Use:   "init",
@@ -96,7 +116,7 @@ func newInitCmd() *cobra.Command {
 
 	initCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 
-	initCmd.AddCommand(initN1Cmd, initN5Cmd, initN3Cmd, initCeCmd, initSeCmd)
+	initCmd.AddCommand(initN1Cmd, initN5Cmd, initN3Cmd, initCeCmd, initSeCmd, initSe3Cmd)
 
 	return initCmd
 
@@ -215,5 +235,40 @@ func initN5(cmd *cobra.Command, args []string) error {
 }
 
 func initN3(cmd *cobra.Command, args []string) error {
-	return fmt.Errorf("deploy N3 cluster not yet implemented")
+	currentCmd = cmd
+	cluster := newCluster()
+	var err error
+	if !cluster.Draft {
+		return ErrClusterConfAlreadyExists
+	}
+
+	c := newCmd(ckInit, append([]string{"n3"}, args...))
+	c.SkipStacks = skipStacks
+	if err = cluster.applyCmd(c); err != nil {
+		loggerError(err.Error())
+		return err
+	}
+
+	defer saveClusterToJson(cluster)
+
+	err = mkCommandDirAndLogFile(cmd, cluster)
+	if err != nil {
+		return err
+	}
+
+	err = cluster.readFromInitArgs(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	err = cluster.validate()
+	if err == nil {
+		println("cluster configuration is ok")
+		if err = cluster.Cmd.apply(cluster); err != nil {
+			loggerError(err)
+			return err
+		}
+	}
+
+	return nil
 }
