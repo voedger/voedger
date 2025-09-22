@@ -449,7 +449,7 @@ func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 	}
 
 	// For N5/SE commands, expect exactly 6 arguments (edition + 5 IPs)
-	if cmd.Args[0] == clusterEditionN5 {
+	if cmd.Args[0] == clusterEditionN5 || cmd.Args[0] == clusterEditionSE {
 		if len(cmd.Args) != 1+se5NodeCount {
 			return ErrInvalidNumberOfArguments
 		}
