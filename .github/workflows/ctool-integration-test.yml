@@ -96,8 +96,7 @@ jobs:
               echo "Passwordless sudo is already configured"
             else
               echo "Configuring passwordless sudo..."
-              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu-nopasswd
-              sudo chmod 440 /etc/sudoers.d/ubuntu-nopasswd
+              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu && sudo chmod 440 /etc/sudoers.d/ubuntu
               echo "Passwordless sudo configured successfully"
             fi
           EOF
@@ -224,8 +223,7 @@ jobs:
               echo "Passwordless sudo is already configured"
             else
               echo "Configuring passwordless sudo..."
-              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu-nopasswd
-              sudo chmod 440 /etc/sudoers.d/ubuntu-nopasswd
+              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu && sudo chmod 440 /etc/sudoers.d/ubuntu
               echo "Passwordless sudo configured successfully"
             fi
           EOF
