@@ -44,7 +44,7 @@ services:
     image: grafana/grafana:8.3.4
     volumes:
       - ${HOME}/grafana/grafana.ini:/etc/grafana/grafana.ini
-      - ${HOME}/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ${HOME}/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ${HOME}/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - /var/lib/grafana:/var/lib/grafana
     network_mode: "host"

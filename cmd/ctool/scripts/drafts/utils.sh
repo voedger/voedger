@@ -39,16 +39,26 @@ utils_ssh() {
   IFS=' ' read -r -a ssh_options <<< "$ssh_options_string"
 
   local ssh_result
-  
+
   # Pass options as separate arguments
   ssh_result=$(ssh "${ssh_options[@]}" "$@")
   # Capture the exit status of the ssh command
   local ssh_exit_status=$?
-  
+
   # Return the SSH command result
   echo "$ssh_result"
 
   return "$ssh_exit_status"
+}
+
+utils_ssh_interactive() {
+  local ssh_options_string="$(utils_SSH_OPTS) -t -p $(utils_SSH_PORT) -i $(utils_SSH_KEY)"
+
+  # Split the string into an array
+  IFS=' ' read -r -a ssh_options <<< "$ssh_options_string"
+
+  # Use interactive SSH with TTY allocation for sudo commands
+  ssh "${ssh_options[@]}" "$@"
 }
 
 utils_scp() {

@@ -287,6 +287,89 @@ func TestCtoolCommands(t *testing.T) {
 	require.Error(err)
 }
 
+// Test CE and SE aliases for backward compatibility
+func TestCtoolCeSeAliases(t *testing.T) {
+	require := require.New(t)
+
+	red = color.New(color.FgRed).SprintFunc()
+	green = color.New(color.FgGreen).SprintFunc()
+	logger.PrintLine = printLogLine
+	prepareScripts()
+	defer func() {
+		err := deleteScriptsTempDir()
+		if err != nil {
+			loggerError(err.Error())
+		}
+	}()
+
+	version := "0.0.1"
+	deleteDryRunDir()
+	err := deleteClusterJson()
+	require.NoError(err)
+
+	defer deleteDryRunDir()
+
+	// Test CE command (alias for n1)
+	t.Run("CE command works like n1", func(t *testing.T) {
+		// Clean up before test
+		deleteDryRunDir()
+		deleteClusterJson()
+
+		// Test CE command with single IP
+		err = execRootCmd([]string{"./ctool", "init", "CE", "10.0.0.21", "--dry-run", "--ssh-key", "key"}, version)
+		require.NoError(err)
+
+		// Clean up after test
+		deleteDryRunDir()
+		deleteClusterJson()
+	})
+
+	// Test SE command (alias for n5)
+	t.Run("SE command works like n5", func(t *testing.T) {
+		// Clean up before test
+		deleteDryRunDir()
+		deleteClusterJson()
+
+		// Test SE command with 5 IPs
+		err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
+		require.NoError(err)
+
+		// Clean up after test
+		deleteDryRunDir()
+		deleteClusterJson()
+	})
+
+	// Test that SE command requires exactly 5 arguments
+	t.Run("SE command requires 5 IPs", func(t *testing.T) {
+		// Clean up before test
+		deleteDryRunDir()
+		deleteClusterJson()
+
+		// Test SE command with wrong number of IPs (should fail)
+		err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "--dry-run", "--ssh-key", "key"}, version)
+		require.Error(err)
+
+		// Clean up after test
+		deleteDryRunDir()
+		deleteClusterJson()
+	})
+
+	// Test that CE command accepts 0 or 1 argument
+	t.Run("CE command accepts 0 or 1 IP", func(t *testing.T) {
+		// Clean up before test
+		deleteDryRunDir()
+		deleteClusterJson()
+
+		// Test CE command with no IPs (should work)
+		err = execRootCmd([]string{"./ctool", "init", "CE", "--dry-run", "--ssh-key", "key"}, version)
+		require.NoError(err)
+
+		// Clean up after test
+		deleteDryRunDir()
+		deleteClusterJson()
+	})
+}
+
 func TestAcmeDomains(t *testing.T) {
 	require := require.New(t)
 

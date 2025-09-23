@@ -9,41 +9,64 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
 - The same user
 - The same SSH key
 
-### Deploy N1
+### Deploy N1 (Community Edition)
 
 **Prerequisites**
-- Configure 1 clean  Ubunty??? server
-  - The following address will be used as example: 5.255.255.56 
+- Configure 1 clean  Ubuntu server
+  - The following address will be used as example: 5.255.255.56
 - Admin user SSH key: adm.key
 
+**Deploy a N1 cluster**
 
-**Deploy a N1 cluster on a localhost**
+    $ ./ctool init n1 10.0.0.21 --ssh-key ./adm.key
 
-    $ ./ctool init n1 10.0.0.21
+**Deploy a CE cluster (alias for n1)**
+
+    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
 
 
-### Deploy N5
+### Deploy N5 (Standard Edition)
 
 **Prerequisites**
-- Configure 5 clean Ubunty servers
-  - The following addresses will be used as example: 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 
+- Configure 5 clean Ubuntu servers
+  - The following addresses will be used as example: 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60
 - Admin user SSH key: adm.key
 
 **Deploy a N5 cluster**
 
     $ ./ctool init n5 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 --ssh-key ./adm.key
 
+**Deploy a SE cluster (alias for n5)**
+
+    $ ./ctool init SE 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 --ssh-key ./adm.key
+
 ### Deploy N3
 
 **Prerequisites**
-- Configure 3 clean Ubunty servers
-  - The following addresses will be used as example: 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 5.255.255.60 
+- Configure 3 clean Ubuntu servers
+  - The following addresses will be used as example: 5.255.255.56 5.255.255.57 5.255.255.58
 - Admin user SSH key: adm.key
 
 **Deploy a N3 cluster**
 
     $ ./ctool init n3 5.255.255.56 5.255.255.57 5.255.255.58 --ssh-key ./adm.key
 
+## Backward Compatibility
+
+For backward compatibility with existing scripts and tests, ctool supports deprecated aliases:
+
+- `CE` - alias for `n1` (Community Edition, single node)
+- `SE` - alias for `n5` (Standard Edition, 5 nodes)
+
+These aliases work exactly the same as their modern equivalents:
+
+    # These commands are equivalent:
+    $ ./ctool init n1 10.0.0.21 --ssh-key ./adm.key
+    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
+
+    # These commands are equivalent:
+    $ ./ctool init n5 ip1 ip2 ip3 ip4 ip5 --ssh-key ./adm.key
+    $ ./ctool init SE ip1 ip2 ip3 ip4 ip5 --ssh-key ./adm.key
 
 **Repeat after error**
 

@@ -14,7 +14,24 @@ fi
 
 source ./utils.sh
 
-release=$(lsb_release -rs)
+# This script runs on the local machine but needs to detect the remote Ubuntu version
+# We'll detect it on the remote machine via SSH
+NODE=$1
+SSH_USER=$LOGNAME
+
+# Detect Ubuntu version on the remote machine
+echo "Detecting Ubuntu version on remote host $NODE..."
+if utils_ssh "$SSH_USER@$NODE" 'command -v lsb_release >/dev/null 2>&1'; then
+    release=$(utils_ssh "$SSH_USER@$NODE" 'lsb_release -rs')
+elif utils_ssh "$SSH_USER@$NODE" '[ -f /etc/os-release ]'; then
+    release=$(utils_ssh "$SSH_USER@$NODE" 'grep VERSION_ID /etc/os-release | cut -d"\"" -f2')
+else
+    echo "Cannot detect Ubuntu version on remote host. Installing lsb-release first..."
+    utils_ssh "$SSH_USER@$NODE" 'sudo apt-get update && sudo apt-get install -y lsb-release'
+    release=$(utils_ssh "$SSH_USER@$NODE" 'lsb_release -rs')
+fi
+
+echo "Detected Ubuntu version: $release"
 
 if [[ $release == "20.04" ]]; then
 	echo "This is Ubuntu 20.04"
@@ -25,20 +42,19 @@ elif [[ $release == "22.04" ]]; then
 	VERSION_STRING="5:20.10.23~3-0~ubuntu-jammy"
 else
 	echo "This script only supports Ubuntu 20.04 and 22.04"
+	echo "Detected version: $release"
 	exit 1
 fi
 
-NODE=$1
-SSH_USER=$LOGNAME
-
 script="\
+        sudo apt-get update;
+        sudo apt-get install -y lsb-release;
         sudo add-apt-repository ppa:rmescandon/yq -y;
         sudo apt-get update;
 	sudo apt-get install \
 		ca-certificates \
 			curl \
 			gnupg \
-		lsb-release \
 		yq jq netcat -y;
 
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
