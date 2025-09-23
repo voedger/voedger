@@ -1,6 +1,9 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 #
+# Copyright (c) 2025-present unTill Software Development Group B. V.
+# @author Alisher Nurmanov
+#
 # Unified ctool integration test workflow
 # Supports CE (Community Edition), SE (Standard Edition 5-node), and SE3 (Standard Edition 3-node)
 
@@ -12,15 +15,16 @@ on:
       cluster_type:
         description: 'Cluster type to test'
         required: true
-        default: 'n1'
+        default: n1
         type: choice
         options:
-        - n1
-        - n5
+          - n1
+          - n5
 
 jobs:
   deploy:
     runs-on: ubuntu-22.04
+
     env:
       SSH_PORT: 2214
       SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
@@ -32,10 +36,9 @@ jobs:
       TF_VAR_issue_number: ${{ github.run_number }}
       # Set included_nodes based on cluster type
       TF_VAR_included_nodes: ${{ 
-        inputs.cluster_type == 'n1' && '[]' ||
-        inputs.cluster_type == 'n5' && '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]' ||
-        inputs.cluster_type == 'SE3' && '["node_00", "node_01", "node_02", "node_instead_00", "node_instead_01"]'
-      }}
+        github.event.inputs.cluster_type == 'n1' && '[]' ||
+        github.event.inputs.cluster_type == 'n5' && '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]' ||
+        github.event.inputs.cluster_type == 'SE3' && '["node_00", "node_01", "node_02", "node_instead_00", "node_instead_01"]' }}
 
     steps:
       - name: Checkout
@@ -52,9 +55,8 @@ jobs:
         uses: ./.github/actions/infrastructure-create-action
         with:
           terraform_config_path: ${{ 
-            inputs.cluster_type == 'n1' && 'cmd/ctool/scripts/drafts/ce/terraform/' ||
-            'cmd/ctool/scripts/terraform/'
-          }}
+            github.event.inputs.cluster_type == 'n1' && 'cmd/ctool/scripts/drafts/ce/terraform/' ||
+            'cmd/ctool/scripts/terraform/' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -66,13 +68,13 @@ jobs:
 
       - name: Load environment file
         run: |
-          if [[ "${{ inputs.cluster_type }}" == "n1" ]]; then
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
             echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
             echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
-          elif [[ "${{ inputs.cluster_type }}" == "n5" ]]; then
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "n5" ]]; then
             echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03)" >> $GITHUB_ENV
             echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
-          elif [[ "${{ inputs.cluster_type }}" == "SE3" ]]; then
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "SE3" ]]; then
             echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
             echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
           fi
@@ -85,34 +87,34 @@ jobs:
           echo "SSH_OPTIONS=$SSH_OPTIONS" >> $GITHUB_ENV
 
       - name: Init Cluster (CE)
-        if: inputs.cluster_type == 'n1'
+        if: github.event.inputs.cluster_type == 'n1'
         run: |
-          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11; exit \$?"; then
+          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
               echo "Error: cluster init. Exit."
               exit 1
           fi
 
       - name: Init Cluster (SE)
-        if: inputs.cluster_type == 'n5'
+        if: github.event.inputs.cluster_type == 'n5'
         uses: ./.github/actions/cluster-init-action
         with:
           command: "./ctool init SE --acme-domain ${{ github.run_number }}-01.cdci.voedger.io 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
 
       - name: Init Cluster (SE3)
-        if: inputs.cluster_type == 'SE3'
+        if: github.event.inputs.cluster_type == 'SE3'
         uses: ./.github/actions/cluster-init-action
         with:
           command: "./ctool init n3 10.0.0.11 10.0.0.12 10.0.0.13 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
 
       - name: Run Voedger Cluster Tests (CE)
-        if: inputs.cluster_type == 'n1'
+        if: github.event.inputs.cluster_type == 'n1'
         uses: ./.github/actions/ce-test-action
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Run Voedger Cluster Tests (SE/SE3)
-        if: inputs.cluster_type == 'n5' || inputs.cluster_type == 'SE3'
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
         uses: ./.github/actions/cluster-test-action
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -121,7 +123,7 @@ jobs:
       - name: Terraform destroy
         if: always()
         run: |
-          if [[ "${{ inputs.cluster_type }}" == "n1" ]]; then
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
             terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ destroy -auto-approve
           else
             terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve
@@ -133,23 +135,22 @@ jobs:
   upgrade:
     needs: deploy
     runs-on: ubuntu-22.04
+
     env:
       SSH_PORT: 2214
       SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
       TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
       TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
       TF_VAR_git_commit_id: ${{ 
-        inputs.cluster_type == 'n1' && '83ef86559425a5924bca24b0db7da95f37055409' ||
-        '7f00f4c759b23c46754a201266cbe94fa8c3777c'
-      }}
+        github.event.inputs.cluster_type == 'n1' && '83ef86559425a5924bca24b0db7da95f37055409' ||
+        '7f00f4c759b23c46754a201266cbe94fa8c3777c' }}
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
       TF_VAR_issue_number: ${{ github.run_number }}
       TF_VAR_included_nodes: ${{ 
-        inputs.cluster_type == 'n1' && '[]' ||
-        inputs.cluster_type == 'n5' && '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]' ||
-        inputs.cluster_type == 'SE3' && '["node_00", "node_01", "node_02", "node_instead_00", "node_instead_01"]'
-      }}
+        github.event.inputs.cluster_type == 'n1' && '[]' ||
+        github.event.inputs.cluster_type == 'n5' && '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]' ||
+        github.event.inputs.cluster_type == 'SE3' && '["node_00", "node_01", "node_02", "node_instead_00", "node_instead_01"]' }}
 
     steps:
       - name: Checkout
@@ -165,10 +166,9 @@ jobs:
       - name: Create Infrastructure
         uses: ./.github/actions/infrastructure-create-action
         with:
-          terraform_config_path: ${{ 
-            inputs.cluster_type == 'n1' && 'cmd/ctool/scripts/drafts/ce/terraform/' ||
-            'cmd/ctool/scripts/terraform/'
-          }}
+          terraform_config_path: ${{
+            github.event.inputs.cluster_type == 'n1' && 'cmd/ctool/scripts/drafts/ce/terraform/' ||
+            'cmd/ctool/scripts/terraform/' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -180,13 +180,13 @@ jobs:
 
       - name: Load environment file
         run: |
-          if [[ "${{ inputs.cluster_type }}" == "n1" ]]; then
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
             echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
             echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
-          elif [[ "${{ inputs.cluster_type }}" == "n5" ]]; then
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "n5" ]]; then
             echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03)" >> $GITHUB_ENV
             echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
-          elif [[ "${{ inputs.cluster_type }}" == "SE3" ]]; then
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "SE3" ]]; then
             echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
             echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
           fi
@@ -199,27 +199,27 @@ jobs:
           echo "SSH_OPTIONS=$SSH_OPTIONS" >> $GITHUB_ENV
 
       - name: Init Cluster (CE)
-        if: inputs.cluster_type == 'n1'
+        if: github.event.inputs.cluster_type == 'n1'
         run: |
-          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11; exit \$?"; then
+          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
               echo "Error: cluster init. Exit."
               exit 1
           fi
 
       - name: Init Cluster (SE)
-        if: inputs.cluster_type == 'n5'
+        if: github.event.inputs.cluster_type == 'n5'
         uses: ./.github/actions/cluster-init-action
         with:
           command: "./ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
 
       - name: Init Cluster (SE3)
-        if: inputs.cluster_type == 'SE3'
+        if: github.event.inputs.cluster_type == 'SE3'
         uses: ./.github/actions/cluster-init-action
         with:
           command: "./ctool init n3 10.0.0.11 10.0.0.12 10.0.0.13 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
 
       - name: Wait for db cluster building (CE)
-        if: inputs.cluster_type == 'n1'
+        if: github.event.inputs.cluster_type == 'n1'
         run: |
           echo "Work with ${{ env.PUBLIC_IP }}"
           count=0
@@ -238,11 +238,11 @@ jobs:
           fi
 
       - name: Wait for db cluster building (SE/SE3)
-        if: inputs.cluster_type == 'n5' || inputs.cluster_type == 'SE3'
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
         run: |
           echo "Work with ${{ env.PUBLIC_IP }}"
           count=0
-          expected_nodes=${{ inputs.cluster_type == 'n5' && '5' || '3' }}
+          expected_nodes=${{ github.event.inputs.cluster_type == 'n5' && '5' || '3' }}
           while [ $count -lt 60 ]; do
              if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq $expected_nodes ]; then
              echo "Scylla initialization success"
@@ -258,7 +258,7 @@ jobs:
           fi
 
       - name: Upgrade Voedger Cluster (CE)
-        if: inputs.cluster_type == 'n1'
+        if: github.event.inputs.cluster_type == 'n1'
         run: |
           ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
              cd /home/ubuntu/voedger/cmd/ctool
@@ -273,7 +273,7 @@ jobs:
           EOF
 
       - name: Upgrade Voedger Cluster (SE/SE3)
-        if: inputs.cluster_type == 'n5' || inputs.cluster_type == 'SE3'
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
         run: |
           ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
              cd /home/ubuntu/voedger/cmd/ctool
@@ -288,7 +288,7 @@ jobs:
           EOF
 
       - name: Add ACME domain (SE/SE3)
-        if: inputs.cluster_type == 'n5' || inputs.cluster_type == 'SE3'
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
         run: |
           ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
              cd /home/ubuntu/voedger/cmd/ctool
@@ -296,14 +296,14 @@ jobs:
           EOF
 
       - name: Run Voedger Cluster Tests (CE)
-        if: inputs.cluster_type == 'n1'
+        if: github.event.inputs.cluster_type == 'n1'
         uses: ./.github/actions/ce-test-action
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Run Voedger Cluster Tests (SE/SE3)
-        if: inputs.cluster_type == 'n5' || inputs.cluster_type == 'SE3'
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
         uses: ./.github/actions/cluster-test-action
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -312,7 +312,7 @@ jobs:
       - name: Terraform destroy
         if: always()
         run: |
-          if [[ "${{ inputs.cluster_type }}" == "n1" ]]; then
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
             terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ destroy -auto-approve -var="git_commit_id=${{ env.TF_VAR_git_commit_id }}"
           else
             terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve -var="git_commit_id=${{ env.TF_VAR_git_commit_id }}"
