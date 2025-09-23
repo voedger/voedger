@@ -86,6 +86,22 @@ jobs:
           fi
           echo "SSH_OPTIONS=$SSH_OPTIONS" >> $GITHUB_ENV
 
+      - name: Configure passwordless sudo (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          echo "Configuring passwordless sudo on CE node..."
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
+            # Check if passwordless sudo is already configured
+            if sudo -n true 2>/dev/null; then
+              echo "Passwordless sudo is already configured"
+            else
+              echo "Configuring passwordless sudo..."
+              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu-nopasswd
+              sudo chmod 440 /etc/sudoers.d/ubuntu-nopasswd
+              echo "Passwordless sudo configured successfully"
+            fi
+          EOF
+
       - name: Init Cluster (CE)
         if: github.event.inputs.cluster_type == 'n1'
         run: |
@@ -197,6 +213,22 @@ jobs:
               SSH_OPTIONS+=" -p $SSH_PORT"
           fi
           echo "SSH_OPTIONS=$SSH_OPTIONS" >> $GITHUB_ENV
+
+      - name: Configure passwordless sudo (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          echo "Configuring passwordless sudo on CE node..."
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
+            # Check if passwordless sudo is already configured
+            if sudo -n true 2>/dev/null; then
+              echo "Passwordless sudo is already configured"
+            else
+              echo "Configuring passwordless sudo..."
+              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu-nopasswd
+              sudo chmod 440 /etc/sudoers.d/ubuntu-nopasswd
+              echo "Passwordless sudo configured successfully"
+            fi
+          EOF
 
       - name: Init Cluster (CE)
         if: github.event.inputs.cluster_type == 'n1'
