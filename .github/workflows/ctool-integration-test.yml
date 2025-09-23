@@ -89,7 +89,7 @@ jobs:
       - name: Init Cluster (CE)
         if: github.event.inputs.cluster_type == 'n1'
         run: |
-          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11; exit \$?"; then
+          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
               echo "Error: cluster init. Exit."
               exit 1
           fi
@@ -201,7 +201,7 @@ jobs:
       - name: Init Cluster (CE)
         if: github.event.inputs.cluster_type == 'n1'
         run: |
-          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11; exit \$?"; then
+          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
               echo "Error: cluster init. Exit."
               exit 1
           fi
