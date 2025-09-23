@@ -33,10 +33,8 @@ type Tester interface {
 }
 
 func RunCLITests(t Tester, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
-	// notestdept
 	t.Helper()
 	for _, tc := range testCases {
-		// if testT, ok := t.(*testing.T); ok {
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Helper()
 			f := func() error {
