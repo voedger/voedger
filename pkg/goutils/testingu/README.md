@@ -8,10 +8,7 @@ To install the `testingu` package, run:
 go get -u github.com/voedger/voedger/pkg/goutils/testingu
 ```
 
-## MockTime - ITime implementation for testing
+## Table of Contents
 
-See [mocktime.md](mocktime.md)
-
-## RuncCLITests - util for testing CLI
-
-See [clitest.md](clitest.md)
+- [MockTime - ITime implementation for testing](mocktime.md)
+- [RunCLITests - util for testing CLI](clitest.md)
