@@ -621,7 +621,7 @@ func TestCommandMessaging(t *testing.T) {
 		},
 	}
 
-	testingu.RunCmdTestCases(t, execRootCmd, testCases, version)
+	testingu.RunCLITests(t, execRootCmd, testCases, version)
 }
 
 func TestCheckTinyGoVersion(t *testing.T) {

@@ -26,7 +26,7 @@ type CmdTestCase struct {
 	ExpectedStderrPatterns []string
 }
 
-func RunCmdTestCases(t *testing.T, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
+func RunCLITests(t *testing.T, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
 	// notestdept
 	t.Helper()
 	for _, tc := range testCases {

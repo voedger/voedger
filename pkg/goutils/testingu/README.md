@@ -12,7 +12,7 @@ go get -u github.com/voedger/voedger/pkg/goutils/testingu
 Below are the steps to use the testingu package to test your CLI applications.
 
 ### 1. Define Your Test Cases
-Create a slice of CmdTestCase structs, each representing a test case. Each test case includes: 
+Create a slice of CmdTestCase structs, each representing a test case. Each test case includes:
 - Name: The name of the test case.
 - Args: The arguments to pass to the CLI tool.
 - ExpectedErr: The expected error (if any).
@@ -65,9 +65,9 @@ func execRootCmd(args []string, ver string) error {
     rootCmd.InitDefaultCompletionCmd()
     return cobrau.ExecCommandAndCatchInterrupt(rootCmd)
 }
-``` 
+```
 ### 3. Run the Test Cases
-Use the RunCmdTestCases function from the `testingu` package to run your test cases.
+Use the RunCLITests function from the `testingu` package to run your test cases.
 
 ```go
 func TestCommandMessaging(t *testing.T) {
@@ -95,7 +95,7 @@ func TestCommandMessaging(t *testing.T) {
 		},
 	}
 
-	testingu.RunCmdTestCases(t, execRootCmd, testCases)
+	testingu.RunCLITests(t, execRootCmd, testCases)
 }
 ```
 
@@ -121,7 +121,7 @@ A struct representing a test case for a CLI command.
 
 ## Functions
 
-### RunCmdTestCases
+### RunCLITests
 Runs a series of command-line test cases.
 
 #### Parameters:
