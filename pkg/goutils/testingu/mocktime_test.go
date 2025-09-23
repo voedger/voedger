@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMockTime(t *testing.T) {
+func TestMockTime_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	t.Run("now", func(t *testing.T) {
 		tm1 := MockTime.Now()
