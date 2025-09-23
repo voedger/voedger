@@ -14,4 +14,4 @@ See [mocktime.md](mocktime.md)
 
 ## RuncCLITests - util for testing CLI
 
-See [cli.md](cli.md)
+See [clitest.md](clitest.md)
