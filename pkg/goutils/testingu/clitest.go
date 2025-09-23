@@ -26,10 +26,17 @@ type CmdTestCase struct {
 	ExpectedStderrPatterns []string
 }
 
-func RunCLITests(t *testing.T, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
+// impossible to mock testing.T so will use this interface that matches testing.T to be able to check if testing.T is failed
+type Tester interface {
+	testing.TB
+	Run(string, func(*testing.T)) bool
+}
+
+func RunCLITests(t Tester, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
 	// notestdept
 	t.Helper()
 	for _, tc := range testCases {
+		// if testT, ok := t.(*testing.T); ok {
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Helper()
 			f := func() error {
@@ -48,7 +55,7 @@ func RunCLITests(t *testing.T, execute func(args []string, version string) error
 	}
 }
 
-func checkError(t *testing.T, expectedErr error, expectedErrPatterns []string, actualErr error) {
+func checkError(t testing.TB, expectedErr error, expectedErrPatterns []string, actualErr error) {
 	// notestdept
 	t.Helper()
 	if expectedErr != nil || len(expectedErrPatterns) > 0 {
@@ -71,7 +78,7 @@ func checkError(t *testing.T, expectedErr error, expectedErrPatterns []string, a
 	}
 }
 
-func checkOutput(t *testing.T, expectedPatterns []string, actual, outputTitle string) {
+func checkOutput(t testing.TB, expectedPatterns []string, actual, outputTitle string) {
 	t.Helper()
 	for _, expectedPattern := range expectedPatterns {
 		switch {
@@ -133,5 +140,4 @@ func CaptureStdoutStderr(f func() error) (stdout string, stderr string, err erro
 	stdoutWriter.Close()
 	wg.Wait()
 	return
-
 }
