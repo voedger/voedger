@@ -356,36 +356,9 @@ func TestRunCLITestsFailureScenarios(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// We need to run the test in a way that captures failures without failing the parent
-			testFailed := false
-
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						// If there's a panic, the test failed
-						testFailed = true
-					}
-				}()
-
-				// Create a mock that tracks failures but doesn't affect the parent test
-				// We'll use a completely separate testing context
-				mockT := &mockTestingT{
-					TB:         &testing.T{}, // Use a separate testing.T
-					shouldFail: false,        // Don't panic, just track
-					failed:     false,
-				}
-
-				// This should cause the test to fail
-				RunCLITests(mockT, tt.execute, []CmdTestCase{tt.testCase}, "")
-
-				// Check if our mock detected the failure
-				if mockT.failed {
-					testFailed = true
-				}
-			}()
-
-			// Verify that the test actually failed as expected
-			require.True(t, testFailed, "Expected the test to fail but it passed")
+			mockT := &mockTestingT{TB: &testing.T{}}
+			RunCLITests(mockT, tt.execute, []CmdTestCase{tt.testCase}, "")
+			require.True(t, mockT.Failed())
 		})
 	}
 }
@@ -393,34 +366,9 @@ func TestRunCLITestsFailureScenarios(t *testing.T) {
 // mockTestingT embeds testing.TB and overrides failure methods to track failures
 type mockTestingT struct {
 	testing.TB
-	shouldFail bool
-	failed     bool
-}
-
-func (m *mockTestingT) Errorf(format string, args ...interface{}) {
-	m.failed = true
-	if m.shouldFail {
-		panic("test failed as expected")
-	}
 }
 
 func (m *mockTestingT) Run(name string, f func(t *testing.T)) bool {
-	// For failure scenarios, we need to capture failures without affecting the parent test
-	originalT := m.TB.(*testing.T)
-
-	// Store the original failure state
-	originalFailed := originalT.Failed()
-
-	// Run the function with the original testing.T
-	// We'll detect failures by checking the Failed() state before and after
-	f(originalT)
-
-	// Check if the test failed during execution
-	if originalT.Failed() && !originalFailed {
-		m.failed = true
-		if m.shouldFail {
-			panic("test failed as expected")
-		}
-	}
+	f(m.TB.(*testing.T))
 	return true
 }
