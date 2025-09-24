@@ -1,0 +1,352 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+#
+# Copyright (c) 2025-present unTill Software Development Group B. V.
+# @author Alisher Nurmanov
+#
+# Unified ctool integration test workflow
+# Supports CE (Community Edition), SE (Standard Edition 5-node), and SE3 (Standard Edition 3-node)
+
+name: ctool integration test
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster_type:
+        description: 'Cluster type to test'
+        required: true
+        default: n1
+        type: choice
+        options:
+          - n1
+          - n5
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+
+    env:
+      SSH_PORT: 2214
+      SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
+      TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
+      TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
+      TF_VAR_git_commit_id: ""
+      TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
+      TF_VAR_ssh_port: 2214
+      TF_VAR_issue_number: ${{ github.run_number }}
+      # Set included_nodes based on cluster type
+      TF_VAR_included_nodes: ${{ 
+        github.event.inputs.cluster_type == 'n1' && '[]' ||
+        github.event.inputs.cluster_type == 'n5' && '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]' ||
+        github.event.inputs.cluster_type == 'SE3' && '["node_00", "node_01", "node_02", "node_instead_00", "node_instead_01"]' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Create Infrastructure
+        uses: ./.github/actions/infrastructure-create-action
+        with:
+          terraform_config_path: ${{ 
+            github.event.inputs.cluster_type == 'n1' && 'cmd/ctool/scripts/drafts/ce/terraform/' ||
+            'cmd/ctool/scripts/terraform/' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AWS_SSH_KEY }}
+
+      - name: Load environment file
+        run: |
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
+            echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
+            echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "n5" ]]; then
+            echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03)" >> $GITHUB_ENV
+            echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "SE3" ]]; then
+            echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+            echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+          fi
+          echo "MON_PASSWORD=test_voedger_pass" >> $GITHUB_ENV
+          echo "MON_USER=voedger" >> $GITHUB_ENV
+          echo "SSH_PORT=2214" >> $GITHUB_ENV
+          if [ -n "${SSH_PORT:-}" ]; then
+              SSH_OPTIONS+=" -p $SSH_PORT"
+          fi
+          echo "SSH_OPTIONS=$SSH_OPTIONS" >> $GITHUB_ENV
+
+      - name: Configure passwordless sudo (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          echo "Configuring passwordless sudo on CE node..."
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
+            # Check if passwordless sudo is already configured
+            if sudo -n true 2>/dev/null; then
+              echo "Passwordless sudo is already configured"
+            else
+              echo "Configuring passwordless sudo..."
+              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu && sudo chmod 440 /etc/sudoers.d/ubuntu
+              echo "Passwordless sudo configured successfully"
+            fi
+          EOF
+
+      - name: Init Cluster (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+              echo "Error: cluster init. Exit."
+              exit 1
+          fi
+
+      - name: Init Cluster (SE)
+        if: github.event.inputs.cluster_type == 'n5'
+        uses: ./.github/actions/cluster-init-action
+        with:
+          command: "./ctool init SE --acme-domain ${{ github.run_number }}-01.cdci.voedger.io 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
+
+      - name: Init Cluster (SE3)
+        if: github.event.inputs.cluster_type == 'SE3'
+        uses: ./.github/actions/cluster-init-action
+        with:
+          command: "./ctool init n3 10.0.0.11 10.0.0.12 10.0.0.13 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
+
+      - name: Run Voedger Cluster Tests (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        uses: ./.github/actions/ce-test-action
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run Voedger Cluster Tests (SE/SE3)
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
+        uses: ./.github/actions/cluster-test-action
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform destroy
+        if: always()
+        run: |
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
+            terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ destroy -auto-approve
+          else
+            terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve
+          fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  upgrade:
+    needs: deploy
+    runs-on: ubuntu-22.04
+
+    env:
+      SSH_PORT: 2214
+      SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
+      TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
+      TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
+      TF_VAR_git_commit_id: ${{ 
+        github.event.inputs.cluster_type == 'n1' && '83ef86559425a5924bca24b0db7da95f37055409' ||
+        '7f00f4c759b23c46754a201266cbe94fa8c3777c' }}
+      TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
+      TF_VAR_ssh_port: 2214
+      TF_VAR_issue_number: ${{ github.run_number }}
+      TF_VAR_included_nodes: ${{ 
+        github.event.inputs.cluster_type == 'n1' && '[]' ||
+        github.event.inputs.cluster_type == 'n5' && '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]' ||
+        github.event.inputs.cluster_type == 'SE3' && '["node_00", "node_01", "node_02", "node_instead_00", "node_instead_01"]' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Create Infrastructure
+        uses: ./.github/actions/infrastructure-create-action
+        with:
+          terraform_config_path: ${{
+            github.event.inputs.cluster_type == 'n1' && 'cmd/ctool/scripts/drafts/ce/terraform/' ||
+            'cmd/ctool/scripts/terraform/' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AWS_SSH_KEY }}
+
+      - name: Load environment file
+        run: |
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
+            echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
+            echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ output -raw public_ip_node_ce)" >> $GITHUB_ENV
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "n5" ]]; then
+            echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03)" >> $GITHUB_ENV
+            echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+          elif [[ "${{ github.event.inputs.cluster_type }}" == "SE3" ]]; then
+            echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+            echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+          fi
+          echo "MON_PASSWORD=test_voedger_pass" >> $GITHUB_ENV
+          echo "MON_USER=voedger" >> $GITHUB_ENV
+          echo "SSH_PORT=2214" >> $GITHUB_ENV
+          if [ -n "${SSH_PORT:-}" ]; then
+              SSH_OPTIONS+=" -p $SSH_PORT"
+          fi
+          echo "SSH_OPTIONS=$SSH_OPTIONS" >> $GITHUB_ENV
+
+      - name: Configure passwordless sudo (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          echo "Configuring passwordless sudo on CE node..."
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
+            # Check if passwordless sudo is already configured
+            if sudo -n true 2>/dev/null; then
+              echo "Passwordless sudo is already configured"
+            else
+              echo "Configuring passwordless sudo..."
+              echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntu && sudo chmod 440 /etc/sudoers.d/ubuntu
+              echo "Passwordless sudo configured successfully"
+            fi
+          EOF
+
+      - name: Init Cluster (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init CE -v 10.0.0.11 --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+              echo "Error: cluster init. Exit."
+              exit 1
+          fi
+
+      - name: Init Cluster (SE)
+        if: github.event.inputs.cluster_type == 'n5'
+        uses: ./.github/actions/cluster-init-action
+        with:
+          command: "./ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
+
+      - name: Init Cluster (SE3)
+        if: github.event.inputs.cluster_type == 'SE3'
+        uses: ./.github/actions/cluster-init-action
+        with:
+          command: "./ctool init n3 10.0.0.11 10.0.0.12 10.0.0.13 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
+
+      - name: Wait for db cluster building (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          echo "Work with ${{ env.PUBLIC_IP }}"
+          count=0
+          while [ $count -lt 60 ]; do
+             if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 1 ]; then
+             echo "Scylla initialization success"
+               break
+             fi
+             echo "Still wait for scylla initialization.."
+             sleep 5
+             count=$((count+1))
+          done
+          if [ $count -eq 60 ]; then
+             echo "Scylla initialization timed out."
+             exit 1
+          fi
+
+      - name: Wait for db cluster building (SE/SE3)
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
+        run: |
+          echo "Work with ${{ env.PUBLIC_IP }}"
+          count=0
+          expected_nodes=${{ github.event.inputs.cluster_type == 'n5' && '5' || '3' }}
+          while [ $count -lt 60 ]; do
+             if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq $expected_nodes ]; then
+             echo "Scylla initialization success"
+               break
+             fi
+             echo "Still wait for scylla initialization.."
+             sleep 5
+             count=$((count+1))
+          done
+          if [ $count -eq 60 ]; then
+             echo "Scylla initialization timed out."
+             exit 1
+          fi
+
+      - name: Upgrade Voedger Cluster (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        run: |
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
+             cd /home/ubuntu/voedger/cmd/ctool
+             ./ctool version
+             git checkout -b upgrade-test
+             git checkout main
+             git pull origin main
+             git log -n 1
+             go build -o ctool
+             ./ctool version
+             ./ctool upgrade -v
+          EOF
+
+      - name: Upgrade Voedger Cluster (SE/SE3)
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
+        run: |
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
+             cd /home/ubuntu/voedger/cmd/ctool
+             ./ctool version
+             git checkout -b upgrade-test
+             git checkout main
+             git pull origin main
+             git log -n 1
+             go build -o ctool
+             ./ctool version
+             ./ctool upgrade -v --ssh-key /tmp/amazonKey.pem
+          EOF
+
+      - name: Add ACME domain (SE/SE3)
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
+        run: |
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
+             cd /home/ubuntu/voedger/cmd/ctool
+             ./ctool acme add ${{ github.run_number }}-01.cdci.voedger.io -v --ssh-key /tmp/amazonKey.pem
+          EOF
+
+      - name: Run Voedger Cluster Tests (CE)
+        if: github.event.inputs.cluster_type == 'n1'
+        uses: ./.github/actions/ce-test-action
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run Voedger Cluster Tests (SE/SE3)
+        if: github.event.inputs.cluster_type == 'n5' || github.event.inputs.cluster_type == 'SE3'
+        uses: ./.github/actions/cluster-test-action
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform destroy
+        if: always()
+        run: |
+          if [[ "${{ github.event.inputs.cluster_type }}" == "n1" ]]; then
+            terraform -chdir=cmd/ctool/scripts/drafts/ce/terraform/ destroy -auto-approve -var="git_commit_id=${{ env.TF_VAR_git_commit_id }}"
+          else
+            terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve -var="git_commit_id=${{ env.TF_VAR_git_commit_id }}"
+          fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

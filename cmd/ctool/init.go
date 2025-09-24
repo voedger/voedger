@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	initN1Cmd, initN5Cmd, initN3Cmd *cobra.Command
+	initN1Cmd, initN5Cmd, initN3Cmd, initCeCmd, initSeCmd *cobra.Command
 )
 var skipStacks []string
 
@@ -50,11 +50,42 @@ func newInitCmd() *cobra.Command {
 		RunE: initN3,
 	}
 
+	// CE command - alias for N1 (Community Edition, single node)
+	initCeCmd = &cobra.Command{
+		Use:   "CE [<ipaddr>...]",
+		Short: "Deploy the CE cluster (alias for n1)",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  initN1, // Use the same function as N1
+	}
+
+	// SE command - alias for N5 (Standard Edition, 5 nodes)
+	initSeCmd = &cobra.Command{
+		Use:   "SE [<ipaddr>...]",
+		Short: "Deploy the SE cluster (alias for n5)",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != se5NodeCount {
+				return ErrInvalidNumberOfArguments
+			}
+			return nil
+		},
+		RunE: initN5, // Use the same function as N5
+	}
+
+	if !addSshKeyFlag(initN1Cmd) {
+		return nil
+	}
 	if !addSshKeyFlag(initN5Cmd) {
+		return nil
+	}
+	if !addSshKeyFlag(initSeCmd) {
+		return nil
+	}
+	if !addSshKeyFlag(initCeCmd) {
 		return nil
 	}
 
 	initN5Cmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
+	initSeCmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 
 	initCmd := &cobra.Command{
 		Use:   "init",
@@ -65,7 +96,7 @@ func newInitCmd() *cobra.Command {
 
 	initCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 
-	initCmd.AddCommand(initN1Cmd, initN5Cmd, initN3Cmd)
+	initCmd.AddCommand(initN1Cmd, initN5Cmd, initN3Cmd, initCeCmd, initSeCmd)
 
 	return initCmd
 
@@ -117,7 +148,7 @@ func initN1(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, append([]string{"N1"}, args...))
+	c := newCmd(ckInit, append([]string{clusterEditionN1}, args...))
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())
 		return err
@@ -152,7 +183,7 @@ func initN5(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, append([]string{"n5"}, args...))
+	c := newCmd(ckInit, append([]string{clusterEditionN5}, args...))
 	c.SkipStacks = skipStacks
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())

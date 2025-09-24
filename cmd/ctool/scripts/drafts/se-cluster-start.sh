@@ -3,9 +3,9 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 #
-# Deploy se cluster
+# Deploy SE cluster
 #   - add labels to swarm nodes
-#   - deploy se stack
+#   - deploy SE stack
 
 set -euo pipefail
 

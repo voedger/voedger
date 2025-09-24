@@ -26,8 +26,15 @@ type CmdTestCase struct {
 	ExpectedStderrPatterns []string
 }
 
-func RunCmdTestCases(t *testing.T, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
-	// notestdept
+// TestRunner is a minimal interface that matches with both testing.T and mock implementations
+// Since testing.T cannot be mocked directly, this interface allows us to test the CLI testing framework itself.
+type TestRunner interface {
+	Run(string, func(*testing.T)) bool
+	Helper()
+	Errorf(format string, args ...any)
+}
+
+func RunCLITests(t TestRunner, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
 	t.Helper()
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
@@ -48,7 +55,7 @@ func RunCmdTestCases(t *testing.T, execute func(args []string, version string) e
 	}
 }
 
-func checkError(t *testing.T, expectedErr error, expectedErrPatterns []string, actualErr error) {
+func checkError(t TestRunner, expectedErr error, expectedErrPatterns []string, actualErr error) {
 	// notestdept
 	t.Helper()
 	if expectedErr != nil || len(expectedErrPatterns) > 0 {
@@ -71,7 +78,7 @@ func checkError(t *testing.T, expectedErr error, expectedErrPatterns []string, a
 	}
 }
 
-func checkOutput(t *testing.T, expectedPatterns []string, actual, outputTitle string) {
+func checkOutput(t TestRunner, expectedPatterns []string, actual, outputTitle string) {
 	t.Helper()
 	for _, expectedPattern := range expectedPatterns {
 		switch {
@@ -133,5 +140,4 @@ func CaptureStdoutStderr(f func() error) (stdout string, stderr string, err erro
 	stdoutWriter.Close()
 	wg.Wait()
 	return
-
 }
