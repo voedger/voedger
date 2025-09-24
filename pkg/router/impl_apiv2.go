@@ -455,7 +455,7 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 		}
 
 		if len(busRequest.Body) > 0 {
-			ReplyCommonError(rw, "unexpected body on n10n unsubscribe", http.StatusBadRequest)
+			ReplyCommonError(rw, "unexpected body on n10n subscribe", http.StatusBadRequest)
 			return
 		}
 

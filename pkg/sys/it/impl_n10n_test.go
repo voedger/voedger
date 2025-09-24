@@ -246,7 +246,7 @@ func TestN10NSubscribeErrors(t *testing.T) {
 
 			// try to subscribe to an extra view, SELECT is not granted
 			url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdxDenied", channelID, ws.WSID)
-			vit.POST(url, body,
+			vit.POST(url, "",
 				httpu.WithAuthorizeBy(ws.Owner.Token),
 				httpu.WithMethod(http.MethodPut),
 				httpu.Expect403(),
