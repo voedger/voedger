@@ -756,7 +756,7 @@ func provideRouterServices(rp router.RouterParams, sendTimeout bus.SendTimeout, 
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory, authnz iauthnz.IAuthenticator,
 	asp istructs.IAppStructsProvider) RouterServices {
 	httpSrv, acmeSrv, adminSrv := router.Provide(rp, broker, blobRequestHandler, autocertCache, requestSender, numsAppsWorkspaces,
-		iTokens, federation, authnz, asp, appTokensFactory)
+		iTokens, federation, appTokensFactory)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -29,8 +28,19 @@ import (
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHTTPService("HTTP server", httpu.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
-		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
+	httpServ := &httpService{
+		RouterParams:       rp,
+		n10n:               broker,
+		requestSender:      requestSender,
+		numsAppsWorkspaces: numsAppsWorkspaces,
+		listenAddress:      httpu.ListenAddr(rp.Port),
+		name:               "HTTP server",
+		blobRequestHandler: blobRequestHandler,
+		iTokens:            iTokens,
+		federation:         federation,
+		appTokensFactory:   appTokensFactory,
+	}
+
 	adminEndpoint := fmt.Sprintf("%s:%d", httpu.LocalhostIP, rp.AdminPort)
 	adminSrv = &httpService{
 		RouterParams: RouterParams{
