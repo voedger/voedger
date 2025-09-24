@@ -345,6 +345,12 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 				return
 			},
 		},
+		istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ApplyCategoryIdx"),
+			Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+				return nil
+			},
+		},
 	)
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))

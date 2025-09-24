@@ -566,10 +566,11 @@ ALTERABLE WORKSPACE test_wsWS (
     ) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
 
 	-- SELECT is not granted
-	VIEW CategoryIdxDenided (
-		Name varchar,
-		PRIMARY KEY ((Name))
-	) AS RESULT OF ApplyCategoryIdx;
+	VIEW CategoryIdxDenied (
+		IntFld int32,
+		StrFld varchar,
+		PRIMARY KEY ((IntFld), StrFld)
+	) AS RESULT OF ApplyCategoryIdxDenied;
 
     TABLE Daily INHERITS sys.CDoc (
     	Year int32,
@@ -752,7 +753,8 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND TestCmdRawArg(sys.Raw) WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
 		PROJECTOR ProjDummyQName AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(ViewWithQName)); -- does nothing, only to define view.app1pkg.ViewQName
-		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx));
+		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx), sys.View(CategoryIdxDenied));
+		SYNC PROJECTOR ApplyCategoryIdxDenied AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdxDenied));
 		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
 		PROJECTOR ApplyClient AFTER INSERT ON (Client) INTENTS(sys.View(Clients));
 

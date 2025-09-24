@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
@@ -27,7 +28,8 @@ import (
 // where is VVM RequestHandler? bus.RequestHandler
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
-	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
+	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory, asp istructs.IAppStructsProvider,
+	authnz iauthnz.IAuthenticator) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
 	httpServ := &httpService{
 		RouterParams:       rp,
 		n10n:               broker,
@@ -39,6 +41,8 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 		iTokens:            iTokens,
 		federation:         federation,
 		appTokensFactory:   appTokensFactory,
+		asp:                asp,
+		authnz:             authnz,
 	}
 
 	adminEndpoint := fmt.Sprintf("%s:%d", httpu.LocalhostIP, rp.AdminPort)
@@ -54,6 +58,7 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 		listenAddress:      adminEndpoint,
 		name:               "Admin HTTP server",
 		federation:         federation,
+		asp:                asp,
 	}
 
 	if rp.Port != HTTPSPort {

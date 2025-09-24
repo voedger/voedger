@@ -277,6 +277,11 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
 			return
 		}
+		if len(principalToken) == 0 {
+			// considering the token is always required for notifications unlike funcs
+			ReplyCommonError(rw, "", http.StatusUnauthorized)
+			return
+		}
 		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
@@ -376,6 +381,8 @@ func authnzEntities(ctx context.Context, subscriptions []subscription, requestTo
 			return principalPayload, err
 		}
 		if !ok {
+			// [~server.n10n/err.routerCreateChannelNoPermissions~impl]
+			// [~server.n10n/err.routerAddSubscriptionNoPermissions~impl]
 			return principalPayload, coreutils.NewHTTPErrorf(http.StatusForbidden)
 		}
 	}

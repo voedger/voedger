@@ -179,13 +179,15 @@ func TestN10NSubscribeErrors(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("401 unauthorized", func(t *testing.T) {
-		t.Run("no token", func(t *testing.T) {
+		t.Run("no token. The token is always required for notifications unlike for funcs", func(t *testing.T) {
 			vit.POST("api/v2/apps/test1/app1/notifications", "{}", httpu.Expect401()).Println()
 		})
 
 		t.Run("expired token", func(t *testing.T) {
 			testingu.MockTime.Add(24 * time.Hour)
-			vit.POST("api/v2/apps/test1/app1/notifications", "{}",
+			// should have a body because token is validated per WSID of the subject (subjects could be in different WSIDs)
+			body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+			vit.POST("api/v2/apps/test1/app1/notifications", body,
 				httpu.WithAuthorizeBy(ws.Owner.Token),
 				httpu.Expect401(),
 			).Println()
@@ -221,6 +223,44 @@ func TestN10NSubscribeErrors(t *testing.T) {
 				).Println()
 			})
 		}
+	})
+
+	t.Run("403 if SELECT is not granted", func(t *testing.T) {
+		t.Run("create channel and subscribe", func(t *testing.T) {
+			body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdxDenied","wsid":%d}],"expiresIn":42}`, ws.WSID)
+			vit.POST("api/v2/apps/test1/app1/notifications", body,
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.Expect403(),
+			)
+		})
+
+		t.Run("subscribe to an extra view", func(t *testing.T) {
+			// subscribe to one view
+			body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+			resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithLongPolling(),
+			)
+
+			offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+			// try to subscribe to an extra view, SELECT is not granted
+			url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdxDenied", channelID, ws.WSID)
+			vit.POST(url, body,
+				httpu.WithAuthorizeBy(ws.Owner.Token),
+				httpu.WithMethod(http.MethodPut),
+				httpu.Expect403(),
+			)
+
+			// close the initial connection
+			// SSE listener channel should be closed after that
+			resp.HTTPResp.Body.Close()
+
+			for range offsetsChan {
+			}
+			waitForDone()
+		})
+
 	})
 }
 
@@ -464,9 +504,22 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 }
 
 func TestSubscribeDeny(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
 	t.Run("subscribe and watch", func(t *testing.T) {
 		t.Run("403 if SELECT is not granted", func(t *testing.T) {
-			
+			// owning does not matter for notifications, need just a valid token
+			token := ws.Owner.Token
+
+			// subscribe
+			body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdxDenied","wsid":%d}],"expiresIn":42}`, ws.WSID)
+			vit.POST("api/v2/apps/test1/app1/notifications", body,
+				httpu.WithAuthorizeBy(token),
+				httpu.Expect403(),
+			)
 		})
 	})
 }
