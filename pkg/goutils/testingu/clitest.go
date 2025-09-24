@@ -26,13 +26,15 @@ type CmdTestCase struct {
 	ExpectedStderrPatterns []string
 }
 
-// impossible to mock testing.T so will use this interface that matches testing.T to be able to check if testing.T is failed
-type Tester interface {
-	testing.TB
+// TestRunner is a minimal interface that matches with both testing.T and mock implementations
+// Since testing.T cannot be mocked directly, this interface allows us to test the CLI testing framework itself.
+type TestRunner interface {
 	Run(string, func(*testing.T)) bool
+	Helper()
+	Errorf(format string, args ...any)
 }
 
-func RunCLITests(t Tester, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
+func RunCLITests(t TestRunner, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
 	t.Helper()
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
@@ -53,7 +55,7 @@ func RunCLITests(t Tester, execute func(args []string, version string) error, te
 	}
 }
 
-func checkError(t testing.TB, expectedErr error, expectedErrPatterns []string, actualErr error) {
+func checkError(t TestRunner, expectedErr error, expectedErrPatterns []string, actualErr error) {
 	// notestdept
 	t.Helper()
 	if expectedErr != nil || len(expectedErrPatterns) > 0 {
@@ -76,7 +78,7 @@ func checkError(t testing.TB, expectedErr error, expectedErrPatterns []string, a
 	}
 }
 
-func checkOutput(t testing.TB, expectedPatterns []string, actual, outputTitle string) {
+func checkOutput(t TestRunner, expectedPatterns []string, actual, outputTitle string) {
 	t.Helper()
 	for _, expectedPattern := range expectedPatterns {
 		switch {
