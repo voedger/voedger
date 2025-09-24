@@ -351,6 +351,8 @@ func getRoles(prns []iauthnz.Principal) (res []appdef.QName) {
 	return res
 }
 
+тут оптимизировать, много дублирующегося кода
+
 func authnzEntities(ctx context.Context, subscriptions []subscription, requestToHost string,
 	principalToken string, iauth iauthnz.IAuthenticator, appStructs istructs.IAppStructs, appTokens istructs.IAppTokens) (principalPayload payloads.PrincipalPayload, err error) {
 	for i, s := range subscriptions {
@@ -451,6 +453,11 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 		principalToken, err := bus.GetPrincipalToken(busRequest)
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(principalToken) == 0 {
+			// considering the token is always required for notifications unlike funcs
+			ReplyCommonError(rw, "", http.StatusUnauthorized)
 			return
 		}
 
