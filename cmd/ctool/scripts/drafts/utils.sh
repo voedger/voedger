@@ -12,7 +12,7 @@ utils_SSH_PORT() {
 }
 
 utils_SSH_KEY() {
-    key="${VOEDGER_SSH_KEY}"
+    key="${VOEDGER_SSH_KEY:-}"
     echo "$key"
 }
 
