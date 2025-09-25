@@ -24,32 +24,11 @@ if [ -z "$APP_NODE_CONTAINER" ]; then
     exit 1
 fi
 
-# Check if Grafana is running with timeout
-echo "Checking if Grafana is ready..."
-TIMEOUT=300  # 5 minutes timeout
-ELAPSED=0
-INTERVAL=5
-
-while [ $ELAPSED -lt $TIMEOUT ]; do
-    # Check if Grafana responds to HTTP requests
-    if curl -s --connect-timeout 5 --max-time 10 http://localhost:3000/api/health > /dev/null 2>&1; then
-        echo "Grafana is ready!"
-        break
-    fi
-
-    echo "Waiting for Grafana to start... (${ELAPSED}s/${TIMEOUT}s)"
-    sleep $INTERVAL
-    ELAPSED=$((ELAPSED + INTERVAL))
+# Check if Grafana is running
+while ! curl -s http://localhost:3000/login | grep -q 'Grafana'; do
+    echo "Waiting for Grafana to start..."
+    sleep 5
 done
-
-if [ $ELAPSED -ge $TIMEOUT ]; then
-    echo "Timeout: Grafana did not start within ${TIMEOUT} seconds"
-    echo "Checking Grafana container status:"
-    sudo docker ps | grep grafana || echo "No Grafana container found"
-    echo "Checking Grafana logs:"
-    sudo docker logs ${APP_NODE_CONTAINER} --tail 20 || echo "Could not get container logs"
-    exit 1
-fi
 
 # Execute the command to reset the admin password
 sudo docker exec ${APP_NODE_CONTAINER} grafana-cli admin reset-admin-password ${NEW_PASSWORD}
