@@ -25,11 +25,11 @@ func ceClusterControllerFunction(c *clusterType) error {
 	switch c.Cmd.Kind {
 	case ckInit, ckUpgrade, ckAcme:
 
-		if err = deployCeMonStack(c); err != nil {
+		if err = deployCeMonStack(); err != nil {
 			return err
 		}
 
-		if err = deployVoedgerCe(c); err != nil {
+		if err = deployVoedgerCe(); err != nil {
 			return err
 		}
 
@@ -59,18 +59,16 @@ func ceClusterControllerFunction(c *clusterType) error {
 	return err
 }
 
-func deployCeMonStack(c *clusterType) error {
+func deployCeMonStack() error {
 
 	loggerInfo("Deploying monitoring stack...")
-	node := c.nodeByHost(n1NodeName)
-	return newScriptExecuter("", "").run("ce/mon-prepare.sh", node.address())
+	return newScriptExecuter("", "").run("ce/mon-prepare.sh")
 }
 
-func deployVoedgerCe(c *clusterType) error {
+func deployVoedgerCe() error {
 
 	loggerInfo("Deploying voedger N1 cluster...")
-	node := c.nodeByHost(n1NodeName)
-	return newScriptExecuter("", "").run("ce/ce-start.sh", node.address())
+	return newScriptExecuter("", "").run("ce/ce-start.sh")
 }
 
 func addVoedgerUser(c *clusterType) error {
@@ -112,8 +110,8 @@ func ceNodeControllerFunction(n *nodeType) error {
 	}
 
 	loggerInfo(fmt.Sprintf("Deploying docker on a %s %s host...", n.nodeName(), n.address()))
-	if err := newScriptExecuter("", "").
-		run("ce/docker-install.sh", n.address()); err != nil {
+	if err := newScriptExecuter(n.cluster.sshKey, "").
+		run("ce/docker-install.sh"); err != nil {
 		return err
 	}
 
@@ -122,6 +120,10 @@ func ceNodeControllerFunction(n *nodeType) error {
 	}
 
 	n.success()
+	return nil
+}
+
+func deployCeCluster(*clusterType) error {
 	return nil
 }
 

@@ -165,8 +165,8 @@ func setGrafanaPassword(cluster *clusterType, password string) error {
 func setGrafanaAdminPassword(cluster *clusterType, password string) error {
 
 	if cluster.Edition == clusterEditionN1 {
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run("ce/grafana-admin-password.sh", password, cluster.nodeByHost(n1NodeName).address()); err != nil {
+		if err := newScriptExecuter("", "").
+			run("ce/grafana-admin-password.sh", password); err != nil {
 			return err
 		}
 	} else {
@@ -204,9 +204,9 @@ func setPrometheusPassword(cluster *clusterType, password string) error {
 	}
 
 	if cluster.Edition == clusterEditionN1 {
-		args := []string{password, hash, cluster.nodeByHost(n1NodeName).address()}
+		args := []string{password, hash}
 
-		if err = newScriptExecuter(cluster.sshKey, "").
+		if err = newScriptExecuter("", "").
 			run("ce/prometheus-voedger-password.sh", args...); err != nil {
 			return err
 		}
