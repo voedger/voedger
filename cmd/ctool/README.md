@@ -16,13 +16,13 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
   - The following address will be used as example: 5.255.255.56
 - Admin user SSH key: adm.key
 
-**Deploy a N1 cluster**
+**Deploy a N1 cluster (runs locally on the target node)**
 
-    $ ./ctool init n1 10.0.0.21 --ssh-key ./adm.key
+    $ ./ctool init n1 10.0.0.21
 
-**Deploy a CE cluster (alias for n1)**
+**Deploy a CE cluster (alias for n1, runs locally on the target node)**
 
-    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
+    $ ./ctool init CE 10.0.0.21
 
 
 ### Deploy N5 (Standard Edition)
@@ -47,9 +47,13 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
   - The following addresses will be used as example: 5.255.255.56 5.255.255.57 5.255.255.58
 - Admin user SSH key: adm.key
 
-**Deploy a N3 cluster**
+**Deploy a N3 cluster (3-node Standard Edition)**
 
     $ ./ctool init n3 5.255.255.56 5.255.255.57 5.255.255.58 --ssh-key ./adm.key
+
+**Deploy a SE3 cluster (alias for n3)**
+
+    $ ./ctool init SE3 5.255.255.56 5.255.255.57 5.255.255.58 --ssh-key ./adm.key
 
 ## Backward Compatibility
 
@@ -60,9 +64,9 @@ For backward compatibility with existing scripts and tests, ctool supports depre
 
 These aliases work exactly the same as their modern equivalents:
 
-    # These commands are equivalent:
-    $ ./ctool init n1 10.0.0.21 --ssh-key ./adm.key
-    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
+    # These commands are equivalent (no SSH key needed - runs locally):
+    $ ./ctool init n1 10.0.0.21
+    $ ./ctool init CE 10.0.0.21
 
     # These commands are equivalent:
     $ ./ctool init n5 ip1 ip2 ip3 ip4 ip5 --ssh-key ./adm.key
@@ -218,11 +222,15 @@ if you run `ssh-agent` before using the `ctool` utility and add the required ssh
 
     $ eval $(ssh-agent)
     $ ssh-add ./adm.key
+    $ ./ctool init SE 5.255.255.55 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 --ssh-key ./adm.key
+
+Otherwise, multi-node commands (`n3`, `n5`, `SE`, `SE3`) must be used with the `--ssh-key` flag
+
+    $ ./ctool init SE 5.255.255.55 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 --ssh-key ./adm.key
+
+**Note:** Single-node commands (`n1`, `CE`) run locally and do not require SSH keys:
+
     $ ./ctool init CE 5.255.255.55
-
-Otherwise, the commands: `init`, `repeat`, `replace` and `upgrade` must be used with the `--ssh-key` flag
-
-    $ ./ctool init CE 5.255.255.55 --ssh-key ./adm.key
 
 ## Use custom compose files
 

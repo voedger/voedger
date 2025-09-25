@@ -71,7 +71,9 @@ func newInitCmd() *cobra.Command {
 		RunE: initN5, // Use the same function as N5
 	}
 
-	if !addSshKeyFlag(initN1Cmd) {
+	// Only add SSH key flag to multi-node commands (N3, N5, SE)
+	// N1 and CE run locally and don't need SSH keys
+	if !addSshKeyFlag(initN3Cmd) {
 		return nil
 	}
 	if !addSshKeyFlag(initN5Cmd) {
@@ -80,10 +82,8 @@ func newInitCmd() *cobra.Command {
 	if !addSshKeyFlag(initSeCmd) {
 		return nil
 	}
-	if !addSshKeyFlag(initCeCmd) {
-		return nil
-	}
 
+	initN3Cmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 	initN5Cmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 	initSeCmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 

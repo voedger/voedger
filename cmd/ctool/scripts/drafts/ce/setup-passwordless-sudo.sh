@@ -1,37 +1,36 @@
 #!/usr/bin/env bash
 #
-# Setup passwordless sudo on remote Ubuntu server for CE deployment
+# Setup passwordless sudo for CE deployment (runs locally on the target node)
 #
 set -euo pipefail
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <node>"
-    exit 1
-fi
-
-source ../utils.sh
-
-NODE=$1
 SSH_USER=${SSH_USER:-$LOGNAME}
 
-# Set default SSH key if not provided
-if [ -z "${VOEDGER_SSH_KEY:-}" ]; then
-    export VOEDGER_SSH_KEY="${HOME}/.ssh/id_rsa"
+echo "Setting up passwordless sudo for user '$SSH_USER'..."
+
+# Check if passwordless sudo is already configured
+echo "Checking if passwordless sudo is already configured..."
+if sudo -n true 2>/dev/null; then
+    echo "Passwordless sudo is already configured for user '$SSH_USER'"
+    exit 0
 fi
 
-echo "Setting up passwordless sudo for user '$SSH_USER' on CE node $NODE..."
 echo "Configuring passwordless sudo..."
 if [ -z "${SSH_USER_PASSWORD:-}" ]; then
-  utils_ssh "$SSH_USER@$NODE" "sudo -S bash -c 'touch /etc/sudoers.d/$SSH_USER && echo \"$SSH_USER ALL=(ALL) NOPASSWD:ALL\" | > sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 440 /etc/sudoers.d/$SSH_USER'"
+    # No password provided, try direct sudo (assumes current session has sudo access)
+    echo "$SSH_USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$SSH_USER > /dev/null
+    sudo chmod 440 /etc/sudoers.d/$SSH_USER
 else
-  utils_ssh "$SSH_USER@$NODE" "echo '$SSH_USER_PASSWORD' | base64 -d | sudo -S bash -c 'touch /etc/sudoers.d/$SSH_USER && echo \"$SSH_USER ALL=(ALL) NOPASSWD:ALL\" | > sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 440 /etc/sudoers.d/$SSH_USER'"
+    # Use provided password
+    echo "$SSH_USER_PASSWORD" | base64 -d | sudo -S bash -c "echo \"$SSH_USER ALL=(ALL) NOPASSWD:ALL\" | tee /etc/sudoers.d/$SSH_USER > /dev/null && chmod 440 /etc/sudoers.d/$SSH_USER"
 fi
+
 echo "Passwordless sudo configured successfully"
 
 # Verify the setup worked
-if utils_ssh "$SSH_USER@$NODE" "sudo -n true" 2>/dev/null; then
-    echo "Passwordless sudo setup completed successfully for user '$SSH_USER' on CE node $NODE"
+if sudo -n true 2>/dev/null; then
+    echo "Passwordless sudo setup completed successfully for user '$SSH_USER'"
 else
-    echo "Failed to configure passwordless sudo for user '$SSH_USER' on CE node $NODE"
+    echo "Failed to configure passwordless sudo for user '$SSH_USER'"
     exit 1
 fi
