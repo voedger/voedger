@@ -19,7 +19,7 @@ USER_NAME="voedger"
 
 APP_NODE_CONTAINER=$(sudo docker ps --format '{{.Names}}' | grep prometheus)
 if [ -z "$APP_NODE_CONTAINER" ]; then
-    echo "Prometheus container was not found on host ${host}"
+    echo "Prometheus container was not found"
 else
     ESCAPED_HASHED_PASSWORD=$(echo "$HASHED_PASSWORD" | sed 's/[\/&]/\\&/g')
     sed -i "s/${USER_NAME}:.*/${USER_NAME}: $ESCAPED_HASHED_PASSWORD/" ~/prometheus/web.yml

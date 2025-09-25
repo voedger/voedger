@@ -31,7 +31,7 @@ docker_ins=0
 command docker -v &>/dev/null || docker_ins=1
 
 if [[ $docker_ins -eq 0 ]]; then
-    echo "Docker is already installed on the remote host."
+    echo "Docker is already installed on the host."
 else
     echo "Docker is not installed on the host. Installing it now..."
     sudo add-apt-repository ppa:rmescandon/yq -y
