@@ -20,30 +20,18 @@ if [ -z "${VOEDGER_SSH_KEY:-}" ]; then
 fi
 
 echo "Setting up passwordless sudo for user '$SSH_USER' on CE node $NODE..."
-
-# Check if passwordless sudo is already configured
-echo "Checking if passwordless sudo is already configured..."
-if utils_ssh "$SSH_USER@$NODE" "sudo -n true" 2>/dev/null; then
-    echo "Passwordless sudo is already configured on CE node $NODE"
-    exit 0
+echo "Configuring passwordless sudo..."
+if [ -z "$SSH_USER_PASSWORD" ]; then
+  utils_ssh "$SSH_USER@$NODE" "sudo -S bash -c 'touch /etc/sudoers.d/$SSH_USER | echo \"$SSH_USER ALL=(ALL) NOPASSWD:ALL\" | > sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 440 /etc/sudoers.d/$SSH_USER'"
+else
+  utils_ssh "$SSH_USER@$NODE" "echo '$SSH_USER_PASSWORD' | base64 -d | sudo -S bash -c 'touch /etc/sudoers.d/$SSH_USER | echo \"$SSH_USER ALL=(ALL) NOPASSWD:ALL\" | > sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 440 /etc/sudoers.d/$SSH_USER'"
 fi
-
-echo "Passwordless sudo is not configured."
-echo ""
-echo "MANUAL SETUP REQUIRED:"
-echo "Please run the following command in a separate terminal to configure passwordless sudo:"
-echo ""
-echo "ssh -t -i ${VOEDGER_SSH_KEY} $SSH_USER@$NODE \"echo '$SSH_USER ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 440 /etc/sudoers.d/$SSH_USER\""
-echo ""
-echo "After running the above command, press Enter to continue..."
-read -p "Press Enter when passwordless sudo is configured: "
-
-echo "Verifying passwordless sudo configuration..."
+echo "Passwordless sudo configured successfully"
 
 # Verify the setup worked
 if utils_ssh "$SSH_USER@$NODE" "sudo -n true" 2>/dev/null; then
-    echo "Passwordless sudo setup completed successfully on CE node $NODE"
+    echo "Passwordless sudo setup completed successfully for user '$SSH_USER' on CE node $NODE"
 else
-    echo "Failed to configure passwordless sudo on CE node $NODE"
+    echo "Failed to configure passwordless sudo for user '$SSH_USER' on CE node $NODE"
     exit 1
 fi
