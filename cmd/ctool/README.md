@@ -16,13 +16,13 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
   - The following address will be used as example: 5.255.255.56
 - Admin user SSH key: adm.key
 
-**Deploy a N1 cluster**
+**Deploy a N1 cluster (runs locally on the target node)**
 
-    $ ./ctool init n1 10.0.0.21 --ssh-key ./adm.key
+    $ ./ctool init n1 10.0.0.21
 
-**Deploy a CE cluster (alias for n1)**
+**Deploy a CE cluster (alias for n1, runs locally on the target node)**
 
-    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
+    $ ./ctool init CE 10.0.0.21
 
 
 ### Deploy N5 (Standard Edition)
@@ -47,9 +47,13 @@ Deploy [Heeus Community Edition (CE)](https://github.com/heeus/heeus-design#comm
   - The following addresses will be used as example: 5.255.255.56 5.255.255.57 5.255.255.58
 - Admin user SSH key: adm.key
 
-**Deploy a N3 cluster**
+**Deploy a N3 cluster (3-node Standard Edition)**
 
     $ ./ctool init n3 5.255.255.56 5.255.255.57 5.255.255.58 --ssh-key ./adm.key
+
+**Deploy a SE3 cluster (alias for n3)**
+
+    $ ./ctool init SE3 5.255.255.56 5.255.255.57 5.255.255.58 --ssh-key ./adm.key
 
 ## Backward Compatibility
 
@@ -60,9 +64,9 @@ For backward compatibility with existing scripts and tests, ctool supports depre
 
 These aliases work exactly the same as their modern equivalents:
 
-    # These commands are equivalent:
-    $ ./ctool init n1 10.0.0.21 --ssh-key ./adm.key
-    $ ./ctool init CE 10.0.0.21 --ssh-key ./adm.key
+    # These commands are equivalent (no SSH key needed - runs locally):
+    $ ./ctool init n1 10.0.0.21
+    $ ./ctool init CE 10.0.0.21
 
     # These commands are equivalent:
     $ ./ctool init n5 ip1 ip2 ip3 ip4 ip5 --ssh-key ./adm.key
@@ -96,17 +100,137 @@ named YYYY-MM-DD--HH-NN-SS-&lt;commandName&gt; containing a detailed cluster dep
 
     YYYY-MM-DD--HH-NN-SS-commandName/commandName.log - a detailed log of cluster command operations.
 
+## Environment Variables
+
+ctool uses several environment variables to configure deployment behavior. These can be set in your shell environment or passed to scripts:
+
+### Core Configuration Variables
+
+| Variable | Description | Default | Used By |
+|----------|-------------|---------|---------|
+| `VOEDGER_SSH_KEY` | Path to SSH private key for server access | `~/.ssh/id_rsa` | All deployment scripts |
+| `VOEDGER_NODE_SSH_PORT` | SSH port for server connections | `22` | All deployment scripts |
+| `VOEDGER_HTTP_PORT` | HTTP port for Voedger application | `80` (CE), `443` (SE/SE3) | Docker containers |
+| `VOEDGER_ACME_DOMAINS` | Comma-separated list of domains for ACME/Let's Encrypt certificates | Empty | SE/SE3 deployments |
+| `VOEDGER_CE_NODE` | IP address or hostname of CE node | Required for CE | CE deployment scripts |
+| `VOEDGER_EDITION` | Cluster edition type (`CE`, `SE`, `SE3`) | Auto-detected | Monitoring configuration |
+
+### System Variables
+
+| Variable | Description | Default | Used By |
+|----------|-------------|---------|---------|
+| `SSH_USER` | SSH username for server connections | `$LOGNAME` | All SSH operations |
+| `SSH_USER_PASSWORD` | Base64-encoded password for sudo operations | Empty | Passwordless sudo setup |
+| `HOME` | User home directory | System default | Docker volume mounts |
+| `LOGNAME` | Current user's login name | System default | SSH operations |
+
+### Grafana Configuration Variables
+
+| Variable | Description | Used By |
+|----------|-------------|---------|
+| `ADMIN_USER` | Grafana admin username | Grafana user management scripts |
+| `ADMIN_PASSWORD` | Grafana admin password | Grafana user management scripts |
+| `USER_NAME` | Target username for operations | User management scripts |
+| `USER_LOGIN` | User login name | User creation scripts |
+| `USER_PASSWORD` | User password | User creation scripts |
+| `NEW_PASSWORD` | New password for password changes | Password change scripts |
+| `DATASOURCE_NAME` | Grafana datasource name | Datasource update scripts |
+| `NEW_BASIC_AUTH_USER` | New basic auth username | Datasource update scripts |
+| `NEW_BASIC_AUTH_PASSWORD` | New basic auth password | Datasource update scripts |
+| `DASHBOARD_UID` | Grafana dashboard UID | Dashboard preference scripts |
+
+### Backup and Maintenance Variables
+
+| Variable | Description | Used By |
+|----------|-------------|---------|
+| `BACKUP_FOLDER` | Target folder for backups | Backup scripts |
+| `CTOOL_PATH` | Path to ctool executable | Cron backup scripts |
+| `KEY_PATH` | Path to SSH key for backups | Cron backup scripts |
+| `EXPIRE` | Backup expiration time (e.g., "7d", "30d") | Backup cleanup scripts |
+| `OUTPUT_FORMAT` | Output format for backup lists ("json" or text) | Backup list scripts |
+
+### Docker and Service Variables
+
+| Variable | Description | Used By |
+|----------|-------------|---------|
+| `SERVICE_NAME` | Docker service name for operations | Service management scripts |
+| `DEVELOPER_MODE` | Developer mode setting (0 or 1) | Docker compose preparation |
+| `VERSION_STRING` | Docker version string for installation | Docker installation scripts |
+
+### Network and Host Variables
+
+| Variable | Description | Used By |
+|----------|-------------|---------|
+| `REMOTE_HOST` | Target remote host for operations | Various utility scripts |
+| `LOCAL_FILE` | Local file path for transfers | File transfer scripts |
+| `REMOTE_FILE` | Remote file path for transfers | File transfer scripts |
+| `FOLDER_PATH` | Target folder path | Folder check scripts |
+| `MIN_RAM` | Minimum RAM requirement in MB | Host validation scripts |
+
+### Testing Variables (GitHub Actions)
+
+| Variable | Description | Used By |
+|----------|-------------|---------|
+| `AWS_ACCESS_KEY_ID` | AWS access key for Terraform | Integration tests |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key for Terraform | Integration tests |
+| `TF_VAR_*` | Terraform variables | Integration tests |
+
+### Usage Examples
+
+**Setting environment variables for deployment:**
+
+```bash
+# Set SSH configuration
+export VOEDGER_SSH_KEY="~/my-key.pem"
+export VOEDGER_NODE_SSH_PORT="2222"
+
+# Deploy CE with custom HTTP port
+export VOEDGER_HTTP_PORT="8080"
+./ctool init CE 10.0.0.21
+
+# Deploy SE with ACME domains
+export VOEDGER_ACME_DOMAINS="example.com,api.example.com"
+./ctool init SE 10.0.0.21 10.0.0.22 10.0.0.23 10.0.0.24 10.0.0.25
+```
+
+**Using environment variables in scripts:**
+
+```bash
+# Check if passwordless sudo is configured
+export VOEDGER_SSH_KEY="~/admin.key"
+./scripts/drafts/ce/check-passwordless-sudo.sh 10.0.0.21
+
+# Set up passwordless sudo with password (base64 encoded)
+export SSH_USER_PASSWORD=$(echo "mypassword" | base64)
+./scripts/drafts/ce/setup-passwordless-sudo.sh 10.0.0.21
+
+# Configure Grafana admin password
+export ADMIN_USER="admin"
+export ADMIN_PASSWORD="current_password"
+export NEW_PASSWORD="new_secure_password"
+./scripts/drafts/ce/grafana-admin-password.sh 10.0.0.21
+
+# Set up backup with custom settings
+export BACKUP_FOLDER="/mnt/backup/voedger"
+export EXPIRE="30d"
+./scripts/drafts/ce/set-cron-backup.sh "0 2 * * *"
+```
+
 ## SSH key
 
 if you run `ssh-agent` before using the `ctool` utility and add the required ssh key, then you don't need to use the `--ssh-key` flag
 
     $ eval $(ssh-agent)
     $ ssh-add ./adm.key
-    $ ./ctool init CE 5.255.255.55 
+    $ ./ctool init SE 5.255.255.55 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 --ssh-key ./adm.key
 
-Otherwise, the commands: `init`, `repeat`, `replace` and `upgrade` must be used with the `--ssh-key` flag
+Otherwise, multi-node commands (`n3`, `n5`, `SE`, `SE3`) must be used with the `--ssh-key` flag
 
-    $ ./ctool init CE 5.255.255.55 --ssh-key ./adm.key
+    $ ./ctool init SE 5.255.255.55 5.255.255.56 5.255.255.57 5.255.255.58 5.255.255.59 --ssh-key ./adm.key
+
+**Note:** Single-node commands (`n1`, `CE`) run locally and do not require SSH keys:
+
+    $ ./ctool init CE 5.255.255.55
 
 ## Use custom compose files
 
