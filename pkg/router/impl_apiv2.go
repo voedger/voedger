@@ -467,14 +467,14 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		principlaToken, err := authnzN10N(busRequest)
+		principalToken, err := authnzN10N(busRequest)
 		if err != nil {
 			replyErr(rw, err)
 			return
 		}
 
 		subscriptions := []subscription{{entity, busRequest.WSID}}
-		if _, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principlaToken, iauthnz, asp, appTokensFactory, busRequest.AppQName); err != nil {
+		if _, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, asp, appTokensFactory, busRequest.AppQName); err != nil {
 			replyErr(rw, err)
 			return
 		}
@@ -491,7 +491,7 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 			if errors.Is(err, in10n.ErrChannelDoesNotExist) {
 				code = http.StatusNotFound
 			}
-			ReplyCommonError(rw, "failed to unsubscribe: "+err.Error(), code)
+			ReplyCommonError(rw, "failed to subscribe: "+err.Error(), code)
 			return
 		}
 	})
