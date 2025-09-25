@@ -21,7 +21,7 @@ fi
 
 echo "Setting up passwordless sudo for user '$SSH_USER' on CE node $NODE..."
 echo "Configuring passwordless sudo..."
-if [ -z "$SSH_USER_PASSWORD" ]; then
+if [ -z "${SSH_USER_PASSWORD:-}" ]; then
   utils_ssh "$SSH_USER@$NODE" "sudo -S bash -c 'touch /etc/sudoers.d/$SSH_USER && echo \"$SSH_USER ALL=(ALL) NOPASSWD:ALL\" | > sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 440 /etc/sudoers.d/$SSH_USER'"
 else
   utils_ssh "$SSH_USER@$NODE" "echo '$SSH_USER_PASSWORD' | base64 -d | sudo -S bash -c 'touch /etc/sudoers.d/$SSH_USER && echo \"$SSH_USER ALL=(ALL) NOPASSWD:ALL\" | > sudo tee /etc/sudoers.d/$SSH_USER && sudo chmod 440 /etc/sudoers.d/$SSH_USER'"
