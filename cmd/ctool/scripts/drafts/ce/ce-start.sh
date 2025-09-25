@@ -15,6 +15,7 @@ fi
 
 source ../utils.sh
 
+CE_NODE_IP="${VOEDGER_CE_NODE:-$NODE}"
 NODE=$1
 HOSTNAME="db-node-1"
 echo "Deploying Voedger CE on host $NODE..."
