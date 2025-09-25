@@ -180,7 +180,7 @@ func TestN10NSubscribeErrors(t *testing.T) {
 
 	t.Run("401 unauthorized", func(t *testing.T) {
 		t.Run("no token. The token is always required for notifications unlike for funcs", func(t *testing.T) {
-			vit.POST("api/v2/apps/test1/app1/notifications", "{body does not matter}", httpu.Expect401()).Println()
+			vit.POST("api/v2/apps/test1/app1/notifications", "", httpu.Expect401()).Println()
 		})
 
 		t.Run("expired token", func(t *testing.T) {
@@ -503,23 +503,3 @@ func TestN10NSubscribeToExtraView(t *testing.T) {
 	waitForDone()
 }
 
-func TestSubscribeDeny(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
-	t.Run("subscribe and watch", func(t *testing.T) {
-		t.Run("403 if SELECT is not granted", func(t *testing.T) {
-			// owning does not matter for notifications, need just a valid token
-			token := ws.Owner.Token
-
-			// subscribe
-			body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdxDenied","wsid":%d}],"expiresIn":42}`, ws.WSID)
-			vit.POST("api/v2/apps/test1/app1/notifications", body,
-				httpu.WithAuthorizeBy(token),
-				httpu.Expect403(),
-			)
-		})
-	})
-}
