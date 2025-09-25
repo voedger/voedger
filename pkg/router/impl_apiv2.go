@@ -21,8 +21,8 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -270,29 +270,20 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		}
 
 		busRequest := createBusRequest(req.Method, data, req)
-		appTokens := appTokensFactory.New(busRequest.AppQName)
-		principalToken, err := bus.GetPrincipalToken(busRequest)
+
+		principalToken, err := authnzN10N(busRequest)
 		if err != nil {
-			// [~server.n10n/err.routerCreateChannelInvalidToken~impl]
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
+			replyErr(rw, err)
 			return
 		}
-		if len(principalToken) == 0 {
-			// considering the token is always required for notifications unlike funcs
-			ReplyCommonError(rw, "", http.StatusUnauthorized)
-			return
-		}
+
 		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		appStructs, err := asp.BuiltIn(busRequest.AppQName)
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-		principalPayload, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, appStructs, appTokens)
+
+		principalPayload, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, asp, appTokensFactory, busRequest.AppQName)
 		if err != nil {
 			replyErr(rw, err)
 			return
@@ -351,10 +342,13 @@ func getRoles(prns []iauthnz.Principal) (res []appdef.QName) {
 	return res
 }
 
-тут оптимизировать, много дублирующегося кода
-
 func authnzEntities(ctx context.Context, subscriptions []subscription, requestToHost string,
-	principalToken string, iauth iauthnz.IAuthenticator, appStructs istructs.IAppStructs, appTokens istructs.IAppTokens) (principalPayload payloads.PrincipalPayload, err error) {
+	principalToken string, iauth iauthnz.IAuthenticator, asp istructs.IAppStructsProvider, appTokensFactory payloads.IAppTokensFactory, appQName appdef.AppQName) (principalPayload payloads.PrincipalPayload, err error) {
+	appStructs, err := asp.BuiltIn(appQName)
+	if err != nil {
+		return payloads.PrincipalPayload{}, coreutils.NewHTTPError(http.StatusBadRequest, err)
+	}
+	appTokens := appTokensFactory.New(appQName)
 	for i, s := range subscriptions {
 		wsDesc, err := appStructs.Records().GetSingleton(s.wsid, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
@@ -369,15 +363,15 @@ func authnzEntities(ctx context.Context, subscriptions []subscription, requestTo
 			RequestWSID: s.wsid,
 			Token:       principalToken,
 		}
-		principals, principalPayloadCurrent, err := iauth.Authenticate(ctx, appStructs, appTokens, authnzReq)
-		if i == 0 {
-			// principalPayloadCurrent is always the same
-			principalPayload = principalPayloadCurrent
-		}
-		roles := getRoles(principals)
+		principals, principalPayloadOfSubscription, err := iauth.Authenticate(ctx, appStructs, appTokens, authnzReq)
 		if err != nil {
 			return principalPayload, coreutils.NewHTTPError(http.StatusUnauthorized, err)
 		}
+		if i == 0 {
+			// principalPayloadCurrent is always the same
+			principalPayload = principalPayloadOfSubscription
+		}
+		roles := getRoles(principals)
 		ok, err := acl.IsOperationAllowed(iWorkspace, appdef.OperationKind_Select, s.entity, nil, roles)
 		if err != nil {
 			return principalPayload, err
@@ -389,6 +383,17 @@ func authnzEntities(ctx context.Context, subscriptions []subscription, requestTo
 		}
 	}
 	return principalPayload, nil
+}
+
+func authnzN10N(busRequest bus.Request) (principalsToken string, err error) {
+	principalToken, err := bus.GetPrincipalToken(busRequest)
+	if err != nil {
+		return "", coreutils.NewHTTPError(http.StatusUnauthorized, err)
+	}
+	if len(principalToken) == 0 {
+		return "", coreutils.NewHTTPErrorf(http.StatusUnauthorized)
+	}
+	return principalToken, nil
 }
 
 func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
@@ -449,18 +454,6 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(req.Method, data, req)
 
-		appTokens := appTokensFactory.New(busRequest.AppQName)
-		principalToken, err := bus.GetPrincipalToken(busRequest)
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if len(principalToken) == 0 {
-			// considering the token is always required for notifications unlike funcs
-			ReplyCommonError(rw, "", http.StatusUnauthorized)
-			return
-		}
-
 		if len(busRequest.Body) > 0 {
 			ReplyCommonError(rw, "unexpected body on n10n subscribe", http.StatusBadRequest)
 			return
@@ -474,13 +467,14 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		appStructs, err := asp.BuiltIn(busRequest.AppQName)
+		principlaToken, err := authnzN10N(busRequest)
 		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			replyErr(rw, err)
 			return
 		}
+
 		subscriptions := []subscription{{entity, busRequest.WSID}}
-		if _, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, appStructs, appTokens); err != nil {
+		if _, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principlaToken, iauthnz, asp, appTokensFactory, busRequest.AppQName); err != nil {
 			replyErr(rw, err)
 			return
 		}

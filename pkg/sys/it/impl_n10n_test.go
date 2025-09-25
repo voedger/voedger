@@ -180,7 +180,7 @@ func TestN10NSubscribeErrors(t *testing.T) {
 
 	t.Run("401 unauthorized", func(t *testing.T) {
 		t.Run("no token. The token is always required for notifications unlike for funcs", func(t *testing.T) {
-			vit.POST("api/v2/apps/test1/app1/notifications", "{}", httpu.Expect401()).Println()
+			vit.POST("api/v2/apps/test1/app1/notifications", "{body does not matter}", httpu.Expect401()).Println()
 		})
 
 		t.Run("expired token", func(t *testing.T) {
