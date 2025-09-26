@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -79,4 +80,21 @@ func replyErr(rw http.ResponseWriter, err error) {
 	} else {
 		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// copies Authorization cookie (if present) to header (if missing)
+// needed for blobs and n10n.
+func GetCookieBearerAuth(req *http.Request) (cookieBearerToken string, ok bool, err error) {
+	cookie, err := req.Cookie(httpu.Authorization)
+	if errors.Is(err, http.ErrNoCookie) {
+		return "", false, nil
+	}
+	if err != nil {
+		// notest
+		return "", false, fmt.Errorf("failed to read cookie: %w", err)
+	}
+	if cookieBearerToken, err = url.QueryUnescape(cookie.Value); err != nil {
+		return "", false, fmt.Errorf("failed to unescape cookie value %q: %w", cookie.Value, err)
+	}
+	return cookieBearerToken, true, nil
 }
