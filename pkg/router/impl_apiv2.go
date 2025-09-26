@@ -167,7 +167,7 @@ func (s *httpService) registerHandlersV2() {
 	// [~server.n10n/cmp.routerUnsubscribeHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications_unsubscribe(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications_unsubscribe(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory, s.asp, s.authnz))).
 		Methods(http.MethodOptions, http.MethodDelete).Name("notifications unsubscribe")
 
 	// notifications subscribe to an extra view /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
@@ -271,7 +271,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 
 		busRequest := createBusRequest(req.Method, data, req)
 
-		principalToken, err := authnzN10N(busRequest)
+		principalToken, err := getTokenN10N(busRequest)
 		if err != nil {
 			replyErr(rw, err)
 			return
@@ -365,6 +365,9 @@ func authnzEntities(ctx context.Context, subscriptions []subscription, requestTo
 		}
 		principals, principalPayloadOfSubscription, err := iauth.Authenticate(ctx, appStructs, appTokens, authnzReq)
 		if err != nil {
+			// [~server.n10n/err.routerCreateChannelInvalidToken~impl]
+			// [~server.n10n/err.routerAddSubscriptionInvalidToken~impl]
+			// [~server.n10n/err.routerUnsubscribeInvalidToken~impl]
 			return principalPayload, coreutils.NewHTTPError(http.StatusUnauthorized, err)
 		}
 		if i == 0 {
@@ -385,7 +388,7 @@ func authnzEntities(ctx context.Context, subscriptions []subscription, requestTo
 	return principalPayload, nil
 }
 
-func authnzN10N(busRequest bus.Request) (principalsToken string, err error) {
+func getTokenN10N(busRequest bus.Request) (principalsToken string, err error) {
 	principalToken, err := bus.GetPrincipalToken(busRequest)
 	if err != nil {
 		return "", coreutils.NewHTTPError(http.StatusUnauthorized, err)
@@ -397,12 +400,19 @@ func authnzN10N(busRequest bus.Request) (principalsToken string, err error) {
 }
 
 func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
-	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
+	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory, asp istructs.IAppStructsProvider,
+	iauthnz iauthnz.IAuthenticator) http.HandlerFunc {
 	return withRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(req.Method, data, req)
 
 		if len(busRequest.Body) > 0 {
 			ReplyCommonError(rw, "unexpected body on n10n unsubscribe", http.StatusBadRequest)
+			return
+		}
+
+		principalToken, err := getTokenN10N(busRequest)
+		if err != nil {
+			replyErr(rw, err)
 			return
 		}
 
@@ -414,21 +424,11 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		principalToken, err := bus.GetPrincipalToken(busRequest)
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+		subscriptions := []subscription{{entity, busRequest.WSID}}
+		if _, err := authnzEntities(req.Context(), subscriptions, busRequest.Host, principalToken, iauthnz, asp, appTokensFactory, busRequest.AppQName); err != nil {
+			replyErr(rw, err)
 			return
 		}
-		appTokens := appTokensFactory.New(busRequest.AppQName)
-		var pp payloads.PrincipalPayload
-		_, err = appTokens.ValidateToken(principalToken, &pp)
-		if err != nil {
-			// [~server.n10n/err.routerAddSubscriptionInvalidToken~impl]
-			// [~server.n10n/err.routerUnsubscribeInvalidToken~impl]
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
-			return
-		}
-
 		projectionKey := in10n.ProjectionKey{
 			App:        busRequest.AppQName,
 			Projection: entity,
@@ -467,7 +467,7 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		principalToken, err := authnzN10N(busRequest)
+		principalToken, err := getTokenN10N(busRequest)
 		if err != nil {
 			replyErr(rw, err)
 			return
