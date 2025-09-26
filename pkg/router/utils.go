@@ -82,8 +82,8 @@ func replyErr(rw http.ResponseWriter, err error) {
 	}
 }
 
-// copies Authorization cookie (if has) to header (if missing)
-// need for blobs and n10n
+// copies Authorization cookie (if present) to header (if missing)
+// needed for blobs and n10n.
 func GetCookieBearerAuth(req *http.Request) (cookieBearerToken string, ok bool, err error) {
 	cookie, err := req.Cookie(httpu.Authorization)
 	if errors.Is(err, http.ErrNoCookie) {
