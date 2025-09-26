@@ -6,11 +6,9 @@
 package router
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -75,19 +73,14 @@ func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appde
 	if _, ok := headers[httpu.Authorization]; !ok {
 		// no token among headers -> look among cookies
 		// no token among cookies as well -> just do nothing, 403 will happen on call helper commands further in BLOBs processor
-		cookie, err := req.Cookie(httpu.Authorization)
-		if !errors.Is(err, http.ErrNoCookie) {
-			if err != nil {
-				// notest
-				panic(err)
-			}
-			val, err := url.QueryUnescape(cookie.Value)
-			if err != nil {
-				WriteTextResponse(resp, "failed to unescape cookie '"+cookie.Value+"'", http.StatusBadRequest)
-				return appQName, wsid, headers, false
-			}
+		cookieBearerToken, ok, err := GetCookieBearerAuth(req)
+		if err != nil {
+			WriteTextResponse(resp, err.Error(), http.StatusBadRequest)
+			return appQName, wsid, headers, false
+		}
+		if ok {
 			// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
-			headers[httpu.Authorization] = val
+			headers[httpu.Authorization] = cookieBearerToken
 		}
 	}
 	appQName = appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName])
