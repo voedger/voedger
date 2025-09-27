@@ -48,6 +48,10 @@ func Expect400(expectedMessages ...string) httpu.ReqOptFunc {
 	return WithExpectedCode(http.StatusBadRequest, expectedMessages...)
 }
 
+func Expect401(expectedMessages ...string) httpu.ReqOptFunc {
+	return WithExpectedCode(http.StatusUnauthorized, expectedMessages...)
+}
+
 func Expect403(expectedMessages ...string) httpu.ReqOptFunc {
 	return WithExpectedCode(http.StatusForbidden, expectedMessages...)
 }
