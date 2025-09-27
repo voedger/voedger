@@ -271,7 +271,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 
 		busRequest := createBusRequest(req.Method, data, req)
 
-		principalToken, err := getTokenN10N(busRequest)
+		principalToken, err := getTokenN10N(busRequest, req)
 		if err != nil {
 			replyErr(rw, err)
 			return
@@ -388,10 +388,17 @@ func authnzEntities(ctx context.Context, subscriptions []subscription, requestTo
 	return principalPayload, nil
 }
 
-func getTokenN10N(busRequest bus.Request) (principalsToken string, err error) {
+func getTokenN10N(busRequest bus.Request, httpReq *http.Request) (principalsToken string, err error) {
 	principalToken, err := bus.GetPrincipalToken(busRequest)
 	if err != nil {
 		return "", coreutils.NewHTTPError(http.StatusUnauthorized, err)
+	}
+	if len(principalToken) == 0 {
+		pt, _, err := GetCookieBearerAuth(httpReq)
+		if err != nil {
+			return "", coreutils.NewHTTPError(http.StatusUnauthorized, err)
+		}
+		principalToken = pt
 	}
 	if len(principalToken) == 0 {
 		return "", coreutils.NewHTTPErrorf(http.StatusUnauthorized)
@@ -410,7 +417,7 @@ func requestHandlerV2_notifications_unsubscribe(numsAppsWorkspaces map[appdef.Ap
 			return
 		}
 
-		principalToken, err := getTokenN10N(busRequest)
+		principalToken, err := getTokenN10N(busRequest, req)
 		if err != nil {
 			replyErr(rw, err)
 			return
@@ -467,7 +474,7 @@ func requestHandlerV2_notifications_subscribe(numsAppsWorkspaces map[appdef.AppQ
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		principalToken, err := getTokenN10N(busRequest)
+		principalToken, err := getTokenN10N(busRequest, req)
 		if err != nil {
 			replyErr(rw, err)
 			return

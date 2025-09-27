@@ -133,6 +133,47 @@ func waitForOffset(t *testing.T, expectedOffset istructs.Offset, offsetCh federa
 	}
 }
 
+func TestCookiesAuth_V2(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// owning does not matter for notifications, need just a valid token
+	token := ws.Owner.Token
+
+	// subscribe and watch
+	body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+		httpu.WithCookies(httpu.Authorization, httpu.BearerPrefix+token),
+		httpu.WithLongPolling(),
+	)
+
+	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
+
+	// subscribe to extra
+	vit.POST(url, "",
+		httpu.WithCookies(httpu.Authorization, httpu.BearerPrefix+token),
+		httpu.WithMethod(http.MethodPut),
+	)
+
+	// unsubscribe
+	vit.POST(url, "",
+		httpu.WithCookies(httpu.Authorization, httpu.BearerPrefix+token),
+		httpu.WithMethod(http.MethodDelete),
+	)
+
+	// close the initial connection
+	// SSE listener channel should be closed after that
+	resp.HTTPResp.Body.Close()
+
+	for range offsetsChan {
+	}
+	waitForDone()
+}
+
 func TestChannelExpiration_V2(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
