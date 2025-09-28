@@ -40,7 +40,7 @@ func TestBasicUsage_db_cache(t *testing.T) {
 		var crt []byte
 		crt, err = cache.Get(ctx, domain)
 		require.NoError(err)
-		require.Equal(itokensjwt.SecretKeyExample, crt)
+		require.EqualValues(itokensjwt.SecretKeyExample, crt)
 	})
 
 	t.Run("Delete certificate from router storage, using domain name as key", func(t *testing.T) {
