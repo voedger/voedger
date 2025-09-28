@@ -538,11 +538,7 @@ func TestStateMaxRelevantOffset(t *testing.T) {
 
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 	expecteMaxRelevantOffset := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
-	for offset := range collectionViewOffsetsChan {
-		if expecteMaxRelevantOffset == offset {
-			break
-		}
-	}
+	vit.WaitForOffset(collectionViewOffsetsChan,expecteMaxRelevantOffset)
 
 	body = `{"args":{"After":0},"elements":[{"fields":["State", "MaxRelevantOffset"]}]}`
 	resp := vit.PostWS(ws, "q.sys.State", body)

@@ -356,6 +356,19 @@ func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal, opts ...httpu.Re
 	return ws
 }
 
+func (vit *VIT) WaitForOffset(offsetsCh federation.OffsetsChan, targetOffset istructs.Offset) {
+	vit.T.Helper()
+	start := time.Now()
+	for off := range offsetsCh {
+		if off >= targetOffset {
+			return
+		}
+		if time.Since(start) >= testTimeout {
+			vit.T.Fatal("failed to wait for offset", targetOffset)
+		}
+	}
+}
+
 func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, projectionQName appdef.QName) federation.OffsetsChan {
 	vit.T.Helper()
 	return vit.SubscribeForN10nProjectionKey(in10n.ProjectionKey{

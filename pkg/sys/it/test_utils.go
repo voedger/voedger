@@ -42,24 +42,20 @@ func InitiateEmailVerificationFunc(vit *it.VIT, f func() *federation.FuncRespons
 }
 
 func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, offset istructs.Offset) {
+	deadline := time.Now().Add(time.Second)
+	body := fmt.Sprintf(`
+	{
+		"args":{"Query":"select LastOffset from %s where Year = %d and DayOfYear = %d"},
+		"elements":[{"fields":["Result"]}]
+	}`, index, vit.Now().Year(), vit.Now().YearDay())
 	type entity struct {
 		LastOffset istructs.Offset
 	}
 
-	body := fmt.Sprintf(`
-			{
-				"args":{"Query":"select LastOffset from %s where Year = %d and DayOfYear = %d"},
-				"elements":[{"fields":["Result"]}]
-			}`, index, vit.Now().Year(), vit.Now().YearDay())
-
-	deadline := time.Now().Add(time.Second)
-
 	for time.Now().Before(deadline) {
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
-		if resp.IsEmpty() {
-			time.Sleep(awaitTime)
-			continue
-		}
+		resp := vit.WaitFor(func() *federation.FuncResponse {
+			return vit.PostWS(ws, "q.sys.SqlQuery", body)
+		})
 
 		e := new(entity)
 
