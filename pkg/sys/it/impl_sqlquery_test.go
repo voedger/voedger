@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -112,8 +111,6 @@ func TestSqlQuery_plog(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body)
 		pLogSize++
 	}
-
-	time.Sleep(ProjectionAwaitTime)
 
 	t.Run("Should read events with default Offset and limit", func(t *testing.T) {
 		require := require.New(t)

@@ -22,6 +22,8 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
+const awaitTime = 100 * time.Millisecond
+
 func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...httpu.ReqOptFunc) (token, code string) {
 	return InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, entity, field, email, targetWSID)

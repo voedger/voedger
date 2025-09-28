@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/vit"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"golang.org/x/crypto/acme/autocert"
@@ -31,7 +32,7 @@ func TestBasicUsage_db_cache(t *testing.T) {
 	require.NotNil(cache)
 
 	t.Run("Write certificate to router storage, using domain name as key", func(t *testing.T) {
-		err = cache.Put(ctx, domain, certificateExample)
+		err = cache.Put(ctx, domain, itokensjwt.SecretKeyExample)
 		require.NoError(err)
 	})
 
@@ -39,7 +40,7 @@ func TestBasicUsage_db_cache(t *testing.T) {
 		var crt []byte
 		crt, err = cache.Get(ctx, domain)
 		require.NoError(err)
-		require.Equal(certificateExample, crt)
+		require.EqualValues(itokensjwt.SecretKeyExample, crt)
 	})
 
 	t.Run("Delete certificate from router storage, using domain name as key", func(t *testing.T) {
