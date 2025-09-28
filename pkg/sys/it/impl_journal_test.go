@@ -25,6 +25,8 @@ func TestBasicUsage_Journal(t *testing.T) {
 	tableNum := vit.NextNumber()
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
 
+	offsets := vit.SubscribeForN10n(ws, journal.QNameViewWLogDates)
+
 	bill := fmt.Sprintf(`{
 				"cuds": [{
 				"fields": {
@@ -41,6 +43,12 @@ func TestBasicUsage_Journal(t *testing.T) {
 	resp := vit.PostWS(ws, "c.sys.CUD", bill)
 	ID := resp.NewID()
 	expectedOffset := resp.CurrentWLogOffset
+
+	for offset := range offsets {
+		if offset >= expectedOffset {
+			break
+		}
+	}
 
 	WaitForIndexOffset(vit, ws, journal.QNameViewWLogDates, expectedOffset)
 
