@@ -93,12 +93,12 @@ func GetCookieBearerAuth(req *http.Request) (cookieBearerToken string, ok bool, 
 		// notest
 		return "", false, fmt.Errorf("failed to read cookie: %w", err)
 	}
-	if !strings.HasPrefix(cookie.Value, httpu.BearerPrefix) {
-		return "", false, fmt.Errorf("unexpected cookie value format: %s", cookie.Value)
+	if cookieBearerToken, err = url.QueryUnescape(cookie.Value); err != nil {
+		return "", false, fmt.Errorf("failed to unescape cookie value %q: %w", cookie.Value, err)
 	}
-	cookieBearerToken = strings.ReplaceAll(cookie.Value, httpu.BearerPrefix, "")
-	if cookieBearerToken, err = url.QueryUnescape(cookieBearerToken); err != nil {
-		return "", false, fmt.Errorf("failed to unescape cookie value %q: %w", cookieBearerToken, err)
+	if !strings.HasPrefix(cookieBearerToken, httpu.BearerPrefix) {
+		return "", false, fmt.Errorf("unexpected cookie value format: %s", cookieBearerToken)
 	}
+	cookieBearerToken = strings.ReplaceAll(cookieBearerToken, httpu.BearerPrefix, "")
 	return cookieBearerToken, true, nil
 }

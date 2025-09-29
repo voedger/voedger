@@ -80,7 +80,7 @@ func parseURLParams(req *http.Request, resp http.ResponseWriter) (appQName appde
 		}
 		if ok {
 			// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
-			headers[httpu.Authorization] = cookieBearerToken
+			headers[httpu.Authorization] = httpu.BearerPrefix + cookieBearerToken
 		}
 	}
 	appQName = appdef.NewAppQName(vars[URLPlaceholder_appOwner], vars[URLPlaceholder_appName])
