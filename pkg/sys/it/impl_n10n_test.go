@@ -163,6 +163,7 @@ func TestCookiesAuth_V2(t *testing.T) {
 	vit.POST(url, "",
 		httpu.WithCookies(httpu.Authorization, httpu.BearerPrefix+token),
 		httpu.WithMethod(http.MethodDelete),
+		httpu.Expect204(),
 	)
 
 	// close the initial connection
