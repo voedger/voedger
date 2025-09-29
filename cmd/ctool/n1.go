@@ -111,7 +111,7 @@ func ceNodeControllerFunction(n *nodeType) error {
 
 	loggerInfo(fmt.Sprintf("Deploying docker on a %s %s host...", n.nodeName(), n.address()))
 	if err := newScriptExecuter(n.cluster.sshKey, "").
-		run("ce/docker-install.sh"); err != nil {
+		run("ce/docker-install.sh", n.address()); err != nil {
 		return err
 	}
 
