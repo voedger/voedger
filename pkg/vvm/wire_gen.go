@@ -243,6 +243,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		MetricsServicePort:  v8,
 		BuiltInAppsPackages: v9,
 		TTLStorage:          ittlStorage,
+		BuildInfo:           buildInfo,
 	}
 	return vvm, func() {
 		cleanup4()

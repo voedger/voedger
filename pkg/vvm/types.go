@@ -8,6 +8,7 @@ import (
 	"context"
 	"net"
 	"net/url"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -131,6 +132,7 @@ type VVM struct {
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
 	TTLStorage          ielections.ITTLStorage[storage.TTLStorageImplKey, string]
+	BuildInfo           *debug.BuildInfo
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
