@@ -6,10 +6,7 @@
 
 set -euo pipefail
 
-NODE=$1
-SSH_USER=$LOGNAME
-
-echo "Setting up monitoring stack on host $NODE..."
+echo "Setting up monitoring stack on host..."
 echo "Creating monitoring directories on host..."
 sudo mkdir -p /prometheus && mkdir -p ~/prometheus;
 sudo mkdir -p /alertmanager && mkdir -p ~/alertmanager;
@@ -42,8 +39,9 @@ cp grafana/provisioning/dashboards/node-exporter-full.json ~/grafana/provisionin
 cp grafana/provisioning/dashboards/prometheus.json ~/grafana/provisioning/dashboards/prometheus.json
 
 # Copy Prometheus configuration files
-cp prometheus/prometheus.yml /tmp/prometheus.yml
-export VOEDGER_CE_NODE=$NODE && envsubst < /tmp/prometheus.yml > ~/prometheus/prometheus.yml
+envsubst < ./prometheus/prometheus.yml > ~/prometheus/prometheus.yml
+
+cp -n ./prometheus/web.yml ~/prometheus/web.yml
 cp prometheus/web.yml ~/prometheus/web.yml
 cp prometheus/alert.rules ~/prometheus/alert.rules
 
