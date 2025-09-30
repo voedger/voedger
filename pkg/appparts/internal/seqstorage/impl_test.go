@@ -9,7 +9,7 @@ import (
 	"context"
 	"testing"
 
-	gomock "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
@@ -19,7 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/vit/mock"
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
 
@@ -233,9 +232,9 @@ func TestSequenceActualization(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockEvents := &coreutils.MockEvents{}
-			mockEvents.On("ReadPLog", gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything, gomock.Anything).
+			mockEvents.On("ReadPLog", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return(nil).
-				Run(func(args gomock.Arguments) {
+				Run(func(args mock.Arguments) {
 					cb := args.Get(4).(istructs.PLogEventsReaderCallback)
 					for _, pLogEvent := range tc.plog {
 						iPLogEvent := testPLogEventToIPlogEvent(pLogEvent, appDef)
@@ -293,7 +292,7 @@ func buildExpectedBatch(expectedValues []expectedSeqValue) []isequencer.SeqValue
 
 func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) istructs.IPLogEvent {
 	mockEvent := coreutils.MockPLogEvent{}
-	mockEvent.On("CUDs", mock.Anything).Run(func(args gomock.Arguments) {
+	mockEvent.On("CUDs", mock.Anything).Run(func(args mock.Arguments) {
 		cudCallback := args[0].(func(istructs.ICUDRow) bool)
 		for _, cudTemplate := range pLogEvent.cuds {
 			cud := coreutils.TestObject{
