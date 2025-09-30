@@ -56,7 +56,7 @@ resource "aws_instance" "node" {
 
 resource "aws_route53_record" "app-node-01_instance_record" {
   zone_id = "Z09953832CB14VQPR2ZJG"
-  name    = "${var.issue_number}-01.cdci.voedger.io"
+  name    = "${var.run_id}-01.cdci.voedger.io"
   type    = "A"
   ttl     = 60
 
@@ -86,7 +86,7 @@ module "instance_ctool_provision" {
 resource "aws_route53_record" "app-node-02_instance_record" {
   count   = local.node_count > 1 ? 1 : 0
   zone_id = "Z09953832CB14VQPR2ZJG"
-  name    = "${var.issue_number}-02.cdci.voedger.io"
+  name    = "${var.run_id}-02.cdci.voedger.io"
   type    = "A"
   ttl     = 60
 
