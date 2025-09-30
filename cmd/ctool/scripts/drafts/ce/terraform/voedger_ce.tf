@@ -56,7 +56,7 @@ resource "aws_instance" "node_ce" {
 
 resource "aws_route53_record" "node_ce_instance_record" {
   zone_id = "Z09953832CB14VQPR2ZJG"
-  name    = "${var.issue_number}.cdci.voedger.io"
+  name    = "${var.run_id}.cdci.voedger.io"
   type    = "A"
   ttl     = 60
 
