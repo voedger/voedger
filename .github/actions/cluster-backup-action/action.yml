@@ -12,14 +12,14 @@ runs:
     - name: Smoke test - create keyspace, table and fill with test data
       run: |
         set -x
-        ISSUE_TITLE="${{ github.event.issue.title }}"
+        CLUSTER_TYPE="${{ github.event.inputs.cluster_type }}"
         
-        if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
+        if [ "$CLUSTER_TYPE" == "n1" ]; then
             REPLICATION_STRATEGY="'class': 'SimpleStrategy', 'replication_factor': 1"
-        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" -o "$ISSUE_TITLE" == "ctoolintegrationtest se3" ]; then
+        elif [ "$CLUSTER_TYPE" == "n5" -o "$CLUSTER_TYPE" == "se3" ]; then
             REPLICATION_STRATEGY="'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 1"
         else
-            echo "Unknown issue title: $ISSUE_TITLE"
+            echo "Unknown cluster type: $CLUSTER_TYPE"
             exit 1
         fi
         
@@ -66,7 +66,7 @@ runs:
     - name: Backup scylla node
       run: |
         set -x
-        ISSUE_TITLE="${{ github.event.issue.title }}"
+        CLUSTER_TYPE="${{ github.event.inputs.cluster_type }}"
         
         function get_node_arg() {
             local version_type=$1
@@ -81,16 +81,16 @@ runs:
             fi
         }
         
-        if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
+        if [ "$CLUSTER_TYPE" == "n1" ]; then
             CYCLE_END=1
             SSH_KEY_OPTION=""
             SSH_PORT_OPTION="" 
-        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" -o "$ISSUE_TITLE" == "ctoolintegrationtest se3" ]; then
+        elif [ "$CLUSTER_TYPE" == "n5" -o "$CLUSTER_TYPE" == "se3" ]; then
             CYCLE_END=3
             SSH_KEY_OPTION="--ssh-key /tmp/amazonKey.pem"
             SSH_PORT_OPTION="-p ${{ env.SSH_PORT }}"
         else
-          echo "Unknown issue title: $ISSUE_TITLE"
+          echo "Unknown cluster type: $CLUSTER_TYPE"
           exit 1
         fi
         
@@ -118,14 +118,14 @@ runs:
       run: |
         set -euo pipefail
         set -x
-        ISSUE_TITLE="${{ github.event.issue.title }}"
+        CLUSTER_TYPE="${{ github.event.inputs.cluster_type }}"
         
-        if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
+        if [ "$CLUSTER_TYPE" == "n1" ]; then
             SSH_KEY_OPTION=""
-        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" -o "$ISSUE_TITLE" == "ctoolintegrationtest se3" ]; then
+        elif [ "$CLUSTER_TYPE" == "n5" -o "$CLUSTER_TYPE" == "se3" ]; then
             SSH_KEY_OPTION="--ssh-key /tmp/amazonKey.pem"
         else
-          echo "Unknown issue title: $ISSUE_TITLE"
+          echo "Unknown cluster type: $CLUSTER_TYPE"
           exit 1
         fi
         
