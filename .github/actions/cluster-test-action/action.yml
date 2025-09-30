@@ -37,11 +37,11 @@ runs:
 
     - name: Check voedger SE stack status
       env:
-        ISSUE_TITLE: "${{ github.event.issue.title }}"
+        CLUSTER_TYPE: "${{ github.event.inputs.cluster_type }}"
       run: |
         attempts=3
 
-        if [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+        if [ "CLUSTER_TYPE" == "n5" ]; then
             hostName="app-node-2"
         else
             hostName="node-2" 
@@ -49,7 +49,7 @@ runs:
 
         ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-rm  AppNode $hostName
         sleep 20
-        url="https://${{ github.event.issue.number }}-01.cdci.voedger.io/static/sys/monitor/site/hello"
+        url="https://${{ github.run_id }}-01.cdci.voedger.io/static/sys/monitor/site/hello"
         for ((i=1; i<=attempts; i++)); do
           echo "Attempt $i to connect to $url"
           if curl --output /dev/null --fail -Iv "$url"; then
@@ -70,7 +70,7 @@ runs:
 
     - name: Set password for Mon Stack
       env:
-        ISSUE_TITLE: "${{ github.event.issue.title }}"
+        CLUSTER_TYPE: "${{ github.event.inputs.cluster_type }}"
       run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
       shell: bash
 
@@ -182,7 +182,7 @@ runs:
 
     - name: Set password for Mon Stack after replace node
       env:
-        ISSUE_TITLE: "${{ github.event.issue.title }}"
+        CLUSTER_TYPE: "${{ github.event.inputs.cluster_type }}"
       run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
       shell: bash
 
