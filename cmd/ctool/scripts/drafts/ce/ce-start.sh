@@ -7,16 +7,8 @@
 # docker-compose -p voedger -f ./docker-compose-tmp.yml ps
 
 set -euo pipefail
+set -x
 
-if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 <node ip address for CE deployment>" >&2
-  exit 1
-fi
-
-source ../utils.sh
-
-CE_NODE_IP="${VOEDGER_CE_NODE:-$NODE}"
-NODE=$1
 HOSTNAME="db-node-1"
 echo "Deploying Voedger CE on host $NODE..."
 echo "Starting Voedger CE deployment on host..."
@@ -64,6 +56,7 @@ else
    exit 1
 fi
 
-echo "Voedger CE deployment completed on host."
+set +x
+exit 0
 
                                                                                                              
