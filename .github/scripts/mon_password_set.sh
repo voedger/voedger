@@ -10,7 +10,7 @@ MON_PASSWORD=$1
 
 ctool_cmd="cd /home/ubuntu/voedger/cmd/ctool && ./ctool mon password -v "
 
-if [ "$CLUSTER_TYPE" == "n5" -o "$ISSUE_TITLE" == "se3" ]; then
+if [ "$CLUSTER_TYPE" == "n5" -o "$CLUSTER_TYPE" == "se3" ]; then
     ctool_cmd+="--ssh-key /tmp/amazonKey.pem "
 fi
 ctool_cmd+="$MON_PASSWORD"
