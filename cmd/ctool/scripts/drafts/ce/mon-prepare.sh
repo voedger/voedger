@@ -6,13 +6,6 @@
 
 set -euo pipefail
 
-if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 <node ip address for monitoring setup>" >&2
-  exit 1
-fi
-
-source ../utils.sh
-
 NODE=$1
 SSH_USER=$LOGNAME
 
