@@ -35,31 +35,31 @@ runs:
       uses: ./.github/actions/cluster-backup-action
 
     - name: Check voedger CE stack status
-      run: bash .github/scripts/voedger_ce_status.sh "http://${{ github.event.issue.number }}.cdci.voedger.io/static/sys/monitor/site/hello"
+      run: bash .github/scripts/voedger_ce_status.sh "http://${{ github.run_id }}.cdci.voedger.io/static/sys/monitor/site/hello"
       shell: bash
 
     - name: Set password for Mon Stack
       env:
-         ISSUE_TITLE: "${{ github.event.issue.title }}"
+         CLUSTER_TYPE: "${{ github.event.inputs.cluster_type }}"
       run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
       shell: bash
 
     - name: Check Prometheus and Alertmanager
-      run: bash .github/scripts/mon_ce_status.sh "http://${{ github.event.issue.number }}.cdci.voedger.io"
+      run: bash .github/scripts/mon_ce_status.sh "http://${{ github.run_id }}.cdci.voedger.io"
       shell: bash
 
     - name: Add ACME domain
       run: |
           ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} <<EOF 
           cd /home/ubuntu/voedger/cmd/ctool
-          ./ctool acme add ${{ github.event.issue.number }}.cdci.voedger.io -v
+          ./ctool acme add ${{ github.run_id }}.cdci.voedger.io -v
           EOF
       shell: bash
 
     - name: Check voedger CE stack status availability over HTTPS
-      run: bash .github/scripts/voedger_ce_status.sh "https://${{ github.event.issue.number }}.cdci.voedger.io/static/sys/monitor/site/hello"
+      run: bash .github/scripts/voedger_ce_status.sh "https://${{ github.run_id }}.cdci.voedger.io/static/sys/monitor/site/hello"
       shell: bash
 
     - name: Check mon CE stack status availability over HTTPS
-      run: bash .github/scripts/mon_ce_status.sh "https://${{ github.event.issue.number }}.cdci.voedger.io"
+      run: bash .github/scripts/mon_ce_status.sh "https://${{ github.run_id }}.cdci.voedger.io"
       shell: bash

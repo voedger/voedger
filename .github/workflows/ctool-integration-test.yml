@@ -33,7 +33,7 @@ jobs:
       TF_VAR_git_commit_id: ""
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
-      TF_VAR_issue_number: ${{ github.run_number }}
+      TF_VAR_run_id: ${{ github.run_id }}
       # Set included_nodes based on cluster type
       TF_VAR_included_nodes: ${{ 
         github.event.inputs.cluster_type == 'n1' && '[]' ||
@@ -98,7 +98,7 @@ jobs:
         if: github.event.inputs.cluster_type == 'n5'
         uses: ./.github/actions/cluster-init-action
         with:
-          command: "./ctool init SE --acme-domain ${{ github.run_number }}-01.cdci.voedger.io 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
+          command: "./ctool init SE --acme-domain ${{ github.run_id }}-01.cdci.voedger.io 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
 
       - name: Init Cluster (SE3)
         if: github.event.inputs.cluster_type == 'SE3'
@@ -146,7 +146,7 @@ jobs:
         '7f00f4c759b23c46754a201266cbe94fa8c3777c' }}
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
-      TF_VAR_issue_number: ${{ github.run_number }}
+      TF_VAR_run_id: ${{ github.run_id }}
       TF_VAR_included_nodes: ${{ 
         github.event.inputs.cluster_type == 'n1' && '[]' ||
         github.event.inputs.cluster_type == 'n5' && '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]' ||
