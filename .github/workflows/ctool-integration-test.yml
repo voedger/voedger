@@ -242,7 +242,7 @@ jobs:
         run: |
           echo "Work with ${{ env.PUBLIC_IP }}"
           count=0
-          expected_nodes=${{ github.event.inputs.cluster_type == 'n5' && '5' || '3' }}
+          expected_nodes=${{ github.event.inputs.cluster_type == 'n5' && 5 || 3 }}
           while [ $count -lt 60 ]; do
              if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq $expected_nodes ]; then
              echo "Scylla initialization success"
