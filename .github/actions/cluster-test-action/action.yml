@@ -41,7 +41,7 @@ runs:
       run: |
         attempts=3
 
-        if [ "CLUSTER_TYPE" == "n5" ]; then
+        if [ "$CLUSTER_TYPE" == "n5" ]; then
             hostName="app-node-2"
         else
             hostName="node-2" 
