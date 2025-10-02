@@ -111,7 +111,7 @@ func ubhExec(args istructs.ExecCommandArgs) (err error) {
 		return
 	}
 	vb.PutRecordID(appdef.SystemField_ID, 1)
-	vb.PutInt32(field_status, int32(iblobstorage.BLOBStatus_Unknown))
+	vb.PutInt32(Field_status, int32(iblobstorage.BLOBStatus_Unknown))
 	vb.PutQName(Field_OwnerRecord, args.ArgumentObject.AsQName(Field_OwnerRecord))
 	vb.PutString(Field_OwnerRecordField, args.ArgumentObject.AsString(Field_OwnerRecordField))
 	return nil

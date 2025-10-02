@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	field_status           = "status"
+	Field_status           = "status"
 	Field_OwnerRecord      = "OwnerRecord"
 	Field_OwnerRecordField = "OwnerRecordField"
 	Field_OwnerRecordID    = "OwnerRecordID"
