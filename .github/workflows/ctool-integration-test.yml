@@ -296,7 +296,7 @@ jobs:
         run: |
           ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF
              cd /home/ubuntu/voedger/cmd/ctool
-             ./ctool acme add ${{ github.run_number }}-01.cdci.voedger.io -v --ssh-key /tmp/amazonKey.pem
+             ./ctool acme add ${{ github.run_id }}-01.cdci.voedger.io -v --ssh-key /tmp/amazonKey.pem
           EOF
 
       - name: Run Voedger Cluster Tests (CE)
