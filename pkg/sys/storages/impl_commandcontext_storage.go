@@ -16,14 +16,17 @@ type commandContextStorage struct {
 	unloggedArgFunc state.UnloggedArgFunc
 	wsidFunc        state.WSIDFunc
 	wlogOffsetFunc  state.WLogOffsetFunc
+	originFunc      state.OriginFunc
 }
 
-func NewCommandContextStorage(argFunc state.ArgFunc, unloggedArgFunc state.UnloggedArgFunc, wsidFunc state.WSIDFunc, wlogOffsetFunc state.WLogOffsetFunc) state.IStateStorage {
+func NewCommandContextStorage(argFunc state.ArgFunc, unloggedArgFunc state.UnloggedArgFunc, wsidFunc state.WSIDFunc, wlogOffsetFunc state.WLogOffsetFunc,
+	originFunc state.OriginFunc) state.IStateStorage {
 	return &commandContextStorage{
 		argFunc:         argFunc,
 		unloggedArgFunc: unloggedArgFunc,
 		wsidFunc:        wsidFunc,
 		wlogOffsetFunc:  wlogOffsetFunc,
+		originFunc:      originFunc,
 	}
 }
 
@@ -47,6 +50,7 @@ func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStat
 		unloggedArg: s.unloggedArgFunc(),
 		wsid:        s.wsidFunc(),
 		wlogOffset:  s.wlogOffsetFunc(),
+		origin:      s.originFunc(),
 	}, nil
 }
 
@@ -56,6 +60,7 @@ type cmdContextValue struct {
 	unloggedArg istructs.IObject
 	wsid        istructs.WSID
 	wlogOffset  istructs.Offset
+	origin      string
 }
 
 func (v *cmdContextValue) AsInt64(name string) int64 {
@@ -80,4 +85,11 @@ func (v *cmdContextValue) AsValue(name string) istructs.IStateValue {
 		}
 	}
 	return v.baseStateValue.AsValue(name)
+}
+
+func (v *cmdContextValue) AsString(name string) string {
+	if name == sys.Storage_CommandContext_Field_Origin {
+		return v.origin
+	}
+	return v.baseStateValue.AsString(name)
 }

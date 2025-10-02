@@ -17,6 +17,7 @@ const (
 	ContentType                                  = "Content-Type"
 	ContentDisposition                           = "Content-Disposition"
 	Accept                                       = "Accept"
+	Origin                                       = "Origin"
 	ContentType_ApplicationJSON                  = "application/json"
 	ContentType_ApplicationXBinary               = "application/x-binary"
 	ContentType_TextPlain                        = "text/plain"

@@ -148,10 +148,11 @@ func Test_BasicUsage(t *testing.T) {
 	unloggedArgFunc := func() istructs.IObject { return nil }
 	appFunc := func() istructs.IAppStructs { return app }
 	wlogOffsetFunc := func() istructs.Offset { return event.WLogOffset() }
+	originFunc := func() string { return "" }
 
 	// Create states for Command processor and Actualizer
 	actualizerState := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil)
-	cmdProcState := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc, state.NullOpts)
+	cmdProcState := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc, state.NullOpts, originFunc)
 
 	// Create extension package from WASM
 	ctx := context.Background()

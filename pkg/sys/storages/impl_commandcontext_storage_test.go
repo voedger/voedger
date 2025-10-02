@@ -24,8 +24,9 @@ func TestCommandContextStorage(t *testing.T) {
 	argFunc := func() istructs.IObject { return arg }
 	unloggedArgFunc := func() istructs.IObject { return unloggedArg }
 	wlogOffsetFunc := func() istructs.Offset { return 42 }
+	originFunc := func() string { return "https://dev.voedger.com" }
 
-	storage := NewCommandContextStorage(argFunc, unloggedArgFunc, wsidFunc, wlogOffsetFunc)
+	storage := NewCommandContextStorage(argFunc, unloggedArgFunc, wsidFunc, wlogOffsetFunc, originFunc)
 
 	kb := storage.NewKeyBuilder(appdef.NullQName, nil)
 	v, err := storage.(state.IWithGet).Get(kb)
@@ -34,4 +35,5 @@ func TestCommandContextStorage(t *testing.T) {
 	require.NotNil(t, v.AsValue(sys.Storage_CommandContext_Field_ArgumentObject))
 	require.NotNil(t, v.AsValue(sys.Storage_CommandContext_Field_ArgumentUnloggedObject))
 	require.Equal(t, int64(42), v.AsInt64(sys.Storage_CommandContext_Field_WLogOffset))
+	require.Equal(t, "https://dev.voedger.com", v.AsString(sys.Storage_CommandContext_Field_Origin))
 }
