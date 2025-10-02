@@ -248,6 +248,10 @@ jobs:
              echo "Scylla initialization success"
                break
              fi
+             echo "Scylla nodes up: $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s")"
+             echo "Expected nodes: $expected_nodes"
+             echo "Actual nodes: $count"
+             echo "--------------------------------"
              echo "Still wait for scylla initialization.."
              sleep 5
              count=$((count+1))
