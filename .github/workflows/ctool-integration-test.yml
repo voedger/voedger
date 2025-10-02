@@ -141,9 +141,7 @@ jobs:
       SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
       TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
       TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
-      TF_VAR_git_commit_id: ${{ 
-        github.event.inputs.cluster_type == 'n1' && '83ef86559425a5924bca24b0db7da95f37055409' ||
-        '7f00f4c759b23c46754a201266cbe94fa8c3777c' }}
+      TF_VAR_git_commit_id: ""
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
       TF_VAR_run_id: ${{ github.run_id }}
