@@ -121,7 +121,7 @@ func TestBlobberErrors(t *testing.T) {
 		)
 	})
 
-	t.Run("404 not found on querying an unexisting blob", func(t *testing.T) {
+	t.Run("404 not found on querying a nonexistent blob", func(t *testing.T) {
 		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", 1,
 			httpu.WithAuthorizeBy(ws.Owner.Token),
 			httpu.Expect404(),
