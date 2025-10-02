@@ -53,7 +53,7 @@ func (vit *VIT) signUp(login Login, opts ...httpu.ReqOptFunc) {
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login.Name, istructs.CurrentClusterID())
 	as, err := vit.IAppStructsProvider.BuiltIn(login.AppQName)
 	require.NoError(vit.T, err)
-	appWSID := coreutils.GetAppWSID(pseudoWSID, as.NumAppWorkspaces())
+	appWSID := coreutils.PseudoWSIDToAppWSID(pseudoWSID, as.NumAppWorkspaces())
 	p := payloads.VerifiedValuePayload{
 		VerificationKind: appdef.VerificationKind_EMail,
 		WSID:             appWSID,
@@ -111,7 +111,7 @@ func (vit *VIT) GetCDocLoginID(login Login) int64 {
 	vit.T.Helper()
 	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
 	require.NoError(vit.T, err) // notest
-	appWSID := coreutils.GetAppWSID(login.PseudoProfileWSID, as.NumAppWorkspaces())
+	appWSID := coreutils.PseudoWSIDToAppWSID(login.PseudoProfileWSID, as.NumAppWorkspaces())
 	body := fmt.Sprintf(`{"args":{"Query":"select CDocLoginID from registry.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
 		appWSID, login.AppQName, registry.GetLoginHash(login.Name))
 	sys := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)

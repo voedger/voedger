@@ -71,7 +71,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	case dml.WorkspaceKind_WSID:
 		wsid = istructs.IDType(update.Workspace.ID)
 	case dml.WorkspaceKind_PseudoWSID:
-		wsid = istructs.IDType(coreutils.GetAppWSID(istructs.WSID(update.Workspace.ID), update.appStructs.NumAppWorkspaces()))
+		wsid = istructs.IDType(coreutils.PseudoWSIDToAppWSID(istructs.WSID(update.Workspace.ID), update.appStructs.NumAppWorkspaces()))
 	case dml.WorkspaceKind_AppWSNum:
 		wsid = istructs.IDType(istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(update.Workspace.ID)))
 	default:

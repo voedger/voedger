@@ -55,7 +55,7 @@ func validateRequest(req *http.Request, rw http.ResponseWriter, numsAppsWorkspac
 	if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
 		baseWSID := wsid.BaseWSID()
 		if baseWSID <= istructs.MaxPseudoBaseWSID {
-			wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
+			wsid = coreutils.PseudoWSIDToAppWSID(wsid, numAppWorkspaces)
 		}
 	}
 	body := []byte{}

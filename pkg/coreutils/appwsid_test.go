@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func TestBasicUsage_GetAppWSID(t *testing.T) {
+func TestPseudoWSIDToAppWSID(t *testing.T) {
 	cases := []struct {
 		wsid             istructs.WSID
 		numAppWorkspaces istructs.NumAppWorkspaces
@@ -29,7 +29,7 @@ func TestBasicUsage_GetAppWSID(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		require.Equal(t, c.expectedAppWSID, GetAppWSID(c.wsid, c.numAppWorkspaces), c)
+		require.Equal(t, c.expectedAppWSID, PseudoWSIDToAppWSID(c.wsid, c.numAppWorkspaces), c)
 	}
 }
 
@@ -48,14 +48,41 @@ func TestGetPseudoWSID(t *testing.T) {
 	}
 }
 
-func TestAppWSIDToPseudoWSID(t *testing.T) {
-	numAppWorkspaces := istructs.NumAppWorkspaces(10)
-	pseudoWSIDInitial := GetPseudoWSID(istructs.NullWSID, "test", istructs.CurrentClusterID())
-	appWSIDExpected := GetAppWSID(pseudoWSIDInitial, numAppWorkspaces)
+func TestAppWSNumber(t *testing.T) {
+	tests := []struct {
+		offset           istructs.WSID
+		numAppWorkspaces istructs.NumAppWorkspaces
+		expectedNumber   uint32
+	}{
+		{0, 10, 6},  // 65536 % 10 = 6
+		{7, 5, 3},   // (65536+7) % 5 = 3
+		{10, 10, 6}, // (65536+10) % 10 = 6 (wrap around)
+		{100, 1, 0}, // Any WSID % 1 = 0 (single workspace)
+	}
 
-	// could be any but must lead to the initial appWSIDExpected
-	psuedoWSID_someNew := AppWSIDToPseudoWSID(appWSIDExpected)
+	for i, tt := range tests {
+		wsid := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+tt.offset)
+		result := AppWSNumber(wsid, tt.numAppWorkspaces)
+		require.Equal(t, tt.expectedNumber, result, "test case %d", i)
+	}
 
-	appWSIDActual := GetAppWSID(psuedoWSID_someNew, numAppWorkspaces)
-	require.Equal(t, appWSIDExpected, appWSIDActual)
+	t.Run("maximum workspaces", func(t *testing.T) {
+		// Test with maximum allowed number of app workspaces
+		maxWorkspaces := istructs.NumAppWorkspaces(istructs.MaxNumAppWorkspaces)
+		wsid := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID)
+		result := AppWSNumber(wsid, maxWorkspaces)
+		require.Equal(t, uint32(0), result) // 65536 % 32768 = 0
+	})
+
+	t.Run("cluster ID independence", func(t *testing.T) {
+		// Should work the same regardless of cluster ID
+		baseWSID := istructs.FirstBaseAppWSID + 7
+		expected := uint32(3) // (65536+7) % 5 = 3
+
+		wsid1 := istructs.NewWSID(istructs.ClusterID(1), baseWSID)
+		wsid2 := istructs.NewWSID(istructs.ClusterID(10), baseWSID)
+
+		require.Equal(t, expected, AppWSNumber(wsid1, 5))
+		require.Equal(t, expected, AppWSNumber(wsid2, 5))
+	})
 }

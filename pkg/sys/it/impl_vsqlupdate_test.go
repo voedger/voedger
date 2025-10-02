@@ -470,7 +470,7 @@ func TestUpdateDifferentLocations(t *testing.T) {
 		// determine the number of the app workspace that stores cdoc.Login "login"
 		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
 		require.NoError(err)
-		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
+		appWSNumber := coreutils.AppWSNumber(pseudoWSID, registryAppStructs.NumAppWorkspaces())
 
 		// unlogged update by app workspace number
 		body := fmt.Sprintf(`{"args": {"Query":"unlogged update sys.registry.a%d.registry.Login.%d set WSKindInitializationData = 'def'"}}`, appWSNumber, loginID)
