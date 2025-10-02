@@ -49,7 +49,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		case dml.WorkspaceKind_WSID:
 			wsID = istructs.WSID(op.Workspace.ID)
 		case dml.WorkspaceKind_PseudoWSID:
-			wsID = coreutils.GetAppWSID(istructs.WSID(op.Workspace.ID), appStructs.NumAppWorkspaces())
+			wsID = coreutils.PseudoWSIDToAppWSID(istructs.WSID(op.Workspace.ID), appStructs.NumAppWorkspaces())
 		default:
 			wsID = args.WSID
 		}

@@ -373,7 +373,7 @@ func TestUsersCreate(t *testing.T) {
 	defer vit.TearDown()
 	login := vit.NextName() + "@123.com"
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
-	appWSID := coreutils.GetAppWSID(pseudoWSID, istructs.DefaultNumAppWorkspaces)
+	appWSID := coreutils.PseudoWSIDToAppWSID(pseudoWSID, istructs.DefaultNumAppWorkspaces)
 	p := payloads.VerifiedValuePayload{
 		VerificationKind: appdef.VerificationKind_EMail,
 		WSID:             appWSID,
