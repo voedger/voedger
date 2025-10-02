@@ -39,7 +39,7 @@ runs:
       env:
         CLUSTER_TYPE: "${{ github.event.inputs.cluster_type }}"
       run: |
-        attempts=5
+        attempts=3
 
         if [ "$CLUSTER_TYPE" == "n5" ]; then
             hostName="app-node-2"
@@ -48,7 +48,7 @@ runs:
         fi
 
         ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-rm  AppNode $hostName
-        sleep 10
+        sleep 20
         url="https://${{ github.run_id }}-01.cdci.voedger.io/static/sys/monitor/site/hello"
         for ((i=1; i<=attempts; i++)); do
           echo "Attempt $i to connect to $url"
@@ -58,8 +58,8 @@ runs:
           fi
   
           if [ "$i" -lt "$attempts" ]; then
-            echo "Retrying in 10 seconds..."
-            sleep 10
+            echo "Retrying in 100 seconds..."
+            sleep 100
           else
             echo "Maximum attempts reached. Website is not available."
             exit 1
