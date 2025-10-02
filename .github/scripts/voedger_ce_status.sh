@@ -17,7 +17,7 @@ for ((i=1; i<=attempts; i++)); do
         break
     fi
     if [ "$i" -lt "$attempts" ]; then
-        echo "Retrying in 2 seconds..."
+        echo "Retrying in 100 seconds..."
         sleep 100
     else
         echo "Maximum attempts reached. Website is not available."
