@@ -48,10 +48,11 @@ func (cm *implICommandMessage) Host() string                      { return cm.ho
 func (cm *implICommandMessage) APIPath() processors.APIPath       { return cm.apiPath }
 func (cm *implICommandMessage) DocID() istructs.RecordID          { return cm.docID }
 func (cm *implICommandMessage) Method() string                    { return cm.method }
+func (cm *implICommandMessage) Origin() string                    { return cm.origin }
 
 func NewCommandMessage(requestCtx context.Context, body []byte, appQName appdef.AppQName, wsid istructs.WSID,
 	responder bus.IResponder, partitionID istructs.PartitionID, qName appdef.QName, token string, host string, apiPath processors.APIPath,
-	docID istructs.RecordID, method string) ICommandMessage {
+	docID istructs.RecordID, method string, origin string) ICommandMessage {
 	return &implICommandMessage{
 		body:        body,
 		appQName:    appQName,
@@ -65,6 +66,7 @@ func NewCommandMessage(requestCtx context.Context, body []byte, appQName appdef.
 		apiPath:     apiPath,
 		docID:       docID,
 		method:      method,
+		origin:      origin,
 	}
 }
 
@@ -230,16 +232,18 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 		},
 		ArgumentUnloggedObject: cmd.unloggedArgsObject,
 	}
+	return nil
+}
 
+func (cmdProc *cmdProc) getHostState(_ context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
 		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset,
-		cmd.argsObject, cmd.unloggedArgsObject, cmd.cmdMes.PartitionID())
+		cmd.argsObject, cmd.unloggedArgsObject, cmd.cmdMes.PartitionID(), cmd.cmdMes.Origin())
 	hs.ClearIntents()
-
 	cmd.eca.State = hs
 	cmd.eca.Intents = hs
-
-	return
+	return nil
 }
 
 func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idGen istructs.IIDGenerator) {

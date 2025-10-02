@@ -87,6 +87,7 @@ const (
 	Storage_CommandContext_Field_ArgumentUnloggedObject = "ArgumentUnloggedObject"
 	Storage_CommandContext_Field_WLogOffset             = "WLogOffset"
 	Storage_CommandContext_Field_Workspace              = "Workspace"
+	Storage_CommandContext_Field_Origin                 = "Origin"
 
 	Storage_QueryContext_Field_ArgumentObject = "ArgumentObject"
 	Storage_QueryContext_Field_Workspace      = "Workspace"

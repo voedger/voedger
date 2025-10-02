@@ -76,7 +76,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
 				cmdProcessorIdx := uint(partitionID) % uint(cpAmount)
 				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, request.QName, token,
-					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method)
+					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method, request.Header[httpu.Origin])
 				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
 					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 				}
@@ -102,7 +102,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
 				cmdProcessorIdx := uint(partitionID) % uint(cpAmount)
 				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, funcQName, token,
-					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method)
+					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method, request.Header[httpu.Origin])
 				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
 					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 				}

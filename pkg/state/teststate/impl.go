@@ -67,6 +67,7 @@ type testState struct {
 	argumentObject map[string]any
 	t              *testing.T
 	commandWSID    istructs.WSID
+	origin         string
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
@@ -262,6 +263,9 @@ func (ts *testState) buildState(processorKind int) {
 
 		return istructs.Offset(0)
 	}
+	originFunc := func() string {
+		return ts.origin
+	}
 	wsidFunc := func() istructs.WSID {
 		return ts.WSID()
 	}
@@ -312,7 +316,7 @@ func (ts *testState) buildState(processorKind int) {
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
-			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state)
+			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state, originFunc)
 	case ProcKind_QueryProcessor:
 		state := state.StateOpts{
 			CustomHTTPClient:         ts,
