@@ -633,7 +633,6 @@ func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkp
 
 func getCommandCtxStorage(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.eca.State.KeyBuilder(sys.Storage_CommandContext, sys.Storage_CommandContext)
 	skbCommandContext, err := cmd.eca.State.KeyBuilder(sys.Storage_CommandContext, sys.Storage_CommandContext)
 	if err != nil {
 		// notest
