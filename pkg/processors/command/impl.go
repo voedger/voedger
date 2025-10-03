@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/processors/oldacl"
+	"github.com/voedger/voedger/pkg/sys"
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -621,13 +622,25 @@ func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work pipeline.IWorkp
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
 		for rec := range cmd.rawEvent.CUDs {
 			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdQName) {
-				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdQName); err != nil {
+				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdQName, cmd.commandCtxStorage); err != nil {
 					return coreutils.WrapSysError(err, http.StatusForbidden)
 				}
 			}
 		}
 	}
 	return nil
+}
+
+func getCommandCtxStorage(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	cmd.eca.State.KeyBuilder(sys.Storage_CommandContext, sys.Storage_CommandContext)
+	skbCommandContext, err := cmd.eca.State.KeyBuilder(sys.Storage_CommandContext, sys.Storage_CommandContext)
+	if err != nil {
+		// notest
+		return err
+	}
+	cmd.commandCtxStorage, err = cmd.eca.State.MustExist(skbCommandContext)
+	return err
 }
 
 func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work pipeline.IWorkpiece) (err error) {
