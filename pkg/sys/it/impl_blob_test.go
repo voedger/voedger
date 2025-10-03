@@ -415,16 +415,16 @@ func TestBLOBsPseudoWSIDToAppWSID(t *testing.T) {
 
 	// [~server.apiv2.blobs/it.TestBlobsCreate~impl]
 	// write
-	psuedoWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstPseudoBaseWSID)
-	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, psuedoWSID, "blob name", httpu.ContentType_ApplicationXBinary, expBLOB,
+	pseudoWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstPseudoBaseWSID)
+	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, pseudoWSID, "blob name", httpu.ContentType_ApplicationXBinary, expBLOB,
 		it.QNameDocBLOB, it.Field_Blob, httpu.WithAuthorizeBy(sysToken))
 
 	// put the blob into the owner field
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.DocBLOB","Blob":%d}}]}`, blobID)
-	ownerID := vit.PostApp(istructs.AppQName_test1_app1, psuedoWSID, "c.sys.CUD", body, httpu.WithAuthorizeBy(sysToken)).NewID()
+	ownerID := vit.PostApp(istructs.AppQName_test1_app1, pseudoWSID, "c.sys.CUD", body, httpu.WithAuthorizeBy(sysToken)).NewID()
 
 	// read, authorize over headers
-	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, psuedoWSID, it.QNameDocBLOB, "Blob", ownerID, httpu.WithAuthorizeBy(sysToken))
+	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, pseudoWSID, it.QNameDocBLOB, "Blob", ownerID, httpu.WithAuthorizeBy(sysToken))
 	actualBLOBContent, err := io.ReadAll(blobReader)
 	require.NoError(err)
 	require.Equal(httpu.ContentType_ApplicationXBinary, blobReader.ContentType)
