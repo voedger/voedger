@@ -19,7 +19,7 @@ func ProvideSysIsActiveValidation(cfg *istructsmem.AppConfigType) {
 		Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
 			return cud.IsNew()
 		},
-		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) error {
+		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName, _ istructs.IStateValue) error {
 			if !cudRow.AsBool(appdef.SystemField_IsActive) {
 				return errors.New("inserting a deactivated record is not allowed")
 			}

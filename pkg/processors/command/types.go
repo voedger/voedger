@@ -92,6 +92,7 @@ type cmdWorkpiece struct {
 	cmdQName                     appdef.QName
 	statusCodeOfSuccess          int
 	reapplier                    istructs.IEventReapplier
+	commandCtxStorage            istructs.IStateValue
 }
 
 type implIDGeneratorReporter struct {

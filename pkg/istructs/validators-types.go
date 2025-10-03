@@ -12,7 +12,7 @@ import (
 
 type CUDValidator struct {
 	Match    ValidatorMatchFunc
-	Validate func(ctx context.Context, appStructs IAppStructs, cudRow ICUDRow, wsid WSID, cmdQName appdef.QName) error
+	Validate func(ctx context.Context, appStructs IAppStructs, cudRow ICUDRow, wsid WSID, cmdQName appdef.QName, commandCtxStorage IStateValue) error
 }
 
 type EventValidator func(ctx context.Context, rawEvent IRawEvent, appStructs IAppStructs, wsid WSID) error
