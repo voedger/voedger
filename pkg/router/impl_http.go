@@ -163,13 +163,13 @@ func (s *httpService) registerHandlersV1() {
 	*/
 	if s.blobRequestHandler != nil {
 		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
-			corsHandler(s.blobHTTPRequestHandler_Write())).
+			corsHandler(s.blobHTTPRequestHandler_Write(s.numsAppsWorkspaces))).
 			Methods("POST", "OPTIONS").
 			Name("blob write")
 
 		// allowed symbols according to see base64.URLEncoding
 		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9-_]+}", URLPlaceholder_appOwner,
-			URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID), corsHandler(s.blobHTTPRequestHandler_Read())).
+			URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID), corsHandler(s.blobHTTPRequestHandler_Read(s.numsAppsWorkspaces))).
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}

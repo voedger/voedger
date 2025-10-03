@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -28,11 +29,12 @@ type validatedData struct {
 	vars     map[string]string
 	wsid     istructs.WSID
 	appQName appdef.AppQName
+	header   map[string]string
 	body     []byte
 }
 
-// validateRequest validates the HTTP request and returns validated data or error
-func validateRequest(req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (validatedData, bool) {
+// does not read body
+func validateRequestForBLOBs(req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (validatedData, bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[URLPlaceholder_wsid]
 	var wsid istructs.WSID
@@ -58,21 +60,52 @@ func validateRequest(req *http.Request, rw http.ResponseWriter, numsAppsWorkspac
 			wsid = coreutils.PseudoWSIDToAppWSID(wsid, numAppWorkspaces)
 		}
 	}
-	body := []byte{}
-	if req.Body != nil && req.Body != http.NoBody {
-		body, err = io.ReadAll(req.Body)
-		if err != nil {
-			logger.Error("failed to read body", err.Error())
-			return validatedData{}, false
-		}
-	}
 
-	return validatedData{
+	res := validatedData{
 		vars:     vars,
 		wsid:     wsid,
 		appQName: appQName,
-		body:     body,
-	}, true
+		header:   map[string]string{},
+	}
+
+	for k, v := range req.Header {
+		res.header[k] = v[0]
+	}
+
+	if _, ok := res.header[httpu.Authorization]; !ok {
+		// no token among headers -> look among cookies
+		// no token among cookies as well -> just do nothing, 403 will happen on call helper commands further in BLOBs processor
+		cookieBearerToken, ok, err := GetCookieBearerAuth(req)
+		if err != nil {
+			WriteTextResponse(rw, err.Error(), http.StatusBadRequest)
+			return validatedData{}, false
+		}
+		if ok {
+			// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
+			res.header[httpu.Authorization] = cookieBearerToken
+		}
+	}
+
+	return res, true
+}
+
+// validateRequest validates the HTTP request and returns validated data or error
+func validateRequest(req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (validatedData, bool) {
+	res, ok := validateRequestForBLOBs(req, rw, numsAppsWorkspaces)
+	if !ok {
+		return validatedData{}, false
+	}
+	if req.Body == nil || req.Body == http.NoBody {
+		return res, true
+	}
+	var err error
+	res.body, err = io.ReadAll(req.Body)
+	if err != nil {
+		// notest
+		logger.Error("failed to read body", err.Error())
+		return validatedData{}, false
+	}
+	return res, true
 }
 
 // createBusRequest creates a bus.Request from validated data
@@ -81,7 +114,7 @@ func createBusRequest(reqMethod string, data validatedData, req *http.Request) b
 		Method:   reqMethod,
 		WSID:     data.wsid,
 		Query:    map[string]string{},
-		Header:   map[string]string{},
+		Header:   data.header,
 		AppQName: data.appQName,
 		Resource: data.vars[URLPlaceholder_resourceName],
 		Body:     data.body,
@@ -99,10 +132,6 @@ func createBusRequest(reqMethod string, data validatedData, req *http.Request) b
 	for k, v := range req.URL.Query() {
 		res.Query[k] = v[0]
 	}
-	for k, v := range req.Header {
-		res.Header[k] = v[0]
-	}
-
 	return res
 }
 
@@ -110,6 +139,16 @@ func createBusRequest(reqMethod string, data validatedData, req *http.Request) b
 func withRequestValidation(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, handler func(*http.Request, http.ResponseWriter, validatedData)) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		data, ok := validateRequest(req, rw, numsAppsWorkspaces)
+		if !ok {
+			return
+		}
+		handler(req, rw, data)
+	}
+}
+
+func withBLOBsRequestValidation(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, handler func(*http.Request, http.ResponseWriter, validatedData)) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		data, ok := validateRequestForBLOBs(req, rw, numsAppsWorkspaces)
 		if !ok {
 			return
 		}

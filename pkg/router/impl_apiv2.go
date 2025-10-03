@@ -68,12 +68,6 @@ func (s *httpService) registerHandlersV2() {
 		corsHandler(requestHandlerV2_view(s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodOptions, http.MethodGet).Name("view")
 
-	// blobs: create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/blobs
-	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/blobs",
-		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
-		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
-		Methods(http.MethodOptions, http.MethodPost).Name("blobs create")
-
 	// schemas: get workspace schema: /api/v2/apps/{owner}/{app}/schemas
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
@@ -127,7 +121,7 @@ func (s *httpService) registerHandlersV2() {
 	// [~server.apiv2.blobs/cmp.routerBlobsCreatePathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/blobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table, URLPlaceholder_field),
-		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender))).
+		corsHandler(requestHandlerV2_blobs_create(s.blobRequestHandler, s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodOptions, http.MethodPost).Name("blobs create")
 
 	// blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}/blobs/{fieldName}
@@ -135,21 +129,21 @@ func (s *httpService) registerHandlersV2() {
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/docs/{%s}.{%s}/{%s}/blobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg,
 		URLPlaceholder_table, URLPlaceholder_id, URLPlaceholder_field),
-		corsHandler(requestHandlerV2_blobs_read(s.blobRequestHandler, s.requestSender))).
+		corsHandler(requestHandlerV2_blobs_read(s.blobRequestHandler, s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodOptions, http.MethodGet).Name("blobs read")
 
 	// temp blob create /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs
 	// [~server.apiv2.tblobs/cmp.routerTBlobsCreatePathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid),
-		corsHandler(requestHandlerV2_tempblobs_create(s.blobRequestHandler, s.requestSender))).
+		corsHandler(requestHandlerV2_tempblobs_create(s.blobRequestHandler, s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodOptions, http.MethodPost).Name("temp blobs create")
 
 	// temp blob read GET /api/v2/apps/{owner}/{app}/workspaces/{wsid}/tblobs/{suuid}
 	// [~server.apiv2.blobs/cmp.routerTBlobsReadPathHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s}/tblobs/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_blobIDOrSUUID),
-		corsHandler(requestHandlerV2_tempblobs_read(s.blobRequestHandler, s.requestSender))).
+		corsHandler(requestHandlerV2_tempblobs_read(s.blobRequestHandler, s.requestSender, s.numsAppsWorkspaces))).
 		Methods(http.MethodOptions, http.MethodGet).Name("temp blobs read")
 
 	// notifications subscribe+watch /api/v2/apps/{owner}/{app}/notifications
@@ -470,13 +464,9 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 	})
 }
 
-func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandler,
-	requestSender bus.IRequestSender) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		appQName, wsid, headers, ok := parseURLParams(req, rw)
-		if !ok {
-			return
-		}
+func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
+	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return withBLOBsRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		vars := mux.Vars(req)
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
@@ -485,66 +475,54 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			// notest: checked by router url rule
 			panic(err)
 		}
-		if !blobRequestHandler.HandleRead_V2(appQName, wsid, headers, req.Context(),
+		if !blobRequestHandler.HandleRead_V2(data.appQName, data.wsid, data.header, req.Context(),
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
 			replyServiceUnavailable(rw)
 		}
-	}
+	})
 }
 
-func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHandler,
-	requestSender bus.IRequestSender) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		appQName, wsid, headers, ok := parseURLParams(req, rw)
-		if !ok {
-			return
-		}
+func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
+	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return withBLOBsRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		vars := mux.Vars(req)
 		suuid := iblobstorage.SUUID(vars[URLPlaceholder_blobIDOrSUUID])
-		if !blobRequestHandler.HandleReadTemp_V2(appQName, wsid, headers, req.Context(),
+		if !blobRequestHandler.HandleReadTemp_V2(data.appQName, data.wsid, data.header, req.Context(),
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, requestSender, suuid) {
 			replyServiceUnavailable(rw)
 		}
-	}
+	})
 }
 
-func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequestHandler,
-	requestSender bus.IRequestSender) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		appQName, wsid, headers, ok := parseURLParams(req, rw)
-		if !ok {
-			return
-		}
-		if !blobRequestHandler.HandleWriteTemp_V2(appQName, wsid, headers, req.Context(),
+func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
+	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return withBLOBsRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
+		if !blobRequestHandler.HandleWriteTemp_V2(data.appQName, data.wsid, data.header, req.Context(),
 			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, requestSender) {
 			replyServiceUnavailable(rw)
 		}
-	}
+	})
 }
 
-func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHandler,
-	requestSender bus.IRequestSender) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		appQName, wsid, headers, ok := parseURLParams(req, rw)
-		if !ok {
-			return
-		}
+func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
+	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+	return withBLOBsRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		vars := mux.Vars(req)
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
-		if !blobRequestHandler.HandleWrite_V2(appQName, wsid, headers, req.Context(),
+		if !blobRequestHandler.HandleWrite_V2(data.appQName, data.wsid, data.header, req.Context(),
 			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
 				replyErr(rw, args[0].(error))
 			}, requestSender, ownerRecord, ownerRecordField) {
 			replyServiceUnavailable(rw)
 		}
-	}
+	})
 }
 
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {

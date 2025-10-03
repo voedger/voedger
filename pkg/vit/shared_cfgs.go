@@ -95,6 +95,7 @@ var (
 		PwdSecret: testSMTPPwdSecretName,
 	}
 	QNameDocWithBLOB  = appdef.NewQName(app1PkgName, "DocWithBLOB")
+	QNameDocBLOB      = appdef.NewQName(app1PkgName, "DocBLOB")
 	QNameODocWithBLOB = appdef.NewQName(app1PkgName, "ODocWithBLOB")
 
 	// BLOBMaxSize 5
