@@ -3,6 +3,15 @@
 
 APPLICATION app1();
 
+ALTER WORKSPACE sys.AppWorkspaceWS (
+
+	TABLE DocBLOB INHERITS sys.WDoc (
+		Blob blob
+	);
+
+	GRANT SELECT, UPDATE, INSERT ON TABLE DocBLOB TO sys.WorkspaceOwner;
+);
+
 ALTER WORKSPACE sys.UserProfileWS (
 	TABLE Doc INHERITS sys.CDoc (
 		EmailField varchar NOT NULL VERIFIABLE,
