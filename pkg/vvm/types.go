@@ -60,7 +60,6 @@ type QueryChannel_V2 iprocbus.ServiceChannel
 type AdminEndpointServiceOperator pipeline.ISyncOperator
 type PublicEndpointServiceOperator pipeline.ISyncOperator
 type BlobberAppClusterID istructs.ClusterAppID
-type BlobStorage iblobstorage.IBLOBStorage
 type BlobberAppStruct istructs.IAppStructs
 type CommandProcessorsChannelGroupIdxType uint
 type QueryProcessorsChannelGroupIdxType_V1 uint

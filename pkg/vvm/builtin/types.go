@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -35,6 +36,7 @@ type APIs struct {
 	federation.IFederation
 	timeu.ITime
 	SidecarApps []appparts.SidecarApp
+	iblobstorage.IBLOBStorage
 	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
 	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }
