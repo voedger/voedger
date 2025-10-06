@@ -740,7 +740,7 @@ func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg
 	return new(istorage.IAppStorage)
 }
 
-func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, time timeu.ITime) BlobStorage {
+func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, time timeu.ITime) iblobstorage.IBLOBStorage {
 	return iblobstoragestg.Provide(bas, time)
 }
 
@@ -750,7 +750,7 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(rp router.RouterParams, sendTimeout bus.SendTimeout, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, quotas in10n.Quotas,
-	wLimiterFactory blobprocessor.WLimiterFactory, blobStorage BlobStorage,
+	wLimiterFactory blobprocessor.WLimiterFactory, blobStorage iblobstorage.IBLOBStorage,
 	autocertCache autocert.Cache, requestSender bus.IRequestSender, vvmPortSource *VVMPortSource,
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) RouterServices {
@@ -800,7 +800,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 }
 
 func provideOpBLOBProcessors(numBLOBWorkers istructs.NumBLOBProcessors, blobServiceChannel blobprocessor.BLOBServiceChannel,
-	blobStorage BlobStorage, wLimiterFactory blobprocessor.WLimiterFactory) OperatorBLOBProcessors {
+	blobStorage iblobstorage.IBLOBStorage, wLimiterFactory blobprocessor.WLimiterFactory) OperatorBLOBProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, numBLOBWorkers)
 	for i := 0; i < int(numBLOBWorkers); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(blobprocessor.ProvideService(blobServiceChannel, blobStorage,
