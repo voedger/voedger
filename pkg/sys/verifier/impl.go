@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
@@ -105,16 +106,10 @@ func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg s
 		kb.PutString(sys.Storage_SendMail_Field_Host, smtpCfg.Host)
 		kb.PutInt32(sys.Storage_SendMail_Field_Port, smtpCfg.Port)
 		kb.PutString(sys.Storage_SendMail_Field_Username, smtpCfg.Username)
-		kbSecret, err := st.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
+		pwd, err := state.ReadSecret(st, smtpCfg.PwdSecret)
 		if err != nil {
 			return err
 		}
-		kbSecret.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
-		sv, err := st.MustExist(kbSecret)
-		if err != nil {
-			return err
-		}
-		pwd := sv.AsString("")
 		kb.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
 		_, err = intents.NewValue(kb)

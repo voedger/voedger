@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -78,17 +79,10 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 		skbSendMail.PutInt32(sys.Storage_SendMail_Field_Port, smtpCfg.Port)
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Username, smtpCfg.Username)
 
-		skbAppSecretsStorage, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
+		pwd, err := state.ReadSecret(s, smtpCfg.PwdSecret)
 		if err != nil {
 			return err
 		}
-		skbAppSecretsStorage.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
-		svAppSecretsStorage, err := s.MustExist(skbAppSecretsStorage)
-		if err != nil {
-			return err
-		}
-
-		pwd := svAppSecretsStorage.AsString("")
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
 		// Send invitation Email
