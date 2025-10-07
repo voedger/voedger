@@ -81,17 +81,17 @@ func validateRequest(req *http.Request, rw http.ResponseWriter, numsAppsWorkspac
 }
 
 func validate(req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, validators ...validatorFunc) (validatedData, bool) {
-	validtedData, ok := validateRequest(req, rw, numsAppsWorkspaces)
+	validatedData, ok := validateRequest(req, rw, numsAppsWorkspaces)
 	if !ok {
-		return validatedData{}, false
+		return validatedData, false
 	}
 	for _, validator := range validators {
-		validtedData, ok = validator(validtedData, req, rw)
+		validatedData, ok = validator(validatedData, req, rw)
 		if !ok {
-			return validatedData{}, false
+			return validatedData, false
 		}
 	}
-	return validtedData, true
+	return validatedData, true
 }
 
 func readBody(validatedData validatedData, req *http.Request, rw http.ResponseWriter) (validatedData, bool) {
