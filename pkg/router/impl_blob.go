@@ -18,7 +18,7 @@ import (
 )
 
 func (s *httpService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
-	return withBLOBsRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
+	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		if logger.IsVerbose() {
 			logger.Verbose("blob write request:", req.URL.String())
 		}
@@ -33,7 +33,7 @@ func (s *httpService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef
 }
 
 func (s *httpService) blobHTTPRequestHandler_Read(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
-	return withBLOBsRequestValidation(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
+	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		if logger.IsVerbose() {
 			logger.Verbose("blob read request:", req.URL.String())
 		}

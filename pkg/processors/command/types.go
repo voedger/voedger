@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
@@ -78,7 +77,6 @@ type cmdWorkpiece struct {
 	metrics                      commandProcessorMetrics
 	syncProjectorsStart          time.Time
 	principals                   []iauthnz.Principal
-	principalPayload             payloads.PrincipalPayload
 	roles                        []appdef.QName
 	parsedCUDs                   []parsedCUD
 	wsDesc                       istructs.IRecord

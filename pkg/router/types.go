@@ -92,3 +92,14 @@ type N10nArgs struct {
 	Subscriptions    []SubscriptionJSON `json:"subscriptions"`
 	ExpiresInSeconds int64              `json:"expiresIn"`
 }
+
+// validatedData contains validated data from HTTP request
+type validatedData struct {
+	vars     map[string]string
+	wsid     istructs.WSID
+	appQName appdef.AppQName
+	header   map[string]string
+	body     []byte
+}
+
+type validatorFunc func(validateData validatedData, req *http.Request, rw http.ResponseWriter) (validatedData, bool)

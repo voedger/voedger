@@ -16,8 +16,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/strconvu"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var onBeforeWriteResponse func(w http.ResponseWriter) // not nil in tests only
@@ -97,4 +100,31 @@ func GetCookieBearerAuth(req *http.Request) (cookieBearerToken string, ok bool, 
 		return "", false, fmt.Errorf("failed to unescape cookie value %q: %w", cookie.Value, err)
 	}
 	return cookieBearerToken, true, nil
+}
+
+// createBusRequest creates a bus.Request from validated data
+func createBusRequest(reqMethod string, data validatedData, req *http.Request) bus.Request {
+	res := bus.Request{
+		Method:   reqMethod,
+		WSID:     data.wsid,
+		Query:    map[string]string{},
+		Header:   data.header,
+		AppQName: data.appQName,
+		Resource: data.vars[URLPlaceholder_resourceName],
+		Body:     data.body,
+	}
+
+	if docIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
+		docIDUint64, err := strconvu.ParseUint64(docIDStr)
+		if err != nil {
+			// notest: parsed already by route regexp
+			panic(err)
+		}
+		res.DocID = istructs.IDType(docIDUint64)
+	}
+
+	for k, v := range req.URL.Query() {
+		res.Query[k] = v[0]
+	}
+	return res
 }
