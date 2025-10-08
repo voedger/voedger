@@ -181,7 +181,7 @@ func TestVerifierErrors(t *testing.T) {
 		vit.TimeAdd(verifier.VerificationTokenDuration + time.Minute)
 
 		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
-		vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body, it.Expect400("your verification code has expired"))
+		vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body, it.Expect400("your verification code has expired")).Println()
 	})
 }
 
