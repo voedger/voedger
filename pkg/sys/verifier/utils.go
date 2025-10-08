@@ -5,6 +5,7 @@
 package verifier
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -37,16 +38,16 @@ func NewVerificationToken(entity string, field, value string, kind appdef.Verifi
 	return token, verificationCode, err
 }
 
-func IssueVerfiedValueToken(token, code string, appTokens istructs.IAppTokens, itokens itokens.ITokens) (verifiedValueToken string, err error) {
+func IssueVerfiedValueToken(token, code string, appTokens istructs.IAppTokens, tokens itokens.ITokens) (verifiedValueToken string, err error) {
 	vp := payloads.VerificationPayload{}
 	if _, err = appTokens.ValidateToken(token, &vp); err != nil {
+		if errors.Is(err, itokens.ErrTokenExpired) {
+			return "", ErrVerificationCodeExpired
+		}
 		return "", coreutils.NewHTTPError(http.StatusBadRequest, err)
 	}
-	if vp.Hash256 != itokens.CryptoHash256([]byte(code)) {
-		return "", coreutils.NewHTTPErrorf(http.StatusBadRequest, "invalid verification code")
+	if vp.Hash256 != tokens.CryptoHash256([]byte(code)) {
+		return "", ErrInvalidVerificationCode
 	}
-	if verifiedValueToken, err = appTokens.IssueToken(VerifiedValueTokenDuration, &vp.VerifiedValuePayload); err != nil {
-		return "", err
-	}
-	return
+	return appTokens.IssueToken(VerifiedValueTokenDuration, &vp.VerifiedValuePayload)
 }

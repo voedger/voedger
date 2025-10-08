@@ -173,6 +173,16 @@ func TestVerifierErrors(t *testing.T) {
 			vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, httpu.Expect400()).Println()
 		}
 	})
+
+	t.Run("user-friendly error message on verification code expired", func(t *testing.T) {
+		verificationToken, verificationCode := InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc,
+			"EmailField", it.TestEmail, userPrincipal.ProfileWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
+
+		vit.TimeAdd(verifier.VerificationTokenDuration + time.Minute)
+
+		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
+		vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body, it.Expect400("your verification code has expired"))
+	})
 }
 
 func TestVerificationLimits(t *testing.T) {
