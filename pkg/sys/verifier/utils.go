@@ -38,7 +38,7 @@ func NewVerificationToken(entity string, field, value string, kind appdef.Verifi
 	return token, verificationCode, err
 }
 
-func IssueVerfiedValueToken(token, code string, appTokens istructs.IAppTokens, tokens itokens.ITokens) (verifiedValueToken string, err error) {
+func IssueVerifiedValueToken(token, code string, appTokens istructs.IAppTokens, tokens itokens.ITokens) (verifiedValueToken string, err error) {
 	vp := payloads.VerificationPayload{}
 	if _, err = appTokens.ValidateToken(token, &vp); err != nil {
 		if errors.Is(err, itokens.ErrTokenExpired) {

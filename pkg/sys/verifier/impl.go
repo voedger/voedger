@@ -22,8 +22,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
@@ -155,7 +155,7 @@ func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) 
 			appTokens = asRegistry.AppTokens()
 		}
 
-		verifiedValueToken, err := IssueVerfiedValueToken(verificationToken, verificationCode, appTokens, itokens)
+		verifiedValueToken, err := IssueVerifiedValueToken(verificationToken, verificationCode, appTokens, itokens)
 		if err != nil {
 			return err
 		}
