@@ -83,7 +83,7 @@ func TestBasicUsage_ApiArray(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 				go func() {
-					respWriter := responder.InitResponse(http.StatusOK)
+					respWriter := responder.StreamJSON(http.StatusOK)
 					for _, obj := range c.objs {
 						require.NoError(respWriter.Write(obj))
 					}
@@ -205,7 +205,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	expectedErrCh := make(chan error)
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
-			respWriter := responder.InitResponse(http.StatusOK)
+			respWriter := responder.StreamJSON(http.StatusOK)
 			defer respWriter.Close(nil)
 			firstElemSendErrCh <- respWriter.Write(testObject{
 				IntField: 42,
@@ -288,7 +288,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// handler, on server side
-			respWriter := responder.InitResponse(http.StatusOK)
+			respWriter := responder.StreamJSON(http.StatusOK)
 			defer respWriter.Close(nil)
 			firstElemSendErrCh <- respWriter.Write(testObject{
 				IntField: 42,

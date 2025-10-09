@@ -75,7 +75,7 @@ func NewSysRouterRequestHandler(requestCtx context.Context, request bus.Request,
 		case "c.EchoCommand":
 			bus.ReplyJSON(responder, http.StatusOK, fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes)))
 		case "q.EchoQuery":
-			respWriter := responder.InitResponse(http.StatusOK)
+			respWriter := responder.StreamJSON(http.StatusOK)
 			if err := respWriter.Write(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))); err != nil {
 				logger.Error(err)
 			}

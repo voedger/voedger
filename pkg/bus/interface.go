@@ -23,7 +23,7 @@ type RequestHandler func(requestCtx context.Context, request Request, responder 
 type IResponder interface {
 	// panics if called >1 times or after Respond
 	// ContentType is ApplicationJSON
-	InitResponse(statusCode int) IResponseWriter
+	StreamJSON(statusCode int) IResponseWriter
 
 	// panics if called >1 times or after InitResponse
 	Respond(responseMeta ResponseMeta, obj any) error

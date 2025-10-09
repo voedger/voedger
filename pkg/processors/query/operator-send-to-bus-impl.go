@@ -17,9 +17,9 @@ import (
 type SendToBusOperator struct {
 	pipeline.AsyncNOOP
 	responseWriter bus.IResponseWriter
-	responder     bus.IResponder
-	metrics       IMetrics
-	errCh         chan<- error
+	responder      bus.IResponder
+	metrics        IMetrics
+	errCh          chan<- error
 }
 
 func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -28,7 +28,7 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 		o.metrics.Increase(Metric_ExecSendSeconds, time.Since(begin).Seconds())
 	}()
 	if o.responseWriter == nil {
-		o.responseWriter = o.responder.InitResponse(http.StatusOK)
+		o.responseWriter = o.responder.StreamJSON(http.StatusOK)
 	}
 	return work, o.responseWriter.Write(work.(rowsWorkpiece).OutputRow().Values())
 }
