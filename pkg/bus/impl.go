@@ -91,7 +91,7 @@ func handlePanic(r interface{}) error {
 	}
 }
 
-func (r *implIResponder) InitResponse(statusCode int) IResponseWriter {
+func (r *implIResponder) StreamJSON(statusCode int) IResponseWriter {
 	r.checkStarted()
 	select {
 	case r.responseMetaCh <- ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: statusCode}:

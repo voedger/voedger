@@ -41,7 +41,7 @@ type ResponseMeta struct {
 type RespondMode int
 
 const (
-	RespondMode_ApiArray RespondMode = iota
+	RespondMode_StreamJSON RespondMode = iota
 	RespondMode_Single
 )
 

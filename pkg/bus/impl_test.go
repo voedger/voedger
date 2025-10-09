@@ -27,7 +27,7 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 		{
 			name: "api array response",
 			handler: func(responder IResponder) {
-				respWriter := responder.InitResponse(http.StatusOK)
+				respWriter := responder.StreamJSON(http.StatusOK)
 				result := map[string]interface{}{
 					"fld1": 42,
 					"fld2": "str",
@@ -47,7 +47,7 @@ func TestRequestSender_ApiArray_BasicUsage(t *testing.T) {
 		{
 			name: "custom response",
 			handler: func(responder IResponder) {
-				respWriter := responder.InitResponse(http.StatusOK)
+				respWriter := responder.StreamJSON(http.StatusOK)
 				result := map[string]interface{}{
 					"fld1": 42,
 					"fld2": "str",
@@ -129,7 +129,7 @@ func TestErrors(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 			// force response timeout
 			testingu.MockTime.Add(time.Duration(DefaultSendTimeout))
-			respWriter := responder.InitResponse(http.StatusOK)
+			respWriter := responder.StreamJSON(http.StatusOK)
 			respWriter.Close(nil)
 		})
 
@@ -143,7 +143,7 @@ func TestErrors(t *testing.T) {
 		clientCtx, disconnectClient := context.WithCancel(context.Background())
 		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
-				respWriter := responder.InitResponse(http.StatusOK)
+				respWriter := responder.StreamJSON(http.StatusOK)
 				<-maySendAfterDisconnect
 				writeErrCh <- respWriter.Write("test")
 				respWriter.Close(nil)
@@ -169,7 +169,7 @@ func TestErrors(t *testing.T) {
 			close(requestHandlerStarted)
 			go func() {
 				<-clientCtx.Done()
-				respWriter := responder.InitResponse(http.StatusOK)
+				respWriter := responder.StreamJSON(http.StatusOK)
 				writeErrCh <- respWriter.Write("test")
 				respWriter.Close(nil)
 			}()
@@ -194,7 +194,7 @@ func TestErrors(t *testing.T) {
 		maySend := make(chan interface{})
 		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
 			go func() {
-				respWriter := responder.InitResponse(http.StatusOK)
+				respWriter := responder.StreamJSON(http.StatusOK)
 				<-maySend
 				_ = respWriter.Write("test") // first succeed because chan buf is 1
 				writeErrCh <- respWriter.Write("test")
@@ -224,9 +224,9 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 	require := require.New(t)
 	t.Run("api array response", func(t *testing.T) {
 		requestSender := NewIRequestSender(testingu.MockTime, DefaultSendTimeout, func(requestCtx context.Context, request Request, responder IResponder) {
-			respWriter := responder.InitResponse(http.StatusOK)
+			respWriter := responder.StreamJSON(http.StatusOK)
 			require.Panics(func() {
-				responder.InitResponse(http.StatusOK)
+				responder.StreamJSON(http.StatusOK)
 			})
 			require.Panics(func() { responder.Respond(ResponseMeta{}, nil) })
 			respWriter.Close(nil)
@@ -241,7 +241,7 @@ func TestPanicOnBeginResponseAgain(t *testing.T) {
 			err := responder.Respond(ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, nil)
 			require.NoError(err)
 			require.Panics(func() {
-				responder.InitResponse(http.StatusOK)
+				responder.StreamJSON(http.StatusOK)
 			})
 			require.Panics(func() { responder.Respond(ResponseMeta{}, nil) })
 		})
