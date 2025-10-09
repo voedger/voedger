@@ -170,7 +170,7 @@ func (s *httpService) registerHandlersV2() {
 
 func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPaths_Schema)
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
@@ -179,7 +179,7 @@ func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces m
 
 func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRoles)
 		busRequest.WorkspaceQName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_workspaceName])
@@ -190,7 +190,7 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 // [~server.users/cmp.routerUsersChangePasswordPathHandler~impl]
 func requestHandlerV2_changePassword(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		login, oldPassword, newPassword, err := parseChangePasswordArgs(string(busRequest.Body))
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
@@ -212,7 +212,7 @@ func requestHandlerV2_changePassword(numsAppsWorkspaces map[appdef.AppQName]istr
 func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
 	iTokens itokens.ITokens, federation federation.IFederation) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		verifiedEmailToken, displayName, pwd, err := parseCreateLoginArgs(string(busRequest.Body))
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
@@ -268,7 +268,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 			return
 		}
 
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		principalPayload, err := authorize(appTokensFactory, busRequest)
 		if err != nil {
 			// [~server.n10n/err.routerCreateChannelInvalidToken~impl]
@@ -329,7 +329,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
 	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
 	return withValidateForN10N(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 
 		if _, err := authorize(appTokensFactory, busRequest); err != nil {
 			// [~server.n10n/err.routerAddSubscriptionInvalidToken~impl]
@@ -419,7 +419,7 @@ func parseN10nArgs(body string) (subscriptions []subscription, expiresIn time.Du
 // [~server.devices/cmp.routerDevicesCreatePathHandler~impl]
 func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, federation federation.IFederation) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		if len(busRequest.Body) > 0 {
 			ReplyCommonError(rw, "unexpected body", http.StatusBadRequest)
 			return
@@ -442,7 +442,7 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 // [~server.authnz/cmp.routerRefreshHandler~impl]
 func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Auth_Refresh)
 		busRequest.Method = http.MethodGet
@@ -453,7 +453,7 @@ func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspa
 // [~server.authnz/cmp.routerLoginPathHandler~impl]
 func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Auth_Login)
 		busRequest.Method = http.MethodGet
@@ -527,7 +527,7 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 
 func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRole)
 		busRequest.WorkspaceQName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_workspaceName])
@@ -538,7 +538,7 @@ func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorks
 
 func requestHandlerV2_view(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Views)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_view])
@@ -555,7 +555,7 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors
 		case processors.APIPath_Queries:
 			entity = data.vars[URLPlaceholder_query]
 		}
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], entity)
@@ -565,7 +565,7 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors
 
 func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		busRequest := createBusRequest(req.Method, data, req)
+		busRequest := createBusRequest(data, req)
 		if recordIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
 			docID, err := strconvu.ParseUint64(recordIDStr)
 			if err != nil {

@@ -103,9 +103,9 @@ func GetCookieBearerAuth(req *http.Request) (cookieBearerToken string, ok bool, 
 }
 
 // createBusRequest creates a bus.Request from validated data
-func createBusRequest(reqMethod string, data validatedData, req *http.Request) bus.Request {
+func createBusRequest(data validatedData, req *http.Request) bus.Request {
 	res := bus.Request{
-		Method:   reqMethod,
+		Method:   req.Method,
 		WSID:     data.wsid,
 		Query:    map[string]string{},
 		Header:   data.header,
