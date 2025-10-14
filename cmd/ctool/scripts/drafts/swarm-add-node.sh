@@ -11,7 +11,7 @@ set -euo pipefail
 set +x
 
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 <ip address first swarm node> <...>" >&2
+  echo "Usage: $0 <manager ip address> <node ip address> [<node ip address> ...]" >&2
   exit 1
 fi
 
@@ -22,20 +22,21 @@ MANAGER=$1
 
 JOIN_TOKEN=$(cat ./manager.token)
 
-shift 
+shift
 # Add remaining nodes as managers and workers
 while [ $# -gt 0 ]; do
 
-ip=$(getent hosts "$1" | awk '{print $1}')
+# $1 is now the IP address of the node to add
+ip="$1"
 
 # Get the ID of the node with the specified IP address
 node_id=$(utils_ssh "$SSH_USER@$MANAGER" "docker node ls --format '{{.ID}}' | while read id; do docker node inspect --format '{{.Status.Addr}} {{.ID}}' \$id; done | grep $ip | awk '{print \$2}'")
   if [[ -n "$node_id" ]]; then
     echo "Host is already a member of Docker Swarm cluster."
-  else 
+  else
     echo "Join node to Docker Swarm..."
     # Attempt to join node to Docker Swarm
-    join_output=$(utils_ssh "$SSH_USER@$1" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377" 2>&1) || join_error=$?
+    join_output=$(utils_ssh "$SSH_USER@$ip" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377" 2>&1) || join_error=$?
       if [[ -n "${join_error-}" ]]; then
         if [[ "$join_output" == *"This node is already part of a swarm"* ]]; then
           echo "Node is already part of a swarm, leaving current swarm..."
