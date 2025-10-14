@@ -72,7 +72,7 @@ func parseSubscribeAndWatchArgs(ctx context.Context, work pipeline.IWorkpiece) (
 		}
 		wsid, err := coreutils.ClarifyJSONWSID(subscr.WSIDNumber)
 		if err != nil {
-			return err
+			return fmt.Errorf("subscriptions[%d]: failed to parse wsid %s: %w", i, subscr.WSIDNumber, err)
 		}
 		entity, err := appdef.ParseQName(subscr.Entity)
 		if err != nil {
