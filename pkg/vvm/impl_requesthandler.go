@@ -38,7 +38,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 			n10nArgs := n10n.N10NProcArgs{
 				Body:             request.Body,
 				Token:            token,
-				Mehtod:           request.Method,
+				Method:           request.Method,
 				EntityFromURL:    request.QName,
 				WSID:             request.WSID,
 				Responder:        responder,

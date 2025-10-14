@@ -70,7 +70,7 @@ type subscription struct {
 type N10NProcArgs struct {
 	Body             []byte
 	Token            string
-	Mehtod           string
+	Method           string
 	EntityFromURL    appdef.QName
 	WSID             istructs.WSID
 	Responder        bus.IResponder

@@ -68,7 +68,7 @@ func parseSubscribeAndWatchArgs(ctx context.Context, work pipeline.IWorkpiece) (
 	}
 	for i, subscr := range subscribeAndWatchArgs.Subscriptions {
 		if len(subscr.Entity) == 0 || len(subscr.WSIDNumber.String()) == 0 {
-			return fmt.Errorf("subscriptions[%d]: entity and\\or wsid is not provided", i)
+			return fmt.Errorf("subscriptions[%d]: entity and/or wsid is not provided", i)
 		}
 		wsid, err := coreutils.ClarifyJSONWSID(subscr.WSIDNumber)
 		if err != nil {

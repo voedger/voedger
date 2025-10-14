@@ -20,7 +20,7 @@ import (
 
 func (p *implIN10NProc) Handle(requestCtx context.Context, args N10NProcArgs) {
 	var pipeline pipeline.ISyncPipeline
-	switch args.Mehtod {
+	switch args.Method {
 	case http.MethodPost:
 		pipeline = subscribeAndWatchPipeline(requestCtx, p)
 	case http.MethodPut:
@@ -29,7 +29,7 @@ func (p *implIN10NProc) Handle(requestCtx context.Context, args N10NProcArgs) {
 		pipeline = unsubscribePipeline(requestCtx, p)
 	default:
 		// notest: excluded by router rule
-		panic("unexpected method " + args.Mehtod)
+		panic("unexpected method " + args.Method)
 	}
 	defer pipeline.Close()
 	n10nWP := &n10nWorkpiece{
