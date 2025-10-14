@@ -30,11 +30,6 @@ type implIN10NProc struct {
 	goroutinesWG     sync.WaitGroup
 }
 
-type Subscription struct {
-	Entity appdef.QName
-	WSID   istructs.WSID
-}
-
 type n10nWorkpiece struct {
 	body                     []byte
 	requestCtx               context.Context

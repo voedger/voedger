@@ -83,11 +83,6 @@ type SubscriptionJSON struct {
 	WSIDNumber json.Number `json:"wsid"`
 }
 
-type subscription struct {
-	entity appdef.QName
-	wsid   istructs.WSID
-}
-
 type N10nArgs struct {
 	Subscriptions    []SubscriptionJSON `json:"subscriptions"`
 	ExpiresInSeconds int64              `json:"expiresIn"`
