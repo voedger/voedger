@@ -22,11 +22,14 @@ SOURCE_KEY_FILE="$2"
 REMOTE_HOST="$3"
 
 SSH_USER=$LOGNAME
-DEST_PATH="${HOME}/ctool"
+
+# Get the remote user's home directory, not the local one
+REMOTE_HOME=$(utils_ssh "$SSH_USER@$REMOTE_HOST" "echo \$HOME" 2>/dev/null | tr -d '\r\n')
+DEST_PATH="${REMOTE_HOME}/ctool"
 DEST_CTOOL_FILE="${DEST_PATH}/ctool"
 DEST_KEY_FILE="${DEST_PATH}/pkey"
 
-utils_ssh "$SSH_USER@$REMOTE_HOST" "mkdir -p "$DEST_PATH""
+utils_ssh "$SSH_USER@$REMOTE_HOST" "mkdir -p \"$DEST_PATH\""
 
 if utils_ssh "$SSH_USER@$REMOTE_HOST" "[ -e \"$DEST_KEY_FILE\" ]"; then
   utils_ssh "$SSH_USER@$REMOTE_HOST" "chmod u+w \"$DEST_KEY_FILE\" && rm -f \"$DEST_KEY_FILE\""
