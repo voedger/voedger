@@ -24,35 +24,48 @@ NEW_SUBNET="192.168.44.0/24"
 NEW_GATEWAY="192.168.44.1"
 INGRESS_NETWORK_NAME=ingress
 
-swarm_manager_ip=$(getent hosts "$1" | awk '{print $1}')
-
 SSH_USER=$LOGNAME
 
-if [[ $(utils_ssh $SSH_USER@"$1" docker info --format '{{.Swarm.LocalNodeState}}') == "inactive" ]]; then
+# $1 is the hostname or IP address for the swarm manager
+swarm_manager_addr="$1"
+
+# Create a script to run on the remote VM
+# This script will be executed via SSH on the remote host
+remote_script=$(cat <<'REMOTE_SCRIPT_EOF'
+set -euo pipefail
+
+SWARM_MANAGER_ADDR="$1"
+NEW_SUBNET="$2"
+NEW_GATEWAY="$3"
+INGRESS_NETWORK_NAME="$4"
+
+# Check if swarm is inactive and initialize if needed
+if docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "inactive"; then
   # Initialize Swarm with all nodes as managers and workers
-  WORKER_TOKEN=$(utils_ssh $SSH_USER@"$1" docker swarm init --advertise-addr "$swarm_manager_ip" --listen-addr "$swarm_manager_ip":2377 | grep -oP "SWMTKN-\S+")
+  WORKER_TOKEN=$(docker swarm init --advertise-addr "$SWARM_MANAGER_ADDR" --listen-addr "$SWARM_MANAGER_ADDR":2377 | grep -o "SWMTKN-[^ ]*")
   echo "$WORKER_TOKEN" > worker.token
 fi
 
-MANAGER_TOKEN=$(utils_ssh $SSH_USER@$1 docker swarm join-token manager | grep -oP "SWMTKN-\S+")
+# Get manager token
+MANAGER_TOKEN=$(docker swarm join-token manager | grep -o "SWMTKN-[^ ]*")
 echo "$MANAGER_TOKEN" > manager.token
 
 # Get the current subnet of the ingress network
-CURRENT_SUBNET=$(utils_ssh $SSH_USER@$1 "docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' ingress")
+CURRENT_SUBNET=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' ingress)
 echo "$CURRENT_SUBNET"
 
 # Check if the current subnet matches the desired subnet
 if [ "$CURRENT_SUBNET" == "10.0.0.0/24" ]; then
 
-  if utils_ssh "$SSH_USER@$1" "docker network inspect $INGRESS_NETWORK_NAME > /dev/null 2>&1; echo \$?"; then
+  if docker network inspect "$INGRESS_NETWORK_NAME" > /dev/null 2>&1; then
     # Remove the existing ingress network
     echo "Remove ingress network"
-    utils_ssh "$SSH_USER"@"$1" "echo y | docker network rm ingress "
+    echo y | docker network rm ingress
   fi
 
   del_count=0
   while [ $del_count -lt 10 ]; do
-    if ! utils_ssh "$SSH_USER@$1" "docker network inspect $INGRESS_NETWORK_NAME > /dev/null 2>&1"; then
+    if ! docker network inspect "$INGRESS_NETWORK_NAME" > /dev/null 2>&1; then
       echo "ingress network deleted."
       break
     fi
@@ -68,15 +81,24 @@ if [ "$CURRENT_SUBNET" == "10.0.0.0/24" ]; then
 
   echo "Create ingress network"
   # Create a new ingress network with the desired subnet
-  utils_ssh "$SSH_USER"@"$1" "docker network create \
+  docker network create \
   --driver overlay \
   --ingress \
-  --subnet=$NEW_SUBNET \
-  --gateway=$NEW_GATEWAY \
+  --subnet="$NEW_SUBNET" \
+  --gateway="$NEW_GATEWAY" \
   --opt com.docker.network.driver.overlay.vxlanid_list=4096 \
-  ingress"
+  ingress
 
     echo "Ingress network recreated with subnet: $NEW_SUBNET"
 else
     echo "Ingress network subnet is not 10.0.0.0/24. No action taken."
 fi
+REMOTE_SCRIPT_EOF
+)
+
+# Execute the script on the remote VM
+utils_ssh "$SSH_USER@$swarm_manager_addr" "bash -s $swarm_manager_addr $NEW_SUBNET $NEW_GATEWAY $INGRESS_NETWORK_NAME" <<< "$remote_script"
+
+# Fetch the manager token from the remote VM and save it locally
+MANAGER_TOKEN=$(utils_ssh "$SSH_USER@$swarm_manager_addr" "cat manager.token")
+echo "$MANAGER_TOKEN" > manager.token
