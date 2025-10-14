@@ -212,7 +212,7 @@ func setPrometheusPassword(cluster *clusterType, password string) error {
 		}
 
 	} else {
-		args := append([]string{password, hash}, "app-node-1", "app-node-2")
+		args := append([]string{password, hash}, cluster.nodeByHost("app-node-1").address(), cluster.nodeByHost("app-node-2").address())
 
 		if err = newScriptExecuter(cluster.sshKey, "").
 			run("prometheus-voedger-password.sh", args...); err != nil {
