@@ -14,7 +14,11 @@ fi
 
 source ./utils.sh
 
-release=$(lsb_release -rs)
+NODE=$1
+SSH_USER=$LOGNAME
+
+# Get Ubuntu version from the remote host, not the local machine
+release=$(utils_ssh "$SSH_USER@$NODE" "lsb_release -rs" 2>/dev/null | tr -d '\r\n' || echo "unknown")
 
 if [[ $release == "20.04" ]]; then
 	echo "This is Ubuntu 20.04"
@@ -24,12 +28,9 @@ elif [[ $release == "22.04" ]]; then
 	echo "This is Ubuntu 22.04"
 	VERSION_STRING="5:20.10.23~3-0~ubuntu-jammy"
 else
-	echo "This script only supports Ubuntu 20.04 and 22.04"
+	echo "This script only supports Ubuntu 20.04 and 22.04 (detected: $release)"
 	exit 1
 fi
-
-NODE=$1
-SSH_USER=$LOGNAME
 
 script="\
         sudo add-apt-repository ppa:rmescandon/yq -y;
@@ -45,8 +46,8 @@ script="\
 		sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg;
 
 	echo \
-		\"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-		$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null;
+		\"deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+		\$(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null;
 
 	sudo apt-get update;
 	sudo apt-get install docker-ce=$VERSION_STRING docker-ce-cli=$VERSION_STRING containerd.io -y;
