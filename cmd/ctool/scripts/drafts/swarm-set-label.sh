@@ -18,9 +18,15 @@ source ./utils.sh
 
 SSH_USER=$LOGNAME
 
+# $1 is the swarm manager IP address (for SSH connection to run docker commands)
+# $2 is the node IP address (to get the hostname of the node being labeled)
+# $3 is the label key
+# $4 is the label value
+
+# Get the hostname of the node we're labeling
 REMOTE_HOSTNAME=$(utils_ssh "$SSH_USER@$2" 'hostname')
 
-# Set node label
+# Set node label - SSH to the swarm manager to run the docker node update command
 utils_ssh "$SSH_USER@$1" "docker node update --label-add $3=$4 $REMOTE_HOSTNAME"
 
 set +x
