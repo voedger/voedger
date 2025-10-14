@@ -55,8 +55,20 @@ rack=rack1
 #
 "
 addVolumeDC
-# Use sed with empty backup extension for macOS compatibility
-sed -i 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
+
+# Detect OS
+OS=$(uname -s)
+if [ "$OS" = "Darwin" ]; then
+    # Use sed with empty backup extension for macOS compatibility
+    sed -i '' 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
+elif [ "$OS" = "Linux" ]; then
+    # Linux doesn't need the empty string
+    sed -i 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
+else
+    echo "Unsupported OS: $OS"
+    exit 1
+fi
+
 echo "$rackdc" | utils_ssh "$SSH_USER@$1" 'cat > ~/scylla/cassandra-rackdc.properties'
 fi
 
