@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -22,7 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -150,21 +148,21 @@ func (s *httpService) registerHandlersV2() {
 	// [~server.n10n/cmp.routerCreateChannelHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.requestSender))).
 		Methods(http.MethodOptions, http.MethodPost).Name("notifications subscribe + watch")
 
 	// notifications unsubscribe /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
 	// [~server.n10n/cmp.routerUnsubscribeHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.requestSender))).
 		Methods(http.MethodOptions, http.MethodDelete).Name("notifications unsubscribe")
 
 	// notifications subscribe to an extra view /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
 	// [~server.n10n/cmp.routerAddSubscriptionHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.n10n, s.appTokensFactory))).
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.requestSender))).
 		Methods(http.MethodOptions, http.MethodPut).Name("notifications subscribe to an extra view")
 }
 
@@ -248,172 +246,38 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 	})
 }
 
-func authorize(appTokensFactory payloads.IAppTokensFactory, busRequest bus.Request) (principalPayload payloads.PrincipalPayload, err error) {
-	principalToken, err := bus.GetPrincipalToken(busRequest)
-	if err != nil {
-		return principalPayload, err
-	}
-	appTokens := appTokensFactory.New(busRequest.AppQName)
-	_, err = appTokens.ValidateToken(principalToken, &principalPayload)
-	return principalPayload, err
-}
-
-func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
-	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
+func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, reqSender bus.IRequestSender) http.HandlerFunc {
 	return withValidateForN10N(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		flusher, ok := rw.(http.Flusher)
+		_, ok := rw.(http.Flusher)
 		if !ok {
 			// notest
 			WriteTextResponse(rw, "streaming unsupported!", http.StatusInternalServerError)
 			return
 		}
-
 		busRequest := createBusRequest(data, req)
-		principalPayload, err := authorize(appTokensFactory, busRequest)
-		if err != nil {
-			// [~server.n10n/err.routerCreateChannelInvalidToken~impl]
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		subscriptions, expiresIn, err := parseN10nArgs(string(busRequest.Body))
-		if err != nil {
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		subjectLogin := istructs.SubjectLogin(principalPayload.Login)
-		channel, err := n10n.NewChannel(subjectLogin, expiresIn)
-		if err != nil {
-			ReplyCommonError(rw, "create new channel failed: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		rw.Header().Set("Content-Type", "text/event-stream")
-		rw.Header().Set("Cache-Control", "no-cache")
-		rw.Header().Set("Connection", "keep-alive")
-
-		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
-			// notest
-			logger.Error("failed to write created channel id to client:", err)
-			return
-		}
-		flusher.Flush()
-
-		subscribedProjectionKeys := []in10n.ProjectionKey{}
-
-		for i, sub := range subscriptions {
-			projectionKey := in10n.ProjectionKey{
-				App:        busRequest.AppQName,
-				Projection: sub.entity,
-				WS:         sub.wsid,
-			}
-			err := n10n.Subscribe(channel, projectionKey)
-			if err != nil {
-				for _, subscribedKey := range subscribedProjectionKeys {
-					if err = n10n.Unsubscribe(channel, subscribedKey); err != nil {
-						logger.Error(fmt.Sprintf("failed to unsubscribe key %#v: %s", subscribedKey, err))
-					}
-				}
-				ReplyCommonError(rw, fmt.Sprintf("subscriptions[%d]: subscribe failed: %s", i, err), http.StatusInternalServerError)
-				return
-			}
-			subscribedProjectionKeys = append(subscribedProjectionKeys, projectionKey)
-		}
-
-		serveN10NChannel(req.Context(), rw, flusher, channel, n10n, subjectLogin)
+		busRequest.IsAPIV2 = true
+		busRequest.IsN10N = true
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	})
 }
 
 // handles both unsubscribe and subscribe to an extra view
-func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
-	n10n in10n.IN10nBroker, appTokensFactory payloads.IAppTokensFactory) http.HandlerFunc {
+func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, reqSender bus.IRequestSender) http.HandlerFunc {
 	return withValidateForN10N(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
+		var err error
 		busRequest := createBusRequest(data, req)
-
-		if _, err := authorize(appTokensFactory, busRequest); err != nil {
-			// [~server.n10n/err.routerAddSubscriptionInvalidToken~impl]
-			// [~server.n10n/err.routerUnsubscribeInvalidToken~impl]
-			ReplyCommonError(rw, err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		if len(busRequest.Body) > 0 {
-			ReplyCommonError(rw, "unexpected body on n10n unsubscribe", http.StatusBadRequest)
-			return
-		}
-
 		vars := mux.Vars(req)
-		channelID := vars[URLPlaceholder_channelID]
-
-		entity, err := appdef.ParseQName(vars[URLPlaceholder_view])
+		busRequest.Resource = vars[URLPlaceholder_channelID]
+		busRequest.IsAPIV2 = true
+		busRequest.IsN10N = true
+		busRequest.QName, err = appdef.ParseQName(vars[URLPlaceholder_view])
 		if err != nil {
 			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		projectionKey := in10n.ProjectionKey{
-			App:        busRequest.AppQName,
-			Projection: entity,
-			WS:         data.wsid,
-		}
-
-		code := http.StatusOK
-		switch req.Method {
-		case http.MethodPut:
-			err = n10n.Subscribe(in10n.ChannelID(channelID), projectionKey)
-		case http.MethodDelete:
-			err = n10n.Unsubscribe(in10n.ChannelID(channelID), projectionKey)
-			code = http.StatusNoContent
-		default:
-			// notest: guarded by the rule for the url path
-			panic("unexpected method " + req.Method)
-		}
-
-		if err != nil {
-			code = http.StatusInternalServerError
-			if errors.Is(err, in10n.ErrChannelDoesNotExist) {
-				code = http.StatusNotFound
-			}
-			ReplyCommonError(rw, "failed to unsubscribe: "+err.Error(), code)
-			return
-		}
-		rw.WriteHeader(code)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
 	})
-}
-
-func parseN10nArgs(body string) (subscriptions []subscription, expiresIn time.Duration, err error) {
-	n10nArgs := N10nArgs{}
-	if err := coreutils.JSONUnmarshalDisallowUnknownFields([]byte(body), &n10nArgs); err != nil {
-		return nil, 0, fmt.Errorf("failed to unmarshal request body: %w", err)
-	}
-	if n10nArgs.ExpiresInSeconds == 0 {
-		n10nArgs.ExpiresInSeconds = defaultN10NExpiresInSeconds
-	} else if n10nArgs.ExpiresInSeconds < 0 {
-		return nil, 0, fmt.Errorf("invalid expiresIn value %d", n10nArgs.ExpiresInSeconds)
-	}
-	expiresIn = time.Duration(n10nArgs.ExpiresInSeconds) * time.Second
-	if len(n10nArgs.Subscriptions) == 0 {
-		return nil, 0, errors.New("no subscriptions provided")
-	}
-	for i, subscr := range n10nArgs.Subscriptions {
-		if len(subscr.Entity) == 0 || len(subscr.WSIDNumber.String()) == 0 {
-			return nil, 0, fmt.Errorf("subscriptions[%d]: entity and\\or wsid is not provided", i)
-		}
-		wsid, err := coreutils.ClarifyJSONWSID(subscr.WSIDNumber)
-		if err != nil {
-			return nil, 0, err
-		}
-		entity, err := appdef.ParseQName(subscr.Entity)
-		if err != nil {
-			return nil, 0, fmt.Errorf("subscriptions[%d]: failed to parse entity %s as a QName: %w", i, subscr.Entity, err)
-		}
-		subscriptions = append(subscriptions, subscription{
-			entity: entity,
-			wsid:   wsid,
-		})
-	}
-	return subscriptions, expiresIn, err
 }
 
 // [~server.devices/cmp.routerDevicesCreatePathHandler~impl]
@@ -573,6 +437,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 				panic(err)
 			}
 			busRequest.DocID = istructs.IDType(docID)
+
 		}
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
@@ -599,8 +464,8 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 		return
 	}
 
-	initResponse(rw, respMeta.ContentType, respMeta.StatusCode)
-	reply_v2(requestCtx, rw, respCh, respErr, cancel, respMeta.Mode())
+	initResponse(rw, respMeta)
+	reply_v2(requestCtx, rw, respCh, respErr, cancel, respMeta)
 }
 
 func parseChangePasswordArgs(body string) (login, oldPassword, newPassword string, err error) {
