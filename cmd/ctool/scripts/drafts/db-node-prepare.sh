@@ -55,7 +55,8 @@ rack=rack1
 #
 "
 addVolumeDC
-sed -i 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
+# Use sed with empty backup extension for macOS compatibility
+sed -i '' 's/endpoint_snitch: SimpleSnitch/endpoint_snitch: GossipingPropertyFileSnitch/' ./scylla.yaml
 echo "$rackdc" | utils_ssh "$SSH_USER@$1" 'cat > ~/scylla/cassandra-rackdc.properties'
 fi
 
