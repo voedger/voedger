@@ -47,7 +47,6 @@ func (p *implIN10NProc) Handle(requestCtx context.Context, args N10NProcArgs) {
 		err = wrapToSysError(err)
 		unsubscribeOnErr(p, n10nWP)
 		reportError(n10nWP, err)
-		return
 	}
 }
 
