@@ -21,6 +21,7 @@ SSH_USER=$LOGNAME
 USER_NAME="voedger"
 
 shift 2
+host_index=1
 for host in "$@"; do
     APP_NODE_CONTAINER=$(utils_ssh ${SSH_USER}@${host} "docker ps --format '{{.Names}}' | grep prometheus")
     if [ -z "$APP_NODE_CONTAINER" ]; then
@@ -28,8 +29,8 @@ for host in "$@"; do
     else
         utils_ssh ${SSH_USER}@${host} "sed -i 's/${USER_NAME}:.*/${USER_NAME}: ${HASHED_PASSWORD//\//\\/}/' ~/prometheus/web.yml"
         echo "Password for voedger user in Prometheus on ${host} was successfully changed"
-        
-	if [ "$host" == "app-node-1" ]; then
+
+	if [ "$host_index" -eq 1 ]; then
           SERVICE_NAME="MonDockerStack_prometheus1"
         else
           SERVICE_NAME="MonDockerStack_prometheus2"
@@ -49,5 +50,6 @@ for host in "$@"; do
 
     	    echo "${SERVICE_NAME} service was updated"
    fi
+   host_index=$((host_index + 1))
 done
 set +x
