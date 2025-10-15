@@ -112,5 +112,9 @@ func HTTPRespToFuncResp(httpResp *httpu.HTTPResponse, httpRespErr error) (funcRe
 }
 
 func unexpectedStatusErr(expectedCodes []int, actualCode int, sysErr error) error {
-	return fmt.Errorf("status %d, expected %v: %w", actualCode, expectedCodes, sysErr)
+	errStr := fmt.Sprintf("status %d, expected %v", actualCode, expectedCodes)
+	if sysErr == nil {
+		return errors.New(errStr)
+	}
+	return fmt.Errorf("%s: %w", errStr, sysErr)
 }

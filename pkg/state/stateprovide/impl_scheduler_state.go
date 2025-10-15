@@ -26,7 +26,7 @@ func implProvideSchedulerState(ctx context.Context, appStructsFunc state.AppStru
 	intentsLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender) state.IHostState {
 
 	state := &schedulerState{
-		hostState: newHostState("Scheduler", intentsLimit, appStructsFunc),
+		hostState: newHostState(ctx, "Scheduler", intentsLimit, appStructsFunc),
 	}
 
 	ieventsFunc := func() istructs.IEvents {

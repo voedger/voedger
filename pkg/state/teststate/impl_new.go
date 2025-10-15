@@ -453,6 +453,7 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	cts.buildAppDef()
 	// build state
 	cts.IState = stateprovide.ProvideMockedCommandProcessorStateFactory()(
+		cts.ctx,
 		IntentsLimit,
 		func() istructs.IAppStructs { return cts.appStructs },
 	)
@@ -667,6 +668,7 @@ func NewProjectorTestState(t *testing.T, extensionFunc func()) *ProjectorTestSta
 	pts.buildAppDef()
 	// build state
 	pts.IState = stateprovide.ProvideMockedActualizerStateFactory()(
+		pts.ctx,
 		IntentsLimit,
 		func() istructs.IAppStructs { return pts.appStructs },
 	)

@@ -88,7 +88,7 @@ func implProvideQueryProcessorState(
 	stateOpts state.StateOpts) state.IHostState {
 
 	state := &queryProcessorState{
-		hostState:     newHostState("QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
+		hostState:     newHostState(ctx, "QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
 		queryArgs:     execQueryArgsFunc,
 		queryCallback: queryCallbackFunc,
 	}

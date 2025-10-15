@@ -6,6 +6,8 @@
 package stateprovide
 
 import (
+	"context"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -14,12 +16,14 @@ import (
 
 type MockedState struct {
 	*hostState
+	ctx context.Context
 }
 
-func implProvideMockedCommandProcessorState(intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
+func implProvideMockedCommandProcessorState(ctx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
 
 	ms := &MockedState{
-		hostState: newHostState("MockedCommandProcessorState", intentsLimit, appStructsFunc),
+		ctx:       ctx,
+		hostState: newHostState(ctx, "MockedCommandProcessorState", intentsLimit, appStructsFunc),
 	}
 
 	ms.addStorage(sys.Storage_View, storages.NewMockedStorage(sys.Storage_View), S_GET|S_GET_BATCH)
@@ -36,10 +40,10 @@ func implProvideMockedCommandProcessorState(intentsLimit int, appStructsFunc sta
 	return ms
 }
 
-func implProvideMockedActualizerState(intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
+func implProvideMockedActualizerState(ctx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
 
 	ms := &MockedState{
-		hostState: newHostState("MockedActualizerState", intentsLimit, appStructsFunc),
+		hostState: newHostState(ctx, "MockedActualizerState", intentsLimit, appStructsFunc),
 	}
 
 	ms.addStorage(sys.Storage_View, storages.NewMockedStorage(sys.Storage_View), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
