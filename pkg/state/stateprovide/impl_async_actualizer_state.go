@@ -32,7 +32,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.A
 
 	state := &asyncActualizerState{
 		bundledHostState: &bundledHostState{
-			hostState:    newHostState("AsyncActualizer", intentsLimit, appStructsFunc),
+			hostState:    newHostState(ctx, "AsyncActualizer", intentsLimit, appStructsFunc),
 			bundlesLimit: bundlesLimit,
 			bundles:      make(map[appdef.QName]bundle),
 		},

@@ -42,7 +42,7 @@ func implProvideCommandProcessorState(
 	originFunc state.OriginFunc) state.IHostState {
 
 	state := &commandProcessorState{
-		hostState:          newHostState("CommandProcessor", intentsLimit, appStructsFunc),
+		hostState:          newHostState(ctx, "CommandProcessor", intentsLimit, appStructsFunc),
 		commandPrepareArgs: execCmdArgsFunc,
 	}
 

@@ -5,6 +5,7 @@
 package stateprovide
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -25,9 +26,10 @@ type hostState struct {
 	withUpdate     map[appdef.QName]state.IWithUpdate
 	intents        map[appdef.QName][]state.ApplyBatchItem
 	intentsLimit   int
+	ctx            context.Context
 }
 
-func newHostState(name string, intentsLimit int, appStructsFunc state.AppStructsFunc) *hostState {
+func newHostState(ctx context.Context, name string, intentsLimit int, appStructsFunc state.AppStructsFunc) *hostState {
 	return &hostState{
 		name:           name,
 		storages:       make(map[appdef.QName]state.IStateStorage),
@@ -40,6 +42,7 @@ func newHostState(name string, intentsLimit int, appStructsFunc state.AppStructs
 		intents:        make(map[appdef.QName][]state.ApplyBatchItem),
 		intentsLimit:   intentsLimit,
 		appStructsFunc: appStructsFunc,
+		ctx:            ctx,
 	}
 }
 
@@ -77,6 +80,10 @@ func (s hostState) QueryPrepareArgs() istructs.PrepareArgs {
 
 func (s hostState) QueryCallback() istructs.ExecQueryCallback {
 	panic(errQueryCallbackNotSupportedByState)
+}
+
+func (s hostState) Context() context.Context {
+	return s.ctx
 }
 
 func (s *hostState) addStorage(storageName appdef.QName, storage state.IStateStorage, ops int) {

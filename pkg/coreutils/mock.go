@@ -184,6 +184,10 @@ func (m *MockState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueC
 	args := m.Called(key, callback)
 	return args.Error(0)
 }
+func(m *MockState) Context() context.Context {
+	args := m.Called()
+	return args.Get(0).(context.Context)
+}
 
 type MockStateKeyBuilder struct {
 	mock.Mock

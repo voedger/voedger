@@ -624,7 +624,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 	})
 }
 func hostStateForTest(s state.IStateStorage) state.IHostState {
-	hs := newHostState("ForTest", 10, nil)
+	hs := newHostState(context.Background(), "ForTest", 10, nil)
 	hs.addStorage(testStorage, s, S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 	return hs
 }
@@ -634,7 +634,7 @@ func emptyHostStateForTest(s state.IStateStorage) (istructs.IState, istructs.IIn
 	return bs, bs
 }
 func limitedIntentsHostStateForTest(s state.IStateStorage) (istructs.IState, istructs.IIntents) {
-	hs := newHostState("LimitedIntentsForTest", 0, nil)
+	hs := newHostState(context.Background(), "LimitedIntentsForTest", 0, nil)
 	hs.addStorage(testStorage, s, S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 	return hs, hs
 }
