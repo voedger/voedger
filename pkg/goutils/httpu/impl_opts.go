@@ -110,9 +110,9 @@ func WithDefaultAuthorize(principalToken string) ReqOptFunc {
 	}
 }
 
-func WithRelativeURL(relativeURL string) ReqOptFunc {
+func WithURLPath(urlPath string) ReqOptFunc {
 	return func(opts IReqOpts) {
-		opts.httpOpts().relativeURL = relativeURL
+		opts.httpOpts().urlPath = urlPath
 	}
 }
 

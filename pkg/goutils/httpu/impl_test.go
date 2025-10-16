@@ -127,7 +127,7 @@ func TestHTTP(t *testing.T) {
 		},
 		{
 			"relative url",
-			[]ReqOptFunc{WithRelativeURL("/foo/bar")},
+			[]ReqOptFunc{WithURLPath("/foo/bar")},
 			func() {
 				handler = func(w http.ResponseWriter, r *http.Request) {
 					require.Equal("/foo/bar", r.URL.Path)

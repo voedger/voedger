@@ -43,7 +43,7 @@ type reqOpts struct {
 	cookies               map[string]string
 	expectedHTTPCodes     []int
 	responseHandler       func(httpResp *http.Response) // used if no errors and an expected status code is received
-	relativeURL           string
+	urlPath               string
 	discardResp           bool
 	bodyReader            io.Reader
 	withoutAuth           bool
