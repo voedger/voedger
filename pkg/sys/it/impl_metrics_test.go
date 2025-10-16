@@ -42,11 +42,11 @@ func TestMetricsService(t *testing.T) {
 	defer cleanup()
 
 	t.Run("service check", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(client, httpu.WithRelativeURL("/metrics/check")))
+		log.Println(vit.MetricsRequest(client, httpu.WithURLPath("/metrics/check")))
 	})
 
 	t.Run("404 on wrong url", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(client, httpu.WithRelativeURL("/unknown"), httpu.Expect404()))
+		log.Println(vit.MetricsRequest(client, httpu.WithURLPath("/unknown"), httpu.Expect404()))
 	})
 
 	t.Run("404 on wrong method", func(t *testing.T) {

@@ -86,12 +86,12 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	if len(opts.expectedHTTPCodes) == 0 {
 		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK, http.StatusCreated)
 	}
-	if len(opts.relativeURL) > 0 {
+	if len(opts.urlPath) > 0 {
 		netURL, err := url.Parse(urlStr)
 		if err != nil {
 			return nil, err
 		}
-		netURL.Path = opts.relativeURL
+		netURL.Path = opts.urlPath
 		urlStr = netURL.String()
 	}
 	if opts.withoutAuth {
