@@ -10,8 +10,10 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func CheckResponseIntent(st state.IHostState) error {
@@ -30,4 +32,13 @@ func CheckResponseIntent(st state.IHostState) error {
 		return nil
 	}
 	return coreutils.NewHTTPErrorf(int(statusCode), respIntentValue.AsString(sys.Storage_Response_Field_ErrorMessage))
+}
+
+// retruns ErrWSNotInited
+func GetWSDesc(wsid istructs.WSID, appStructs istructs.IAppStructs) (wsDesc istructs.IRecord, err error) {
+	wsDesc, err = appStructs.Records().GetSingleton(wsid, authnz.QNameCDocWorkspaceDescriptor)
+	if err == nil && wsDesc.QName() == appdef.NullQName {
+		err = ErrWSNotInited
+	}
+	return wsDesc, err
 }

@@ -167,14 +167,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return coreutils.WrapSysError(err, http.StatusUnauthorized)
 		}),
 		operator("get workspace descriptor", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.wsDesc, err = qw.appStructs.Records().GetSingleton(qw.msg.WSID(), authnz.QNameCDocWorkspaceDescriptor)
+			qw.wsDesc, err = processors.GetWSDesc(qw.msg.WSID(), qw.appStructs)
 			return err
-		}),
-		operator("check cdoc.sys.WorkspaceDescriptor existence", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.wsDesc.QName() == appdef.NullQName {
-				return processors.ErrWSNotInited
-			}
-			return nil
 		}),
 		operator("get principals roles", func(ctx context.Context, qw *queryWork) (err error) {
 			for _, prn := range qw.principals {
