@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -41,4 +42,14 @@ func GetWSDesc(wsid istructs.WSID, appStructs istructs.IAppStructs) (wsDesc istr
 		err = ErrWSNotInited
 	}
 	return wsDesc, err
+}
+
+func GetRoles(principals []iauthnz.Principal) (roles []appdef.QName) {
+	for _, prn := range principals {
+		if prn.Kind != iauthnz.PrincipalKind_Role {
+			continue
+		}
+		roles = append(roles, prn.QName)
+	}
+	return roles
 }

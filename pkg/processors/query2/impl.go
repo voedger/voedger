@@ -171,12 +171,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return err
 		}),
 		operator("get principals roles", func(ctx context.Context, qw *queryWork) (err error) {
-			for _, prn := range qw.principals {
-				if prn.Kind != iauthnz.PrincipalKind_Role {
-					continue
-				}
-				qw.roles = append(qw.roles, prn.QName)
-			}
+			qw.roles = processors.GetRoles(qw.principals)
 			return nil
 		}),
 		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
