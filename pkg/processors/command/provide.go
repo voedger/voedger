@@ -170,7 +170,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 						cmd.metrics.increase(CommandsTotal, 1.0)
 						cmdHandlingErr := cmdPipeline.SendSync(cmd)
 						if cmdHandlingErr != nil {
-							logger.Error(cmdHandlingErr)
+							logger.Error(fmt.Sprintf("%d/%s exec error: %s", cmd.cmdMes.WSID(), cmd.cmdMes.QName(), cmdHandlingErr))
 						}
 						sendResponse(cmd, cmdHandlingErr)
 						if cmd.appPartitionRestartScheduled {

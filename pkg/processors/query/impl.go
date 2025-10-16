@@ -147,6 +147,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
+						logger.Error(fmt.Sprintf("%d/%s exec error: %s", qwork.msg.WSID(), qwork.msg.QName(), err))
 					}
 					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
