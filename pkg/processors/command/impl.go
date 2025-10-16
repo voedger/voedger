@@ -404,12 +404,7 @@ func (cmdProc *cmdProc) authenticate(_ context.Context, work pipeline.IWorkpiece
 
 func getPrincipalsRoles(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	for _, prn := range cmd.principals {
-		if prn.Kind != iauthnz.PrincipalKind_Role {
-			continue
-		}
-		cmd.roles = append(cmd.roles, prn.QName)
-	}
+	cmd.roles = processors.GetRoles(cmd.principals)
 	return nil
 }
 
