@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 )
 
-func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, onSendFailed func(), respMode bus.RespondMode) {
+func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error, onSendFailed func(), respMeta bus.ResponseMeta) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -35,7 +35,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 
 	// ApiArray and no elems -> {"results":[]}
 
-	if respMode == bus.RespondMode_StreamJSON {
+	if respMeta.Mode() == bus.RespondMode_StreamJSON {
 		if sendSuccess = writeResponse(w, `{"results":[`); !sendSuccess {
 			return
 		}
@@ -50,7 +50,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 
 		toSend := ""
 
-		if respMode == bus.RespondMode_StreamJSON {
+		if respMeta.Mode() == bus.RespondMode_StreamJSON {
 			if elemsCount > 0 {
 				if sendSuccess = writeResponse(w, ","); !sendSuccess {
 					return
@@ -65,7 +65,11 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		} else {
 			switch typed := elem.(type) {
 			case nil:
-				toSend = "{}"
+				// avoiding error:
+				// failed to write response: http: request method or response status code does not allow body
+				if respMeta.StatusCode != http.StatusNoContent {
+					toSend = "{}"
+				}
 			case string:
 				toSend = typed
 			case []byte:
@@ -89,7 +93,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		elemsCount++
 	}
 
-	if respMode == bus.RespondMode_StreamJSON {
+	if respMeta.Mode() == bus.RespondMode_StreamJSON {
 		if sendSuccess = writeResponse(w, "]"); !sendSuccess {
 			return
 		}
@@ -111,7 +115,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		}
 	}
 
-	if sendSuccess && respMode == bus.RespondMode_StreamJSON {
+	if sendSuccess && respMeta.Mode() == bus.RespondMode_StreamJSON {
 		sendSuccess = writeResponse(w, "}")
 	}
 }
