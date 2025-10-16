@@ -34,7 +34,7 @@ func CheckResponseIntent(st state.IHostState) error {
 	return coreutils.NewHTTPErrorf(int(statusCode), respIntentValue.AsString(sys.Storage_Response_Field_ErrorMessage))
 }
 
-// retruns ErrWSNotInited
+// returns ErrWSNotInited
 func GetWSDesc(wsid istructs.WSID, appStructs istructs.IAppStructs) (wsDesc istructs.IRecord, err error) {
 	wsDesc, err = appStructs.Records().GetSingleton(wsid, authnz.QNameCDocWorkspaceDescriptor)
 	if err == nil && wsDesc.QName() == appdef.NullQName {
