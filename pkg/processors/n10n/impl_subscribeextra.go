@@ -18,7 +18,9 @@ func subscribeExtraPipeline(requestCtx context.Context, p *implIN10NProc) pipeli
 	return pipeline.NewSyncPipeline(requestCtx, "Subscribe on Extra View Processor",
 		pipeline.WireFunc("validateToken", p.validateToken),
 		pipeline.WireFunc("denyBody", denyBody),
+		pipeline.WireFunc("getAppStructs", p.getAppStructs),
 		pipeline.WireFunc("addProjectionKeyFromURL", addProjectionKeyFromURL),
+		pipeline.WireFunc("authnzEntities", p.authnzEntities),
 		pipeline.WireFunc("subscribe", p.subscribe),
 		pipeline.WireFunc("replyOK", p.replyOK),
 	)

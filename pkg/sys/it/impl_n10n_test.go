@@ -172,27 +172,90 @@ func TestChannelExpiration_V2(t *testing.T) {
 	waitForDone()
 }
 
-func TestN10NSubscribeErrors(t *testing.T) {
+func TestAuthnzN10N_401(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("401 unauthorized", func(t *testing.T) {
-		t.Run("no token", func(t *testing.T) {
-			vit.POST("api/v2/apps/test1/app1/notifications", "{}", httpu.Expect401()).Println()
+		t.Run("subscribe and watch", func(t *testing.T) {
+			t.Run("no token", func(t *testing.T) {
+				vit.POST("api/v2/apps/test1/app1/notifications", "", httpu.Expect401()).Println()
+			})
+			t.Run("expired token", func(t *testing.T) {
+				testingu.MockTime.Add(24 * time.Hour)
+				// should have a body because token is validated per WSID of the subject (subjects could be in different WSIDs)
+				body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+				vit.POST("api/v2/apps/test1/app1/notifications", body,
+					httpu.WithAuthorizeBy(ws.Owner.Token),
+					it.Expect401("token expired"),
+				).Println()
+				vit.RefreshTokens()
+			})
 		})
 
-		t.Run("expired token", func(t *testing.T) {
-			testingu.MockTime.Add(24 * time.Hour)
-			vit.POST("api/v2/apps/test1/app1/notifications", "{}",
-				httpu.WithAuthorizeBy(ws.Owner.Token),
-				httpu.Expect401(),
-			).Println()
-			vit.RefreshTokens()
+		// subscribe to one view
+		body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+		resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.WithLongPolling(),
+		)
+		offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
+
+		t.Run("subscribe to extra", func(t *testing.T) {
+			t.Run("no token", func(t *testing.T) {
+				vit.POST(url, "",
+					httpu.WithMethod(http.MethodPut),
+					httpu.Expect401(),
+				).Println()
+			})
+
+			t.Run("expired token", func(t *testing.T) {
+				testingu.MockTime.Add(24 * time.Hour)
+				vit.POST(url, "",
+					httpu.WithMethod(http.MethodPut),
+					httpu.WithAuthorizeBy(ws.Owner.Token),
+					it.Expect401("token expired"),
+				).Println()
+				vit.RefreshTokens()
+			})
 		})
+		t.Run("unsubscribe", func(t *testing.T) {
+			t.Run("no token", func(t *testing.T) {
+				vit.POST(url, "",
+					httpu.WithMethod(http.MethodDelete),
+					httpu.Expect401(),
+				).Println()
+			})
+			t.Run("expired token", func(t *testing.T) {
+				testingu.MockTime.Add(24 * time.Hour)
+				vit.POST(url, "",
+					httpu.WithMethod(http.MethodDelete),
+					httpu.WithAuthorizeBy(ws.Owner.Token),
+					it.Expect401("token expired"),
+				).Println()
+				vit.RefreshTokens()
+			})
+		})
+
+		// close the initial connection
+		// SSE listener channel should be closed after that
+		resp.HTTPResp.Body.Close()
+
+		for range offsetsChan {
+		}
+		waitForDone()
 	})
 
+}
+
+func TestN10NSubscribeErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	t.Run("bad requests", func(t *testing.T) {
 		cases := []struct {
 			body     string
@@ -222,6 +285,89 @@ func TestN10NSubscribeErrors(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestAuthnzN10N_403(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	t.Run("create channel and subscribe", func(t *testing.T) {
+		body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdxDenied","wsid":%d}],"expiresIn":42}`, ws.WSID)
+		vit.POST("api/v2/apps/test1/app1/notifications", body,
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.Expect403(),
+		)
+	})
+
+	t.Run("subscribe to an extra view", func(t *testing.T) {
+		// subscribe to one view
+		body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+		resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.WithLongPolling(),
+		)
+
+		offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+		// try to subscribe to an extra view, SELECT is not granted
+		url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.CategoryIdxDenied", channelID, ws.WSID)
+		vit.POST(url, "",
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			httpu.WithMethod(http.MethodPut),
+			httpu.Expect403(),
+		)
+
+		// close the initial connection
+		// SSE listener channel should be closed after that
+		resp.HTTPResp.Body.Close()
+
+		for range offsetsChan {
+		}
+		waitForDone()
+	})
+}
+
+func TestCookiesAuth_V2(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// owning does not matter for notifications, need just a valid token
+	token := ws.Owner.Token
+
+	// subscribe and watch
+	body := fmt.Sprintf(`{"subscriptions": [{"entity":"app1pkg.CategoryIdx","wsid": %d}],"expiresIn": 42}`, ws.WSID)
+	resp := vit.POST("api/v2/apps/test1/app1/notifications", body,
+		httpu.WithCookies(httpu.Authorization, httpu.BearerPrefix+token),
+		httpu.WithLongPolling(),
+	)
+
+	offsetsChan, channelID, waitForDone := federation.ListenSSEEvents(resp.HTTPResp.Request.Context(), resp.HTTPResp.Body)
+
+	url := fmt.Sprintf("api/v2/apps/test1/app1/notifications/%s/workspaces/%d/subscriptions/app1pkg.DailyIdx", channelID, ws.WSID)
+
+	// subscribe to extra
+	vit.POST(url, "",
+		httpu.WithCookies(httpu.Authorization, httpu.BearerPrefix+token),
+		httpu.WithMethod(http.MethodPut),
+	)
+
+	// unsubscribe
+	vit.POST(url, "",
+		httpu.WithCookies(httpu.Authorization, httpu.BearerPrefix+token),
+		httpu.WithMethod(http.MethodDelete),
+		httpu.Expect204(),
+	)
+
+	// close the initial connection
+	// SSE listener channel should be closed after that
+	resp.HTTPResp.Body.Close()
+
+	for range offsetsChan {
+	}
+	waitForDone()
 }
 
 func TestN10NSubscribeToExtraErrors(t *testing.T) {

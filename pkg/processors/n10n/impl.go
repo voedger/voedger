@@ -33,6 +33,7 @@ func (p *implIN10NProc) Handle(requestCtx context.Context, args N10NProcArgs) {
 	}
 	defer pipeline.Close()
 	n10nWP := &n10nWorkpiece{
+		host:          args.Host,
 		body:          args.Body,
 		requestCtx:    requestCtx,
 		responder:     args.Responder,
