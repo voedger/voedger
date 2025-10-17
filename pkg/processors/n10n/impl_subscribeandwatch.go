@@ -26,9 +26,10 @@ func subscribeAndWatchPipeline(requestCtx context.Context, p *implIN10NProc) pip
 		pipeline.WireFunc("getSubjectLogin", p.getSubjectLogin),
 		pipeline.WireFunc("parseSubscribeAndWatchArgs", parseSubscribeAndWatchArgs),
 		pipeline.WireFunc("newChannel", p.newChannel),
+		pipeline.WireFunc("subscribe", p.subscribe),
 		pipeline.WireFunc("initResponse", initResponse),
 		pipeline.WireFunc("sendChannelIDSSEEvent", sendChannelIDSSEEvent),
-		pipeline.WireFunc("subscribe", p.subscribe),
+		pipeline.WireSyncOperator("revertSubscribedOnErr", &revertSubscribedOnErr{n10nBroker: p.n10nBroker}),
 		pipeline.WireFunc("go WatchChannel", p.watchChannel),
 	)
 }
@@ -138,4 +139,14 @@ func (p *implIN10NProc) watchChannel(ctx context.Context, work pipeline.IWorkpie
 		n10nWP.responseWriter.Close(nil)
 	}()
 	return nil
+}
+
+func (u *revertSubscribedOnErr) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+	n10nWP := work.(*n10nWorkpiece)
+	for _, subscribedKey := range n10nWP.subscribedProjectionKeys {
+		if err := u.n10nBroker.Unsubscribe(n10nWP.channelID, subscribedKey); err != nil {
+			logger.Error(fmt.Sprintf("failed to unsubscribe key %s: %s", subscribedKey.ToJSON(), err))
+		}
+	}
+	return err
 }

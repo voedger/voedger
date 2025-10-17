@@ -8,7 +8,6 @@ package n10n
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/bus"
@@ -45,7 +44,6 @@ func (p *implIN10NProc) Handle(requestCtx context.Context, args N10NProcArgs) {
 	err := pipeline.SendSync(n10nWP)
 	if err != nil {
 		err = wrapToSysError(err)
-		unsubscribeOnErr(p, n10nWP)
 		reportError(n10nWP, err)
 	}
 }
@@ -60,14 +58,6 @@ func wrapToSysError(err error) error {
 		resultCode = http.StatusTooManyRequests
 	}
 	return coreutils.WrapSysError(err, resultCode)
-}
-
-func unsubscribeOnErr(p *implIN10NProc, n10nWP *n10nWorkpiece) {
-	for _, subscribedKey := range n10nWP.subscribedProjectionKeys {
-		if err := p.n10nBroker.Unsubscribe(n10nWP.channelID, subscribedKey); err != nil {
-			logger.Error(fmt.Sprintf("failed to unsubscribe key %#v: %s", subscribedKey, err))
-		}
-	}
 }
 
 func reportError(n10nWP *n10nWorkpiece, err error) {
