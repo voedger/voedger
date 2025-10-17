@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 type IN10NProc interface {
@@ -71,4 +72,9 @@ type N10NProcArgs struct {
 	Responder        bus.IResponder
 	AppQName         appdef.AppQName
 	ChannelIDFromURL string
+}
+
+type revertSubscribedOnErr struct {
+	pipeline.NOOP
+	n10nBroker in10n.IN10nBroker
 }
