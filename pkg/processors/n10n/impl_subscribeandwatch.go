@@ -124,12 +124,13 @@ func (p *implIN10NProc) watchChannel(ctx context.Context, work pipeline.IWorkpie
 	watchChannelCtx, cancel := context.WithCancel(n10nWP.requestCtx)
 	go func() {
 		defer p.goroutinesWG.Done()
+		defer cancel()
 		// unsubscribe and channel cleanup is done within WatchChannel
 		p.n10nBroker.WatchChannel(watchChannelCtx, n10nWP.channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
 			sseMessage := fmt.Sprintf("event: %s\ndata: %d\n\n", projection.ToJSON(), offset)
 			if err := n10nWP.responseWriter.Write(sseMessage); err != nil {
 				// could happen if e.g. router stopped to listen for bus
-				logger.Error("failed to send sse message:", sseMessage)
+				logger.Error("failed to send sse message", sseMessage, ":", err)
 				// force WatchChannel to exit
 				cancel()
 			}
