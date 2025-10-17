@@ -27,9 +27,9 @@ func subscribeAndWatchPipeline(requestCtx context.Context, p *implIN10NProc) pip
 		pipeline.WireFunc("parseSubscribeAndWatchArgs", parseSubscribeAndWatchArgs),
 		pipeline.WireFunc("newChannel", p.newChannel),
 		pipeline.WireFunc("subscribe", p.subscribe),
-		pipeline.WireSyncOperator("revertSubscribedOnErr", &revertSubscribedOnErr{n10nBroker: p.n10nBroker}),
 		pipeline.WireFunc("initResponse", initResponse),
 		pipeline.WireFunc("sendChannelIDSSEEvent", sendChannelIDSSEEvent),
+		pipeline.WireSyncOperator("revertSubscribedOnErr", &revertSubscribedOnErr{n10nBroker: p.n10nBroker}),
 		pipeline.WireFunc("go WatchChannel", p.watchChannel),
 	)
 }
