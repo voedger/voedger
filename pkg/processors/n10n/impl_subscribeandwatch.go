@@ -115,6 +115,7 @@ func (p *implIN10NProc) authnzEntities(ctx context.Context, work pipeline.IWorkp
 			// [~server.n10n/err.routerCreateChannelInvalidToken~impl]
 			// [~server.n10n/err.routerAddSubscriptionInvalidToken~impl]
 			// [~server.n10n/err.routerUnsubscribeInvalidToken~impl]
+			// notest: token is validated already, error could happen on e.g. subjects read failure
 			return coreutils.NewHTTPError(http.StatusUnauthorized, err)
 		}
 		roles := processors.GetRoles(principals)
