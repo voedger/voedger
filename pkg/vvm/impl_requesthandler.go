@@ -36,6 +36,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 		}
 		if request.IsN10N {
 			n10nArgs := n10n.N10NProcArgs{
+				Host:             request.Host,
 				Body:             request.Body,
 				Token:            token,
 				Method:           request.Method,

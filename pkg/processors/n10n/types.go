@@ -25,13 +25,15 @@ type IN10NProc interface {
 }
 
 type implIN10NProc struct {
-	n10nBroker       in10n.IN10nBroker
-	authenticator    iauthnz.IAuthenticator
-	appTokensFactory payloads.IAppTokensFactory
-	goroutinesWG     sync.WaitGroup
+	n10nBroker         in10n.IN10nBroker
+	authenticator      iauthnz.IAuthenticator
+	appTokensFactory   payloads.IAppTokensFactory
+	goroutinesWG       sync.WaitGroup
+	appStructsProvider istructs.IAppStructsProvider
 }
 
 type n10nWorkpiece struct {
+	host                     string
 	body                     []byte
 	requestCtx               context.Context
 	responder                bus.IResponder
@@ -46,6 +48,8 @@ type n10nWorkpiece struct {
 	principalPayload         payloads.PrincipalPayload
 	entityFromURL            appdef.QName
 	wsidFromURL              istructs.WSID
+	appStructs               istructs.IAppStructs
+	appTokens                istructs.IAppTokens
 }
 
 type n10nArgs struct {
@@ -64,6 +68,7 @@ type subscription struct {
 }
 
 type N10NProcArgs struct {
+	Host             string
 	Body             []byte
 	Token            string
 	Method           string
