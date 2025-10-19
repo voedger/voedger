@@ -158,6 +158,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return qw.apiPathHandler.checkRateLimit(ctx, qw)
 		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
+			if processors.SetPrincipalsForAnonymousOnlyFunc(qw.appStructs.AppDef(), qw.msg.QName(), qw.msg.WSID(), qw) {
+				// grant to anonymous -> set token == "" to avoid validating an expired token accidentally kept in cookies
+				return nil
+			}
 			req := iauthnz.AuthnRequest{
 				Host:        qw.msg.Host(),
 				RequestWSID: qw.msg.WSID(),

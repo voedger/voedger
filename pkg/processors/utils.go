@@ -53,3 +53,29 @@ func GetRoles(principals []iauthnz.Principal) (roles []appdef.QName) {
 	}
 	return roles
 }
+
+func SetPrincipalsForAnonymousOnlyFunc(appDef appdef.IAppDef, funcQName appdef.QName, wsid istructs.WSID, setter interface{ SetPrincipals([]iauthnz.Principal) }) (ok bool) {
+	queryType := appDef.Type(funcQName)
+	rulesForQuery := []appdef.IACLRule{}
+	for _, acl := range appDef.ACL() {
+		if acl.Filter().Match(queryType) {
+			rulesForQuery = append(rulesForQuery, acl)
+		}
+	}
+	if len(rulesForQuery) == 1 {
+		if len(rulesForQuery[0].Ops()) == 1 &&
+			rulesForQuery[0].Ops()[0] == appdef.OperationKind_Execute &&
+			rulesForQuery[0].Policy() == appdef.PolicyKind_Allow &&
+			rulesForQuery[0].Principal().Kind() == appdef.TypeKind_Role &&
+			rulesForQuery[0].Principal().QName() == iauthnz.QNameRoleAnonymous {
+			setter.SetPrincipals([]iauthnz.Principal{{
+				Kind:  iauthnz.PrincipalKind_Role,
+				WSID:  wsid,
+				QName: iauthnz.QNameRoleAnonymous,
+			}})
+			return true
+		}
+	}
+	return false
+}
+

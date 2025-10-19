@@ -765,6 +765,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		QUERY QryReturnsCategory(QryReturnsCategoryParams) RETURNS QryReturnsCategoryResult WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
 		QUERY QryVoid RETURNS void;
 		COMMAND CmdODocWithBLOB(ODocWithBLOB) WITH Tags=(WorkspaceOwnerFuncTag);
+
+		COMMAND CmdAllowedToAnonymousOnly;
+		QUERY QryAllowedToAnonymousOnly RETURNS void;
 	);
 
 	ROLE Updated; -- need for invite tests
@@ -813,6 +816,9 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT ON TABLE DocWithBLOB TO sys.WorkspaceOwner;
 	GRANT SELECT ON TABLE Country TO sys.WorkspaceOwner;
 	GRANT SELECT ON TABLE ODocWithBLOB TO sys.WorkspaceOwner;
+
+	GRANT EXECUTE ON COMMAND CmdAllowedToAnonymousOnly TO sys.Anonymous;
+	GRANT EXECUTE ON QUERY QryAllowedToAnonymousOnly TO sys.Anonymous;
 
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocActivateDenied TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE ON TABLE DocDeactivateDenied TO sys.WorkspaceOwner;

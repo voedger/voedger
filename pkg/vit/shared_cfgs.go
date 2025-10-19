@@ -430,6 +430,9 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdODocWithBLOB"), istructsmem.NullCommandExec))
 
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdAllowedToAnonymousOnly"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryAllowedToAnonymousOnly"), istructsmem.NullQueryExec))
+
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,
