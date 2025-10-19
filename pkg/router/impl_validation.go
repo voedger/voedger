@@ -19,7 +19,7 @@ import (
 )
 
 func withValidateForFuncs(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, handler func(req *http.Request, rw http.ResponseWriter, data validatedData)) http.HandlerFunc {
-	return withValidate(numsAppsWorkspaces, handler, readBody)
+	return withValidate(numsAppsWorkspaces, handler, readBody, cookiesTokenToHeaders)
 }
 
 func withValidateForN10N(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, handler func(req *http.Request, rw http.ResponseWriter, data validatedData)) http.HandlerFunc {

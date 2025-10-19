@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"sync"
 	"testing"
 
@@ -538,10 +539,30 @@ func TestStateMaxRelevantOffset(t *testing.T) {
 
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 	expecteMaxRelevantOffset := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
-	vit.WaitForOffset(collectionViewOffsetsChan,expecteMaxRelevantOffset)
+	vit.WaitForOffset(collectionViewOffsetsChan, expecteMaxRelevantOffset)
 
 	body = `{"args":{"After":0},"elements":[{"fields":["State", "MaxRelevantOffset"]}]}`
 	resp := vit.PostWS(ws, "q.sys.State", body)
 	actualMaxRelevantOffsetOffset := istructs.Offset(resp.SectionRow()[1].(float64))
 	require.Equal(t, expecteMaxRelevantOffset, actualMaxRelevantOffsetOffset)
+}
+
+func TestQueryCookiesAuth(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// expecting no errors on token in cookies
+
+	t.Run("APIv1", func(t *testing.T) {
+		body := `{"args":{"Schema":"app1pkg.articles"},"elements":[{"fields": ["name", "control_active", "sys.ID"]}]}`
+		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "q.sys.Collection", body,
+			httpu.WithCookies(httpu.Authorization, "Bearer "+ws.Owner.Token))
+	})
+
+	t.Run("APIv2", func(t *testing.T) {
+		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello world"}`)),
+			httpu.WithCookies(httpu.Authorization, "Bearer "+ws.Owner.Token))
+	})
 }
