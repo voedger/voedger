@@ -191,6 +191,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
+			if processors.SetPrincipalsForAnonymousOnlyFunc(qw.appStructs.AppDef(), qw.msg.QName(), qw.msg.WSID(), qw) {
+				// grant to anonymous -> set token == "" to avoid validating an expired token accidentally kept in cookies
+				return nil
+			}
 			req := iauthnz.AuthnRequest{
 				Host:        qw.msg.Host(),
 				RequestWSID: qw.msg.WSID(),
@@ -486,6 +490,10 @@ func (qw *queryWork) AppPartition() appparts.IAppPartition {
 // need for q.sys.SqlQuery to authnz the result
 func (qw *queryWork) Roles() []appdef.QName {
 	return qw.roles
+}
+
+func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
+	qw.principals = prns
 }
 
 func borrowAppPart(_ context.Context, qw *queryWork) error {

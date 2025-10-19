@@ -196,3 +196,7 @@ func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
 		contentType: httpu.ContentType_ApplicationJSON,
 	}
 }
+
+func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
+	qw.principals = prns
+}

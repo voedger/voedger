@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -650,4 +651,29 @@ func TestUnnamingInQueryResult(t *testing.T) {
 
 	body = fmt.Sprintf(`{"args": {"CategoryID":%d},"elements": [{"path":"","fields": ["CategoryID"],"refs":[["CategoryID", "name"],["CategoryID","int_fld1"]]}]}`, catID)
 	vit.PostWS(ws, "q.app1pkg.QryReturnsCategory", body).Println()
+}
+
+func TestExpiredTokenSkippedOnGrantExecToAnonymousFunc(t *testing.T) {
+	// avoiding validating an expired token accidentally kept in cookies
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	token := ws.Owner.Token
+
+	// expire the token
+	vit.TimeAdd(24 * time.Hour)
+
+	t.Run("command", func(t *testing.T) {
+		vit.PostWS(ws, "c.app1pkg.CmdAllowedToAnonymousOnly", "{}", httpu.WithAuthorizeBy(token))
+	})
+
+	t.Run("query", func(t *testing.T) {
+		t.Run("APIv1", func(t *testing.T) {
+			vit.PostWS(ws, "q.app1pkg.QryAllowedToAnonymousOnly", "{}", httpu.WithAuthorizeBy(token))
+		})
+		t.Run("APIv2", func(t *testing.T) {
+			vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryAllowedToAnonymousOnly`, ws.WSID), httpu.WithAuthorizeBy(token))
+		})
+	})
 }
