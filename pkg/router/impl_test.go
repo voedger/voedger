@@ -314,11 +314,15 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 				StrField: "str1",
 			})
 		}()
-	}, bus.SendTimeout(time.Hour)) // one hour timeout to eliminate case when client context closes longer than bus timeout on client disconnect. It could take up to few seconds
+	}, bus.SendTimeout(time.Minute)) // a minute timeout to eliminate case when client context closes longer than bus timeout on client disconnect. It could take up to few seconds
 	defer tearDown(router)
 
 	// client side
-	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+	client := &http.Client{
+		Transport: &http.Transport{DisableKeepAlives: true},
+	}
+	defer client.CloseIdleConnections()
+	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 	require.NoError(err)
 
 	// ensure the first element is sent successfully
