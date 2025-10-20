@@ -112,7 +112,7 @@ func TestBlobberErrors(t *testing.T) {
 		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", blobID, httpu.Expect403())
 	})
 
-	t.Run("413 request enetity too large on blob size quota exceeded", func(t *testing.T) {
+	t.Run("413 request entity too large on blob size quota exceeded", func(t *testing.T) {
 		bigBLOB := make([]byte, 150)
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", httpu.ContentType_ApplicationXBinary, bigBLOB,
 			it.QNameDocWithBLOB, it.Field_Blob,
