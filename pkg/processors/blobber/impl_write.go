@@ -74,7 +74,7 @@ func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLi
 			bw.uploadedSize, err = blobStorage.WriteTempBLOB(ctx, *key, bw.descr, bw.blobMessageWrite.reader, wLimiter, bw.duration)
 		}
 		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
-			return coreutils.NewHTTPError(http.StatusForbidden, err)
+			return coreutils.NewHTTPError(http.StatusRequestEntityTooLarge, err)
 		}
 		return err
 	}
