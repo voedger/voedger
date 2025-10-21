@@ -276,7 +276,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}
 		}
-		_, err := httpClient.Req(context.Background(), url, "body",ReqOptFunc(WithRetryOnStatus(http.StatusServiceUnavailable)))
+		_, err := httpClient.Req(context.Background(), url, "body", ReqOptFunc(WithRetryOnStatus(http.StatusServiceUnavailable)))
 		require.NoError(err)
 		require.GreaterOrEqual(retryNum, 2)
 	})
