@@ -344,7 +344,7 @@ func TestQuotas(t *testing.T) {
 // - subscribe to QNameHeartbeat30
 // - start goroutine that will call WatchChannel(..notifySubscriber..)
 // - test heartbeats interval
-//   - advcance the mock time by a second until Heartbeat30Duration-1
+//   - advance the mock time by a second until Heartbeat30Duration-1
 //   - expect no heartbeats on each second
 //   - advance time by 1 second more
 //   - expect heartbeat
@@ -398,7 +398,7 @@ func TestHeartbeats(t *testing.T) {
 			case <-cb.data:
 				t.Fatal("Unexpected heartbeat")
 			default:
-				// OK, heatbeat time not come yet
+				// OK, heartbeat time not come yet
 			}
 		}
 		done = make(chan any)
