@@ -26,6 +26,7 @@ type IMockTime interface {
 	FireNextTimerImmediately()
 
 	SetOnNextNewTimerChan(f func())
+	SetOnNextTimerArmed(f func())
 }
 
 func NewMockTime() IMockTime {
@@ -42,6 +43,7 @@ type mockedTime struct {
 	timers                   map[mockTimer]struct{}
 	fireNextTimerImmediately bool
 	onNextNewTimerChan       func()
+	onNextTimerArmed         func()
 }
 
 func (t *mockedTime) Now() time.Time {
@@ -59,6 +61,9 @@ func (t *mockedTime) NewTimerChan(d time.Duration) <-chan time.Time {
 	mt := mockTimer{
 		c:          make(chan time.Time, 1),
 		expiration: t.now.Add(d),
+	}
+	if t.onNextTimerArmed != nil {
+		t.onNextTimerArmed()
 	}
 	t.timers[mt] = struct{}{}
 	if t.fireNextTimerImmediately {
@@ -79,6 +84,15 @@ func (t *mockedTime) SetOnNextNewTimerChan(f func()) {
 	t.onNextNewTimerChan = func() {
 		f()
 		t.onNextNewTimerChan = nil
+	}
+	t.Unlock()
+}
+
+func (t *mockedTime) SetOnNextTimerArmed(f func()) {
+	t.Lock()
+	t.onNextTimerArmed = func() {
+		f()
+		t.onNextTimerArmed = nil
 	}
 	t.Unlock()
 }

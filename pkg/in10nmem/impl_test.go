@@ -339,20 +339,23 @@ func TestQuotas(t *testing.T) {
 
 }
 
-// Flow:
-// - Create mockTimer
-// - Subscribe to QNameHeartbeat30
-// - Start goroutine that will call WatchChannel(..notifySubscriber..)
-// - mockTimer.FireNextTimerImmediately()
-// - Make sure that notifySubscriber is called
+// flow:
+// - create mockTimer
+// - subscribe to QNameHeartbeat30
+// - start goroutine that will call WatchChannel(..notifySubscriber..)
+// - test heartbeats interval
+//   - advcance the mock time by a second until Heartbeat30Duration-1
+//   - expect no heartbeats on each second
+//   - advance time by 1 second more
+//   - expect heartbeat
+//   - repeat 10 times
 func TestHeartbeats(t *testing.T) {
-
-	// https://github.com/voedger/voedger/issues/3938
-	t.Skip("Skipped temporarily due to issues")
-
 	req := require.New(t)
-	mockTime := testingu.MockTime
-	mockTime.FireNextTimerImmediately()
+	mockTime := testingu.NewMockTime()
+	done := make(chan any)
+	mockTime.SetOnNextTimerArmed(func() {
+		close(done)
+	})
 
 	quotasExample := in10n.Quotas{
 		Channels:                1,
@@ -387,15 +390,26 @@ func TestHeartbeats(t *testing.T) {
 		defer wg.Done()
 		broker.WatchChannel(ctx, channelID, cb.updatesMock)
 	}()
-
 	for range 10 {
-		// Wait for update with timeout
+		for range int(in10n.Heartbeat30Duration.Seconds()) - 1 {
+			<-done
+			mockTime.Add(time.Second)
+			select {
+			case <-cb.data:
+				t.Fatal("Unexpected heartbeat")
+			default:
+				// OK, heatbeat time not come yet
+			}
+		}
+		done = make(chan any)
+		mockTime.SetOnNextTimerArmed(func() {
+			close(done)
+		})
+		mockTime.Add(time.Second)
 		select {
 		case update := <-cb.data:
-			// Verify we got an update for the heartbeat projection
 			req.Equal(in10n.Heartbeat30ProjectionKey, update.Projection)
 			log.Println("Received heartbeat update:", update)
-			mockTime.Add(30 * time.Second) // Simulate passage of time
 		case <-time.After(5 * time.Second):
 			t.Fatal("Timeout waiting for heartbeat notification")
 		}
