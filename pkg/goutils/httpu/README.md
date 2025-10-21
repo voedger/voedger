@@ -1,45 +1,115 @@
 # httpu
 
-HTTP client utilities with built-in retry logic, flexible request
-options, and robust error handling for production applications.
+HTTP client with automatic retry handling, flexible
+configuration, and sensible defaults for resilient
+distributed systems.
 
 ## Problem
 
-Standard HTTP clients require extensive boilerplate for common
-patterns like retries, authentication, and response handling.
+Making reliable HTTP requests in distributed systems
+requires handling transient failures, connection resets,
+rate limiting, and status-based retries. Without a
+dedicated utility, developers must manually implement
+retry logic, error handling, and configuration for each
+request.
+
+<details>
+<summary>Without httpu</summary>
+
+```go
+// Boilerplate: manual retry logic, error handling
+client := &http.Client{}
+var resp *http.Response
+var err error
+for attempt := 0; attempt < 3; attempt++ {
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	resp, err = client.Do(req)
+	if err != nil {
+		// Handle connection resets manually
+		if strings.Contains(err.Error(), "WSAECONNRESET") {
+			time.Sleep(time.Duration(attempt) * 100 * time.Millisecond)
+			continue
+		}
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		// Manual retry-after parsing
+		retryAfter := resp.Header.Get("Retry-After")
+		if retryAfter != "" {
+			// Parse and sleep...
+		}
+		continue
+	}
+	if resp.StatusCode == http.StatusOK {
+		break
+	}
+	return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+}
+body, _ := io.ReadAll(resp.Body)
+```
+
+</details>
+
+<details>
+<summary>With httpu</summary>
+
+```go
+import "github.com/voedger/voedger/pkg/goutils/httpu"
+
+httpClient, cleanup := httpu.NewIHTTPClient()
+defer cleanup()
+
+resp, err := httpClient.Req(
+	context.Background(),
+	url,
+	"",
+	httpu.WithAuthorizeBy(token),
+	httpu.WithRetryOnStatus(
+		http.StatusServiceUnavailable,
+		httpu.WithRespectRetryAfter(),
+	),
+)
+```
+
+</details>
 
 ## Features
 
-- **Configurable client** - HTTP client with customizable default options
-  - [Client creation: provide.go#L15](provide.go#L15)
-  - [TCP linger setting: provide.go#L24](provide.go#L24)
-  - [Default options: provide.go#L29](provide.go#L29)
+- **[Automatic retry handling](impl.go#L111)** - Built-in
+  retry logic for connection errors and configurable
+  HTTP status codes with exponential backoff
+  - [{Retry-After header support: impl.go#L139}](impl.go#L139)
+  - [{Error matchers: impl_opts.go#L149}](impl_opts.go#L149)
 
-- **Request options** - Flexible configuration system for HTTP requests
-  - [Options interface: types.go#L26](types.go#L26)
-  - [Option functions: impl_opts.go#L17](impl_opts.go#L17)
-  - [Options validation: impl_opts.go#L199](impl_opts.go#L199)
+- **[Flexible request options](impl_opts.go)** - Chainable
+  option functions for headers, cookies, authentication,
+  and response handling
+  - [{Headers and cookies: impl_opts.go#L58}](impl_opts.go#L58)
+  - [{Authorization: impl_opts.go#L81}](impl_opts.go#L81)
+  - [{Custom validators: impl_opts.go#L228}](impl_opts.go#L228)
 
-- **Retry logic** - Automatic retry with configurable error matching
-  - [Retry configuration: impl.go#L112](impl.go#L112)
-  - [Error matchers: impl_opts.go#L133](impl_opts.go#L133)
-  - [503 retry handling: impl.go#L132](impl.go#L132)
+- **[Status code expectations](impl_opts.go#L74)** - Specify
+  expected HTTP status codes with convenience helpers
+  (Expect204, Expect404, etc.)
+  - [{Expected codes validation: impl.go#L161}](impl.go#L161)
 
-- **Error handling** - Platform-specific error detection and handling
-  - [Windows socket errors: utils.go#L40](utils.go#L40)
-  - [Status code errors: errors.go#L14](errors.go#L14)
-  - [Default matchers: consts.go#L25](consts.go#L25)
+- **[Response handling modes](impl_opts.go#L17)** - Support
+  for custom response handlers, long polling, and
+  response discarding
+  - [{Response handler: impl_opts.go#L17}](impl_opts.go#L17)
+  - [{Long polling: impl_opts.go#L30}](impl_opts.go#L30)
 
-- **Response handling** - Multiple response processing modes
-  - [Body reading: utils.go#L17](utils.go#L17)
-  - [Response discarding: utils.go#L22](utils.go#L22)
-  - [Custom handlers: impl_opts.go#L17](impl_opts.go#L17)
+- **[Connection optimization](provide.go#L17)** - TCP
+  linger configuration and connection pooling for
+  efficient resource usage
 
 ## Platform Support
 
-Includes Windows-specific socket error handling for WSAECONNRESET and 
+Includes Windows-specific socket error handling for WSAECONNRESET and
 WSAECONNREFUSED errors to improve retry behavior on Windows systems.
 
 ## Use
 
-See [example usage](example_test.go)
+See [example](example_test.go)
+

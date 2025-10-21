@@ -166,7 +166,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	}
 
 	// one more request to any WSID -> 503 service unavailable
-	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token))
+	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
 
 	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
 		okToFinish <- nil

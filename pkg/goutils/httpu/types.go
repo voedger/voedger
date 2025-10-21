@@ -30,6 +30,8 @@ type IReqOpts interface {
 }
 
 type ReqOptFunc func(opts IReqOpts)
+type RetryOnStatusOpt func(*retryOnStatus)
+type RetryPolicyOpt func(opts IReqOpts)
 
 type IHTTPClient interface {
 	Req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
@@ -38,19 +40,24 @@ type IHTTPClient interface {
 }
 
 type reqOpts struct {
-	method                string
-	headers               map[string]string
-	cookies               map[string]string
-	expectedHTTPCodes     []int
-	responseHandler       func(httpResp *http.Response) // used if no errors and an expected status code is received
-	urlPath               string
-	discardResp           bool
-	bodyReader            io.Reader
-	withoutAuth           bool
-	skipRetryOn503        bool
-	maxRetryDurationOn503 time.Duration
-	customOptsProvider    func(IReqOpts) IReqOpts
-	appendedOpts          []ReqOptFunc
-	validators            []func(IReqOpts) (panicMessage string)
-	retryErrsMatchers     []func(err error) (retry bool)
+	method             string
+	headers            map[string]string
+	cookies            map[string]string
+	expectedHTTPCodes  []int
+	responseHandler    func(httpResp *http.Response) // used if no errors and an expected status code is received
+	urlPath            string
+	discardResp        bool
+	bodyReader         io.Reader
+	withoutAuth        bool
+	customOptsProvider func(IReqOpts) IReqOpts
+	appendedOpts       []ReqOptFunc
+	validators         []func(IReqOpts) (panicMessage string)
+	retryOnErr         []func(err error) (retry bool)
+	retryOnStatus      []retryOnStatus
+}
+
+type retryOnStatus struct {
+	statusCode        int
+	respectRetryAfter bool
+	maxRetryDuration  time.Duration
 }

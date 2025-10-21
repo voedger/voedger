@@ -158,7 +158,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		emailCaptor:          emailCaptor,
 		mockTime:             testingu.MockTime,
 	}
-	httpClient, httpClientCleanup := httpu.NewIHTTPClient()
+	httpClient, httpClientCleanup := httpu.NewIHTTPClient(
+		httpu.WithRetryPolicy(httpu.WithRetryOnStatus(http.StatusServiceUnavailable)),
+	)
 	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)

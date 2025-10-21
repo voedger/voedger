@@ -7,10 +7,9 @@ package httpu
 
 import (
 	"errors"
-	"net/http"
 )
 
 var (
 	ErrUnexpectedStatusCode = errors.New("unexpected status code")
-	errHTTPStatus503        = errors.New(http.StatusText(http.StatusServiceUnavailable))
+	errRetry                = errors.New("retry")
 )

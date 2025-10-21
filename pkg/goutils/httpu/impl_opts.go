@@ -84,21 +84,37 @@ func WithAuthorizeBy(token string) ReqOptFunc {
 	}
 }
 
-func WithMaxRetryDurationOn503(maxRetryDuration time.Duration) ReqOptFunc {
-	return func(opts IReqOpts) {
-		opts.httpOpts().maxRetryDurationOn503 = maxRetryDuration
+func WithRespectRetryAfter() RetryOnStatusOpt {
+	return func(policy *retryOnStatus) {
+		policy.respectRetryAfter = true
 	}
 }
 
-func WithRetryOn503() ReqOptFunc {
+// WithRetryOnStatus returns a RetryPolicyOpt that can be used with WithRetryPolicy,
+// or a ReqOptFunc that can be used directly with request options.
+// default max 1 minute
+func WithRetryOnStatus(statusCode int, retryOpts ...RetryOnStatusOpt) RetryPolicyOpt {
 	return func(opts IReqOpts) {
-		opts.httpOpts().skipRetryOn503 = false
+		policy := retryOnStatus{
+			statusCode:       statusCode,
+			maxRetryDuration: defaultMaxRetryDuration,
+		}
+		for _, opt := range retryOpts {
+			opt(&policy)
+		}
+		opts.httpOpts().retryOnStatus = append(opts.httpOpts().retryOnStatus, policy)
 	}
 }
 
-func WithSkipRetryOn503() ReqOptFunc {
+func WithMaxRetryDuration(statusCode int, maxRetryDuration time.Duration) ReqOptFunc {
 	return func(opts IReqOpts) {
-		opts.httpOpts().skipRetryOn503 = true
+		for i, policy := range opts.httpOpts().retryOnStatus {
+			if policy.statusCode == statusCode {
+				opts.httpOpts().retryOnStatus[i].maxRetryDuration = maxRetryDuration
+				return
+			}
+		}
+		panic(fmt.Sprintf("max retry duration for status code %d is specified but retry policy is not", statusCode))
 	}
 }
 
@@ -130,10 +146,29 @@ func WithMethod(m string) ReqOptFunc {
 	}
 }
 
-func WithRetryErrorMatcher(matcher func(err error) (retry bool)) ReqOptFunc {
+func WithRetryOnError(matcher func(err error) (retry bool)) ReqOptFunc {
 	return func(opts IReqOpts) {
-		opts.httpOpts().retryErrsMatchers = append(opts.httpOpts().retryErrsMatchers, matcher)
+		opts.httpOpts().retryOnErr = append(opts.httpOpts().retryOnErr, matcher)
 	}
+}
+
+// WithRetryPolicy replaces the default retry policy with a custom one.
+// It accepts only RetryPolicyOpt functions (e.g., WithRetryOnStatus, WithSkipRetryOnStatus, WithMaxRetryDurationOnStatus).
+// To disable all retries, use WithNoRetryPolicy() instead.
+func WithRetryPolicy(policyOpts ...RetryPolicyOpt) ReqOptFunc {
+	return func(opts IReqOpts) {
+		o := opts.httpOpts()
+		o.retryOnStatus = nil
+		for _, policy := range policyOpts {
+			policy(opts)
+		}
+	}
+}
+
+// WithNoRetryPolicy disables all retry policies (both default and custom).
+// This is useful when you want to make requests without any automatic retries.
+func WithNoRetryPolicy() ReqOptFunc {
+	return WithRetryPolicy()
 }
 
 func WithCustomOptsProvider(prov func(internalOpts IReqOpts) (customOpts IReqOpts)) ReqOptFunc {
@@ -221,15 +256,4 @@ func (opts *reqOpts) ExpectedHTTPCodes() []int {
 
 func (opts *reqOpts) httpOpts() *reqOpts {
 	return opts
-}
-
-func (opts *reqOpts) shouldHandle503() bool {
-	return !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) && !opts.skipRetryOn503
-}
-
-func optsValidator_retryOn503(opts IReqOpts) (panicMessage string) {
-	if opts.httpOpts().maxRetryDurationOn503 > 0 && opts.httpOpts().skipRetryOn503 {
-		return "max retry duration on 503 cannot be specified if skip on 503 is set"
-	}
-	return ""
 }
