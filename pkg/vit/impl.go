@@ -50,7 +50,7 @@ import (
 )
 
 // shared among all VIT instances
-// caches apps that are not test?/app?
+// caches schemas for apps that are not test apps (i.e., not test1_app1, test1_app2, test2_app1, or test2_app2)
 var nonTestAppsSchemasCache = &implISchemasCache_nonTestApps{schemas: map[appdef.AppQName]*parser.AppSchemaAST{}}
 
 func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
