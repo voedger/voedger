@@ -8,6 +8,7 @@ package httpu
 import (
 	"errors"
 	"net"
+	"net/http"
 	"syscall"
 	"time"
 )
@@ -18,6 +19,7 @@ const (
 	ContentDisposition                           = "Content-Disposition"
 	Accept                                       = "Accept"
 	Origin                                       = "Origin"
+	RetryAfter                                   = "Retry-After"
 	ContentType_ApplicationJSON                  = "application/json"
 	ContentType_ApplicationXBinary               = "application/x-binary"
 	ContentType_TextPlain                        = "text/plain"
@@ -31,18 +33,26 @@ const (
 	httpBaseRetryDelay                           = 20 * time.Millisecond
 	httpMaxRetryDelay                            = 1 * time.Second
 	localhostDynamic                             = "127.0.0.1:0"
+	defaultMaxRetryDuration                      = time.Minute
 )
 
 var (
-	constDefaultOpts = []ReqOptFunc{
-		WithRetryErrorMatcher(func(err error) bool {
+	mandatoryOpts = []ReqOptFunc{
+		WithRetryOnError(func(err error) bool {
 			// https://github.com/voedger/voedger/issues/1694
 			return IsWSAEError(err, WSAECONNREFUSED)
 		}),
-		WithRetryErrorMatcher(func(err error) bool {
-			// retry on 503
-			return errors.Is(err, errHTTPStatus503)
+		WithRetryOnError(func(err error) bool {
+			return errors.Is(err, errRetry)
 		}),
+	}
+	defaultRetryPolicy = []ReqOptFunc{
+		ReqOptFunc(WithRetryOnStatus(http.StatusRequestTimeout)),
+		ReqOptFunc(WithRetryOnStatus(http.StatusTooManyRequests, WithRespectRetryAfter())),
+		ReqOptFunc(WithRetryOnStatus(http.StatusInternalServerError)),
+		ReqOptFunc(WithRetryOnStatus(http.StatusBadGateway)),
+		ReqOptFunc(WithRetryOnStatus(http.StatusServiceUnavailable)),
+		ReqOptFunc(WithRetryOnStatus(http.StatusGatewayTimeout)),
 	}
 	LocalhostIP = net.IPv4(127, 0, 0, 1)
 )

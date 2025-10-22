@@ -193,7 +193,7 @@ func TestFederationFunc(t *testing.T) {
 		require.NoError(err)
 		require.Nil(resp)
 	})
-	t.Run("context cancel during retry on 503", func(t *testing.T) {
+	t.Run("context cancel during retry on status", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		federation, cleanup := New(ctx, func() *url.URL {
 			return federationURL
@@ -208,7 +208,7 @@ func TestFederationFunc(t *testing.T) {
 			}
 			cancel()
 		}
-		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, httpu.WithRetryOn503())
+		_, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, httpu.ReqOptFunc(httpu.WithRetryOnStatus(http.StatusServiceUnavailable)))
 		require.ErrorIs(err, context.Canceled)
 	})
 }

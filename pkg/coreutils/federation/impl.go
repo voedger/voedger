@@ -296,10 +296,13 @@ func (f *implIFederation) dummy() {}
 
 func (f *implIFederation) WithRetry() IFederationWithRetry {
 	return &implIFederation{
-		httpClient:         f.httpClient,
-		federationURL:      f.federationURL,
-		adminPortGetter:    f.adminPortGetter,
-		defaultReqOptFuncs: []httpu.ReqOptFunc{httpu.WithRetryOn503()},
-		vvmCtx:             f.vvmCtx,
+		httpClient:      f.httpClient,
+		federationURL:   f.federationURL,
+		adminPortGetter: f.adminPortGetter,
+		defaultReqOptFuncs: []httpu.ReqOptFunc{
+			httpu.ReqOptFunc(httpu.WithRetryOnStatus(http.StatusServiceUnavailable)),
+			httpu.WithMaxRetryDuration(http.StatusServiceUnavailable, federationRetryMaxDuration),
+		},
+		vvmCtx: f.vvmCtx,
 	}
 }
