@@ -157,7 +157,7 @@ type implIEmailSender_captor struct {
 // other app schemas could be changed among tests so it is wrong to cache non-sys apps
 // normally should be used in VIT tests only
 // vvm.NullSchemasCache is default in VVM
-type implISchemasCache_sysApps struct {
+type implISchemasCache_nonTestApps struct {
 	schemas map[appdef.AppQName]*parser.AppSchemaAST
 	lock    sync.Mutex
 }

@@ -473,8 +473,9 @@ func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestar
 	testAfterRestart(t, vit)
 }
 
-func (c *implISchemasCache_sysApps) Get(appQName appdef.AppQName) *parser.AppSchemaAST {
-	if !appQName.IsSys() {
+func (c *implISchemasCache_nonTestApps) Get(appQName appdef.AppQName) *parser.AppSchemaAST {
+	switch appQName {
+	case istructs.AppQName_test1_app1, istructs.AppQName_test1_app2, istructs.AppQName_test2_app1, istructs.AppQName_test2_app2:
 		return nil
 	}
 	c.lock.Lock()
@@ -482,8 +483,9 @@ func (c *implISchemasCache_sysApps) Get(appQName appdef.AppQName) *parser.AppSch
 	return c.schemas[appQName]
 }
 
-func (c *implISchemasCache_sysApps) Put(appQName appdef.AppQName, schema *parser.AppSchemaAST) {
-	if !appQName.IsSys() {
+func (c *implISchemasCache_nonTestApps) Put(appQName appdef.AppQName, schema *parser.AppSchemaAST) {
+	switch appQName {
+	case istructs.AppQName_test1_app1, istructs.AppQName_test1_app2, istructs.AppQName_test2_app1, istructs.AppQName_test2_app2:
 		return
 	}
 	c.lock.Lock()
