@@ -22,7 +22,7 @@ import (
 
 // sys/registry app, triggered by cdoc.registry.Login
 // at pseudoWSID translated to AppWSID
-func invokeCreateWorkspaceIDProjector(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		for rec := range event.CUDs {
 			if rec.QName() != QNameCDocLogin || !rec.IsNew() {
