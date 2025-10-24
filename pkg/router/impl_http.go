@@ -215,7 +215,7 @@ func corsHandler(h http.Handler) http.HandlerFunc {
 			logger.Verbose("serving", r.Method, r.URL.Path, ", origin", r.Header.Get(httpu.Origin))
 		}
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Blob-Name")
 		if r.Method == "OPTIONS" {
 			return
 		}
