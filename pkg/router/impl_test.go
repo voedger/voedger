@@ -265,7 +265,7 @@ func TestCheck(t *testing.T) {
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Equal(t, "ok", string(respBodyBytes))
-	expectOKRespPlainText(t, resp)
+	expectResp(t, resp, httpu.ContentType_TextPlain, http.StatusOK)
 }
 
 func Test404(t *testing.T) {
@@ -491,15 +491,7 @@ func expectJSONResp(t *testing.T, expectedJSON string, expectedString string, re
 	} else {
 		require.Equal(t, expectedString, string(b))
 	}
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	require.Contains(t, resp.Header["Content-Type"][0], "application/json", resp.Header)
-	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])
-	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization"}, resp.Header["Access-Control-Allow-Headers"])
-}
-
-func expectOKRespPlainText(t *testing.T, resp *http.Response) {
-	t.Helper()
-	expectResp(t, resp, "text/plain", http.StatusOK)
+	expectResp(t, resp, httpu.ContentType_ApplicationJSON, http.StatusOK)
 }
 
 func expectResp(t *testing.T, resp *http.Response, contentType string, statusCode int) {
@@ -507,5 +499,5 @@ func expectResp(t *testing.T, resp *http.Response, contentType string, statusCod
 	require.Equal(t, statusCode, resp.StatusCode)
 	require.Contains(t, resp.Header["Content-Type"][0], contentType, resp.Header)
 	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])
-	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization"}, resp.Header["Access-Control-Allow-Headers"])
+	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Blob-Name"}, resp.Header["Access-Control-Allow-Headers"])
 }
