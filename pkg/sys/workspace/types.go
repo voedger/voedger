@@ -14,7 +14,7 @@ import (
 // template ownerID(raw) -> template ownerRecordField -> uploaded blobID to set to ownerRecordField
 type blobsMap map[istructs.RecordID]map[string]istructs.RecordID
 
-type WSPostInitFunc func(targetAppQName appdef.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation federation.IFederation, authToken string) (err error)
+type WSPostInitFunc func(targetAppQName appdef.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation federation.IFederationWithRetry, authToken string) (err error)
 
 type BLOBWorkspaceTemplateField struct {
 	iblobstorage.DescrType
