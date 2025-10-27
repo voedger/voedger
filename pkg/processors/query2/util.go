@@ -19,7 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
@@ -69,7 +68,6 @@ type queryWork struct {
 	rowsProcessorErrCh   chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
 	metrics              queryprocessor.IMetrics
 	principals           []iauthnz.Principal
-	principalPayload     payloads.PrincipalPayload
 	roles                []appdef.QName
 	secretReader         isecrets.ISecretReader
 	iWorkspace           appdef.IWorkspace
@@ -82,6 +80,7 @@ type queryWork struct {
 	responseWriterGetter func() bus.IResponseWriter
 	apiPathHandler       apiPathHandler
 	federation           federation.IFederation
+	profileWSID          istructs.WSID
 }
 
 var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece
@@ -104,8 +103,8 @@ func (qw *queryWork) borrow() (err error) {
 }
 
 func (qw *queryWork) isDeveloper() bool {
-	for _, role := range qw.principalPayload.Roles {
-		if role.QName == appdef.QNameRoleDeveloper {
+	for _, prn := range qw.principals {
+		if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == appdef.QNameRoleDeveloper {
 			return true
 		}
 	}

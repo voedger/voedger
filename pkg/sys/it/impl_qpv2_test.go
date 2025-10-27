@@ -2251,7 +2251,7 @@ func TestQueryProcessor2_Schemas(t *testing.T) {
 			Login:       "Login",
 			SubjectKind: istructs.SubjectKind_User,
 			ProfileWSID: 1,
-			Roles:       []payloads.RoleType{{WSID: 1, QName: appdef.QNameRoleDeveloper}},
+			GlobalRoles: []appdef.QName{appdef.QNameRoleDeveloper},
 		}
 		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
 		require.NoError(err)
@@ -2281,7 +2281,7 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 			Login:       "Login",
 			SubjectKind: istructs.SubjectKind_User,
 			ProfileWSID: 1,
-			Roles:       []payloads.RoleType{{WSID: 1, QName: appdef.QNameRoleDeveloper}},
+			GlobalRoles: []appdef.QName{appdef.QNameRoleDeveloper},
 		}
 		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
 		require.NoError(err)
@@ -2325,7 +2325,7 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 			Login:       "Login",
 			SubjectKind: istructs.SubjectKind_User,
 			ProfileWSID: 1,
-			Roles:       []payloads.RoleType{{WSID: 1, QName: appdef.QNameRoleDeveloper}},
+			GlobalRoles: []appdef.QName{appdef.QNameRoleDeveloper},
 		}
 		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
 		require.NoError(err)
