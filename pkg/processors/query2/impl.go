@@ -167,7 +167,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				RequestWSID: qw.msg.WSID(),
 				Token:       qw.msg.Token(),
 			}
-			qw.principals, qw.principalPayload, err = authn.Authenticate(qw.msg.RequestCtx(), qw.appStructs, qw.appStructs.AppTokens(), req)
+			qw.principals, qw.profileWSID, err = authn.Authenticate(qw.msg.RequestCtx(), qw.appStructs, qw.appStructs.AppTokens(), req)
 			return coreutils.WrapSysError(err, http.StatusUnauthorized)
 		}),
 		operator("get workspace descriptor", func(ctx context.Context, qw *queryWork) (err error) {

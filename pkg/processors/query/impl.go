@@ -28,7 +28,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
@@ -200,7 +199,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				RequestWSID: qw.msg.WSID(),
 				Token:       qw.msg.Token(),
 			}
-			if qw.principals, qw.principalPayload, err = authn.Authenticate(qw.msg.RequestCtx(), qw.appStructs, qw.appStructs.AppTokens(), req); err != nil {
+			if qw.principals, _, err = authn.Authenticate(qw.msg.RequestCtx(), qw.appStructs, qw.appStructs.AppTokens(), req); err != nil {
 				return coreutils.WrapSysError(err, http.StatusUnauthorized)
 			}
 			return
@@ -421,7 +420,6 @@ type queryWork struct {
 	rowsProcessorErrCh   chan error // will contain the first error from rowProcessor if any. The rest of errors in rowsProcessor will be just logged
 	metrics              IMetrics
 	principals           []iauthnz.Principal
-	principalPayload     payloads.PrincipalPayload
 	roles                []appdef.QName
 	secretReader         isecrets.ISecretReader
 	iWorkspace           appdef.IWorkspace

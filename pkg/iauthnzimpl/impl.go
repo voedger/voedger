@@ -15,7 +15,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func (i *implIAuthenticator) Authenticate(requestContext context.Context, as istructs.IAppStructs, appTokens istructs.IAppTokens, req iauthnz.AuthnRequest) (principals []iauthnz.Principal, principalPayload payloads.PrincipalPayload, err error) {
+func (i *implIAuthenticator) Authenticate(requestContext context.Context, as istructs.IAppStructs, appTokens istructs.IAppTokens, req iauthnz.AuthnRequest) (principals []iauthnz.Principal, profileWSID istructs.WSID, err error) {
+	var principalPayload payloads.PrincipalPayload
 	defer func() {
 		if !principalPayload.IsAPIToken {
 			principals = append(principals, iauthnz.Principal{
@@ -42,15 +43,15 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		// copy roles from subjects
 		rolesFromSubjects, err := i.rolesFromSubjects(requestContext, istructs.SysGuestLogin, as, req.RequestWSID)
 		if err != nil {
-			return nil, principalPayload, err
+			return nil, istructs.NullWSID, err
 		}
 		principals = append(principals, rolesFromSubjects...)
 
-		return principals, principalPayload, nil
+		return principals, istructs.NullWSID, nil
 	}
 
 	if _, err = appTokens.ValidateToken(req.Token, &principalPayload); err != nil {
-		return nil, principalPayload, err
+		return nil, istructs.NullWSID, err
 	}
 
 	principals = append(principals, iauthnz.Principal{
@@ -91,11 +92,11 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	// read roles from cdoc.sys.Subjects from the current workspace
 	rolesFromSubjects, err := i.rolesFromSubjects(requestContext, principalPayload.Login, as, req.RequestWSID)
 	if err != nil {
-		return nil, principalPayload, err
+		return nil, istructs.NullWSID, err
 	}
 	principals = append(principals, rolesFromSubjects...)
 
-	profileWSID := principalPayload.ProfileWSID // for user and device subject kinds
+	profileWSID = principalPayload.ProfileWSID // for user and device subject kinds
 	pkt := iauthnz.PrincipalKind_NULL
 	loginName := ""
 	switch principalPayload.SubjectKind {
@@ -105,7 +106,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	case istructs.SubjectKind_Device:
 		pkt = iauthnz.PrincipalKind_Device
 	default:
-		return nil, principalPayload, fmt.Errorf("unsupported subject kind: %v", principalPayload)
+		return nil, istructs.NullWSID, fmt.Errorf("unsupported subject kind: %v", principalPayload)
 	}
 
 	// system role
@@ -139,7 +140,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 
 	wsDesc, err := as.Records().GetSingleton(req.RequestWSID, qNameCDocWorkspaceDescriptor)
 	if err != nil {
-		return nil, principalPayload, err
+		return nil, istructs.NullWSID, err
 	}
 
 	if req.RequestWSID == profileWSID {
@@ -173,7 +174,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 				isDeviceAllowed := i.isDeviceAllowedFuncs[as.AppQName()]
 				deviceAllowed, err := isDeviceAllowed(as, req.RequestWSID, deviceProfileWSID)
 				if err != nil {
-					return nil, payloads.PrincipalPayload{}, err
+					return nil, istructs.NullWSID, err
 				}
 				if deviceAllowed {
 					principals = append(principals, prnWSDevice)
@@ -200,7 +201,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}
 
-	return principals, principalPayload, nil
+	return principals, profileWSID, nil
 }
 
 func (i *implIAuthenticator) rolesFromSubjects(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) (res []iauthnz.Principal, err error) {
