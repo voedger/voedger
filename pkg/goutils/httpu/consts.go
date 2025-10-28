@@ -28,7 +28,6 @@ const (
 	ContentType_MultipartFormData                = "multipart/form-data"
 	BearerPrefix                                 = "Bearer "
 	WSAECONNRESET                  syscall.Errno = 10054
-	WSAECONNREFUSED                syscall.Errno = 10061
 	maxHTTPRequestTimeout                        = time.Hour
 	httpBaseRetryDelay                           = 20 * time.Millisecond
 	httpMaxRetryDelay                            = 1 * time.Second
@@ -38,10 +37,6 @@ const (
 
 var (
 	mandatoryOpts = []ReqOptFunc{
-		WithRetryOnError(func(err error) bool {
-			// https://github.com/voedger/voedger/issues/1694
-			return IsWSAEError(err, WSAECONNREFUSED)
-		}),
 		WithRetryOnError(func(err error) bool {
 			return errors.Is(err, errRetry)
 		}),

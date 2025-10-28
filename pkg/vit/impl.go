@@ -161,6 +161,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	}
 	httpClient, httpClientCleanup := httpu.NewIHTTPClient(
 		httpu.WithRetryPolicy(httpu.WithRetryOnStatus(http.StatusServiceUnavailable)),
+		httpu.WithRetryOnError(func(err error) bool {
+			// https://github.com/voedger/voedger/issues/1694
+			return httpu.IsWSAEError(err, WSAECONNREFUSED)
+		}),
 	)
 	vit.httpClient = httpClient
 
