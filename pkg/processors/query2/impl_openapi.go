@@ -128,7 +128,7 @@ func (g *schemaGenerator) generateComponents() {
 	}
 
 	// generate any schema
-	// can be any object
+	// can be any JSON object
 	schemas[sysAnySchemaName] = map[string]interface{}{
 		schemaKeyType: schemaTypeObject,
 	}
