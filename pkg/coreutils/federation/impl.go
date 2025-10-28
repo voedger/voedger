@@ -244,7 +244,7 @@ func (f *implIFederation) Port() int {
 	return res
 }
 
-func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error) {
+func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey, optFuncs ...httpu.ReqOptFunc) (offsetsChan OffsetsChan, unsubscribe func(), err error) {
 	query := fmt.Sprintf(`
 		{
 			"SubjectLogin": "test_%d",
@@ -258,7 +258,9 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		}`, projectionKey.WS, projectionKey.App, projectionKey.Projection, projectionKey.WS)
 	params := url.Values{}
 	params.Add("payload", query)
-	resp, err := f.get("n10n/channel?"+params.Encode(), httpu.WithLongPolling())
+	opts := slices.Clone(optFuncs)
+	opts = append(opts, httpu.WithLongPolling())
+	resp, err := f.get("n10n/channel?"+params.Encode(), opts...)
 	if err != nil {
 		return nil, nil, err
 	}

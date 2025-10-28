@@ -6,10 +6,12 @@ package vit
 
 import (
 	"embed"
+	"net/http"
 	"syscall"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -50,5 +52,12 @@ var (
 		NumParts:         testAppPartsNum,
 		EnginePoolSize:   DefaultTestAppEnginesPool,
 		NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
+	}
+	vitHTTPRetryPolicy = []httpu.RetryPolicyOpt{
+		httpu.WithRetryOnStatus(http.StatusServiceUnavailable),
+		httpu.WithRetryOnError(func(err error) bool {
+			// https://github.com/voedger/voedger/issues/1694
+			return httpu.IsWSAEError(err, WSAECONNREFUSED)
+		}),
 	}
 )

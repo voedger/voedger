@@ -392,7 +392,7 @@ func (vit *VIT) SubscribeForN10nProjectionKey(pk in10n.ProjectionKey) federation
 
 func (vit *VIT) SubscribeForN10nUnsubscribe(pk in10n.ProjectionKey) (offsetsChan federation.OffsetsChan, unsubscribe func()) {
 	vit.T.Helper()
-	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(pk)
+	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(pk, httpu.WithRetryPolicy(vitHTTPRetryPolicy...))
 	require.NoError(vit.T, err)
 	return offsetsChan, unsubscribe
 }
