@@ -755,6 +755,8 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND TestDeniedCmd;
 		QUERY TestDeniedQuery() RETURNS TestCmdResult;
+		QUERY QryAny(any) RETURNS any WITH Tags=(ApiFeatureTag);
+		COMMAND CmdAny(any) RETURNS any WITH Tags=(ApiFeatureTag);
 
 		COMMAND CmdODocOne(odoc1, UNLOGGED odoc1) WITH Tags=(WorkspaceOwnerFuncTag, ApiFeatureTag);
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2) WITH Tags=(WorkspaceOwnerFuncTag);
@@ -795,6 +797,8 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT INSERT ON TABLE orecord1 TO ApiRole;
 	GRANT EXECUTE ON COMMAND CmdODocOne TO ApiRole;
 	GRANT EXECUTE ON QUERY QryReturnsCategory TO ApiRole;
+	GRANT EXECUTE ON QUERY QryAny TO ApiRole;
+	GRANT EXECUTE ON COMMAND CmdAny TO ApiRole;
 	GRANT SELECT ON VIEW Clients TO ApiRole;
 
 	GRANT SELECT, UPDATE, INSERT ON TABLE Root TO sys.WorkspaceOwner;

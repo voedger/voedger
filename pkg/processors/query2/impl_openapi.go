@@ -95,24 +95,42 @@ func (g *schemaGenerator) generateComponents() {
 			if t.Kind() == appdef.TypeKind_Command && op == appdef.OperationKind_Execute {
 				cmd := t.(appdef.ICommand)
 				if param := cmd.Param(); param != nil {
+					if param.QName() == appdef.QNameANY {
+						continue
+					}
 					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
 				}
 				if result := cmd.Result(); result != nil {
+					if result.QName() == appdef.QNameANY {
+						continue
+					}
 					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
 				}
 			}
 			if t.Kind() == appdef.TypeKind_Query && op == appdef.OperationKind_Execute {
 				qry := t.(appdef.IQuery)
 				if param := qry.Param(); param != nil {
+					if param.QName() == appdef.QNameANY {
+						continue
+					}
 					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
 				}
 				if result := qry.Result(); result != nil {
+					if result.QName() == appdef.QNameANY {
+						continue
+					}
 					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
 				}
 			}
 		}
 
 		g.processedTypes[typeName] = true
+	}
+
+	// generate any schema
+	// can be any JSON object
+	schemas[sysAnySchemaName] = map[string]interface{}{
+		schemaKeyType: schemaTypeObject,
 	}
 
 	// generate error schema

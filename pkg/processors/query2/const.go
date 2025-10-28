@@ -30,6 +30,7 @@ const (
 )
 
 var qNameWDocBLOB = appdef.NewQName(appdef.SysPackage, "BLOB")
+var sysAnySchemaName = appdef.QNameANY.String()
 
 const (
 	methodGet    = "get"
