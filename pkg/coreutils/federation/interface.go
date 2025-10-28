@@ -25,7 +25,7 @@ type iFederationBase interface {
 	URLStr() string
 	Port() int
 	N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...httpu.ReqOptFunc) error
-	N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error)
+	N10NSubscribe(projectionKey in10n.ProjectionKey, optFuncs ...httpu.ReqOptFunc) (offsetsChan OffsetsChan, unsubscribe func(), err error)
 	AdminFunc(relativeURL string, body string, optFuncs ...httpu.ReqOptFunc) (*FuncResponse, error)
 }
 

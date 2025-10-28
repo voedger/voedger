@@ -146,7 +146,7 @@ func WithMethod(m string) ReqOptFunc {
 	}
 }
 
-func WithRetryOnError(matcher func(err error) (retry bool)) ReqOptFunc {
+func WithRetryOnError(matcher func(err error) (retry bool)) RetryPolicyOpt {
 	return func(opts IReqOpts) {
 		opts.httpOpts().retryOnErr = append(opts.httpOpts().retryOnErr, matcher)
 	}

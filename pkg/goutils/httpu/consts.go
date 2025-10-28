@@ -37,9 +37,9 @@ const (
 
 var (
 	mandatoryOpts = []ReqOptFunc{
-		WithRetryOnError(func(err error) bool {
+		ReqOptFunc(WithRetryOnError(func(err error) bool {
 			return errors.Is(err, errRetry)
-		}),
+		})),
 	}
 	DefaultRetryPolicy = []RetryPolicyOpt{
 		WithRetryOnStatus(http.StatusRequestTimeout),

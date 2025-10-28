@@ -159,13 +159,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		emailCaptor:          emailCaptor,
 		mockTime:             testingu.MockTime,
 	}
-	httpClient, httpClientCleanup := httpu.NewIHTTPClient(
-		httpu.WithRetryPolicy(httpu.WithRetryOnStatus(http.StatusServiceUnavailable)),
-		httpu.WithRetryOnError(func(err error) bool {
-			// https://github.com/voedger/voedger/issues/1694
-			return httpu.IsWSAEError(err, WSAECONNREFUSED)
-		}),
-	)
+	httpClient, httpClientCleanup := httpu.NewIHTTPClient(httpu.WithRetryPolicy(vitHTTPRetryPolicy...))
 	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
