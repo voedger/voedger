@@ -46,13 +46,13 @@ var (
 			return errors.Is(err, errRetry)
 		}),
 	}
-	defaultRetryPolicy = []ReqOptFunc{
-		ReqOptFunc(WithRetryOnStatus(http.StatusRequestTimeout)),
-		ReqOptFunc(WithRetryOnStatus(http.StatusTooManyRequests, WithRespectRetryAfter())),
-		ReqOptFunc(WithRetryOnStatus(http.StatusInternalServerError)),
-		ReqOptFunc(WithRetryOnStatus(http.StatusBadGateway)),
-		ReqOptFunc(WithRetryOnStatus(http.StatusServiceUnavailable)),
-		ReqOptFunc(WithRetryOnStatus(http.StatusGatewayTimeout)),
+	DefaultRetryPolicy = []RetryPolicyOpt{
+		WithRetryOnStatus(http.StatusRequestTimeout),
+		WithRetryOnStatus(http.StatusTooManyRequests, WithRespectRetryAfter()),
+		WithRetryOnStatus(http.StatusInternalServerError),
+		WithRetryOnStatus(http.StatusBadGateway),
+		WithRetryOnStatus(http.StatusServiceUnavailable),
+		WithRetryOnStatus(http.StatusGatewayTimeout),
 	}
 	LocalhostIP = net.IPv4(127, 0, 0, 1)
 )

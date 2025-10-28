@@ -7,12 +7,9 @@ package federation
 
 import (
 	"regexp"
-	"time"
 
 	"github.com/voedger/voedger/pkg/iblobstorage"
 )
-
-const federationRetryMaxDuration = 30 * time.Second
 
 var (
 	TemporaryBLOB_URLTTLToDurationLs = map[string]iblobstorage.DurationType{

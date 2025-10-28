@@ -25,7 +25,7 @@ func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func(
 		return conn, err
 	}
 	opts := slices.Clone(mandatoryOpts)
-	opts = append(opts, defaultRetryPolicy...)
+	opts = append(opts, WithDefaultRetryPolicy())
 	opts = append(opts, defaultOpts...)
 	client = &implIHTTPClient{
 		client:      &http.Client{Transport: tr},

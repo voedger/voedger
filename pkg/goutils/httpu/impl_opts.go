@@ -171,6 +171,10 @@ func WithNoRetryPolicy() ReqOptFunc {
 	return WithRetryPolicy()
 }
 
+func WithDefaultRetryPolicy() ReqOptFunc {
+	return WithRetryPolicy(DefaultRetryPolicy...)
+}
+
 func WithCustomOptsProvider(prov func(internalOpts IReqOpts) (customOpts IReqOpts)) ReqOptFunc {
 	return func(opts IReqOpts) {
 		opts.httpOpts().customOptsProvider = prov
