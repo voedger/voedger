@@ -6,6 +6,7 @@ package vit
 
 import (
 	"embed"
+	"syscall"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appparts"
@@ -13,17 +14,18 @@ import (
 )
 
 const (
-	debugTimeout                 = time.Hour
-	day                          = 24 * time.Hour
-	defaultWorkspaceAwaitTimeout = 3 * time.Minute // so long for Test_Race_RestaurantIntenseUsage with -race
-	testTimeout                  = 10 * time.Second
-	workspaceQueryDelay          = 30 * time.Millisecond
-	allowedGoroutinesNumDiff     = 200
-	field_Input                  = "Input"
-	testEmailsAwaitingTimeout    = 5 * time.Second
-	testTimeMillis               = 1649667286774
-	testRegistryPartsNum         = 2
-	testAppPartsNum              = 5
+	debugTimeout                               = time.Hour
+	day                                        = 24 * time.Hour
+	defaultWorkspaceAwaitTimeout               = 3 * time.Minute // so long for Test_Race_RestaurantIntenseUsage with -race
+	testTimeout                                = 10 * time.Second
+	workspaceQueryDelay                        = 30 * time.Millisecond
+	allowedGoroutinesNumDiff                   = 200
+	field_Input                                = "Input"
+	testEmailsAwaitingTimeout                  = 5 * time.Second
+	testTimeMillis                             = 1649667286774
+	testRegistryPartsNum                       = 2
+	testAppPartsNum                            = 5
+	WSAECONNREFUSED              syscall.Errno = 10061
 )
 
 var (
