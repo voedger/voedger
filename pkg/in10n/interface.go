@@ -18,7 +18,7 @@ type IN10nBroker interface {
 
 	// Errors: ErrQuotaExceeded_Channels*
 	// @ConcurrentAccess
-	NewChannel(subject istructs.SubjectLogin, channelDuration time.Duration) (channelID ChannelID, err error)
+	NewChannel(subject istructs.SubjectLogin, channelDuration time.Duration) (channelID ChannelID, channelCleanup func(), err error)
 
 	// ChannelID must be taken from NewChannel()
 	// Errors: ErrChannelDoesNotExist, ErrQuotaExceeded_Subscriptions*

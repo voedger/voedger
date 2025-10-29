@@ -38,6 +38,7 @@ type n10nWorkpiece struct {
 	requestCtx               context.Context
 	responder                bus.IResponder
 	channelID                in10n.ChannelID
+	channelCleanup           func()
 	subscriptions            []subscription
 	expiresIn                time.Duration
 	subscribedProjectionKeys []in10n.ProjectionKey
@@ -79,7 +80,7 @@ type N10NProcArgs struct {
 	ChannelIDFromURL string
 }
 
-type revertSubscribedOnErr struct {
+type channelCleanupOnErr struct {
 	pipeline.NOOP
 	n10nBroker in10n.IN10nBroker
 }

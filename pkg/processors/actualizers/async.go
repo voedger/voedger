@@ -64,6 +64,7 @@ type asyncActualizer struct {
 	plogBatch            // [50]plogEvent
 	appParts       appparts.IAppPartitions
 	retrierCfg     retrier.Config
+	channelCleanup func()
 }
 
 func (a *asyncActualizer) Prepare() {
@@ -205,7 +206,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.pipeline = pipeline.NewAsyncPipeline(ctx, a.name, projectorOp, errorHandlerOp)
 
-	if a.conf.channel, err = a.conf.Broker.NewChannel(istructs.SubjectLogin(a.name), n10nChannelDuration); err != nil {
+	if a.conf.channel, a.channelCleanup, err = a.conf.Broker.NewChannel(istructs.SubjectLogin(a.name), n10nChannelDuration); err != nil {
 		return err
 	}
 	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
@@ -218,6 +219,9 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 func (a *asyncActualizer) finit() {
 	if a.pipeline != nil {
 		a.pipeline.Close()
+	}
+	if a.channelCleanup != nil {
+		a.channelCleanup()
 	}
 	if logger.IsTrace() {
 		logger.Trace(a.name + "s finalized")
