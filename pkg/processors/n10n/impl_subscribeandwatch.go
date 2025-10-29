@@ -194,5 +194,5 @@ func (u *channelCleanupOnErr) OnErr(err error, work interface{}, _ pipeline.IWor
 	if n10nWP.channelCleanup != nil {
 		n10nWP.channelCleanup()
 	}
-	return nil
+	return err
 }

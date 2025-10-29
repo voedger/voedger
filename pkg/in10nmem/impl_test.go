@@ -317,22 +317,21 @@ func TestQuotas(t *testing.T) {
 		var subject istructs.SubjectLogin
 		cleanups := []func(){}
 		defer func() {
-			for _, channelCeanup := range cleanups {
-				channelCeanup()
+			for _, channelCleanup := range cleanups {
+				channelCleanup()
 			}
 		}()
 		for i := 0; i < 10; i++ {
 			subject = istructs.SubjectLogin("paa" + strconv.Itoa(i))
 			for c := 0; c < 10; c++ {
 				_, channelCleanup, err := broker.NewChannel(subject, 24*time.Hour)
-				if i == 9 && c == 10 {
-					req.ErrorIs(err, in10n.ErrQuotaExceeded_Channels)
-				} else {
-					req.NoError(err)
-					cleanups = append(cleanups, channelCleanup)
-				}
+				req.NoError(err)
+				cleanups = append(cleanups, channelCleanup)
 			}
 		}
+		// Try to create one more channel than allowed (quota is 100)
+		_, _, err := broker.NewChannel("extraSubject", 24*time.Hour)
+		req.ErrorIs(err, in10n.ErrQuotaExceeded_Channels)
 
 	})
 
