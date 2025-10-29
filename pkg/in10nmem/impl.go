@@ -377,10 +377,9 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 						logger.Trace("notifier goroutine: ch.cchan <- struct{}{}")
 					}
 				default:
-					// Nothing critical, subscribers will be notified because the channel has value
-					if logger.IsVerbose() {
-						logger.Verbose("notifier goroutine: channel full, skipping send")
-					}
+					// normally happens when the <-cchan is triggered in WatchChannel but next receiving from cchan is not started yet
+					// i.e. WatchChannel does not read from cchan in the current instant
+					// the event will not be lost because cchan has a value and the according offset is already updated
 				}
 			}
 		}
