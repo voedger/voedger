@@ -104,8 +104,9 @@ func TestBasicUsage(t *testing.T) {
 	app := setUp(t, prepareWS)
 	defer tearDown(app)
 
-	channelID, err := app.n10nBroker.NewChannel("test", 24*time.Hour)
+	channelID, channelCleanup, err := app.n10nBroker.NewChannel("test", 24*time.Hour)
 	require.NoError(err)
+	defer channelCleanup()
 	projectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_untill_airs_bp,
 		Projection: actualizers.PLogUpdatesQName,

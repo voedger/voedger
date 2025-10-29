@@ -35,7 +35,7 @@ func subscribeAndWatchPipeline(requestCtx context.Context, p *implIN10NProc) pip
 		pipeline.WireFunc("subscribe", p.subscribe),
 		pipeline.WireFunc("initResponse", initResponse),
 		pipeline.WireFunc("sendChannelIDSSEEvent", sendChannelIDSSEEvent),
-		pipeline.WireSyncOperator("revertSubscribedOnErr", &revertSubscribedOnErr{n10nBroker: p.n10nBroker}),
+		pipeline.WireSyncOperator("channelCleanupOnErr", &channelCleanupOnErr{n10nBroker: p.n10nBroker}),
 		pipeline.WireFunc("go WatchChannel", p.watchChannel),
 	)
 }
@@ -135,7 +135,7 @@ func (p *implIN10NProc) authnzEntities(ctx context.Context, work pipeline.IWorkp
 
 func (p *implIN10NProc) newChannel(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	n10nWP := work.(*n10nWorkpiece)
-	n10nWP.channelID, err = p.n10nBroker.NewChannel(n10nWP.subjectLogin, n10nWP.expiresIn)
+	n10nWP.channelID, n10nWP.channelCleanup, err = p.n10nBroker.NewChannel(n10nWP.subjectLogin, n10nWP.expiresIn)
 	return err
 }
 
@@ -183,17 +183,16 @@ func (p *implIN10NProc) watchChannel(ctx context.Context, work pipeline.IWorkpie
 				cancel()
 			}
 		})
+		n10nWP.channelCleanup()
 		n10nWP.responseWriter.Close(nil)
 	}()
 	return nil
 }
 
-func (u *revertSubscribedOnErr) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+func (u *channelCleanupOnErr) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
 	n10nWP := work.(*n10nWorkpiece)
-	for _, subscribedKey := range n10nWP.subscribedProjectionKeys {
-		if err := u.n10nBroker.Unsubscribe(n10nWP.channelID, subscribedKey); err != nil {
-			logger.Error(fmt.Sprintf("failed to unsubscribe key %s: %s", subscribedKey.ToJSON(), err))
-		}
+	if n10nWP.channelCleanup != nil {
+		n10nWP.channelCleanup()
 	}
-	return err
+	return nil
 }

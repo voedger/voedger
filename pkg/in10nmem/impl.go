@@ -32,6 +32,7 @@ type N10nBroker struct {
 	sync.RWMutex
 	projections      map[in10n.ProjectionKey]*projection
 	channels         map[in10n.ChannelID]*channel
+	channelsWG   sync.WaitGroup
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
@@ -76,17 +77,17 @@ type metricType struct {
 // NewChannel @ConcurrentAccess
 // Create new channel.
 // On timeout channel will be closed. channelDuration determines time during with it will be open.
-func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration time.Duration) (channelID in10n.ChannelID, err error) {
+func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration time.Duration) (channelID in10n.ChannelID, channelCleanup func(), err error) {
 	nb.Lock()
 	defer nb.Unlock()
 	var metric *metricType
 	if len(nb.channels) >= nb.quotas.Channels {
-		return "", in10n.ErrQuotaExceeded_Channels
+		return "", nil, in10n.ErrQuotaExceeded_Channels
 	}
 	metric = nb.metricBySubject[subject]
 	if metric != nil {
 		if metric.numChannels >= nb.quotas.ChannelsPerSubject {
-			return "", in10n.ErrQuotaExceeded_ChannelsPerSubject
+			return "", nil, in10n.ErrQuotaExceeded_ChannelsPerSubject
 		}
 	} else {
 		metric = new(metricType)
@@ -102,7 +103,9 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 		cchan:           make(chan struct{}, 1),
 	}
 	nb.channels[channelID] = &channel
-	return channelID, err
+	channelCleanup = func() { nb.cleanupChannel(&channel, channelID, metric) }
+	nb.channelsWG.Add(1)
+	return channelID, channelCleanup, err
 }
 
 // Implementation of in10n.IN10nBroker
@@ -236,21 +239,19 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 // Implementation of the in10n.IN10nBroker
 func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
 	// check that the channelID with the given ChannelID exists
-	channel, metric := func() (*channel, *metricType) {
+	channel := func() *channel {
 		nb.RLock()
 		defer nb.RUnlock()
 		channel, channelOK := nb.channels[channelID]
 		if !channelOK {
-			panic(fmt.Errorf("channel with channelID: %s must exists %w", channelID, in10n.ErrChannelDoesNotExist))
+			panic(fmt.Errorf("channel with channelID: %s must exist %w", channelID, in10n.ErrChannelDoesNotExist))
 		}
-		metric, metricOK := nb.metricBySubject[channel.subject]
+		_, metricOK := nb.metricBySubject[channel.subject]
 		if !metricOK {
-			panic(fmt.Errorf("metric for channel with channelID: %s must exists", channelID))
+			panic(fmt.Errorf("metric for channel with channelID: %s must exist", channelID))
 		}
-		return channel, metric
+		return channel
 	}()
-
-	defer nb.cleanupChannel(channel, channelID, metric)
 
 	updateUnits := make([]UpdateUnit, 0)
 
@@ -260,7 +261,7 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 		case <-ctx.Done():
 			return
 		case <-channel.cchan:
-			
+
 			if logger.IsTrace() {
 				logger.Trace("notified: ", channelID)
 			}
@@ -332,6 +333,7 @@ func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID
 	metric.numSubscriptions -= len(channel.subscriptions)
 	nb.numSubscriptions -= len(channel.subscriptions)
 	delete(nb.channels, channelID)
+	nb.channelsWG.Done()
 	nb.Unlock()
 }
 
@@ -462,6 +464,7 @@ func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb *N10nBroker, clean
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channel),
+		channelsWG:  sync.WaitGroup{},
 		metricBySubject: make(map[istructs.SubjectLogin]*metricType),
 		quotas:          quotas,
 		time:            time,
@@ -472,6 +475,7 @@ func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb *N10nBroker, clean
 	cleanup = func() {
 		cancel()
 		wg.Wait()
+		broker.channelsWG.Wait()
 	}
 
 	wg.Add(1)
