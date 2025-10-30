@@ -6,6 +6,7 @@
 package testingu
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -120,4 +121,17 @@ func (t *mockedTime) checkTimers() {
 			delete(t.timers, timer)
 		}
 	}
+}
+
+// String implements fmt.Stringer to prevent reflection-based unprotected access to internal fields
+// if mockedTime is used as a mock argument then the mock engine will compare fmt.Sprintf("%v", expectedArg) and fmt.Sprintf("%v", actualArg) to check expectations
+// where actualArg is *mockedTime
+// that could lead to data race: fmt.Sprintf() reads fields of mockedTime via reflection without protection
+// whereas someone calls mockedTime methods that writes internal fields (protected via mutex)
+// String method exists -> fmt.Sprintf() will use it instead of reflection
+func (t *mockedTime) String() string {
+	t.RLock()
+	defer t.RUnlock()
+	return fmt.Sprintf("mockedTime{now=%s, timers=%d, fireNextTimerImmediately=%t}",
+		t.now.Format(time.RFC3339Nano), len(t.timers), t.fireNextTimerImmediately)
 }

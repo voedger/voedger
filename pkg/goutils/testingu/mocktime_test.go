@@ -6,6 +6,7 @@
 package testingu
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -65,6 +66,10 @@ func TestMockTime_BasicUsage(t *testing.T) {
 		}
 
 		require.Equal(MockTime.Now(), firingInstant)
+
+		t.Run("stringer", func(t *testing.T) {
+			require.Equal(fmt.Sprintf(`mockedTime{now=%s, timers=0, fireNextTimerImmediately=false}`, MockTime.Now().Format(time.RFC3339Nano)), fmt.Sprintf("%v", MockTime))
+		})
 	})
 }
 
