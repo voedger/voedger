@@ -31,7 +31,6 @@ import (
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
-	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/wneessen/go-mail"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -98,7 +97,6 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
 
 	cfg.Time = testingu.MockTime
-	cfg.AsyncActualizersRetryDelay = actualizers.RetryDelay(100 * time.Millisecond)
 	cfg.SchemasCache = nonTestAppsSchemasCache
 
 	emailCaptor := &implIEmailSender_captor{
