@@ -32,7 +32,6 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/processors/actualizers"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
@@ -163,7 +162,6 @@ type VVMConfig struct {
 	WSPostInitFunc             workspace.WSPostInitFunc
 	DataPath                   string
 	MetricsServicePort         metrics.MetricsServicePort
-	AsyncActualizersRetryDelay actualizers.RetryDelay
 	AdminPort                  int
 	SchemasCache               ISchemasCache // normally NullSchemasCache in production, vit.SysAppsSchemasCache in VIT tests
 

@@ -245,7 +245,6 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"EmailSender",
 			"SecretsReader",
 			"SequencesTrustLevel",
-			"AsyncActualizersRetryDelay",
 			"SchemasCache",
 		),
 	))
@@ -327,7 +326,6 @@ func provideBasicAsyncActualizerConfig(
 	metrics imetrics.IMetrics,
 	broker in10n.IN10nBroker,
 	federation federation.IFederation,
-	asyncActualizersRetryDelay actualizers.RetryDelay,
 	stateCfg state.StateOpts,
 	emailSender state.IEmailSender,
 ) actualizers.BasicAsyncActualizerConfig {
@@ -341,7 +339,6 @@ func provideBasicAsyncActualizerConfig(
 		StateOpts:     stateCfg,
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
-		RetryDelay:    asyncActualizersRetryDelay,
 		EmailSender:   emailSender,
 	}
 }

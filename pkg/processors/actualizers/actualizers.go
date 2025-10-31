@@ -8,7 +8,6 @@ package actualizers
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -46,7 +45,7 @@ func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part i
 			PartitionID:                part,
 		},
 		appParts:   a.appParts,
-		retrierCfg: retrier.NewConfig(time.Duration(a.cfg.RetryDelay), time.Duration(a.cfg.RetryDelay)),
+		retrierCfg: retrier.NewConfig(defaultRetryInitialDelay, defaultRetryMaxDelay),
 	}
 	act.Prepare()
 	a.wait.Add(1)

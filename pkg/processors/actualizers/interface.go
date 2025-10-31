@@ -49,7 +49,6 @@ type BasicAsyncActualizerConfig struct {
 	// FlushPositionInterval specifies how often actualizer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInterval time.Duration
 
-	RetryDelay  RetryDelay
 	EmailSender state.IEmailSender
 }
 

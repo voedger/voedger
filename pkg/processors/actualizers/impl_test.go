@@ -229,7 +229,6 @@ func deployTestAppEx(
 	appStructs istructs.IAppStructs,
 	stop func(),
 ) {
-	actualizerCfg.RetryDelay = RetryDelay(100 * time.Millisecond)
 	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
 
