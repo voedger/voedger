@@ -218,33 +218,33 @@ func Test_Subscribe_NoUpdate_Unsubscribe(t *testing.T) {
 	}
 
 	// for range 10 {
-		// Subscribe
-		{
-			err := nb.Subscribe(channelID, projectionKey1)
-			req.NoError(err)
+	// Subscribe
+	{
+		err := nb.Subscribe(channelID, projectionKey1)
+		req.NoError(err)
 
-			err = nb.Subscribe(channelID, projectionKey2)
-			req.NoError(err)
+		err = nb.Subscribe(channelID, projectionKey2)
+		req.NoError(err)
 
-		}
-		// Should see some offsets
+	}
+	// Should see some offsets
 
-		{
-			var ui []UpdateUnit
-			ui = append(ui, <-cb.data)
-			ui = append(ui, <-cb.data)
-			req.Contains(ui, UpdateUnit{
-				Offset:     istructs.Offset(100),
-				Projection: projectionKey1,
-			})
-			req.Contains(ui, UpdateUnit{
-				Offset:     istructs.Offset(200),
-				Projection: projectionKey2,
-			})
-		}
-		// Unsubscribe
-		require.NoError(t, nb.Unsubscribe(channelID, projectionKey1))
-		require.NoError(t, nb.Unsubscribe(channelID, projectionKey2))
+	{
+		var ui []UpdateUnit
+		ui = append(ui, <-cb.data)
+		ui = append(ui, <-cb.data)
+		req.Contains(ui, UpdateUnit{
+			Offset:     istructs.Offset(100),
+			Projection: projectionKey1,
+		})
+		req.Contains(ui, UpdateUnit{
+			Offset:     istructs.Offset(200),
+			Projection: projectionKey2,
+		})
+	}
+	// Unsubscribe
+	require.NoError(t, nb.Unsubscribe(channelID, projectionKey1))
+	require.NoError(t, nb.Unsubscribe(channelID, projectionKey2))
 
 	// }
 
@@ -642,15 +642,12 @@ func TestMultipleWatchChannelProtection(t *testing.T) {
 	req.NoError(err)
 
 	watchCtx, cancel := context.WithCancel(context.Background())
-	panicMessage := ""
+	panicChan := make(chan any, 2)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer func() {
-			if r := recover(); r != nil {
-				panicMessage = fmt.Sprint(r)
-				cancel()
-			}
+			panicChan <- recover()
 			wg.Done()
 		}()
 		nb.WatchChannel(watchCtx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
@@ -658,16 +655,24 @@ func TestMultipleWatchChannelProtection(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer func() {
-			if r := recover(); r != nil {
-				panicMessage = fmt.Sprint(r)
-				cancel()
-			}
+			panicChan <- recover()
 			wg.Done()
 		}()
 		nb.WatchChannel(watchCtx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
 	}()
 
+	panic1 := <-panicChan
+	cancel()
+	panic2 := <-panicChan
 	wg.Wait()
+	panicMessage := ""
+	if panic1 != nil && panic2 != nil {
+		t.Fatal("1 panic expected, got 2:", panic1, panic2)
+	} else if panic1 != nil {
+		panicMessage = fmt.Sprint(panic1)
+	} else if panic2 != nil {
+		panicMessage = fmt.Sprint(panic2)
+	}
 	require.Contains(t, panicMessage, in10n.ErrChannelAlreadyBeingWatched.Error())
 
 	channelCleanup()
