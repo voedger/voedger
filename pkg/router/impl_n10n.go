@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 
@@ -26,7 +25,7 @@ import (
 /*
 curl -G --data-urlencode "payload={\"SubjectLogin\": \"paa\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.price\",\"WS\":1}, {\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/channel -H "Content-Type: application/json"
 */
-func (s *httpService) subscribeAndWatchHandler(reqSender bus.IRequestSender) http.HandlerFunc {
+func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var (
 			urlParams      in10nmem.CreateChannelParamsType
