@@ -16,3 +16,4 @@ var ErrQuotaExceeded_SubscriptionsPerSubject = errors.New(quotaExceededPrefix + 
 
 var ErrChannelDoesNotExist = errors.New("channel does not exist")
 var ErrChannelTerminated = errors.New("channel terminated")
+var ErrChannelAlreadyBeingWatched = errors.New("channel is already being watched")

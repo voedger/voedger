@@ -207,6 +207,11 @@ func (nb *N10nBroker) WatchChannel(watchCtx context.Context, channelID in10n.Cha
 		return channel
 	}()
 
+	if !channel.watching.CompareAndSwap(false, true) {
+		panic(fmt.Errorf("%w: %s", in10n.ErrChannelAlreadyBeingWatched, channelID))
+	}
+	defer channel.watching.Store(false)
+
 	updateUnits := make([]UpdateUnit, 0)
 
 	// cycle for channel.cchan and ctx

@@ -10,6 +10,7 @@ package in10nmem
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -56,6 +57,7 @@ type channel struct {
 	createTime      time.Time
 	cchan           chan struct{}
 	terminated      bool
+	watching        atomic.Bool
 }
 
 type metricType struct {

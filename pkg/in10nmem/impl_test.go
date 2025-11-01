@@ -14,6 +14,7 @@ package in10nmem
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -594,8 +595,6 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 	brokerCleanup()
 }
 
-
-
 // Wait for 1 seconds
 func reqEventuallyNumProjectionSubscriptions(t *testing.T, broker in10n.IN10nBroker, expected int, proj in10n.ProjectionKey) {
 	t.Helper()
@@ -616,4 +615,61 @@ func checkMetricsZero(t *testing.T, nb in10n.IN10nBroker, projections ...in10n.P
 		req.Zero(numChannels)
 		req.Zero(numSubscriptions)
 	})
+}
+
+func TestMultipleWatchChannelProtection(t *testing.T) {
+	req := require.New(t)
+
+	quotas := in10n.Quotas{
+		Channels:                10,
+		ChannelsPerSubject:      10,
+		Subscriptions:           10,
+		SubscriptionsPerSubject: 10,
+	}
+
+	nb, brokerCleanup := NewN10nBroker(quotas, timeu.NewITime())
+
+	projectionKey := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "projection"),
+		WS:         istructs.WSID(1),
+	}
+
+	channelID, channelCleanup, err := nb.NewChannel("testuser", 24*time.Hour)
+	req.NoError(err)
+
+	err = nb.Subscribe(channelID, projectionKey)
+	req.NoError(err)
+
+	watchCtx, cancel := context.WithCancel(context.Background())
+	panicMessage := ""
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicMessage = fmt.Sprint(r)
+				cancel()
+			}
+			wg.Done()
+		}()
+		nb.WatchChannel(watchCtx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
+	}()
+	wg.Add(1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicMessage = fmt.Sprint(r)
+				cancel()
+			}
+			wg.Done()
+		}()
+		nb.WatchChannel(watchCtx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
+	}()
+
+	wg.Wait()
+	require.Contains(t, panicMessage, in10n.ErrChannelAlreadyBeingWatched.Error())
+
+	channelCleanup()
+	brokerCleanup()
 }
