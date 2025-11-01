@@ -106,7 +106,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iAppStructsProvider := provideIAppStructsProvider(appConfigsTypeEmpty, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider, sequencesTrustLevel)
 	syncActualizerFactory := actualizers.ProvideSyncActualizerFactory()
 	quotas := provideN10NQuotas(vvmConfig)
-	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, iTime)
+	in10nBroker, cleanup := in10nmem.NewN10nBroker(quotas, iTime)
 	v2 := provideAppsExtensionPoints(vvmConfig)
 	buildInfo, err := provideBuildInfo()
 	if err != nil {

@@ -70,7 +70,7 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	}
 	req := require.New(t)
 
-	nb, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+	nb, cleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 	defer cleanup()
 
 	var channel1ID in10n.ChannelID
@@ -193,7 +193,7 @@ func Test_Subscribe_NoUpdate_Unsubscribe(t *testing.T) {
 	}
 	req := require.New(t)
 
-	nb, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+	nb, cleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 	defer cleanup()
 
 	nb.Update(projectionKey1, istructs.Offset(100))
@@ -264,7 +264,7 @@ func TestWatchNotExistsChannel(t *testing.T) {
 		SubscriptionsPerSubject: 1,
 	}
 
-	broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+	broker, cleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 	defer cleanup()
 	ctx := context.TODO()
 
@@ -295,7 +295,7 @@ func TestQuotas(t *testing.T) {
 	}
 
 	t.Run("Test channel quotas per subject. We create more channels than allowed for subject.", func(t *testing.T) {
-		broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+		broker, cleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 		defer cleanup()
 		cleanups := []func(){}
 		for i := 0; i <= 10; i++ {
@@ -312,7 +312,7 @@ func TestQuotas(t *testing.T) {
 	})
 
 	t.Run("Test channel quotas for the whole service. We create more channels than allowed for service.", func(t *testing.T) {
-		broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+		broker, cleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 		defer cleanup()
 		var subject istructs.SubjectLogin
 		cleanups := []func(){}
@@ -341,7 +341,7 @@ func TestQuotas(t *testing.T) {
 			Projection: appdef.NewQName("test", "restaurant"),
 			WS:         istructs.WSID(1),
 		}
-		broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+		broker, cleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 		defer cleanup()
 		var subject istructs.SubjectLogin
 		cleanups := []func(){}
@@ -395,7 +395,7 @@ func TestHeartbeats(t *testing.T) {
 		SubscriptionsPerSubject: 1,
 	}
 
-	broker, cleanup := ProvideEx2(quotasExample, mockTime)
+	broker, cleanup := NewN10nBroker(quotasExample, mockTime)
 	defer cleanup()
 
 	// Create channel and subscribe to Heartbeat30
@@ -460,7 +460,7 @@ func TestChannelExpiration(t *testing.T) {
 		SubscriptionsPerSubject: 1,
 	}
 
-	broker, cleanup := ProvideEx2(quotasExample, testingu.MockTime)
+	broker, cleanup := NewN10nBroker(quotasExample, testingu.MockTime)
 	defer cleanup()
 
 	subject := istructs.SubjectLogin("test")
@@ -521,7 +521,7 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 		SubscriptionsPerSubject: 10,
 	}
 
-	broker, cleanup := ProvideEx2(quotasExample, timeu.NewITime())
+	broker, cleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 	defer cleanup()
 
 	// Initially, no subscriptions should exist

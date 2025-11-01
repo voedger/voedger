@@ -49,7 +49,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                2,
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
@@ -137,7 +137,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                2,
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
@@ -214,7 +214,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                2,
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
@@ -302,7 +302,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	errorsCh := make(chan string, 10)
 
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, cleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                2,
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
@@ -409,7 +409,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                2,
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
@@ -547,7 +547,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                2,
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
@@ -626,7 +626,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                2,
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
@@ -747,7 +747,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		return appdef.NewQName("test", fmt.Sprintf("prj_%d", i))
 	}
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                totalPartitions * projectorsPerPartition,
 		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
 		Subscriptions:           totalPartitions * projectorsPerPartition,
@@ -879,7 +879,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		return appdef.NewQName("test", fmt.Sprintf("prj_%d", i))
 	}
 
-	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:                totalPartitions * projectorsPerPartition,
 		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
 		Subscriptions:           totalPartitions * projectorsPerPartition,

@@ -184,7 +184,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideIAppStructsProvider,        // IAppStructsProvider
 		payloads.ProvideIAppTokensFactory, // IAppTokensFactory
 		provideAppPartitions,
-		in10nmem.ProvideEx2,
+		in10nmem.NewN10nBroker,
 		queryprocessor.ProvideServiceFactory,
 		query2.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
