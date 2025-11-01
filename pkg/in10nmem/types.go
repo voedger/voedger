@@ -9,9 +9,59 @@
 package in10nmem
 
 import (
+	"sync"
+	"time"
+
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
+
+type N10nBroker struct {
+	sync.RWMutex
+	projections      map[in10n.ProjectionKey]*projection
+	channels         map[in10n.ChannelID]*channel
+	channelsWG       sync.WaitGroup
+	quotas           in10n.Quotas
+	metricBySubject  map[istructs.SubjectLogin]*metricType
+	numSubscriptions int
+	time             timeu.ITime
+	events           chan event
+}
+
+type event struct {
+	prj *projection
+}
+
+type projection struct {
+	sync.Mutex
+
+	offsetPointer *istructs.Offset
+
+	toSubscribe map[in10n.ChannelID]*channel
+
+	// merged by pnotifier using toSubscribe, toUnsubscribe
+	subscribedChannels map[in10n.ChannelID]*channel
+}
+
+type subscription struct {
+	deliveredOffset istructs.Offset
+	currentOffset   *istructs.Offset
+}
+
+type channel struct {
+	subject         istructs.SubjectLogin
+	subscriptions   map[in10n.ProjectionKey]*subscription
+	channelDuration time.Duration
+	createTime      time.Time
+	cchan           chan struct{}
+	terminated      bool
+}
+
+type metricType struct {
+	numChannels      int
+	numSubscriptions int
+}
 
 type UpdateUnit struct {
 	Projection in10n.ProjectionKey
