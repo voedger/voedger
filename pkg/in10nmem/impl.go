@@ -22,57 +22,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/maps"
 )
-
-type N10nBroker struct {
-	sync.RWMutex
-	projections      map[in10n.ProjectionKey]*projection
-	channels         map[in10n.ChannelID]*channel
-	channelsWG   sync.WaitGroup
-	quotas           in10n.Quotas
-	metricBySubject  map[istructs.SubjectLogin]*metricType
-	numSubscriptions int
-	time             timeu.ITime
-	events           chan event
-}
-
-type event struct {
-	prj *projection
-}
-
-type projection struct {
-	sync.Mutex
-
-	offsetPointer *istructs.Offset
-
-	toSubscribe map[in10n.ChannelID]*channel
-
-	// merged by pnotifier using toSubscribe, toUnsubscribe
-	subscribedChannels map[in10n.ChannelID]*channel
-}
-
-type subscription struct {
-	deliveredOffset istructs.Offset
-	currentOffset   *istructs.Offset
-}
-
-type channel struct {
-	subject         istructs.SubjectLogin
-	subscriptions   map[in10n.ProjectionKey]*subscription
-	channelDuration time.Duration
-	createTime      time.Time
-	cchan           chan struct{}
-	terminated      bool
-}
-
-type metricType struct {
-	numChannels      int
-	numSubscriptions int
-}
 
 // NewChannel @ConcurrentAccess
 // Create new channel.
@@ -457,32 +410,6 @@ func (nb *N10nBroker) MetricNumProjectionSubscriptions(projection in10n.Projecti
 	prj.Lock()
 	defer prj.Unlock()
 	return len(prj.subscribedChannels)
-}
-
-func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb *N10nBroker, cleanup func()) {
-	broker := N10nBroker{
-		projections:     make(map[in10n.ProjectionKey]*projection),
-		channels:        make(map[in10n.ChannelID]*channel),
-		channelsWG:  sync.WaitGroup{},
-		metricBySubject: make(map[istructs.SubjectLogin]*metricType),
-		quotas:          quotas,
-		time:            time,
-		events:          make(chan event, eventsChannelSize),
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	wg := sync.WaitGroup{}
-	cleanup = func() {
-		cancel()
-		wg.Wait()
-		broker.channelsWG.Wait()
-	}
-
-	wg.Add(1)
-	go notifier(ctx, &wg, broker.events)
-	wg.Add(1)
-	go broker.heartbeat30(ctx, &wg)
-
-	return &broker, cleanup
 }
 
 // Call Update() every 30 seconds for i10n.Heartbeat30ProjectionKey

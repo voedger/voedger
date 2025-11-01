@@ -44,7 +44,7 @@ func Example() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	broker, cleanup := in10nmem.ProvideEx2(quotasExample, timeu.NewITime())
+	broker, cleanup := in10nmem.NewN10nBroker(quotasExample, timeu.NewITime())
 	defer cleanup()
 
 	numChannels := broker.MetricNumChannels()

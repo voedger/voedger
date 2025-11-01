@@ -9,10 +9,36 @@
 package in10nmem
 
 import (
+	"context"
+	"sync"
+
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
+	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
-func ProvideEx2(quotas in10n.Quotas, time timeu.ITime) (nb in10n.IN10nBroker, cleanup func()) {
-	return NewN10nBroker(quotas, time)
+func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb in10n.IN10nBroker, cleanup func()) {
+	broker := N10nBroker{
+		projections:     make(map[in10n.ProjectionKey]*projection),
+		channels:        make(map[in10n.ChannelID]*channel),
+		channelsWG:      sync.WaitGroup{},
+		metricBySubject: make(map[istructs.SubjectLogin]*metricType),
+		quotas:          quotas,
+		time:            time,
+		events:          make(chan event, eventsChannelSize),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	cleanup = func() {
+		cancel()
+		wg.Wait()
+		broker.channelsWG.Wait()
+	}
+
+	wg.Add(1)
+	go notifier(ctx, &wg, broker.events)
+	wg.Add(1)
+	go broker.heartbeat30(ctx, &wg)
+
+	return &broker, cleanup
 }
