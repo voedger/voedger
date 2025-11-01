@@ -59,8 +59,8 @@ type channel struct {
 }
 
 type metricType struct {
-	numChannels      int
-	numSubscriptions int
+	numChannelsPerSubject      int
+	numSubscriptionsPerSubject int
 }
 
 type UpdateUnit struct {

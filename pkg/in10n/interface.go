@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -63,20 +62,4 @@ type IN10nBroker interface {
 
 	// @ConcurrentAccess
 	MetricNumProjectionSubscriptions(projection ProjectionKey) int
-}
-
-type ChannelID string
-type SubscriptionID string
-
-type ProjectionKey struct {
-	App        appdef.AppQName
-	Projection appdef.QName
-	WS         istructs.WSID
-}
-
-type Quotas struct {
-	Channels                int
-	ChannelsPerSubject      int
-	Subscriptions           int
-	SubscriptionsPerSubject int
 }

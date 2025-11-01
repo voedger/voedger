@@ -292,11 +292,11 @@ func TestQuotas(t *testing.T) {
 		broker, brokerCleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 		chanCleanups := []func(){}
 		for i := 0; i <= 10; i++ {
-			_, chanCleap, err := broker.NewChannel("paa", 24*time.Hour)
+			_, chanCleanup, err := broker.NewChannel("paa", 24*time.Hour)
 			if i == 10 {
 				req.ErrorIs(err, in10n.ErrQuotaExceeded_ChannelsPerSubject)
 			} else {
-				chanCleanups = append(chanCleanups, chanCleap)
+				chanCleanups = append(chanCleanups, chanCleanup)
 			}
 		}
 		for _, chanCleanup := range chanCleanups {

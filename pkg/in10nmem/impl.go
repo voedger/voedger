@@ -39,14 +39,14 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 	}
 	metric = nb.metricBySubject[subject]
 	if metric != nil {
-		if metric.numChannels >= nb.quotas.ChannelsPerSubject {
+		if metric.numChannelsPerSubject >= nb.quotas.ChannelsPerSubject {
 			return "", nil, in10n.ErrQuotaExceeded_ChannelsPerSubject
 		}
 	} else {
 		metric = new(metricType)
 		nb.metricBySubject[subject] = metric
 	}
-	metric.numChannels++
+	metric.numChannelsPerSubject++
 	channelID = in10n.ChannelID(uuid.New().String())
 	channel := channel{
 		subject:         subject,
@@ -101,7 +101,7 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 		if nb.numSubscriptions >= nb.quotas.Subscriptions {
 			return in10n.ErrQuotaExceeded_Subscriptions
 		}
-		if metric.numSubscriptions >= nb.quotas.SubscriptionsPerSubject {
+		if metric.numSubscriptionsPerSubject >= nb.quotas.SubscriptionsPerSubject {
 			return in10n.ErrQuotaExceeded_SubscriptionsPerSubject
 		}
 
@@ -116,7 +116,7 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 			currentOffset:   guaranteeProjection(nb.projections, projectionKey),
 		}
 		channel.subscriptions[projectionKey] = &subscription
-		metric.numSubscriptions++
+		metric.numSubscriptionsPerSubject++
 		nb.numSubscriptions++
 
 		// Must exist because we create it in guaranteeProjection
@@ -166,7 +166,7 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 			return ErrMetricDoesNotExists
 		}
 		delete(channel.subscriptions, projectionKey)
-		metric.numSubscriptions--
+		metric.numSubscriptionsPerSubject--
 		nb.numSubscriptions--
 
 		prj = nb.projections[projectionKey]
@@ -190,7 +190,8 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 }
 
 // Implementation of the in10n.IN10nBroker
-func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
+// watchCtx normally is normally request+VVM ctx
+func (nb *N10nBroker) WatchChannel(watchCtx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
 	// check that the channelID with the given ChannelID exists
 	channel := func() *channel {
 		nb.RLock()
@@ -209,9 +210,9 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 	updateUnits := make([]UpdateUnit, 0)
 
 	// cycle for channel.cchan and ctx
-	for ctx.Err() == nil {
+	for watchCtx.Err() == nil {
 		select {
-		case <-ctx.Done():
+		case <-watchCtx.Done():
 			return
 		case <-channel.cchan:
 
@@ -219,7 +220,7 @@ func (nb *N10nBroker) WatchChannel(ctx context.Context, channelID in10n.ChannelI
 				logger.Trace("notified: ", channelID)
 			}
 
-			if ctx.Err() != nil {
+			if watchCtx.Err() != nil {
 				return
 			}
 
@@ -282,13 +283,13 @@ func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID
 	}
 
 	nb.Lock()
-	metric.numChannels--
+	metric.numChannelsPerSubject--
 	delete(nb.channels, channelID)
-	nb.channelsWG.Done()
 	nb.Unlock()
+	nb.channelsWG.Done()
 }
 
-func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
+func notifier(brokerCtx context.Context, wg *sync.WaitGroup, events chan event) {
 	defer func() {
 		logger.Info("notifier goroutine stopped")
 		wg.Done()
@@ -296,9 +297,9 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 
 	logger.Info("notifier goroutine started")
 
-	for ctx.Err() == nil {
+	for brokerCtx.Err() == nil {
 		select {
-		case <-ctx.Done():
+		case <-brokerCtx.Done():
 			return
 		case eve := <-events:
 			prj := eve.prj
@@ -386,7 +387,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	postMetric := func(subject istructs.SubjectLogin, metric *metricType) (err error) {
 		nb.RLock()
 		defer nb.RUnlock()
-		cb(subject, metric.numChannels, metric.numSubscriptions)
+		cb(subject, metric.numChannelsPerSubject, metric.numSubscriptionsPerSubject)
 		return err
 	}
 	for subject, subjectMetric := range nb.metricBySubject {
@@ -413,7 +414,7 @@ func (nb *N10nBroker) MetricNumProjectionSubscriptions(projection in10n.Projecti
 }
 
 // Call Update() every 30 seconds for i10n.Heartbeat30ProjectionKey
-func (nb *N10nBroker) heartbeat30(ctx context.Context, wg *sync.WaitGroup) {
+func (nb *N10nBroker) heartbeat30(brokerCtx context.Context, wg *sync.WaitGroup) {
 	defer func() {
 		logger.Info("heartbeat30 goroutine stopped")
 		wg.Done()
@@ -427,7 +428,7 @@ func (nb *N10nBroker) heartbeat30(ctx context.Context, wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-brokerCtx.Done():
 			return
 		case <-ticker:
 			if logger.IsTrace() {
