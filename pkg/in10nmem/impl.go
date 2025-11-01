@@ -283,8 +283,6 @@ func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID
 
 	nb.Lock()
 	metric.numChannels--
-	metric.numSubscriptions -= len(channel.subscriptions)
-	nb.numSubscriptions -= len(channel.subscriptions)
 	delete(nb.channels, channelID)
 	nb.channelsWG.Done()
 	nb.Unlock()
@@ -324,6 +322,8 @@ func notifier(ctx context.Context, wg *sync.WaitGroup, events chan event) {
 				logger.Trace("notifier goroutine: len(prj.subscribedChannels):", strconv.Itoa(len(prj.subscribedChannels)))
 			}
 			for _, ch := range prj.subscribedChannels {
+				// note: ch could be closed\terminated here but still in prj.subscribedChannels
+				// just fail to write to cchan in this case, no problem
 				select {
 				case ch.cchan <- struct{}{}:
 					if logger.IsTrace() {
