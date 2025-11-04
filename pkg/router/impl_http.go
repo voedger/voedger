@@ -112,7 +112,7 @@ func (s *httpService) Stop() {
 		s.server.Close()
 	}
 	if s.n10n != nil {
-		for s.n10n.MetricNumSubcriptions() > 0 {
+		for s.n10n.MetricNumSubscriptions() > 0 {
 			time.Sleep(subscriptionsCloseCheckInterval)
 		}
 	}

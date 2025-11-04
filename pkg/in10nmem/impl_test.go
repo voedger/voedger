@@ -349,7 +349,7 @@ func TestQuotas(t *testing.T) {
 				err = broker.Subscribe(channel, projectionKeyExample)
 				req.NoError(err)
 				if i == 99 && g == 9 {
-					numSubscriptions := broker.MetricNumSubcriptions()
+					numSubscriptions := broker.MetricNumSubscriptions()
 					req.Equal(1000, numSubscriptions)
 					projectionKeyExample.WS = istructs.WSID(i + 100000)
 					err = broker.Subscribe(channel, projectionKeyExample)
@@ -524,7 +524,7 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 	broker, brokerCleanup := NewN10nBroker(quotasExample, timeu.NewITime())
 
 	// Initially, no subscriptions should exist
-	req.Equal(0, broker.MetricNumSubcriptions())
+	req.Equal(0, broker.MetricNumSubscriptions())
 
 	// Create a channel
 	subject := istructs.SubjectLogin("testuser")
@@ -562,7 +562,7 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 	req.NoError(err)
 
 	// Wait for metrics to be updated
-	req.Equal(1, broker.MetricNumSubcriptions())
+	req.Equal(1, broker.MetricNumSubscriptions())
 	reqEventuallyNumProjectionSubscriptions(t, broker, 1, projection1)
 
 	// Subscribe to projection2
@@ -570,7 +570,7 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 	req.NoError(err)
 
 	// Wait for metrics to be updated
-	req.Equal(2, broker.MetricNumSubcriptions())
+	req.Equal(2, broker.MetricNumSubscriptions())
 	req.Equal(1, broker.MetricNumProjectionSubscriptions(projection1))
 	reqEventuallyNumProjectionSubscriptions(t, broker, 1, projection2)
 
@@ -579,7 +579,7 @@ func Test_MetricNumProjectionSubscriptions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for metrics to be updated
-	req.Equal(1, broker.MetricNumSubcriptions())
+	req.Equal(1, broker.MetricNumSubscriptions())
 	reqEventuallyNumProjectionSubscriptions(t, broker, 0, projection1)
 
 	// Close context (this should clean up remaining subscriptions)
@@ -606,7 +606,7 @@ func reqEventuallyNumProjectionSubscriptions(t *testing.T, broker in10n.IN10nBro
 func checkMetricsZero(t *testing.T, nb in10n.IN10nBroker, projections ...in10n.ProjectionKey) {
 	t.Helper()
 	req := require.New(t)
-	req.Zero(nb.MetricNumSubcriptions())
+	req.Zero(nb.MetricNumSubscriptions())
 	req.Zero(nb.MetricNumChannels())
 	for _, prj := range projections {
 		reqEventuallyNumProjectionSubscriptions(t, nb, 0, prj)
@@ -716,7 +716,7 @@ func TestDoubleSubscribeAndUnsubscribe(t *testing.T) {
 	require.NoError(err)
 
 	// check metrics - must be 1, not 2
-	require.Equal(1, broker.MetricNumSubcriptions())
+	require.Equal(1, broker.MetricNumSubscriptions())
 	broker.MetricSubject(watchCtx, func(subject istructs.SubjectLogin, numChannels, numSubscriptions int) {
 		require.Equal(subject, testSubject)
 		require.Equal(1, numChannels)
