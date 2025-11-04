@@ -678,3 +678,58 @@ func TestMultipleWatchChannelProtection(t *testing.T) {
 	channelCleanup()
 	brokerCleanup()
 }
+
+func TestDoubleSubscribeAndUnsubscribe(t *testing.T) {
+	require := require.New(t)
+
+	quotas := in10n.Quotas{
+		Channels:                10,
+		ChannelsPerSubject:      10,
+		Subscriptions:           10,
+		SubscriptionsPerSubject: 10,
+	}
+
+	broker, brokerCleanup := NewN10nBroker(quotas, timeu.NewITime())
+
+	projectionKey := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("test", "projection"),
+		WS:         istructs.WSID(1),
+	}
+
+	testSubject := istructs.SubjectLogin("testuser")
+	channelID, channelCleanup, err := broker.NewChannel(testSubject, 24*time.Hour)
+	require.NoError(err)
+
+	watchCtx, cancel := context.WithCancel(context.Background())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		broker.WatchChannel(watchCtx, channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
+		wg.Done()
+	}()
+
+	// double subscribe
+	err = broker.Subscribe(channelID, projectionKey)
+	require.NoError(err)
+	err = broker.Subscribe(channelID, projectionKey)
+	require.NoError(err)
+
+	// check metrics - must be 1, not 2
+	require.Equal(1, broker.MetricNumSubcriptions())
+	broker.MetricSubject(watchCtx, func(subject istructs.SubjectLogin, numChannels, numSubscriptions int) {
+		require.Equal(subject, testSubject)
+		require.Equal(1, numChannels)
+		require.Equal(1, numSubscriptions)
+	})
+
+	// double unsubscribe
+	require.NoError(broker.Unsubscribe(channelID, projectionKey))
+	require.NoError(broker.Unsubscribe(channelID, projectionKey))
+
+	cancel()
+	wg.Wait()
+	channelCleanup()
+	checkMetricsZero(t, broker, projectionKey)
+	brokerCleanup()
+}
