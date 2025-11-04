@@ -555,11 +555,11 @@ func checkMetricsZero(t *testing.T, nb in10n.IN10nBroker, projections ...in10n.P
 	wg := sync.WaitGroup{}
 	for _, prj := range projections {
 		wg.Add(1)
-		go func() {
+		go func(prj in10n.ProjectionKey) {
 			// TestQuotas creates ~1000 projections, so check it simultaneously
 			reqEventuallyNumProjectionSubscriptions(t, nb, 0, prj)
 			wg.Done()
-		}()
+		}(prj)
 	}
 	wg.Wait()
 	nb.MetricSubject(context.Background(), func(subject istructs.SubjectLogin, numChannels, numSubscriptions int) {
