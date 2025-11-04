@@ -111,13 +111,17 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 			projectionKey = in10n.Heartbeat30ProjectionKey
 		}
 
-		subscription := subscription{
-			deliveredOffset: istructs.Offset(0),
-			currentOffset:   guaranteeProjection(nb.projections, projectionKey),
+		currentOffset := guaranteeProjection(nb.projections, projectionKey)
+		if _, ok := channel.subscriptions[projectionKey]; !ok {
+			// do not affect metrics and internal maps on Subscribe again
+			subscription := subscription{
+				deliveredOffset: istructs.Offset(0),
+				currentOffset:   currentOffset,
+			}
+			channel.subscriptions[projectionKey] = &subscription
+			metric.numSubscriptionsPerSubject++
+			nb.numSubscriptions++
 		}
-		channel.subscriptions[projectionKey] = &subscription
-		metric.numSubscriptionsPerSubject++
-		nb.numSubscriptions++
 
 		// Must exist because we create it in guaranteeProjection
 		prj = nb.projections[projectionKey]
@@ -161,13 +165,15 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 		// if channel.terminated {
 		// Ok we can unsubscribe from terminated channel
 
-		metric, mOK := nb.metricBySubject[channel.subject]
-		if !mOK {
-			return ErrMetricDoesNotExists
+		if _, ok := channel.subscriptions[projectionKey]; ok {
+			metric, mOK := nb.metricBySubject[channel.subject]
+			if !mOK {
+				return ErrMetricDoesNotExists
+			}
+			delete(channel.subscriptions, projectionKey)
+			metric.numSubscriptionsPerSubject--
+			nb.numSubscriptions--
 		}
-		delete(channel.subscriptions, projectionKey)
-		metric.numSubscriptionsPerSubject--
-		nb.numSubscriptions--
 
 		prj = nb.projections[projectionKey]
 		return nil
@@ -382,7 +388,7 @@ func (nb *N10nBroker) MetricNumChannels() int {
 	return len(nb.channels)
 }
 
-func (nb *N10nBroker) MetricNumSubcriptions() int {
+func (nb *N10nBroker) MetricNumSubscriptions() int {
 	nb.RLock()
 	defer nb.RUnlock()
 	return nb.numSubscriptions

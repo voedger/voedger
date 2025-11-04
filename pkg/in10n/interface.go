@@ -56,7 +56,7 @@ type IN10nBroker interface {
 	// @ConcurrentAccess
 	MetricNumChannels() int
 	// @ConcurrentAccess
-	MetricNumSubcriptions() int
+	MetricNumSubscriptions() int
 	// @ConcurrentAccess
 	MetricSubject(ctx context.Context, cb func(subject istructs.SubjectLogin, numChannels int, numSubscriptions int))
 

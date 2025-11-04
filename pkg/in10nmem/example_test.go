@@ -68,7 +68,7 @@ func Example() {
 	}()
 
 	// check subscriptions, numSubscriptions must be equal 0
-	fmt.Println("Before Subscribe(), numSubscriptions: ", broker.MetricNumSubcriptions())
+	fmt.Println("Before Subscribe(), numSubscriptions: ", broker.MetricNumSubscriptions())
 
 	// Subscribe on exist channel numSubscriptions must be equal 1
 	err = broker.Subscribe(channel, projectionKeyExample)
@@ -76,7 +76,7 @@ func Example() {
 		panic(err)
 	}
 
-	fmt.Println("Before Subscribe(), numSubscriptions: ", broker.MetricNumSubcriptions())
+	fmt.Println("Before Subscribe(), numSubscriptions: ", broker.MetricNumSubscriptions())
 
 	// Update the projection
 
@@ -103,7 +103,7 @@ func Example() {
 	channelCleanup()
 
 	// Check subscriptions, numSubscriptions must be equal 0
-	fmt.Println("Canceled, numSubscriptions: ", broker.MetricNumSubcriptions())
+	fmt.Println("Canceled, numSubscriptions: ", broker.MetricNumSubscriptions())
 
 	// Output:
 	// Before NewChannel(), numChannels: 0
