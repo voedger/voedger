@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"iter"
 	"net/http"
 	"strings"
 
@@ -39,13 +38,12 @@ func CreateOpenAPISchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QNa
 }
 
 type schemaGenerator struct {
-	developer    bool
-	ws           appdef.IWorkspace
-	role         appdef.QName
-	pubTypesFunc PublishedTypesFunc
-	meta         SchemaMeta
-	types        iter.Seq2[appdef.IType,
-		iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]]
+	developer      bool
+	ws             appdef.IWorkspace
+	role           appdef.QName
+	pubTypesFunc   PublishedTypesFunc
+	meta           SchemaMeta
+	types          map[appdef.IType]map[appdef.OperationKind]*[]appdef.FieldName
 	components     map[string]interface{}
 	paths          map[string]map[string]interface{}
 	schemasByType  map[string]map[appdef.OperationKind]string
@@ -55,7 +53,15 @@ type schemaGenerator struct {
 
 // generate performs the schema generation process
 func (g *schemaGenerator) generate() {
-	g.types = g.pubTypesFunc(g.ws, g.role)
+	// Materialize the iterator into a map so it can be iterated multiple times
+	g.types = make(map[appdef.IType]map[appdef.OperationKind]*[]appdef.FieldName)
+	for t, ops := range g.pubTypesFunc(g.ws, g.role) {
+		g.types[t] = make(map[appdef.OperationKind]*[]appdef.FieldName)
+		for op, fields := range ops {
+			g.types[t][op] = fields
+		}
+	}
+
 	g.collectDocSchemaTypes()
 
 	// First pass - generate schema components for types
