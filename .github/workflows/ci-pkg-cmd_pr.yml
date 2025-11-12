@@ -11,7 +11,6 @@ jobs:
     uses: host6/ci-action/.github/workflows/ci_reuse_go_pr.yml@AIR-2075-ci-action-get-rid-of-JavaScript-dev
     with:
       test_folder: "pkg"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       ignore_bp3: "true"
       short_test: "true"
       ignore_build: "true"
