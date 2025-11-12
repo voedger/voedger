@@ -7,7 +7,7 @@ on:
 
 jobs:
   call-workflow-ci-pkg:
-    if: github.repository == 'voedger/voedger'
+    if: github.repository == 'host6/voedger'
     uses: host6/ci-action/.github/workflows/ci_reuse_go_pr.yml@AIR-2075-ci-action-get-rid-of-JavaScript-dev
     with:
       test_folder: "pkg"
