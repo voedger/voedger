@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
+
 func updateTable(update update, federation federation.IFederation, itokens itokens.ITokens) error {
 	jsonFields, err := json.Marshal(update.setFields)
 	if err != nil {
