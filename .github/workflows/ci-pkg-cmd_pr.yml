@@ -8,7 +8,7 @@ on:
 jobs:
   call-workflow-ci-pkg:
     if: github.repository == 'voedger/voedger'
-    uses: host6/ci-action/.github/workflows/ci_reuse_go_pr.yml@AIR-2075-ci-action-get-rid-of-JavaScript-dev 
+    uses: host6/ci-action/.github/workflows/ci_reuse_go_pr.yml@AIR-2075-ci-action-get-rid-of-JavaScript-dev
     with:
       test_folder: "pkg"
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
