@@ -31,6 +31,7 @@ const (
 
 var qNameWDocBLOB = appdef.NewQName(appdef.SysPackage, "BLOB")
 var sysAnySchemaName = appdef.QNameANY.String()
+var sysAnySchemaRef = "#/components/schemas/" + sysAnySchemaName
 
 const (
 	methodGet    = "get"
