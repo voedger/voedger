@@ -45,7 +45,7 @@ func execCmdInitiateCancelAcceptedInvite(time timeu.ITime) func(args istructs.Ex
 		if err != nil {
 			return
 		}
-		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
+		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
 		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeCancelled))
 
 		return err

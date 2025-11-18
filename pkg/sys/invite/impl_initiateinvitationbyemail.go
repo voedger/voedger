@@ -81,7 +81,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 			svbCDocInvite.PutInt32(Field_State, int32(State_ToBeInvited))
-			svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
+			svbCDocInvite.PutInt64(Field_Updated, tm.Now().UnixMilli())
 			svbCDocInvite.PutString(field_ActualLogin, "") // to be filled with Invitee's login by ap.sys.Apply
 
 			return nil
@@ -102,7 +102,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 		svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 		svbCDocInvite.PutInt64(field_Created, now)
-		svbCDocInvite.PutInt64(field_Updated, now)
+		svbCDocInvite.PutInt64(Field_Updated, now)
 		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeInvited))
 		// do not fill cdoc.sys.Invite.ActualLogin because it must be Invitee's login. It is unknown here
 
