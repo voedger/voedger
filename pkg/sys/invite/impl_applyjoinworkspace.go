@@ -57,7 +57,7 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 		if subjectExistsByLogin || subjectExistsByActualLogin {
 			// cdoc.sys.Subject exists by login -> skip
 			// see https://github.com/voedger/voedger/issues/1107
-			// && svCDocInvite.AsInt32(field_State) == State_Joined -> insert cdoc.sys.Subject with an existing login -> unique violation -> the projector stuck
+			// && svCDocInvite.AsInt32(Field_State) == State_Joined -> insert cdoc.sys.Subject with an existing login -> unique violation -> the projector stuck
 			fieldName := "cdoc.sys.Invite.Login"
 			if subjectExistsByActualLogin {
 				fieldName = "cdoc.sys.Invite.ActualLogin"
@@ -83,7 +83,7 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 			return
 		}
 		_, err = federation.Func(
-			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
+			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":%q}}`,
 				svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
 			httpu.WithAuthorizeBy(token),
@@ -123,7 +123,7 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 			// svCDocInvite.AsString(Field_Login) is actually c.sys.InitiateInvitationByEMail.Email
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
 				svCDocInvite.AsString(field_ActualLogin), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
-				svCDocInvite.AsInt64(field_InviteeProfileWSID))
+				svCDocInvite.AsInt64(Field_InviteeProfileWSID))
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`,
 				svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
