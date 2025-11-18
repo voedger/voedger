@@ -66,7 +66,7 @@ func applyCancelAcceptedInvite(time timeu.ITime, federation federation.IFederati
 
 		// Deactivate joined workspace
 		_, err = federation.Func(
-			fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
+			fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 			httpu.WithAuthorizeBy(token),
 			httpu.WithDiscardResponse())

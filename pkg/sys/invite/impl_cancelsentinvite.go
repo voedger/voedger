@@ -38,7 +38,7 @@ func execCmdCancelSentInvite(time timeu.ITime) func(args istructs.ExecCommandArg
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteNotExists)
 		}
 
-		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdCancelSentInvite) {
+		if !isValidInviteState(svCDocInvite.AsInt32(Field_State), qNameCmdCancelSentInvite) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
@@ -47,7 +47,7 @@ func execCmdCancelSentInvite(time timeu.ITime) func(args istructs.ExecCommandArg
 			return
 		}
 		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
-		svbCDocInvite.PutInt32(field_State, int32(State_Cancelled))
+		svbCDocInvite.PutInt32(Field_State, int32(State_Cancelled))
 
 		return
 	}

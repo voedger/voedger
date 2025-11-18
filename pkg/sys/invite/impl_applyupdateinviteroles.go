@@ -69,7 +69,7 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 
 		//Update joined workspace roles
 		_, err = federation.Func(
-			fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
+			fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d}}`, event.ArgumentObject().AsString(Field_Roles), event.Workspace()),
 			httpu.WithAuthorizeBy(token),
 			httpu.WithDiscardResponse())
