@@ -4,15 +4,15 @@ on:
   issues:
     types: [closed]
 
-jobs: 
+jobs:
   link:
     runs-on: ubuntu-22.04
 
     steps:
     - name: Link issue to milestone
-      env: 
+      env:
         GH_TOKEN: ${{ secrets.REPOREADING_TOKEN }}
         repo: ${{ GITHUB.REPOSITORY }}
         issue: ${{ github.event.issue.number }}
-      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/linkmilestone.sh | bash 
+      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/main/scripts/linkmilestone.sh | bash
 

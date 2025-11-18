@@ -6,17 +6,17 @@ on:
       personaltoken:
         required: true
 
-jobs: 
+jobs:
   build:
     runs-on: ubuntu-22.04
 
     steps:
 
     - name: Merge PR
-      env: 
+      env:
         GH_TOKEN: ${{ secrets.personaltoken }}
         token: ${{ secrets.personaltoken }}
         repo: ${{ GITHUB.REPOSITORY }}
         pr_number: ${{ github.event.number }}
         br_name: ${{ github.head_ref || github.ref_name }}
-      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/domergepr.sh | bash 
+      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/main/scripts/domergepr.sh | bash
