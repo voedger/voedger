@@ -51,7 +51,7 @@ const (
 	Field_InviteeProfileWSID    = "InviteeProfileWSID"
 	Field_State                 = "State"
 	field_Created               = "Created"
-	field_Updated               = "Updated"
+	Field_Updated               = "Updated"
 	field_SubjectID             = "SubjectID"
 	field_Dummy                 = "Dummy"
 	field_JoinedWorkspaceID     = "JoinedWorkspaceID"

@@ -50,7 +50,7 @@ func execCmdInitiateUpdateInviteRoles(time timeu.ITime) func(args istructs.ExecC
 			return
 		}
 		svbCDocInvite.PutInt32(Field_State, int32(State_ToUpdateRoles))
-		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
+		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
 
 		return err
 	}

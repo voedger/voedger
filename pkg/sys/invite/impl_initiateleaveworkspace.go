@@ -63,7 +63,7 @@ func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecComm
 			return err
 		}
 		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeLeft))
-		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
+		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
 		svbCDocInvite.PutBool(appdef.SystemField_IsActive, false)
 
 		return
