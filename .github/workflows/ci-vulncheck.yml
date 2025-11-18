@@ -8,15 +8,8 @@ jobs:
 
     steps:
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 'stable'
-        check-latest: true
-        cache: false
-
-    - name: Checkout
-      uses: actions/checkout@v4
+    - name: Checkout and Setup go
+      uses: untillpro/ci-action/checkout-and-setup-go@main
 
     - name: Vulnerability management
       run: |

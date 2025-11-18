@@ -31,8 +31,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: local
 
     steps:
-      - name: Setup Go environment
-        uses: untillpro/ci-action/go-setup@main
+      - name: Checkout and Setup go
+        uses: untillpro/ci-action/checkout-and-setup-go@main
 
       - name: Run Amazon DynamoDB Implementation Tests
         working-directory: pkg/istorage/amazondb

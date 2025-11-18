@@ -21,22 +21,8 @@ jobs:
           - 9042:9042
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 'stable'
-        cache: false  # Disables default caching (may be unnecessary)
-
-    - name: Cache Go Modules
-      uses: actions/cache@v4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+    - name: Checkout and Setup go
+      uses: untillpro/ci-action/checkout-and-setup-go@main
 
     - name: Run Cassandra Implementation Tests
       working-directory: pkg/istorage/cas
