@@ -30,7 +30,7 @@ func asyncProjectorApplyUpdateInviteRoles(time timeu.ITime, federation federatio
 
 func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}

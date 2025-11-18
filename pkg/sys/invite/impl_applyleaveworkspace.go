@@ -28,11 +28,11 @@ func applyLeaveWorkspace(time timeu.ITime, federation federation.IFederation, to
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {
 			//TODO additional check that CUD only once?
-			if rec.QName() != qNameCDocInvite {
+			if rec.QName() != QNameCDocInvite {
 				continue
 			}
 
-			skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+			skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 			if err != nil {
 				return err
 			}

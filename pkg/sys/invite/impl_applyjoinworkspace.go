@@ -30,7 +30,7 @@ func asyncProjectorApplyJoinWorkspace(time timeu.ITime, federation federation.IF
 func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		// it is AFTER EXECUTE ON (InitiateJoinWorkspace) so no doc checking here
-		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}

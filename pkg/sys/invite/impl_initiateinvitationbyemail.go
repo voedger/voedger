@@ -55,7 +55,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		}
 
 		if ok {
-			skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+			skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 			if err != nil {
 				return err
 			}
@@ -87,7 +87,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			return nil
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return err
 		}

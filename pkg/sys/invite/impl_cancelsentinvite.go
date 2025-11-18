@@ -24,7 +24,7 @@ func provideCmdCancelSentInvite(sr istructsmem.IStatelessResources, time timeu.I
 
 func execCmdCancelSentInvite(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}

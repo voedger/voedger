@@ -44,7 +44,7 @@ func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecComm
 			return
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return err
 		}
