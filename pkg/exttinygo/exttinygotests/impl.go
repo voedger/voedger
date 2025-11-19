@@ -19,7 +19,6 @@ func NewTestAPI(processorKind int, packagePath string, createWorkspaces ...tests
 	return ts
 }
 
-
 func NewCommandTest(t *testing.T, iCommand teststate.ICommand, extensionFunc func()) *teststate.CommandTestState {
 	ts := teststate.NewCommandTestState(t, iCommand, extensionFunc)
 	internal.SafeStateAPI = safestate.Provide(ts, nil)
