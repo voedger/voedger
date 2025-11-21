@@ -18,7 +18,7 @@ func syncProjectorInviteIndex() istructs.Projector {
 
 var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	for rec := range event.CUDs {
-		if rec.QName() != qNameCDocInvite {
+		if rec.QName() != QNameCDocInvite {
 			continue
 		}
 

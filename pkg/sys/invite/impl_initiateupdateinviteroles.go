@@ -28,7 +28,7 @@ func execCmdInitiateUpdateInviteRoles(time timeu.ITime) func(args istructs.ExecC
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -41,7 +41,7 @@ func execCmdInitiateUpdateInviteRoles(time timeu.ITime) func(args istructs.ExecC
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteNotExists)
 		}
 
-		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateUpdateInviteRoles) {
+		if !isValidInviteState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateUpdateInviteRoles) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
@@ -49,8 +49,8 @@ func execCmdInitiateUpdateInviteRoles(time timeu.ITime) func(args istructs.ExecC
 		if err != nil {
 			return
 		}
-		svbCDocInvite.PutInt32(field_State, int32(State_ToUpdateRoles))
-		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
+		svbCDocInvite.PutInt32(Field_State, int32(State_ToUpdateRoles))
+		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
 
 		return err
 	}

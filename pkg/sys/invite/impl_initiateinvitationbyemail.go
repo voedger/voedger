@@ -55,7 +55,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		}
 
 		if ok {
-			skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+			skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 			if err != nil {
 				return err
 			}
@@ -65,12 +65,12 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 				return err
 			}
 
-			inviteState := State(svCDocInvite.AsInt32(field_State))
+			inviteState := State(svCDocInvite.AsInt32(Field_State))
 			if existingSubjectID > 0 && !reInviteAllowedForState[inviteState] {
 				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w %s`, ErrReInviteNotAllowedForState, inviteState))
 			}
 
-			if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateInvitationByEMail) {
+			if !isValidInviteState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateInvitationByEMail) {
 				return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 			}
 
@@ -80,14 +80,14 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			}
 			svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
-			svbCDocInvite.PutInt32(field_State, int32(State_ToBeInvited))
-			svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
+			svbCDocInvite.PutInt32(Field_State, int32(State_ToBeInvited))
+			svbCDocInvite.PutInt64(Field_Updated, tm.Now().UnixMilli())
 			svbCDocInvite.PutString(field_ActualLogin, "") // to be filled with Invitee's login by ap.sys.Apply
 
 			return nil
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return err
 		}
@@ -102,8 +102,8 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 		svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 		svbCDocInvite.PutInt64(field_Created, now)
-		svbCDocInvite.PutInt64(field_Updated, now)
-		svbCDocInvite.PutInt32(field_State, int32(State_ToBeInvited))
+		svbCDocInvite.PutInt64(Field_Updated, now)
+		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeInvited))
 		// do not fill cdoc.sys.Invite.ActualLogin because it must be Invitee's login. It is unknown here
 
 		return

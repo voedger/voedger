@@ -28,11 +28,11 @@ func applyLeaveWorkspace(time timeu.ITime, federation federation.IFederation, to
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {
 			//TODO additional check that CUD only once?
-			if rec.QName() != qNameCDocInvite {
+			if rec.QName() != QNameCDocInvite {
 				continue
 			}
 
-			skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+			skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 			if err != nil {
 				return err
 			}
@@ -70,7 +70,7 @@ func applyLeaveWorkspace(time timeu.ITime, federation federation.IFederation, to
 
 			//Deactivate joined workspace
 			if _, err = federation.Func(
-				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
+				fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
 				fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 				httpu.WithAuthorizeBy(token),
 				httpu.WithDiscardResponse()); err != nil {

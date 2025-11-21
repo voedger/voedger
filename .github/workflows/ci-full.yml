@@ -14,6 +14,7 @@ jobs:
       short_test: "false"
       ignore_build: "true"
       test_subfolders: "true"
+      install_tinygo: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}

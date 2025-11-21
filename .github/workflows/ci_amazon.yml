@@ -14,7 +14,6 @@ on:
 #      - 'pkg/istorage/amazondb/**'
 
 jobs:
-
   build:
     name: Build & Test
     runs-on: ubuntu-22.04
@@ -32,48 +31,43 @@ jobs:
           AWS_SECRET_ACCESS_KEY: local
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout and Setup go
+        uses: untillpro/ci-action/checkout-and-setup-go@main
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 'stable'
+      - name: Run Amazon DynamoDB Implementation Tests
+        working-directory: pkg/istorage/amazondb
+        run: go test ./... -v -race
+        env:
+          AWS_REGION: eu-west-1
+          AWS_ACCESS_KEY_ID: local
+          AWS_SECRET_ACCESS_KEY: local
+          DYNAMODB_ENDPOINT: http://localhost:8000 # Set endpoint for local testing
+          DYNAMODB_TESTS_ENABLED: true
 
-    - name: Run Amazon DynamoDB Implementation Tests
-      working-directory: pkg/istorage/amazondb
-      run: go test ./... -v -race
-      env:
-        AWS_REGION: eu-west-1
-        AWS_ACCESS_KEY_ID: local
-        AWS_SECRET_ACCESS_KEY: local
-        DYNAMODB_ENDPOINT: http://localhost:8000  # Set endpoint for local testing
-        DYNAMODB_TESTS_ENABLED: true
+      - name: Run Amazon DynamoDB TTLStorage and Elections Tests
+        working-directory: pkg/vvm/storage
+        run: go test ./... -v -race
+        env:
+          AWS_REGION: eu-west-1
+          AWS_ACCESS_KEY_ID: local
+          AWS_SECRET_ACCESS_KEY: local
+          DYNAMODB_ENDPOINT: http://localhost:8000 # Set endpoint for local testing
+          DYNAMODB_TESTS_ENABLED: true
 
-    - name: Run Amazon DynamoDB TTLStorage and Elections Tests
-      working-directory: pkg/vvm/storage
-      run: go test ./... -v -race
-      env:
-        AWS_REGION: eu-west-1
-        AWS_ACCESS_KEY_ID: local
-        AWS_SECRET_ACCESS_KEY: local
-        DYNAMODB_ENDPOINT: http://localhost:8000  # Set endpoint for local testing
-        DYNAMODB_TESTS_ENABLED: true
-
-    - name: Set Failure URL
-      if: failure()
-      id: set_failure_url
-      run: echo "failure_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+      - name: Set Failure URL
+        if: failure()
+        id: set_failure_url
+        run: echo "failure_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
 
   call-workflow-create-issue:
     needs: build
     if: ${{ failure() }}
     uses: untillpro/ci-action/.github/workflows/create_issue.yml@main
     with:
-      repo: 'voedger/voedger'
-      assignee: 'host6'
-      name: 'Amazon DynamoDB test failed on'  # ✅ Fixed title
+      repo: "voedger/voedger"
+      assignee: "host6"
+      name: "Amazon DynamoDB test failed on" # ✅ Fixed title
       body: ${{ needs.build.outputs.failure_url }}
-      label: 'prty/blocker'
+      label: "prty/blocker"
     secrets:
-      personaltoken: ${{ secrets.personaltoken }}  # Match with `workflow_call`
+      personaltoken: ${{ secrets.personaltoken }} # Match with `workflow_call`

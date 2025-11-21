@@ -4,15 +4,15 @@ on:
   issues:
     types: [reopened]
 
-jobs: 
+jobs:
   unlink:
     runs-on: ubuntu-22.04
 
     steps:
     - name: Unlink issue from milestone
-      env: 
+      env:
         GH_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         repo: ${{ GITHUB.REPOSITORY }}
         issue: ${{ github.event.issue.number }}
-      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/unlinkmilestone.sh | bash 
+      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/main/scripts/unlinkmilestone.sh | bash
 

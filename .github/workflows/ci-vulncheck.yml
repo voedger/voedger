@@ -2,24 +2,17 @@ name: Vulnerability management
 
 on: workflow_call
 
-jobs: 
+jobs:
   build:
     runs-on: ubuntu-22.04
 
     steps:
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 'stable'
-        check-latest: true
-        cache: false
-
-    - name: Checkout
-      uses: actions/checkout@v4
+    - name: Checkout and Setup go
+      uses: untillpro/ci-action/checkout-and-setup-go@main
 
     - name: Vulnerability management
       run: |
         go install golang.org/x/vuln/cmd/govulncheck@latest
-        curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/execgovuln.sh | bash 
+        curl -s https://raw.githubusercontent.com/untillpro/ci-action/main/scripts/execgovuln.sh | bash
 

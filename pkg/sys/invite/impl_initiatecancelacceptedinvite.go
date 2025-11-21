@@ -24,7 +24,7 @@ func provideCmdInitiateCancelAcceptedInvite(sr istructsmem.IStatelessResources, 
 
 func execCmdInitiateCancelAcceptedInvite(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -37,7 +37,7 @@ func execCmdInitiateCancelAcceptedInvite(time timeu.ITime) func(args istructs.Ex
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteNotExists)
 		}
 
-		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateCancelAcceptedInvite) {
+		if !isValidInviteState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateCancelAcceptedInvite) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
@@ -45,8 +45,8 @@ func execCmdInitiateCancelAcceptedInvite(time timeu.ITime) func(args istructs.Ex
 		if err != nil {
 			return
 		}
-		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
-		svbCDocInvite.PutInt32(field_State, int32(State_ToBeCancelled))
+		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
+		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeCancelled))
 
 		return err
 	}

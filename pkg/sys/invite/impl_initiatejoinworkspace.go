@@ -27,7 +27,7 @@ func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time ti
 // [~server.invites/Join.InitiateJoinWorkspace~impl]
 func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -40,7 +40,7 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommand
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteNotExists)
 		}
 
-		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateJoinWorkspace) {
+		if !isValidInviteState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateJoinWorkspace) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 		if svCDocInvite.AsInt64(field_ExpireDatetime) < tm.Now().UnixMilli() {
@@ -69,10 +69,10 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommand
 		if err != nil {
 			return
 		}
-		svbCDocInvite.PutInt64(field_InviteeProfileWSID, svPrincipal.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
+		svbCDocInvite.PutInt64(Field_InviteeProfileWSID, svPrincipal.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
 		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(sys.Storage_RequestSubject_Field_Kind))
-		svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
-		svbCDocInvite.PutInt32(field_State, int32(State_ToBeJoined))
+		svbCDocInvite.PutInt64(Field_Updated, tm.Now().UnixMilli())
+		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeJoined))
 		svbCDocInvite.PutChars(field_ActualLogin, svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name))
 
 		return

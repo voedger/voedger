@@ -44,7 +44,7 @@ func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecComm
 			return
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecComm
 			return err
 		}
 
-		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateLeaveWorkspace) {
+		if !isValidInviteState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateLeaveWorkspace) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
@@ -62,8 +62,8 @@ func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecComm
 		if err != nil {
 			return err
 		}
-		svbCDocInvite.PutInt32(field_State, int32(State_ToBeLeft))
-		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
+		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeLeft))
+		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
 		svbCDocInvite.PutBool(appdef.SystemField_IsActive, false)
 
 		return

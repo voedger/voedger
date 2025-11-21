@@ -30,7 +30,7 @@ func asyncProjectorApplyUpdateInviteRoles(time timeu.ITime, federation federatio
 
 func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -69,7 +69,7 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 
 		//Update joined workspace roles
 		_, err = federation.Func(
-			fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
+			fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d}}`, event.ArgumentObject().AsString(Field_Roles), event.Workspace()),
 			httpu.WithAuthorizeBy(token),
 			httpu.WithDiscardResponse())

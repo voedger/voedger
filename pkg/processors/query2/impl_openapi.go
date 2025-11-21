@@ -936,6 +936,9 @@ func (g *schemaGenerator) docSchemaRefIfExist(typ appdef.QName, op appdef.Operat
 }
 
 func (g *schemaGenerator) schemaRef(typ appdef.IType, op appdef.OperationKind) string {
+	if typ == nil {
+		return sysAnySchemaRef
+	}
 	if typeSchemas, ok := g.schemasByType[typ.QName().String()]; ok {
 		if opSchema, ok := typeSchemas[op]; ok {
 			return fmt.Sprintf("#/components/schemas/%s", opSchema)
@@ -1105,26 +1108,44 @@ func (g *schemaGenerator) generateResponses(typ appdef.IType, op appdef.Operatio
 
 	case (op == appdef.OperationKind_Execute && typ.Kind() == appdef.TypeKind_Query):
 		// Collection response with results array
-		responses[statusCode200] = map[string]interface{}{
-			schemaKeyDescription: descrOK,
-			schemaKeyContent: map[string]interface{}{
-				applicationJSON: map[string]interface{}{
-					schemaKeySchema: map[string]interface{}{
-						schemaKeyType: schemaTypeObject,
-						schemaKeyProperties: map[string]interface{}{
-							fieldResults: map[string]interface{}{
-								schemaKeyType: schemaTypeArray,
-								schemaKeyItems: map[string]interface{}{
-									schemaKeyRef: g.schemaRef(typ.(appdef.IQuery).Result(), op),
+		qry := typ.(appdef.IQuery)
+		result := qry.Result()
+
+		// If Query has no result, return empty response (no content)
+		if result == nil {
+			responses[statusCode200] = map[string]interface{}{
+				schemaKeyDescription: descrOK,
+			}
+		} else {
+			// Determine the schema reference for the result
+			var resultSchemaRef string
+			if result.QName() == appdef.QNameANY {
+				resultSchemaRef = sysAnySchemaRef
+			} else {
+				resultSchemaRef = g.schemaRef(result, op)
+			}
+
+			responses[statusCode200] = map[string]interface{}{
+				schemaKeyDescription: descrOK,
+				schemaKeyContent: map[string]interface{}{
+					applicationJSON: map[string]interface{}{
+						schemaKeySchema: map[string]interface{}{
+							schemaKeyType: schemaTypeObject,
+							schemaKeyProperties: map[string]interface{}{
+								fieldResults: map[string]interface{}{
+									schemaKeyType: schemaTypeArray,
+									schemaKeyItems: map[string]interface{}{
+										schemaKeyRef: resultSchemaRef,
+									},
 								},
-							},
-							fieldError: map[string]interface{}{
-								schemaKeyRef: errorSchemaRef,
+								fieldError: map[string]interface{}{
+									schemaKeyRef: errorSchemaRef,
+								},
 							},
 						},
 					},
 				},
-			},
+			}
 		}
 	}
 	return responses

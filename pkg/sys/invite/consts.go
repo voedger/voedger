@@ -22,7 +22,7 @@ var (
 	qNameCmdDeactivateJoinedWorkspace    = appdef.NewQName(appdef.SysPackage, "DeactivateJoinedWorkspace")
 	qNameCmdInitiateLeaveWorkspace       = appdef.NewQName(appdef.SysPackage, "InitiateLeaveWorkspace")
 	qNameCmdCancelSentInvite             = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
-	qNameCDocInvite                      = appdef.NewQName(appdef.SysPackage, "Invite")
+	QNameCDocInvite                      = appdef.NewQName(appdef.SysPackage, "Invite")
 	qNameViewInviteIndex                 = appdef.NewQName(appdef.SysPackage, "InviteIndexView")
 	qNameProjectorInviteIndex            = appdef.NewQName(appdef.SysPackage, "ProjectorInviteIndex")
 	QNameViewJoinedWorkspaceIndex        = appdef.NewQName(appdef.SysPackage, "JoinedWorkspaceIndexView")
@@ -48,10 +48,10 @@ const (
 	field_EmailSubject          = "EmailSubject"
 	Field_Login                 = "Login"
 	Field_InvitingWorkspaceWSID = "InvitingWorkspaceWSID"
-	field_InviteeProfileWSID    = "InviteeProfileWSID"
-	field_State                 = "State"
+	Field_InviteeProfileWSID    = "InviteeProfileWSID"
+	Field_State                 = "State"
 	field_Created               = "Created"
-	field_Updated               = "Updated"
+	Field_Updated               = "Updated"
 	field_SubjectID             = "SubjectID"
 	field_Dummy                 = "Dummy"
 	field_JoinedWorkspaceID     = "JoinedWorkspaceID"
