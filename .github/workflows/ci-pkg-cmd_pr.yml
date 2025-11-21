@@ -18,6 +18,7 @@ jobs:
       running_workflow: "CI pkg-cmd PR"
       go_race: "false"
       test_subfolders: "true"
+      install_tinygo: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ""
