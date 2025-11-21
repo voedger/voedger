@@ -8,7 +8,7 @@ on:
 jobs:
   call-workflow-ci-pkg:
     if: github.repository == 'voedger/voedger'
-    uses: host6/ci-action/.github/workflows/ci_reuse_go_pr.yml@ci-multijob
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@main
     with:
       test_folder: "pkg"
       ignore_bp3: "true"
