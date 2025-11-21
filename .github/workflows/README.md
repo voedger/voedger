@@ -7,7 +7,7 @@
 - Triggered on: `push` to `main` branch, paths-ignore: `pkg/istorage/**`
 - Condition: `github.repository == 'voedger/voedger'` (avoids run on commit to main of a fork)
 
-- [Step 1: Call CI Reuse Go Workflow](ci-pkg-cmd.yml#L11-L25): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main` with `test_folder: pkg`, `ignore_copyright`, `short_test: true`, `go_race: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go.yml details](#ci_reuse_goyml-full-test-suite)
+- [Step 1: Call CI Reuse Go Workflow](ci-pkg-cmd.yml#L11-L25): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main` with `test_folder: pkg`, `short_test: true`, `go_race: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go.yml details](#ci_reuse_goyml-full-test-suite)
 
 - [Step 2: Set Ignore Build BP3](ci-pkg-cmd.yml#L26-L41): If `github.repository == 'voedger/voedger'`: `ignore_bp3=false`, else `ignore_bp3=true`
 
@@ -22,7 +22,7 @@
 - Triggered on: `pull_request_target`, paths-ignore: `pkg/istorage/**`
 - Condition: `github.repository == 'voedger/voedger'`
 
-- [Step 1: Call CI Reuse Go PR Workflow](ci-pkg-cmd_pr.yml#L9-L24): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@main` with `test_folder: pkg`, `ignore_copyright`, `short_test: true`, `go_race: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go_pr.yml details](#ci_reuse_go_pryml-pr-test-suite)
+- [Step 1: Call CI Reuse Go PR Workflow](ci-pkg-cmd_pr.yml#L9-L24): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@main` with `test_folder: pkg`, `short_test: true`, `go_race: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go_pr.yml details](#ci_reuse_go_pryml-pr-test-suite)
 
 - [Step 2: Auto-merge PR](ci-pkg-cmd_pr.yml#L25-L29): Calls `./.github/workflows/merge.yml`
   - [Merge PR](merge.yml#L15-L22): Run [domergepr.sh](#domergeprsh---auto-merge-script) script from ci-action with PR number and branch name
@@ -47,7 +47,7 @@
 - Triggered on: `workflow_dispatch` or `schedule: cron "0 5 * * *"` (daily at 5 AM UTC)
 - Condition: `github.repository == 'voedger/voedger'`
 
-- [Step 1: Call CI Reuse Go Workflow](ci-full.yml#L9-L21): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main` with `ignore_copyright`, `go_race: true`, `short_test: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go.yml details](#ci_reuse_goyml-full-test-suite)
+- [Step 1: Call CI Reuse Go Workflow](ci-full.yml#L9-L21): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main` with `go_race: true`, `short_test: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go.yml details](#ci_reuse_goyml-full-test-suite)
 
 - [Step 2: Notify Failure (if failed)](ci-full.yml#L23-L32): Condition `failure()` - Sets output `failure_url` with workflow run URL
 
