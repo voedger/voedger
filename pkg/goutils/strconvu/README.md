@@ -112,13 +112,14 @@ func parseMultiple(s1, s2, s3 string) (uint8, uint64, int64, error) {
 
 - **[UintToString](impl.go#L12)** - Generic unsigned integer to
   string conversion
-- **[IntToString](impl.go#L16)** - Generic signed integer to string
+- **[IntToString](impl.go#L17)** - Generic signed integer to string
   conversion
-- **[ParseUint8](impl.go#L21)** - String to uint8 parsing with
+- **[ParseUint8](impl.go#L22)** - String to uint8 parsing with
   automatic range validation
-- **[ParseUint64](impl.go#L30)** - String to uint64 parsing with
+- **[ParseUint64](impl.go#L31)** - String to uint64 parsing with
   error handling
-- **[ParseInt64](impl.go#L35)** - String to int64 parsing with error
+- **[ParseInt32](impl.go#L36)** - String to int32 parsing with automatic range validation
+- **[ParseInt64](impl.go#L45)** - String to int64 parsing with error
   handling
 
 ## Use

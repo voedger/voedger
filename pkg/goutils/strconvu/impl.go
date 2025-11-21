@@ -33,6 +33,15 @@ func ParseUint64(s string) (uint64, error) {
 	return strconv.ParseUint(s, decimalBase, bitSize64)
 }
 
+// ParseInt32 parses a string into an int32 value treating it as a regular decimal number
+func ParseInt32(s string) (int32, error) {
+	value, err := strconv.ParseInt(s, decimalBase, bitSize32)
+	if err != nil {
+		return 0, err
+	}
+	return int32(value), err
+}
+
 // ParseInt64 parses a string into an int64 value treating it as a regular decimal number
 func ParseInt64(s string) (int64, error) {
 	return strconv.ParseInt(s, decimalBase, bitSize64)
