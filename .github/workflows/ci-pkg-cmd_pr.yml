@@ -12,7 +12,6 @@ jobs:
     with:
       test_folder: "pkg"
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      ignore_bp3: "true"
       short_test: "true"
       ignore_build: "true"
       running_workflow: "CI pkg-cmd PR"
