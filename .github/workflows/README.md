@@ -61,7 +61,7 @@
 - [Step 5: Build & Push Docker](ci-full.yml#L50-L58): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main`
   - [Checkout](cd-voedger.yml#L21-L22): Checkout code
   - [Set up Go](cd-voedger.yml#L24-L28): Go stable version, cache disabled
-  - [Build executable](cd-voedger.yml#L30-L38): Configure git for private repos (heeus, untillpro, voedger), `go build -o ./cmd/voedger ./cmd/voedger`
+  - [Build executable](cd-voedger.yml#L30-L38): Configure git for private repos (untillpro, voedger), `go build -o ./cmd/voedger ./cmd/voedger`
   - [Log in to Docker Hub](cd-voedger.yml#L40-L44): Authenticate with Docker Hub credentials
   - [Build and push Docker image](cd-voedger.yml#L46-L52): Build from `./cmd/voedger/Dockerfile`, push as `voedger/voedger:0.0.1-alpha`
 
