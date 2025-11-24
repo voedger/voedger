@@ -21,7 +21,6 @@ jobs:
       install_tinygo: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ""
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   auto-merge-pr:
     needs: call-workflow-ci-pkg

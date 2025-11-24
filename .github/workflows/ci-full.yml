@@ -18,7 +18,6 @@ jobs:
       install_tinygo: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
 
   notify_failure:
