@@ -11,7 +11,6 @@ jobs:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@main
     with:
       test_folder: "pkg"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       short_test: "true"
       ignore_build: "true"
       running_workflow: "CI pkg-cmd PR"

@@ -13,7 +13,6 @@ jobs:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main
     with:
       test_folder: "pkg"
-      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
       short_test: "true"
       go_race: "false"
       ignore_build: "true"
