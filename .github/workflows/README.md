@@ -9,9 +9,7 @@
 
 - [Step 1: Call CI Reuse Go Workflow](ci-pkg-cmd.yml#L11-L25): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main` with `test_folder: pkg`, `ignore_copyright`, `short_test: true`, `go_race: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go.yml details](#ci_reuse_goyml-full-test-suite)
 
-- [Step 2: Set Ignore Build BP3](ci-pkg-cmd.yml#L26-L41): If `github.repository == 'voedger/voedger'`: `ignore_bp3=false`, else `ignore_bp3=true`
-
-- [Step 3: Build & Push Docker](ci-pkg-cmd.yml#L43-L51): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main` (condition: `github.repository == 'voedger/voedger'`)
+- [Step 2: Build & Push Docker](ci-pkg-cmd.yml#L43-L51): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main` (condition: `github.repository == 'voedger/voedger'`)
 
 ---
 

@@ -14,7 +14,6 @@ jobs:
     with:
       test_folder: "pkg"
       ignore_copyright: "cmd/voedger/sys.monitor/site.main"
-      ignore_bp3: "true"
       short_test: "true"
       go_race: "false"
       ignore_build: "true"
@@ -23,25 +22,10 @@ jobs:
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  build:
-    needs: call-workflow-ci-pkg
-    name: build
-    runs-on: ubuntu-22.04
-    outputs:
-      ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
 
-    steps:
-      - name: Set Ignore Build BP3
-        id: setignore
-        run: |
-          if [[ ${{ github.repository }} == 'voedger/voedger' ]]; then
-            echo "ignore_bp3=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ignore_bp3=true" >> "$GITHUB_OUTPUT"
-          fi
 
   call-workflow-cd_voeger:
-    needs: build
+    needs: call-workflow-ci-pkg
     if: github.repository == 'voedger/voedger'
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
