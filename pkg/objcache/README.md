@@ -1,7 +1,5 @@
 # `objcache` package
 
-[![codecov](https://codecov.io/gh/voedger/voedger/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/voedger/voedger/objcache)
-
 Reference count cache with values freeing automation.
 
 ## Motivation

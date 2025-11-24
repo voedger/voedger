@@ -1,7 +1,5 @@
 # `plogcache` from `istructsmem` internal package
 
-[![codecov](https://codecov.io/gh/voedger/voedger/branch/main/graph/badge.svg?token=1O1pA6zdYs)](https://codecov.io/gh/voedger/voedger/istructsmem/internal/plogcache)
-
 PLog events cache.
 
 ## Motivation
@@ -29,19 +27,19 @@ flowchart
     eventsCache[(plog events cache)]:::NEW
     IEvents -.- eventsCache
   end
-  
+
   istorage:::Group
   subgraph istorage [istorage package]
     storageCache[(cache)]:::Green
     storage[(storage)]:::Green
     storageCache -.- storage
   end
-  
+
   processors -->|write events| istructsmem
   istructsmem -->|read events| projectors
   istructsmem <--->|"read/write (key,value)"| istorage
-  
- 
+
+
   classDef NEW fill:#FFE0E0,stroke:#800000, stroke-width:2px, stroke-dasharray: 5 5
   classDef Green fill:#E0FFF0,stroke:#008040
   classDef Group fill:#FFFFFF, stroke:#808080, stroke-width:2px, stroke-dasharray: 5 5

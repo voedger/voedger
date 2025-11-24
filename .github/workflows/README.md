@@ -333,9 +333,6 @@ When ci-action workflows execute, they run the following JavaScript logic:
 - [**Setup Go Environment**](https://github.com/untillpro/ci-action/blob/main/index.js#L88-L93): Configure GOPRIVATE and git credentials for private repositories
 - [**go mod tidy**](https://github.com/untillpro/ci-action/blob/main/index.js#L99-L101): If `run-mod-tidy !== "false"`
 - [**Build**](https://github.com/untillpro/ci-action/blob/main/index.js#L103-L105): `go build ./...` if `ignore-build !== "true"`
-- [**Tests & Coverage**](https://github.com/untillpro/ci-action/blob/main/index.js#L107-L138):
-  - **If Codecov Token**: `go test` with coverage flags, upload to Codecov
-  - **If No Token**: `go test` with optional `-race` and `-short` flags
 - [**Custom Build Command**](https://github.com/untillpro/ci-action/blob/main/index.js#L142-L144): Execute if provided
 
 #### [IF Node.js Project](https://github.com/untillpro/ci-action/blob/main/index.js#L149-L170)
@@ -343,7 +340,6 @@ When ci-action workflows execute, they run the following JavaScript logic:
 - [**npm install**](https://github.com/untillpro/ci-action/blob/main/index.js#L155)
 - [**npm run build**](https://github.com/untillpro/ci-action/blob/main/index.js#L156)
 - [**npm test**](https://github.com/untillpro/ci-action/blob/main/index.js#L157)
-- [**Codecov**](https://github.com/untillpro/ci-action/blob/main/index.js#L160-L165): If token provided, run coverage and upload
 
 ### [Phase 4: Publish Release](https://github.com/untillpro/ci-action/blob/main/index.js#L174-L186)
 
