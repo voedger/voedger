@@ -15,7 +15,6 @@ jobs:
       test_folder: "pkg"
       short_test: "true"
       go_race: "false"
-      ignore_build: "true"
       test_subfolders: "true"
       install_tinygo: "true"
     secrets:

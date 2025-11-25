@@ -12,7 +12,6 @@ jobs:
     with:
       test_folder: "pkg"
       short_test: "true"
-      ignore_build: "true"
       running_workflow: "CI pkg-cmd PR"
       go_race: "false"
       test_subfolders: "true"
