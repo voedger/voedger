@@ -9,9 +9,7 @@
 
 - [Step 1: Call CI Reuse Go Workflow](ci-pkg-cmd.yml#L11-L25): Calls `untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main` with `test_folder: pkg`, `short_test: true`, `go_race: false`, `ignore_build: true`, `test_subfolders: true` → See [ci_reuse_go.yml details](#ci_reuse_goyml-full-test-suite)
 
-- [Step 2: Set Ignore Build BP3](ci-pkg-cmd.yml#L26-L41): If `github.repository == 'voedger/voedger'`: `ignore_bp3=false`, else `ignore_bp3=true`
-
-- [Step 3: Build & Push Docker](ci-pkg-cmd.yml#L43-L51): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main` (condition: `github.repository == 'voedger/voedger'`)
+- [Step 2: Build & Push Docker](ci-pkg-cmd.yml#L43-L51): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main` (condition: `github.repository == 'voedger/voedger'`)
 
 ---
 
@@ -61,7 +59,7 @@
 - [Step 5: Build & Push Docker](ci-full.yml#L50-L58): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main`
   - [Checkout](cd-voedger.yml#L21-L22): Checkout code
   - [Set up Go](cd-voedger.yml#L24-L28): Go stable version, cache disabled
-  - [Build executable](cd-voedger.yml#L30-L38): Configure git for private repos (heeus, untillpro, voedger), `go build -o ./cmd/voedger ./cmd/voedger`
+  - [Build executable](cd-voedger.yml#L30-L38): Configure git for private repos (untillpro, voedger), `go build -o ./cmd/voedger ./cmd/voedger`
   - [Log in to Docker Hub](cd-voedger.yml#L40-L44): Authenticate with Docker Hub credentials
   - [Build and push Docker image](cd-voedger.yml#L46-L52): Build from `./cmd/voedger/Dockerfile`, push as `voedger/voedger:0.0.1-alpha`
 
@@ -333,9 +331,6 @@ When ci-action workflows execute, they run the following JavaScript logic:
 - [**Setup Go Environment**](https://github.com/untillpro/ci-action/blob/main/index.js#L88-L93): Configure GOPRIVATE and git credentials for private repositories
 - [**go mod tidy**](https://github.com/untillpro/ci-action/blob/main/index.js#L99-L101): If `run-mod-tidy !== "false"`
 - [**Build**](https://github.com/untillpro/ci-action/blob/main/index.js#L103-L105): `go build ./...` if `ignore-build !== "true"`
-- [**Tests & Coverage**](https://github.com/untillpro/ci-action/blob/main/index.js#L107-L138):
-  - **If Codecov Token**: `go test` with coverage flags, upload to Codecov
-  - **If No Token**: `go test` with optional `-race` and `-short` flags
 - [**Custom Build Command**](https://github.com/untillpro/ci-action/blob/main/index.js#L142-L144): Execute if provided
 
 #### [IF Node.js Project](https://github.com/untillpro/ci-action/blob/main/index.js#L149-L170)
@@ -343,7 +338,6 @@ When ci-action workflows execute, they run the following JavaScript logic:
 - [**npm install**](https://github.com/untillpro/ci-action/blob/main/index.js#L155)
 - [**npm run build**](https://github.com/untillpro/ci-action/blob/main/index.js#L156)
 - [**npm test**](https://github.com/untillpro/ci-action/blob/main/index.js#L157)
-- [**Codecov**](https://github.com/untillpro/ci-action/blob/main/index.js#L160-L165): If token provided, run coverage and upload
 
 ### [Phase 4: Publish Release](https://github.com/untillpro/ci-action/blob/main/index.js#L174-L186)
 

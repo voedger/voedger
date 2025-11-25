@@ -1,7 +1,5 @@
 # Application Definition
 
-[![codecov](https://codecov.io/gh/voedger/voedger/appdef/branch/main/graph/badge.svg?token=u6VrbqKtnn)](https://codecov.io/gh/voedger/voedger/appdef)
-
 ## Types
 
 ### Types inheritance
@@ -83,7 +81,7 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_WDoc
     }
-                    
+
     IODoc --|> IDoc: inherits
     class IODoc {
         <<interface>>
@@ -134,7 +132,7 @@ classDiagram
         +Key() IViewKey
         +Value() IViewValue
     }
-            
+
     IType <|-- IExtension : inherits
     class IExtension {
         <<interface>>
@@ -230,7 +228,7 @@ classDiagram
 
   class iterator {
     <<func([]IType)iter.Seq[T]>>
-    
+
     +CDocs([]IType) iter.Seq[ICDoc]
     +Commands([]IType) iter.Seq[ICommand]
     +CRecords([]IType) iter.Seq[ICRecord]
@@ -312,12 +310,12 @@ classDiagram
                         - RecordID
                         - Record
                         - Event"
- 
+
     Ancestor "1" <--* "1" IData : Ancestor
     class Ancestor {
         <<IData>>
     }
-    note for Ancestor "  - data type from which the user data type is inherits or 
+    note for Ancestor "  - data type from which the user data type is inherits or
                          - nil for built-in types"
 
     IConstraint "0..*" <--*  "1" IData : Constraints
@@ -394,7 +392,7 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_WDoc
     }
-                    
+
     IODoc --|> IDoc: inherits
     class IODoc {
         <<interface>>
@@ -692,7 +690,7 @@ classDiagram
     }
 
     IACLRule "1" *--> "1..*" OperationKind : operations
-    
+
     class OperationKind {
         <<enumeration>>
         Insert
@@ -703,7 +701,7 @@ classDiagram
     }
 
     IACLRule "1" *--> "1" PolicyKind : policy
-    
+
     class PolicyKind {
         <<enumeration>>
         Allow
