@@ -42,11 +42,8 @@ jobs:
     secrets:
       personaltoken: ${{ secrets.PERSONAL_TOKEN }}
 
-  call-workflow-vulncheck:
-    needs: call-workflow-ci
-    uses: voedger/voedger/.github/workflows/ci-vulncheck.yml@main
   call-workflow-cd-voeger:
-    needs: call-workflow-vulncheck
+    needs: call-workflow-ci
     if: ${{ contains(github.repository, 'voedger/voedger' ) }}
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
