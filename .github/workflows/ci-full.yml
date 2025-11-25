@@ -12,7 +12,6 @@ jobs:
     with:
       go_race: "true"
       short_test: "false"
-      ignore_build: "true"
       test_subfolders: "true"
       install_tinygo: "true"
     secrets:
