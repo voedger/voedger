@@ -462,8 +462,9 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		// create a workspace in another app
 		anotherAppWSOwner := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
 		qNameApp2_TestWSKind := appdef.NewQName("app2pkg", "test_ws")
+		anotherAppWSName := vit.NextName()
 		anotherAppWS := vit.CreateWorkspace(it.WSParams{
-			Name:         "anotherAppWS",
+			Name:         anotherAppWSName,
 			Kind:         qNameApp2_TestWSKind,
 			ClusterID:    istructs.CurrentClusterID(),
 			InitDataJSON: `{"IntFld":42}`,
