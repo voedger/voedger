@@ -8,7 +8,7 @@ on:
 jobs:
   call-workflow-ci:
     if: github.repository == 'voedger/voedger'
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main
+    uses: untillpro/ci-action/.github/workflows/ci.yml@main
     with:
       go_race: "true"
       short_test: "false"
