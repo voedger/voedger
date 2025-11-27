@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
 cd ./allocs
 ./build.sh
 cd ../basicusage

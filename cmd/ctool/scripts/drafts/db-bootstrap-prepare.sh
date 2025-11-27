@@ -2,12 +2,12 @@
 #
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
-# 
+#
 # Prepare scylla node for bootstrap procedure: add 'replace_address_first_boot: <ip address>'
 # this tell scylla cluster that this new node will set up instead node in command above.
 # And bootstrap wiil start immediately after scylla load.
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

@@ -2,7 +2,7 @@
 #
 # Setup passwordless sudo for CE deployment (runs locally on the target node)
 #
-set -euo pipefail
+set -Eeuo pipefail
 
 SSH_USER=${SSH_USER:-$LOGNAME}
 

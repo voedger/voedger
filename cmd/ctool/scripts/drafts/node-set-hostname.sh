@@ -5,7 +5,7 @@
 #
 # Set hostname with hostnamectl
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

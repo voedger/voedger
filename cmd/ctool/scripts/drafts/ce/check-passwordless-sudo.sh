@@ -2,7 +2,7 @@
 #
 # Check if passwordless sudo is configured on remote Ubuntu server
 #
-set -euo pipefail
+set -Eeuo pipefail
 
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <node>"

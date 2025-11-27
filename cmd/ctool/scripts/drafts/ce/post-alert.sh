@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # sending event to alert manager
 
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 
@@ -23,5 +23,5 @@ EVENT=$1
 curl -XPOST -v -H "${HDR1}" -H "${HDR2}" -H "${HDR3}" -d @${EVENT} http://db-node-1:9093/api/v2/alerts
 
 echo  "the alert was sent successfully"
-      
+
 set +x

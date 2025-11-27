@@ -315,7 +315,7 @@ func TestVariableEnvironment(t *testing.T) {
 	dryRun = true
 
 	script := `#!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 echo "TEST_VAR = $TEST_VAR"
 

@@ -21,7 +21,7 @@
 #    - wait for scylla initialization
 #    - run nodetool repair
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set +x
 

@@ -5,7 +5,7 @@
 #
 # Install docker to Voedger CE
 #
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

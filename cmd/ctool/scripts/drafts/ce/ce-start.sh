@@ -6,7 +6,7 @@
 # envsubst < ./docker-compose.yml > docker-compose-tmp.yml
 # docker-compose -p voedger -f ./docker-compose-tmp.yml ps
 
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 HOSTNAME="db-node-1"
@@ -30,4 +30,4 @@ fi
 set +x
 exit 0
 
-                                                                                                             
+

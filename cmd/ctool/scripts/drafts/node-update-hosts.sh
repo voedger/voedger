@@ -3,9 +3,9 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 #
-# Upsert /etc/hosts file with cluster node record 
+# Upsert /etc/hosts file with cluster node record
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

@@ -2,14 +2,14 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # writes a database backup task to cron
 # over an ssh connection
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -ne 2 ] && [ $# -ne 3 ]; then
-  echo "Usage: $0 <cron schedule time> <ssh port> [<expire time>]" 
+  echo "Usage: $0 <cron schedule time> <ssh port> [<expire time>]"
   exit 1
 fi
 

@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
-# 
+#
 # Delete line that contain 'replace_address_first_boot: <ip address>'
 # after bootstrap procedure
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

@@ -4,7 +4,7 @@
 # @author Aleksei Ponomarev
 #
 
-set -euo pipefail
+set -Eeuo pipefail
 
 # Default storage type
 storage_type="${VOEDGER_STORAGE_TYPE:-cas3}"

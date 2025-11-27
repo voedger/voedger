@@ -6,7 +6,7 @@
 # Add node to Swarm. Find node id with dedicated ip. If node id not found - join node to swarm cluster.
 # Token, stored in 'manager.token' file used for join node.
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set +x
 

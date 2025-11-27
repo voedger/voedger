@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # Removing backups with an expired shelf life
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 if [ $# -ne 2 ]; then
   echo "Usage: $0 <backups folder> <expire period>"

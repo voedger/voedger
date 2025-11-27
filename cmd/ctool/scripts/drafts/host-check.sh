@@ -2,15 +2,15 @@
 #
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # pinging the address of the host
 # checks that the host is alive in the Swarm cluster
 
-set -euo pipefail
+set -Eeuo pipefail
 
 
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  echo "Usage: $0 <IP-Address> ["only-ping" or docker host name]" 
+  echo "Usage: $0 <IP-Address> ["only-ping" or docker host name]"
   exit 1
 fi
 

@@ -2,9 +2,9 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 #
-# Backup scylla node. 
-# Usage: ./backupnode.sh <Target folder> 
-# Example: ./backupnode.sh /tmp/backup 
+# Backup scylla node.
+# Usage: ./backupnode.sh <Target folder>
+# Example: ./backupnode.sh /tmp/backup
 # Operations:
 #  - Init
 #    - get container id
@@ -18,7 +18,7 @@
 #    - remove signal file
 #    - clear snapshot
 
-set -euo pipefail
+set -Eeuo pipefail
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 <Target folder>"
@@ -113,7 +113,7 @@ dump_schema() {
 }
 
 backup() {
-    signalFile create 
+    signalFile create
     if container=$(getContainer "$containerName"); then
         echo "Container id for $containerName: $container"
     else
@@ -141,7 +141,7 @@ function on_exit() {
     if [ -n "${snapshotTag:-}" ]; then
         snapshotCtl clearsnapshot
     fi
-    signalFile remove 
+    signalFile remove
 }
 
 function on_error() {

@@ -5,7 +5,7 @@
 #
 # Set labels for host
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

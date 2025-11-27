@@ -5,17 +5,17 @@
 #
 # Copy prometheus database to another host
 #
-# By default, Prometheus stores its time series database (TSDB) 
-# data and snapshots in a subdirectory named within the 
-# directory specified by --storage.tsdb.path. Therefore, 
-# the snapshots are stored in the snapshots directory 
+# By default, Prometheus stores its time series database (TSDB)
+# data and snapshots in a subdirectory named within the
+# directory specified by --storage.tsdb.path. Therefore,
+# the snapshots are stored in the snapshots directory
 # relative to the --storage.tsdb.path.
 #
-# In compose file Mon stack use /prometheus folder on host and 
-# map this folder to prometheus image. So, snapshot will be store 
+# In compose file Mon stack use /prometheus folder on host and
+# map this folder to prometheus image. So, snapshot will be store
 # in /prometheus/snapshots
 
-set -euo pipefail
+set -Eeuo pipefail
 
 # Check if both source and destination IP addresses are provided
 if [[ "$#" -ne 2 ]]; then
@@ -44,7 +44,7 @@ dst_name=$(getent hosts "$dst_ip" | awk '{print $2}')
 
 ssh-keyscan -p "$(utils_SSH_PORT)" -H "$dst_name" >> ~/.ssh/known_hosts
 
-snapshot=$(curl -u voedger:voedger -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name') 
+snapshot=$(curl -u voedger:voedger -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name')
 # Make the snapshot on source host
 if [ -z $snapshot ]; then
   echo "Error make prometheus snapshot."
@@ -67,7 +67,7 @@ utils_scp -3 $SSH_USER@$src_ip:~/$snapshot.tar.gz $SSH_USER@$dst_ip:~
 
 utils_ssh "$SSH_USER@$dst_ip" "
   # Exit immediately if any command exits with a non-zero status
-  set -euo pipefail
+  set -Eeuo pipefail
 
   # Extract the snapshot on the destination host
   sudo mkdir -p $snapshot_dir && sudo tar -xzvf ~/$snapshot.tar.gz -C $snapshot_dir

@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # copies the ctool and ssh key file to the remote host
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

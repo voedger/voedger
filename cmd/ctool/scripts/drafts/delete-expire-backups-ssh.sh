@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # writes a database backup task to cron
 # over an ssh connection
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -ne 3 ] && [ $# -ne 3 ]; then

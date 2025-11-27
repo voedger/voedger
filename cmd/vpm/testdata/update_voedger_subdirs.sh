@@ -1,6 +1,5 @@
-#!/bin/bash
-
-set -euo pipefail
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
 find . -name "go.mod" -type f | while read -r modfile; do
     dir=$(dirname "$modfile")

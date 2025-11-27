@@ -5,7 +5,7 @@
 #
 # Update service
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 
