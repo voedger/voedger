@@ -2,7 +2,7 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 
@@ -39,12 +39,12 @@ utils_ssh() {
   IFS=' ' read -r -a ssh_options <<< "$ssh_options_string"
 
   local ssh_result
-  
+
   # Pass options as separate arguments
   ssh_result=$(ssh "${ssh_options[@]}" "$@")
   # Capture the exit status of the ssh command
   local ssh_exit_status=$?
-  
+
   # Return the SSH command result
   echo "$ssh_result"
 

@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # Verification of the availability of a folder on the local machine and access rights to it
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

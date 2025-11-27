@@ -13,7 +13,7 @@ runs:
       run: |
         set -x
         CLUSTER_TYPE="${{ github.event.inputs.cluster_type }}"
-        
+
         if [ "$CLUSTER_TYPE" == "n1" ]; then
             REPLICATION_STRATEGY="'class': 'SimpleStrategy', 'replication_factor': 1"
         elif [ "$CLUSTER_TYPE" == "n5" -o "$CLUSTER_TYPE" == "se3" ]; then
@@ -22,7 +22,7 @@ runs:
             echo "Unknown cluster type: $CLUSTER_TYPE"
             exit 1
         fi
-        
+
         ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} bash -s <<EOF
         docker exec \$(docker ps -qf name=scylla) bash -c "
         function create_keyspace() {
@@ -49,7 +49,7 @@ runs:
         flush_records
         "
         EOF
-        
+
       shell: bash
 
     - name: Check inserted data
@@ -67,7 +67,7 @@ runs:
       run: |
         set -x
         CLUSTER_TYPE="${{ github.event.inputs.cluster_type }}"
-        
+
         function get_node_arg() {
             local version_type=$1
             local node_num=$2
@@ -80,11 +80,11 @@ runs:
                 return 1
             fi
         }
-        
+
         if [ "$CLUSTER_TYPE" == "n1" ]; then
             CYCLE_END=1
             SSH_KEY_OPTION=""
-            SSH_PORT_OPTION="" 
+            SSH_PORT_OPTION=""
         elif [ "$CLUSTER_TYPE" == "n5" -o "$CLUSTER_TYPE" == "se3" ]; then
             CYCLE_END=3
             SSH_KEY_OPTION="--ssh-key /tmp/amazonKey.pem"
@@ -93,12 +93,12 @@ runs:
           echo "Unknown cluster type: $CLUSTER_TYPE"
           exit 1
         fi
-        
+
         for ((i=1; i<=CYCLE_END; i++)); do
             NODE_OPTION=$(get_node_arg $CYCLE_END $i)
             if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool backup node $NODE_OPTION /home/ubuntu/backup $SSH_KEY_OPTION -v $SSH_PORT_OPTION"; then
                 echo "Backup success"
-            else 
+            else
                 echo "Failed to backup scylla node"
                 exit 1
             fi
@@ -107,7 +107,7 @@ runs:
 
     - name: Drop keyspace
       run: |
-        set -euo pipefail
+        set -Eeuo pipefail
         set -x
         ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) cqlsh db-node-1 9042 -e "DROP KEYSPACE v_keyspace;"'
         ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) cqlsh db-node-1 9042 -e "DESC KEYSPACES;"'
@@ -116,10 +116,10 @@ runs:
 
     - name: Restore keyspace
       run: |
-        set -euo pipefail
+        set -Eeuo pipefail
         set -x
         CLUSTER_TYPE="${{ github.event.inputs.cluster_type }}"
-        
+
         if [ "$CLUSTER_TYPE" == "n1" ]; then
             SSH_KEY_OPTION=""
         elif [ "$CLUSTER_TYPE" == "n5" -o "$CLUSTER_TYPE" == "se3" ]; then
@@ -128,7 +128,7 @@ runs:
           echo "Unknown cluster type: $CLUSTER_TYPE"
           exit 1
         fi
-        
+
         ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool restore /home/ubuntu/backup $SSH_KEY_OPTION -v"
       shell: bash
 

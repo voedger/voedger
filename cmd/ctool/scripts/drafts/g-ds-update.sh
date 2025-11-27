@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
-# 
+#
 # Add new user to grafana
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

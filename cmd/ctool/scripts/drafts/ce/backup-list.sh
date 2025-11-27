@@ -5,7 +5,7 @@
 #
 # Displays a list of available backups on three DBNodes
 
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -gt 1 ]; then

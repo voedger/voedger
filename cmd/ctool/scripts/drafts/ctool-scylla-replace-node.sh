@@ -3,7 +3,7 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 #
-# Replace scylla node in cluster 
+# Replace scylla node in cluster
 #   - Install docker on new hardware
 #   - Add new node to swarm
 #   - Prepare node to scylla service
@@ -15,7 +15,7 @@
 #   - add node to back seed list and restart service
 #   - rolling restart db cluster
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 
@@ -165,7 +165,7 @@ utils_ssh "$SSH_USER@$REPLACED_NODE_NAME" "docker exec \$(docker ps -qf name=scy
 
 db_rolling_restart() {
   local compose_file="$1"
-  local services=()      
+  local services=()
 
   mapfile -t services < <(yq eval '.services | keys | .[]' "$compose_file" | grep -v "$REPLACED_SERVICE")
 

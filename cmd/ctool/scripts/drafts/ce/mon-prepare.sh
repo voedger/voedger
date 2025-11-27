@@ -2,9 +2,9 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
-# 
+#
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

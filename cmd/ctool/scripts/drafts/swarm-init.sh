@@ -9,7 +9,7 @@
 #    - get token for add managers
 #    - store token for manangers to 'manager.token' file
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set +x
 
@@ -32,7 +32,7 @@ swarm_manager_addr="$1"
 # Create a script to run on the remote VM
 # This script will be executed via SSH on the remote host
 remote_script=$(cat <<'REMOTE_SCRIPT_EOF'
-set -euo pipefail
+set -Eeuo pipefail
 
 SWARM_MANAGER_ADDR="$1"
 NEW_SUBNET="$2"

@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # Sets a new password for the admin user in Grafana
 # on the local machine
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -ne 1 ]; then

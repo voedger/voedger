@@ -5,7 +5,7 @@
 #
 #
 # displays a list of available backups on three DBNodes
-set -euo pipefail
+set -Eeuo pipefail
 
 if [ $# -gt 1 ]; then
   echo "Usage: $0 [<json>]"

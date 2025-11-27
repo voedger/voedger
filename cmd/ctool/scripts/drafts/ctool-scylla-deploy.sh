@@ -6,12 +6,12 @@
 # Deploy scylla cluster
 #   - Install docker
 #   - Init swarm cluster
-#   - join dedicated nodes to swarm 
+#   - join dedicated nodes to swarm
 #   - add labels to swarm nodes
-#   - prepare hosts for scylla services 
+#   - prepare hosts for scylla services
 #   - deploy scylla stack
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

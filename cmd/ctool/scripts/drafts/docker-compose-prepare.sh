@@ -5,7 +5,7 @@
 #
 # Create docker-compose.yml for scylla stack
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

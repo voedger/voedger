@@ -3,13 +3,13 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 #
-# Delete node from Swarm cluster. 
+# Delete node from Swarm cluster.
 #    - find node id by ip address
-#    - Since manager cannot be removed from swarm, 
-#        - first, manager demote to worker 
+#    - Since manager cannot be removed from swarm,
+#        - first, manager demote to worker
 #        - then sequentally removed from swarm
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set +x
 
@@ -25,7 +25,7 @@ MANAGER=$1
 
 JOIN_TOKEN=$(cat ./manager.token)
 
-shift 
+shift
 # Add remaining nodes as managers and workers
 while [ $# -gt 0 ]; do
 

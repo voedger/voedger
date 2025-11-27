@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # copying a local file to remote hosts
 
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -lt 3 ]; then
@@ -32,7 +32,7 @@ while [ $# -gt 0 ]; do
         exit 1
     fi
 
-    shift 
+    shift
 done
 
 set +x

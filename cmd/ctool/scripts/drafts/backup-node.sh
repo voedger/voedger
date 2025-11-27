@@ -18,7 +18,7 @@
 #    - remove signal file
 #    - clear snapshot
 
-set -euo pipefail
+set -Eeuo pipefail
 
 if [[ $# -ne 2 ]]; then
   echo "Usage: $0 <Node> <Target folder>"

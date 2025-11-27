@@ -4,7 +4,7 @@
 #
 # Deploy distributed file system using GlusterFS
 
-set +x
+set -Eeuo pipefail
 
 if [ -z "${VOEDGER_SSH_KEY:-}" ]; then
     echo "VOEDGER_SSH_KEY must be set with ssh key path. Exiting..."

@@ -5,7 +5,7 @@
 #
 # Grafana user password change
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

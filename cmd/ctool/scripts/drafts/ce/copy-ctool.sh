@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # copies the ctool and cluster.json files to the ~/ctool/
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 
