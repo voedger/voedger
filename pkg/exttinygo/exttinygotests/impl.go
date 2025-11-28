@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/state/teststate"
 )
 
+
 func NewTestAPI(processorKind int, packagePath string, createWorkspaces ...teststate.TestWorkspace) teststate.ITestAPI {
 	ts := teststate.NewTestState(processorKind, packagePath, createWorkspaces...)
 	internal.SafeStateAPI = safestate.Provide(ts, nil)
