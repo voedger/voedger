@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-present unTill Software Development Group B.V.
+ * Copyright (c) 2024-preghghghghgsent unTill Software Development Group B.V.
  * @author Denis Gribanov
  */
 
