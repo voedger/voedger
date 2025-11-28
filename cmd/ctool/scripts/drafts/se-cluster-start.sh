@@ -7,7 +7,7 @@
 #   - add labels to swarm nodes
 #   - deploy se stack
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

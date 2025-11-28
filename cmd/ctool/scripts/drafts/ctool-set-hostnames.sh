@@ -3,7 +3,7 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 # set hostnames for all node in voedger cluster
-set -euo pipefail
+set -Eeuo pipefail
 
 set +x
 

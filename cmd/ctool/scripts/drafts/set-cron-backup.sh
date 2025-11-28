@@ -2,13 +2,13 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # writes a database backup task to cron
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -ne 2 ] && [ $# -ne 3 ]; then
-  echo "Usage: $0 <cron schedule time> <ssh port> [<expire time>]"  
+  echo "Usage: $0 <cron schedule time> <ssh port> [<expire time>]"
   exit 1
 fi
 
@@ -31,7 +31,7 @@ BACKUP_FOLDER="/mnt/backup/voedger/\$(date +\%Y\%m\%d\%H\%M\%S)-backup"
 
 set_cron_schedule(){
     CRON_FILE=$(mktemp)
-    
+
     if crontab -l | grep -v "backup node"; then
       crontab -l | grep -v "backup node" > "${CRON_FILE}"
     fi

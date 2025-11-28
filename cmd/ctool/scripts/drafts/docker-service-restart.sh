@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # Restanation of the service in a remote host
 
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -ne 2 ]; then

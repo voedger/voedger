@@ -5,7 +5,7 @@
 #
 # Install docker to Voedger CE
 #
-set -euo pipefail
+set -Eeuo pipefail
 
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 <node ip address for docker install>" >&2

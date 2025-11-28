@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # copying a file from a remote host to a local
 
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 

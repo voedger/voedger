@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: ./update-service.sh <lost_node> <new_node>
-# 
+#
 # Update scylla ctack before replace node(edit only the service whose node was lost):
 #   - remove lost node ip address from seed list
 #   - replace broadcast-address parameter with ip address node instead
@@ -8,7 +8,7 @@
 #   - update healthcheck with new ip address node instead
 # Service find by ip adddres bind to halthcheck
 
-set -euo pipefail
+set -Eeuo pipefail
 
 if [ $# -ne 2 ]; then
 #  echo "Usage: $0 <lost_node> <new_node>"

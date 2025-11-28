@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
-# Sets a new password for the admin user in Grafana 
+#
+#
+# Sets a new password for the admin user in Grafana
 # on a app-node-1 and app-node-2 hosts
-set -euo pipefail
+set -Eeuo pipefail
 
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <password> <app-node host>"

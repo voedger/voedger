@@ -5,7 +5,7 @@
 #
 # Checks the availability of the host and its compliance with the minimum hardware requirements
 #
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

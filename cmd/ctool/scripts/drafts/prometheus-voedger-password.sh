@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # Sets a new password for the admin user in Prometheus
 # on specified remote hosts
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 if [ $# -lt 3 ]; then
     echo "Usage: $0 <password> <hashed password> <host1> [<host2> ...]"
@@ -35,7 +35,7 @@ for host in "$@"; do
         else
           SERVICE_NAME="MonDockerStack_prometheus2"
         fi
-        
+
             utils_ssh ${SSH_USER}@${host} "docker service update '${SERVICE_NAME}' --force"
 
             while true; do

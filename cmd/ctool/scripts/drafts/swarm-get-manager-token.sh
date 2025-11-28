@@ -6,7 +6,7 @@
 #    - get token for add managers
 #    - store token for manangers to 'manager.token' file
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set +x
 

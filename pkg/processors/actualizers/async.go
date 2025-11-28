@@ -101,6 +101,12 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 				err = a.keepReading()
 			}
 			a.finit() // execute even if a.init() has failed
+
+			// avoiding panic on close the closed pipeline. Case:
+			// init, error, finit, init again but error before pipeline creation, then 2nd finit -> panic on closing the closed channel within the pipeline
+			// i.e. 2nd finit will panic if an error is returned from 2nd init before the place where the pipeline is re-created
+			// see https://untill.atlassian.net/browse/AIR-2302
+			a.pipeline = nil
 			return err
 		})
 	}

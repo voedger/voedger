@@ -8,7 +8,7 @@ on:
 jobs:
   call-workflow-ci:
     if: github.repository == 'voedger/voedger'
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@main
+    uses: untillpro/ci-action/.github/workflows/ci.yml@main
     with:
       go_race: "true"
       short_test: "false"
@@ -42,11 +42,8 @@ jobs:
     secrets:
       personaltoken: ${{ secrets.PERSONAL_TOKEN }}
 
-  call-workflow-vulncheck:
-    needs: call-workflow-ci
-    uses: voedger/voedger/.github/workflows/ci-vulncheck.yml@main
   call-workflow-cd-voeger:
-    needs: call-workflow-vulncheck
+    needs: call-workflow-ci
     if: ${{ contains(github.repository, 'voedger/voedger' ) }}
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:

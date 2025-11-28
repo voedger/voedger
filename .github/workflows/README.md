@@ -51,12 +51,8 @@
 
 - [Step 3: Create Issue (if failed)](ci-full.yml#L34-L45): Condition `failure()` - Calls `untillpro/ci-action/.github/workflows/create_issue.yml@main` to create issue "Daily Test failed on" with label "prty/blocker"
 
-- [Step 4: Vulnerability Check](ci-full.yml#L47-L49): Calls `voedger/voedger/.github/workflows/ci-vulncheck.yml@main`
-  - [Set up Go](ci-vulncheck.yml#L11-L16): Go stable version, cache disabled
-  - [Checkout](ci-vulncheck.yml#L18-L19): Checkout code
-  - [Vulnerability management](ci-vulncheck.yml#L21-L24): Install `govulncheck@latest`, run `execgovuln.sh` script
 
-- [Step 5: Build & Push Docker](ci-full.yml#L50-L58): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main`
+- [Step 4: Build & Push Docker](ci-full.yml#L50-L58): Calls `voedger/voedger/.github/workflows/cd-voedger.yml@main`
   - [Checkout](cd-voedger.yml#L21-L22): Checkout code
   - [Set up Go](cd-voedger.yml#L24-L28): Go stable version, cache disabled
   - [Build executable](cd-voedger.yml#L30-L38): Configure git for private repos (untillpro, voedger), `go build -o ./cmd/voedger ./cmd/voedger`
@@ -403,7 +399,6 @@ graph TD
         CW3["cp.yml"]
         CW4["ci_cas.yml"]
         CW5["ci_amazon.yml"]
-        CW6["ci-vulncheck.yml"]
         CW7["cd-voedger.yml"]
         CW8["merge.yml"]
         CW9["create_issue.yml"]
@@ -440,7 +435,6 @@ graph TD
     W2 --> CW8
     W3 --> CW8
     W4 --> CW1
-    W4 --> CW6
     W4 --> CW7
     W5 --> CW3
     W6 --> ST1
@@ -455,8 +449,6 @@ graph TD
     CW2 --> D1
     CW2 --> D2
     CW2 --> D5
-    CW6 --> D1
-    CW6 --> D2
     CW7 --> D4
     CW8 --> D5
     CW3 --> D6
@@ -492,7 +484,6 @@ graph TD
     style CW3 fill:#ce93d8
     style CW4 fill:#a5d6a7
     style CW5 fill:#a5d6a7
-    style CW6 fill:#ffcc80
     style CW7 fill:#ffcc80
     style CW8 fill:#81d4fa
     style CW9 fill:#ce93d8
@@ -640,7 +631,6 @@ sequenceDiagram
     participant Schedule as GitHub Schedule
     participant WF as ci-full.yml
     participant CI as ci_reuse_go.yml
-    participant Vuln as ci-vulncheck.yml
     participant Docker as cd-voedger.yml
     participant Issue as create_issue.yml
     participant Tests as Test Results
@@ -666,15 +656,6 @@ sequenceDiagram
         Issue-->>WF: Issue Created
         deactivate Issue
     end
-
-    WF->>Vuln: Vulnerability Check
-    activate Vuln
-    Vuln->>Vuln: Set up Go stable
-    Vuln->>Vuln: Checkout code
-    Vuln->>Vuln: Install govulncheck
-    Vuln->>Vuln: Run execgovuln.sh
-    Vuln-->>WF: ✓ Vuln Check Complete
-    deactivate Vuln
 
     WF->>Docker: Build & Push Docker
     activate Docker

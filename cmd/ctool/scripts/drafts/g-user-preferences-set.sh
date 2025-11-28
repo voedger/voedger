@@ -5,7 +5,7 @@
 #
 # Set preferences for new grafana users
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

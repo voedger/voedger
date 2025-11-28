@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # Sets a new password for the admin user in Prometheus
 # on specified local hosts
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <password> <hashed password>"

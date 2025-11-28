@@ -2,11 +2,11 @@
 #
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
-# 
+#
 # Prepare scylla node: create directory for scylla data files,
 # and copy scylla config to host
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 

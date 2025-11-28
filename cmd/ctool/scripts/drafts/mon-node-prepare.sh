@@ -2,16 +2,16 @@
 #
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
-# 
+#
 # Prepare scylla node: create directory for scylla data files,
 # and copy scylla config to host
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 
 if [[ $# -ne 5 ]]; then
-  echo "Usage: $0 <AppNode1> <AppNode2> <DBNode1> <DBNode2> <DBNode3>" 
+  echo "Usage: $0 <AppNode1> <AppNode2> <DBNode1> <DBNode2> <DBNode3>"
   exit 1
 fi
 
@@ -31,7 +31,7 @@ hosts=("app-node-1" "app-node-2" "db-node-1" "db-node-2" "db-node-3")
 update_hosts_file() {
   local host=$1
   local ip=$2
-  local hr=$3 
+  local hr=$3
   # Check if the hostname already exists in /etc/hosts
   if utils_ssh "$SSH_USER@$ip" "sudo grep -qF '$hr' /etc/hosts"; then
       # If the hostname exists, replace the existing entry

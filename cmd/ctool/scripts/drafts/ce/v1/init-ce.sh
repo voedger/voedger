@@ -5,7 +5,7 @@
 #
 # init Voedger CE
 #
-set -euo pipefail
+set -Eeuo pipefail
 
 # install comman software components
 ./docker-install.sh

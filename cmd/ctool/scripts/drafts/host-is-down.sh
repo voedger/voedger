@@ -2,13 +2,13 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # checks that the host is down in the Swarm cluster
 
-set -euo pipefail
+set -Eeuo pipefail
 
 if [ $# -ne 2 ]; then
-  echo "Usage: $0 <IP-Address> <docker host name>" 
+  echo "Usage: $0 <IP-Address> <docker host name>"
   exit 1
 fi
 

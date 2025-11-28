@@ -5,7 +5,7 @@
 #
 # Create docker-compose.yml for scylla stack and deploy
 
-set -euo pipefail
+set -Eeuo pipefail
 
 set -x
 
@@ -24,7 +24,7 @@ hosts=("db-node-1" "db-node-2" "db-node-3")
 update_hosts_file() {
   local host=$1
   local ip=$2
-  local hr=$3 
+  local hr=$3
   # Check if the hostname already exists in /etc/hosts
   if utils_ssh "$SSH_USER@$ip" "sudo grep -qF '$hr' /etc/hosts"; then
       # If the hostname exists, replace the existing entry

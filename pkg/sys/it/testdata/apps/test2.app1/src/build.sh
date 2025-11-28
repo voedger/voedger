@@ -1,5 +1,5 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -Eeuo pipefail
 vpm build
 rm -rf ../image/pkg
 unzip -o "src.var" -d "../image"

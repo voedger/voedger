@@ -2,10 +2,10 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
+#
 # Restanation of the docker container with name fragment
 
-set -euo pipefail
+set -Eeuo pipefail
 set -x
 
 if [ $# -ne 1 ]; then
