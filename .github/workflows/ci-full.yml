@@ -12,7 +12,6 @@ jobs:
     with:
       go_race: "true"
       short_test: "false"
-      test_subfolders: "true"
       install_tinygo: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}

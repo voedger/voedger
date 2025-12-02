@@ -12,10 +12,8 @@ jobs:
     if: github.repository == 'voedger/voedger'
     uses: untillpro/ci-action/.github/workflows/ci.yml@main
     with:
-      test_folder: "pkg"
       short_test: "true"
       go_race: "false"
-      test_subfolders: "true"
       install_tinygo: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
