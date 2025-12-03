@@ -49,7 +49,7 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 					return errors.New("failed to build, app schema not found")
 				}
 
-				return errors.New("failed to compile, check schemas")
+				return fmt.Errorf("failed to compile: %w", err)
 			}
 
 			if len(compileRes.NotFoundDeps) > 0 {
