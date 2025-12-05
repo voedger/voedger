@@ -304,6 +304,7 @@ func (f *implIFederation) WithRetry() IFederationWithRetry {
 		defaultReqOptFuncs: []httpu.ReqOptFunc{
 			httpu.WithRetryPolicy(f.policyOptsForWithRetry...),
 		},
-		vvmCtx: f.vvmCtx,
+		vvmCtx:                 f.vvmCtx,
+		policyOptsForWithRetry: f.policyOptsForWithRetry,
 	}
 }
