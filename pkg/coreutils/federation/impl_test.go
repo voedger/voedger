@@ -48,7 +48,7 @@ func TestFederationFunc(t *testing.T) {
 	require.NoError(err)
 	federation, cleanup := New(context.Background(), func() *url.URL {
 		return federationURL
-	}, coreutils.NilAdminPortGetter)
+	}, coreutils.NilAdminPortGetter, httpu.DefaultRetryPolicyOpts)
 	defer cleanup()
 
 	t.Run("basic", func(t *testing.T) {
@@ -197,7 +197,7 @@ func TestFederationFunc(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		federation, cleanup := New(ctx, func() *url.URL {
 			return federationURL
-		}, coreutils.NilAdminPortGetter)
+		}, coreutils.NilAdminPortGetter, httpu.DefaultRetryPolicyOpts)
 		defer cleanup()
 		counter := 0
 		handler = func(w http.ResponseWriter, _ *http.Request) {
@@ -219,7 +219,7 @@ func TestPanicOnGETAndDiscardResponse(t *testing.T) {
 	require.NoError(err)
 	federation, cleanup := New(context.Background(), func() *url.URL {
 		return federationURL
-	}, coreutils.NilAdminPortGetter)
+	}, coreutils.NilAdminPortGetter, httpu.DefaultRetryPolicyOpts)
 	defer cleanup()
 
 	require.Panics(func() {

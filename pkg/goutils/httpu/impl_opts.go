@@ -172,7 +172,7 @@ func WithNoRetryPolicy() ReqOptFunc {
 }
 
 func WithDefaultRetryPolicy() ReqOptFunc {
-	return WithRetryPolicy(DefaultRetryPolicy...)
+	return WithRetryPolicy(DefaultRetryPolicyOpts...)
 }
 
 func WithCustomOptsProvider(prov func(internalOpts IReqOpts) (customOpts IReqOpts)) ReqOptFunc {

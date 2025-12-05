@@ -114,7 +114,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		return nil, nil, err
 	}
 	vvmPortSource := provideVVMPortSource()
-	iFederation, cleanup2 := provideIFederation(vvmCtx, vvmConfig, vvmPortSource)
+	policyOptsForWithRetry := vvmConfig.PolicyOptsForFederationWithRetry
+	iFederation, cleanup2 := provideIFederation(vvmCtx, vvmConfig, vvmPortSource, policyOptsForWithRetry)
 	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	stateOpts := provideStateOpts()
@@ -588,7 +589,7 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideIFederation(vvmCtx context.Context, cfg *VVMConfig, vvmPortSource *VVMPortSource) (federation.IFederation, func()) {
+func provideIFederation(vvmCtx context.Context, cfg *VVMConfig, vvmPortSource *VVMPortSource, policyForWithRetry federation.PolicyOptsForWithRetry) (federation.IFederation, func()) {
 	return federation.New(vvmCtx, func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL
@@ -599,7 +600,7 @@ func provideIFederation(vvmCtx context.Context, cfg *VVMConfig, vvmPortSource *V
 			panic(err)
 		}
 		return resultFU
-	}, func() int { return vvmPortSource.adminGetter() })
+	}, func() int { return vvmPortSource.adminGetter() }, policyForWithRetry)
 }
 
 // Metrics service port could be dynamic -> need a func that will return the actual port

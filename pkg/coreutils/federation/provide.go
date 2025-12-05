@@ -12,16 +12,17 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 )
 
-func New(vvmCtx context.Context, federationURL func() *url.URL, adminPortGetter func() int) (federation IFederation, cleanup func()) {
+func New(vvmCtx context.Context, federationURL func() *url.URL, adminPortGetter func() int, policyForWithRetry PolicyOptsForWithRetry) (federation IFederation, cleanup func()) {
 	httpClient, cln := httpu.NewIHTTPClient(
 		httpu.WithNoRetryPolicy(),
 		httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), // to prevent discarding possible sys.Error
 	)
 	fed := &implIFederation{
-		httpClient:      httpClient,
-		federationURL:   federationURL,
-		adminPortGetter: adminPortGetter,
-		vvmCtx:          vvmCtx,
+		httpClient:             httpClient,
+		federationURL:          federationURL,
+		adminPortGetter:        adminPortGetter,
+		vvmCtx:                 vvmCtx,
+		policyOptsForWithRetry: policyForWithRetry,
 	}
 	return fed, cln
 }

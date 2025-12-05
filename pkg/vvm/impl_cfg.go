@@ -53,12 +53,13 @@ func NewVVMDefaultConfig() VVMConfig {
 			logger.Info("using istoragemem")
 			return mem.Provide(time), nil
 		},
-		SecretsReader: isecretsimpl.ProvideSecretReader(),
-		IP:            httpu.LocalhostIP,
-		NumVVM:        1,
-		AdminPort:     DefaultAdminPort,
-		EmailSender:   storages.NewIEmailSenderSMTP(),
-		SchemasCache:  &NullSchemasCache{},
+		SecretsReader:                    isecretsimpl.ProvideSecretReader(),
+		IP:                               httpu.LocalhostIP,
+		NumVVM:                           1,
+		AdminPort:                        DefaultAdminPort,
+		EmailSender:                      storages.NewIEmailSenderSMTP(),
+		SchemasCache:                     &NullSchemasCache{},
+		PolicyOptsForFederationWithRetry: httpu.DefaultRetryPolicyOpts,
 
 		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,

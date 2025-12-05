@@ -41,7 +41,7 @@ var (
 			return errors.Is(err, errRetry)
 		})),
 	}
-	DefaultRetryPolicy = []RetryPolicyOpt{
+	DefaultRetryPolicyOpts = []RetryPolicyOpt{
 		WithRetryOnStatus(http.StatusRequestTimeout),
 		WithRetryOnStatus(http.StatusTooManyRequests, WithRespectRetryAfter()),
 		WithRetryOnStatus(http.StatusInternalServerError),
