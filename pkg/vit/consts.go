@@ -53,11 +53,13 @@ var (
 		EnginePoolSize:   DefaultTestAppEnginesPool,
 		NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 	}
-	vitHTTPRetryPolicy = []httpu.RetryPolicyOpt{
+	withRetryOnConnRefused = httpu.WithRetryOnError(func(err error) bool {
+		// https://github.com/voedger/voedger/issues/1694
+		// https://untill.atlassian.net/browse/AIR-2211
+		return httpu.IsWSAEError(err, WSAECONNREFUSED)
+	})
+	vitHTTPClientRetryPolicy = []httpu.RetryPolicyOpt{
 		httpu.WithRetryOnStatus(http.StatusServiceUnavailable),
-		httpu.WithRetryOnError(func(err error) bool {
-			// https://github.com/voedger/voedger/issues/1694
-			return httpu.IsWSAEError(err, WSAECONNREFUSED)
-		}),
+		withRetryOnConnRefused,
 	}
 )

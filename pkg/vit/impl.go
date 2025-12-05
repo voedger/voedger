@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -134,6 +135,12 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.RouterWriteTimeout = int(debugTimeout)
 	cfg.SendTimeout = bus.SendTimeout(debugTimeout)
 
+	// append retry on WSAECONNREFUSED to in-VVM IFederationWithRetry
+	// Otherwise stress tests on Windows are failed due of WSAECONNREFUSED on workspace post-init
+	policyOptsForWithRetry := slices.Clone(cfg.PolicyOptsForFederationWithRetry)
+	policyOptsForWithRetry = append(policyOptsForWithRetry, withRetryOnConnRefused)
+	cfg.PolicyOptsForFederationWithRetry = policyOptsForWithRetry
+
 	vvm, err := vvmpkg.Provide(&cfg)
 	require.NoError(t, err)
 
@@ -157,7 +164,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 		emailCaptor:          emailCaptor,
 		mockTime:             testingu.MockTime,
 	}
-	httpClient, httpClientCleanup := httpu.NewIHTTPClient(httpu.WithRetryPolicy(vitHTTPRetryPolicy...))
+	httpClient, httpClientCleanup := httpu.NewIHTTPClient(httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...))
 	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
