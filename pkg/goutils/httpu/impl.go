@@ -62,21 +62,16 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 		validators: []func(IReqOpts) (panicMessage string){
 			optsValidator_responseHandling,
 		},
+		customOpts: map[any]any{},
 	}
 	for _, defaultOptFunc := range c.defaultOpts {
 		defaultOptFunc(opts)
 	}
-	var iOpts IReqOpts = opts
-	var prevCustomOptsProvider func(IReqOpts) IReqOpts = nil
 	for _, optFunc := range optFuncs {
-		optFunc(iOpts)
-		if prevCustomOptsProvider == nil && opts.customOptsProvider != nil {
-			iOpts = opts.customOptsProvider(iOpts)
-			prevCustomOptsProvider = opts.customOptsProvider
-		}
+		optFunc(opts)
 	}
 	for _, optFunc := range opts.appendedOpts {
-		optFunc(iOpts)
+		optFunc(opts)
 	}
 	if len(opts.method) == 0 {
 		opts.method = http.MethodGet
@@ -165,7 +160,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 	httpResponse := &HTTPResponse{
 		HTTPResp: resp,
-		Opts:     iOpts,
+		Opts:     opts,
 	}
 	if resp.StatusCode == http.StatusOK && isCodeExpected && opts.responseHandler != nil {
 		opts.responseHandler(resp)

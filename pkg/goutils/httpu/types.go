@@ -26,6 +26,7 @@ type HTTPResponse struct {
 type IReqOpts interface {
 	Append(ReqOptFunc)
 	ExpectedHTTPCodes() []int
+	CustomOpts(key any) (customOpts any)
 	httpOpts() *reqOpts
 }
 
@@ -40,20 +41,20 @@ type IHTTPClient interface {
 }
 
 type reqOpts struct {
-	method             string
-	headers            map[string]string
-	cookies            map[string]string
-	expectedHTTPCodes  []int
-	responseHandler    func(httpResp *http.Response) // used if no errors and an expected status code is received
-	urlPath            string
-	discardResp        bool
-	bodyReader         io.Reader
-	withoutAuth        bool
-	customOptsProvider func(IReqOpts) IReqOpts
-	appendedOpts       []ReqOptFunc
-	validators         []func(IReqOpts) (panicMessage string)
-	retryOnErr         []func(err error) (retry bool)
-	retryOnStatus      []retryOnStatus
+	method            string
+	headers           map[string]string
+	cookies           map[string]string
+	expectedHTTPCodes []int
+	responseHandler   func(httpResp *http.Response) // used if no errors and an expected status code is received
+	urlPath           string
+	discardResp       bool
+	bodyReader        io.Reader
+	withoutAuth       bool
+	appendedOpts      []ReqOptFunc
+	validators        []func(IReqOpts) (panicMessage string)
+	retryOnErr        []func(err error) (retry bool)
+	retryOnStatus     []retryOnStatus
+	customOpts        map[any]any
 }
 
 type retryOnStatus struct {
