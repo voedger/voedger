@@ -64,6 +64,7 @@ linters:
     testifylint:
       disable:
         - float-compare
+
     unparam:
       check-exported: true
     errcheck:
@@ -88,7 +89,7 @@ linters:
         source: 'require\.Panics(?:WithValue)?'
       - linters:
         - testifylint
-        text: (do not use require in http handlers)|(must only be used in the goroutine running the test function)
+        text: (do not use require in http handlers)|(must only be used in the goroutine running the test function)|(use require\.Equal)
       - linters:
         - staticcheck
         text: should not use underscores

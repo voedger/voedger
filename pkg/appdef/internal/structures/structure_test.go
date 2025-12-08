@@ -81,7 +81,7 @@ func Test_StructuresAndRecords(t *testing.T) {
 					str = append(str, s.QName())
 				}
 			}
-			require.Equal(str, []appdef.QName{docName, objName, recName})
+			require.Equal([]appdef.QName{docName, objName, recName}, str)
 		})
 
 		t.Run("should be ok to find builded records", func(t *testing.T) {
@@ -108,7 +108,7 @@ func Test_StructuresAndRecords(t *testing.T) {
 					recs = append(recs, r.QName())
 				}
 			}
-			require.Equal(recs, []appdef.QName{docName, recName})
+			require.Equal([]appdef.QName{docName, recName}, recs)
 		})
 
 		t.Run("should be ok to find builded contained records", func(t *testing.T) {

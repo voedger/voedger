@@ -7,6 +7,7 @@ package actualizers_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -21,7 +22,7 @@ import (
 
 func TestActualizersWaitTimeout(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
-	partID := istructs.PartitionID(1)
+	initialPartID := istructs.PartitionID(1)
 	wsName := appdef.NewQName("test", "workspace")
 	prjNames := appdef.MustParseQNames("test.p1", "test.p2", "test.p3")
 
@@ -45,7 +46,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 	t.Run("should ok to wait for all actualizers finished", func(t *testing.T) {
 		ctx, stop := context.WithCancel(context.Background())
 
-		actualizers := actualizers.New(appName, partID)
+		actualizers := actualizers.New(appName, initialPartID)
 
 		app := appDef()
 
@@ -54,11 +55,11 @@ func TestActualizersWaitTimeout(t *testing.T) {
 			runCalls.Store(name, 1)
 		}
 		actualizers.Deploy(ctx, app,
-			func(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
+			func(ctx context.Context, app appdef.AppQName, deployingPartID istructs.PartitionID, name appdef.QName) {
 				require.True(runCalls.CompareAndDelete(name, 1), "actualizer %s was run more than once", name)
 
 				require.Equal(appName, app)
-				require.Equal(partID, partID)
+				require.Equal(initialPartID, deployingPartID)
 				require.Contains(prjNames, name)
 				<-ctx.Done()
 			})
@@ -73,7 +74,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 		require.Empty(actualizers.Enum())
 
 		runCalls.Range(func(key, value any) bool {
-			require.Fail("actualizer %s was not run", key.(appdef.QName))
+			require.Fail(fmt.Sprintf("actualizer %s was not run", key.(appdef.QName)))
 			return true
 		})
 	})
@@ -86,7 +87,7 @@ func TestActualizersWaitTimeout(t *testing.T) {
 
 		ctx, stop := context.WithCancel(context.Background())
 
-		actualizers := actualizers.New(appName, partID)
+		actualizers := actualizers.New(appName, initialPartID)
 
 		app := appDef()
 
