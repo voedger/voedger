@@ -78,7 +78,8 @@ func TestForkOperator_DoSync(t *testing.T) {
 
 		err := operator.DoSync(context.Background(), newTestWork())
 
-		require.IsType(t, ErrInBranches{}, err)
+		var errProbe ErrInBranches
+		require.ErrorAs(t, err, &errProbe)
 		require.Equal(t, "branch DoSync() error", err.Error())
 	})
 }

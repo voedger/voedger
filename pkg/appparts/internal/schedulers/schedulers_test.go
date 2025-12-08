@@ -21,7 +21,7 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 	partCnt := istructs.NumAppPartitions(2)
 	wsCnt := istructs.NumAppWorkspaces(10)
-	partID := istructs.PartitionID(1)
+	initialPartID := istructs.PartitionID(1)
 	jobNames := appdef.MustParseQNames("test.j1", "test.j2")
 
 	appDef := func() appdef.IAppDef {
@@ -39,7 +39,7 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 	t.Run("should ok to wait for all actualizers finished", func(t *testing.T) {
 		ctx, stop := context.WithCancel(context.Background())
 
-		schedulers := New(appName, partCnt, wsCnt, partID)
+		schedulers := New(appName, partCnt, wsCnt, initialPartID)
 
 		app := appDef()
 
@@ -55,12 +55,12 @@ func TestSchedulersWaitTimeout(t *testing.T) {
 			}
 		}
 		schedulers.Deploy(ctx, app,
-			func(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsNum istructs.AppWorkspaceNumber, wsID istructs.WSID, name appdef.QName) {
+			func(ctx context.Context, app appdef.AppQName, deployingPartID istructs.PartitionID, wsNum istructs.AppWorkspaceNumber, wsID istructs.WSID, name appdef.QName) {
 				key := runKey(name, wsNum)
 				require.True(runCalls.CompareAndDelete(key, 1), "scheduler %s was run more than once", key)
 
 				require.Equal(appName, app)
-				require.Equal(partID, partID)
+				require.Equal(initialPartID, deployingPartID)
 				require.Contains(jobNames, name)
 				require.Equal(
 					istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum)+istructs.FirstBaseAppWSID),

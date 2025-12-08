@@ -2200,7 +2200,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.EqualValues(2, o.AsInt64("int64"))
 				require.EqualValues(float32(3.3), o.AsFloat32("float32"))
 				require.EqualValues(4.4, o.AsFloat64("float64"))
-				require.EqualValues(true, o.AsBool("bool"))
+				require.True(o.AsBool("bool"))
 				require.EqualValues("test", o.AsString("string"))
 				require.EqualValues([]byte{1, 2, 3}, o.AsBytes("bytes"))
 			}},
@@ -2226,7 +2226,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.Equal(test.testObj, o.QName())
 				require.Zero(o.AsInt32("int32"))
 				require.Zero(o.AsBool("bool"))
-				require.Zero(o.AsString("string"))
+				require.Empty(o.AsString("string"))
 				require.Zero(o.AsBytes("bytes"))
 			}},
 		{"should be error if unknown field in JSON",
