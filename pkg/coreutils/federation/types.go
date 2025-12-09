@@ -14,11 +14,12 @@ import (
 )
 
 type implIFederation struct {
-	httpClient         httpu.IHTTPClient
-	federationURL      func() *url.URL
-	adminPortGetter    func() int
-	defaultReqOptFuncs []httpu.ReqOptFunc
-	vvmCtx             context.Context
+	httpClient             httpu.IHTTPClient
+	federationURL          func() *url.URL
+	adminPortGetter        func() int
+	defaultReqOptFuncs     []httpu.ReqOptFunc
+	vvmCtx                 context.Context
+	policyOptsForWithRetry PolicyOptsForWithRetry
 }
 
 type OffsetsChan chan istructs.Offset
@@ -54,3 +55,5 @@ type FuncResponse struct {
 	QueryResponse
 	SysError error
 }
+
+type PolicyOptsForWithRetry []httpu.RetryPolicyOpt

@@ -292,8 +292,12 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
 		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login.Name, login.Pwd)
-		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body, httpu.Expect409(), httpu.WithExpectedCode(http.StatusOK))
-		if resp.HTTPResp.StatusCode == http.StatusConflict {
+		resp := vit.POST(fmt.Sprintf("api/v2/apps/%s/%s/auth/login", login.AppQName.Owner(), login.AppQName.Name()), body,
+			httpu.Expect409(),
+			httpu.Expect503(),
+			httpu.WithExpectedCode(http.StatusOK),
+		)
+		if resp.HTTPResp.StatusCode == http.StatusConflict || resp.HTTPResp.StatusCode == http.StatusServiceUnavailable {
 			time.Sleep(workspaceQueryDelay)
 			continue
 		}
@@ -392,7 +396,7 @@ func (vit *VIT) SubscribeForN10nProjectionKey(pk in10n.ProjectionKey) federation
 
 func (vit *VIT) SubscribeForN10nUnsubscribe(pk in10n.ProjectionKey) (offsetsChan federation.OffsetsChan, unsubscribe func()) {
 	vit.T.Helper()
-	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(pk, httpu.WithRetryPolicy(vitHTTPRetryPolicy...))
+	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(pk, httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...))
 	require.NoError(vit.T, err)
 	return offsetsChan, unsubscribe
 }

@@ -246,6 +246,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"SecretsReader",
 			"SequencesTrustLevel",
 			"SchemasCache",
+			"PolicyOptsForFederationWithRetry",
 		),
 	))
 }
@@ -524,7 +525,7 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideIFederation(vvmCtx context.Context, cfg *VVMConfig, vvmPortSource *VVMPortSource) (federation.IFederation, func()) {
+func provideIFederation(vvmCtx context.Context, cfg *VVMConfig, vvmPortSource *VVMPortSource, policyForWithRetry federation.PolicyOptsForWithRetry) (federation.IFederation, func()) {
 	return federation.New(vvmCtx, func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL
@@ -535,7 +536,7 @@ func provideIFederation(vvmCtx context.Context, cfg *VVMConfig, vvmPortSource *V
 			panic(err)
 		}
 		return resultFU
-	}, func() int { return vvmPortSource.adminGetter() })
+	}, func() int { return vvmPortSource.adminGetter() }, policyForWithRetry)
 }
 
 // Metrics service port could be dynamic -> need a func that will return the actual port

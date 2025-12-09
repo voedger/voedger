@@ -227,6 +227,7 @@ func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, 
 	return !ok
 }
 
+
 // istructs.IAppStructs.SyncProjectors
 func (app *appStructsType) SyncProjectors() istructs.Projectors {
 	return app.config.SyncProjectors()

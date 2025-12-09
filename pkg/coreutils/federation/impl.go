@@ -302,8 +302,9 @@ func (f *implIFederation) WithRetry() IFederationWithRetry {
 		federationURL:   f.federationURL,
 		adminPortGetter: f.adminPortGetter,
 		defaultReqOptFuncs: []httpu.ReqOptFunc{
-			httpu.WithDefaultRetryPolicy(),
+			httpu.WithRetryPolicy(f.policyOptsForWithRetry...),
 		},
-		vvmCtx: f.vvmCtx,
+		vvmCtx:                 f.vvmCtx,
+		policyOptsForWithRetry: f.policyOptsForWithRetry,
 	}
 }

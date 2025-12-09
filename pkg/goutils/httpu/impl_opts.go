@@ -172,13 +172,7 @@ func WithNoRetryPolicy() ReqOptFunc {
 }
 
 func WithDefaultRetryPolicy() ReqOptFunc {
-	return WithRetryPolicy(DefaultRetryPolicy...)
-}
-
-func WithCustomOptsProvider(prov func(internalOpts IReqOpts) (customOpts IReqOpts)) ReqOptFunc {
-	return func(opts IReqOpts) {
-		opts.httpOpts().customOptsProvider = prov
-	}
+	return WithRetryPolicy(DefaultRetryPolicyOpts...)
 }
 
 func Expect204() ReqOptFunc {
@@ -235,6 +229,12 @@ func WithOptsValidator(validator func(IReqOpts) (panicMessage string)) ReqOptFun
 	}
 }
 
+func WithCustomOpts(key any, value any) ReqOptFunc {
+	return func(opts IReqOpts) {
+		opts.httpOpts().customOpts[key] = value
+	}
+}
+
 func optsValidator_responseHandling(opts IReqOpts) (panicMessage string) {
 	mutualExclusiveOpts := 0
 	o := opts.httpOpts()
@@ -260,4 +260,8 @@ func (opts *reqOpts) ExpectedHTTPCodes() []int {
 
 func (opts *reqOpts) httpOpts() *reqOpts {
 	return opts
+}
+
+func (opts *reqOpts) CustomOpts(key any) (customOpts any) {
+	return opts.customOpts[key]
 }

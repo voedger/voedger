@@ -11,36 +11,37 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 )
 
-type vitReqOpts struct {
-	httpu.IReqOpts   // IReqOpts must be included, not defined as a field
-	expectedMessages []string
-}
+type vitOptsKey struct{}
 
-// must be the first opt
-func WithVITOpts() httpu.ReqOptFunc {
-	return httpu.WithCustomOptsProvider(func(internalOpts httpu.IReqOpts) (customOpts httpu.IReqOpts) {
-		return &vitReqOpts{IReqOpts: internalOpts}
-	})
+type vitReqOpts struct {
+	expectedMessages []string
 }
 
 func WithExpectedCode(code int, expectedMessages ...string) httpu.ReqOptFunc {
 	return func(opts httpu.IReqOpts) {
 		opts.Append(httpu.WithExpectedCode(code))
-		opts.(*vitReqOpts).expectedMessages = append(opts.(*vitReqOpts).expectedMessages, expectedMessages...)
+		vitOpts := opts.CustomOpts(vitOptsKey{}).(*vitReqOpts)
+		vitOpts.expectedMessages = append(vitOpts.expectedMessages, expectedMessages...)
 	}
+}
+
+func createVITOpts() httpu.ReqOptFunc {
+	return httpu.WithCustomOpts(vitOptsKey{}, &vitReqOpts{})
 }
 
 func Expect400RefIntegrity_Existence() httpu.ReqOptFunc {
 	return func(opts httpu.IReqOpts) {
 		opts.Append(httpu.Expect400())
-		opts.(*vitReqOpts).expectedMessages = append(opts.(*vitReqOpts).expectedMessages, "referential integrity violation", "does not exist")
+		vitOpts := opts.CustomOpts(vitOptsKey{}).(*vitReqOpts)
+		vitOpts.expectedMessages = append(vitOpts.expectedMessages, "referential integrity violation", "does not exist")
 	}
 }
 
 func Expect400RefIntegrity_QName() httpu.ReqOptFunc {
 	return func(opts httpu.IReqOpts) {
 		opts.Append(httpu.Expect400())
-		opts.(*vitReqOpts).expectedMessages = append(opts.(*vitReqOpts).expectedMessages, "referential integrity violation", "QNames are only allowed")
+		vitOpts := opts.CustomOpts(vitOptsKey{}).(*vitReqOpts)
+		vitOpts.expectedMessages = append(vitOpts.expectedMessages, "referential integrity violation", "QNames are only allowed")
 	}
 }
 
