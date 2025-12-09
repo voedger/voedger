@@ -155,7 +155,7 @@ func Test_Views(t *testing.T) {
 				case 7:
 					checkValueValF2(f)
 				default:
-					require.Fail("unexpected field «%s»", f.Name())
+					require.Fail("unexpected field", f.Name())
 				}
 			}
 			require.Equal(view.FieldCount(), cnt)
@@ -181,7 +181,7 @@ func Test_Views(t *testing.T) {
 						require.Equal("ccF2", f.Name())
 						require.False(f.Required())
 					default:
-						require.Fail("unexpected field «%s»", f.Name())
+						require.Fail("unexpected field", f.Name())
 					}
 				}
 				require.Equal(key.FieldCount(), cnt)
@@ -202,7 +202,7 @@ func Test_Views(t *testing.T) {
 						require.Equal("pkF2", f.Name())
 						require.True(f.Required())
 					default:
-						require.Fail("unexpected field «%s»", f.Name())
+						require.Fail("unexpected field", f.Name())
 					}
 				}
 				require.Equal(pk.FieldCount(), cnt)
@@ -222,7 +222,7 @@ func Test_Views(t *testing.T) {
 						require.Equal("ccF2", f.Name())
 						require.False(f.Required())
 					default:
-						require.Fail("unexpected field «%s»", f.Name())
+						require.Fail("unexpected field", f.Name())
 					}
 				}
 				require.Equal(cc.FieldCount(), cnt)
@@ -244,7 +244,7 @@ func Test_Views(t *testing.T) {
 					case 3:
 						checkValueValF2(f)
 					default:
-						require.Fail("unexpected field «%s»", f.Name())
+						require.Fail("unexpected field", f.Name())
 					}
 				}
 				require.Equal(val.FieldCount(), cnt)

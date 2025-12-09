@@ -55,7 +55,7 @@ func TestFederationFunc(t *testing.T) {
 		handler = func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			require.NoError(err)
-			require.Equal(`{"fld":"val"}`, string(body))
+			require.JSONEq(`{"fld":"val"}`, string(body))
 			_, err = w.Write([]byte(`{
 				"newIDs":{"1":2},
 				"sections":[{"type":"","elements":[[[["hello, world"]]]]}],
