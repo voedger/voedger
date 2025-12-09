@@ -1,7 +1,7 @@
 name: CI pkg-cmd PR
 
 on:
-  pull_request_target:
+  pull_request:
     paths-ignore:
       - 'pkg/istorage/**'
 
