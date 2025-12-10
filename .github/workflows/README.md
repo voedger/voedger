@@ -4,8 +4,8 @@
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci-pkg-cmd.yml` | Push to main (excl. pkg/istorage) | Run CI tests, build Docker image |
-| `ci-pkg-cmd_pr.yml` | PR (excl. pkg/istorage) | Run CI tests, auto-merge |
+| `ci.yml` | Push to main (excl. pkg/istorage) | Run CI tests, build Docker image |
+| `ci_pr.yml` | PR (excl. pkg/istorage) | Run CI tests, auto-merge |
 | `ci-wf_pr.yml` | PR to .github/workflows | Auto-merge workflow changes |
 | `ci-full.yml` | Daily 5 AM UTC / manual | Full test suite with race detector |
 | `ci-pkg-storage.yml` | Push/PR to pkg/istorage paths | Run storage backend tests |
@@ -113,13 +113,13 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 
 ## Workflow Details
 
-### Push to main (ci-pkg-cmd.yml)
+### Push to main (ci.yml)
 
 1. Calls `untillpro/ci-action/.github/workflows/ci.yml@main`
    - short_test: true, go_race: false, install_tinygo: true
 2. Calls `cd-voedger.yml` to build Docker image
 
-### PR (ci-pkg-cmd_pr.yml)
+### PR (ci_pr.yml)
 
 1. Calls `untillpro/ci-action/.github/workflows/ci_pr.yml@main`
 2. Calls `merge.yml` for auto-merge
@@ -194,8 +194,8 @@ graph TD
     end
 
     subgraph "Voedger Workflows"
-        W1["ci-pkg-cmd.yml"]
-        W2["ci-pkg-cmd_pr.yml"]
+        W1["ci.yml"]
+        W2["ci_pr.yml"]
         W3["ci-wf_pr.yml"]
         W4["ci-full.yml"]
         W5["cp.yml"]
@@ -314,7 +314,7 @@ Detailed step-by-step flow showing PR validation, testing, and auto-merge.
 ```mermaid
 sequenceDiagram
     participant GitHub as GitHub Event
-    participant WF as ci-pkg-cmd_pr.yml
+    participant WF as ci_pr.yml
     participant CI as ci_pr.yml
     participant Tests as Test Execution
     participant Merge as merge.yml
