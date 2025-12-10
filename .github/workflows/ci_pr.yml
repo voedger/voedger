@@ -1,4 +1,4 @@
-name: CI pkg-cmd PR
+name: CI on Pull Request
 
 on:
   pull_request_target:
@@ -6,7 +6,7 @@ on:
       - 'pkg/istorage/**'
 
 jobs:
-  call-workflow-ci-pkg:
+  call-workflow-ci:
     if: github.repository == 'voedger/voedger'
     uses: untillpro/ci-action/.github/workflows/ci_pr.yml@main
     with:
@@ -18,7 +18,7 @@ jobs:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   auto-merge-pr:
-    needs: call-workflow-ci-pkg
+    needs: call-workflow-ci
     uses: ./.github/workflows/merge.yml
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
