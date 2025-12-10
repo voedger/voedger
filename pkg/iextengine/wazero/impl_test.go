@@ -42,6 +42,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
+
 var extIO = &mockIo{}
 var plogOffset istructs.Offset
 var wlogOffset istructs.Offset
