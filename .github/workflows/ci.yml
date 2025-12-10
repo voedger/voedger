@@ -1,4 +1,4 @@
-name: CI pkg-cmd
+name: CI
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - 'pkg/istorage/**'
 
 jobs:
-  call-workflow-ci-pkg:
+  call-workflow-ci:
     if: github.repository == 'voedger/voedger'
     uses: untillpro/ci-action/.github/workflows/ci.yml@main
     with:
@@ -20,7 +20,7 @@ jobs:
 
 
   call-workflow-cd_voeger:
-    needs: call-workflow-ci-pkg
+    needs: call-workflow-ci
     if: github.repository == 'voedger/voedger'
     uses: voedger/voedger/.github/workflows/cd-voedger.yml@main
     secrets:
