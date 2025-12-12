@@ -349,8 +349,15 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	// but will be failed in router (will be disconnected right on writeResponse)
 	close(setDisconnectOnWriteResponse)
 
-	// first elem send after client disconnect should be successful
-	require.NoError(<-expectedErrCh)
+	// The second write may return nil or context.Canceled depending on timing:
+	// - The write to bus channel succeeds (data is delivered)
+	// - Router managed to call resp.Body.Close() in the hook
+	// - We've got the result of `return rs.clientCtx.Err()` at implResponseWriter.Write()
+	// Both outcomes are valid - what matters is the write reached the router
+	secondWriteErr := <-expectedErrCh
+	if secondWriteErr != nil {
+		require.ErrorIs(secondWriteErr, context.Canceled)
+	}
 
 	// next sending to the bus must be failed because the requestCtx is closed
 	require.ErrorIs(<-expectedErrCh, context.Canceled)
