@@ -61,7 +61,6 @@ with:
   install_tinygo: "true"
 secrets:
   reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-  personal_token: ${{ secrets.PERSONAL_TOKEN }}
 ```
 
 **Additional checks:**
