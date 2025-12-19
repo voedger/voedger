@@ -18,6 +18,12 @@ import (
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 )
 
+type syncActualizerWorkpiece interface {
+	pipeline.IWorkpiece
+	Event() istructs.IPLogEvent
+	AppPartition() appparts.IAppPartition
+}
+
 func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator {
 	if conf.IntentsLimit == 0 {
 		conf.IntentsLimit = defaultIntentsLimit
@@ -32,12 +38,12 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 	}
 	h := &syncErrorHandler{ss: ss}
 	return pipeline.NewSyncPipeline(conf.Ctx, "PartitionSyncActualizer",
-		pipeline.WireFunc("Update event", func(_ context.Context, work pipeline.IWorkpiece) (err error) {
-			service.event = work.(interface{ Event() istructs.IPLogEvent }).Event()
+		pipeline.WireFunc("Update event", func(_ context.Context, work syncActualizerWorkpiece) (err error) {
+			service.event = work.Event()
 			return nil
 		}),
-		pipeline.WireFunc("Update IAppStructs", func(_ context.Context, work pipeline.IWorkpiece) (err error) {
-			service.appStructs = work.(interface{ AppPartition() appparts.IAppPartition }).AppPartition().AppStructs()
+		pipeline.WireFunc("Update IAppStructs", func(_ context.Context, work syncActualizerWorkpiece) (err error) {
+			service.appStructs = work.AppPartition().AppStructs()
 			return nil
 		}),
 		pipeline.WireSyncOperator("SyncActualizer", pipeline.ForkOperator(pipeline.ForkSame, bb[0], bb[1:]...)),
@@ -68,8 +74,8 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 	)
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector",
-			func(ctx context.Context, work pipeline.IWorkpiece) error {
-				appPart := work.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
+			func(ctx context.Context, work syncActualizerWorkpiece) error {
+				appPart := work.AppPartition()
 				appDef := appPart.AppStructs().AppDef()
 				prj := appdef.Projector(appDef.Type, projector.Name)
 				event := s.PLogEvent()

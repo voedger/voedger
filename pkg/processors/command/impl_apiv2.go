@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 func parseCUDs_v2(cmd *cmdWorkpiece) (err error) {
@@ -116,8 +115,7 @@ func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID int64, nextR
 	return res, nil
 }
 
-func apiv2_denyODocCUD(_ context.Context, work pipeline.IWorkpiece) (err error) {
-	cmd := work.(*cmdWorkpiece)
+func apiv2_denyODocCUD(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.iWorkspace == nil {
 		return nil
 	}

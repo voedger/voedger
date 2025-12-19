@@ -152,12 +152,12 @@ func TestNOOP_Cover(t *testing.T) {
 	})
 
 	t.Run("make sync operator", func(t *testing.T) {
-		s := NewSyncOp(nil)
+		s := NewSyncOp[IWorkpiece](nil)
 		require.NoError(s.DoSync(context.TODO(), nil))
 		s.Close()
 	})
 	t.Run("make async operator", func(t *testing.T) {
-		as := NewAsyncOp(nil)
+		as := NewAsyncOp[IWorkpiece](nil)
 		w, err := as.DoAsync(context.TODO(), nil)
 		require.Nil(w)
 		require.NoError(err)

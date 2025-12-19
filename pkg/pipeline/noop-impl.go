@@ -74,22 +74,46 @@ func (s *implIServiceSimple) Run(ctx context.Context) {
 	}
 }
 
-// based on ISyncOperator
-func WireFunc(name string, doSync func(ctx context.Context, work IWorkpiece) (err error)) *WiredOperator {
+// WireFunc creates a WiredOperator with a sync operator.
+// T can be any type that implements IWorkpiece, allowing typed workpiece access.
+func WireFunc[T IWorkpiece](name string, doSync func(ctx context.Context, work T) (err error)) *WiredOperator {
 	return WireSyncOperator(name, NewSyncOp(doSync))
 }
 
-// based on IAsyncOperator
-func WireAsyncFunc(name string, doAsync func(ctx context.Context, work IWorkpiece) (outWork IWorkpiece, err error)) *WiredOperator {
+// WireAsyncFunc creates a WiredOperator with an async operator.
+// T can be any type that implements IWorkpiece, allowing typed workpiece access.
+func WireAsyncFunc[T IWorkpiece](name string, doAsync func(ctx context.Context, work T) (outWork IWorkpiece, err error)) *WiredOperator {
 	return WireAsyncOperator(name, NewAsyncOp(doAsync))
 }
 
-func NewSyncOp(doSync func(ctx context.Context, work IWorkpiece) (err error)) ISyncOperator {
-	return &implISyncOperatorSimple{doSync: doSync}
+// NewSyncOp creates a sync operator from a function.
+// T can be any type that implements IWorkpiece, allowing typed workpiece access.
+func NewSyncOp[T IWorkpiece](doSync func(ctx context.Context, work T) (err error)) ISyncOperator {
+	if doSync == nil {
+		return &implISyncOperatorSimple{}
+	}
+	return &implISyncOperatorSimple{doSync: func(ctx context.Context, work IWorkpiece) error {
+		var typedWork T
+		if work != nil {
+			typedWork = work.(T)
+		}
+		return doSync(ctx, typedWork)
+	}}
 }
 
-func NewAsyncOp(doAsync func(ctx context.Context, work IWorkpiece) (outWork IWorkpiece, err error)) IAsyncOperator {
-	return &implAsyncOperatorSimple{doAsync: doAsync}
+// NewAsyncOp creates an async operator from a function.
+// T can be any type that implements IWorkpiece, allowing typed workpiece access.
+func NewAsyncOp[T IWorkpiece](doAsync func(ctx context.Context, work T) (outWork IWorkpiece, err error)) IAsyncOperator {
+	if doAsync == nil {
+		return &implAsyncOperatorSimple{}
+	}
+	return &implAsyncOperatorSimple{doAsync: func(ctx context.Context, work IWorkpiece) (IWorkpiece, error) {
+		var typedWork T
+		if work != nil {
+			typedWork = work.(T)
+		}
+		return doAsync(ctx, typedWork)
+	}}
 }
 
 func NewService(run func(ctx context.Context)) IService {

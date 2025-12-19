@@ -15,7 +15,7 @@ import (
 func newBenchPipeline(nops int) ISyncPipeline {
 	ops := make([]*WiredOperator, nops)
 	for idx := range ops {
-		ops[idx] = WireFunc(strconv.Itoa(idx), nil)
+		ops[idx] = WireFunc[IWorkpiece](strconv.Itoa(idx), nil)
 	}
 
 	pipeline := NewSyncPipeline(context.Background(), "bench 10 NOOPS", ops[0], ops[1:]...)
