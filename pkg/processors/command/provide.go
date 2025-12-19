@@ -57,9 +57,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, secretReader)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
-				pipeline.WireFunc("applyRecords", func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-					// sync apply records
-					cmd := work.(*cmdWorkpiece)
+				pipeline.WireFunc("applyRecords", func(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 					if cmd.reapplier != nil {
 						err = cmd.reapplier.ApplyRecords()
 					} else {
@@ -70,26 +68,19 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 					}
 					return err
 				}), pipeline.WireSyncOperator("syncProjectorsAndPutWLog", pipeline.ForkOperator(pipeline.ForkSame,
-					// forK: sync projector and PutWLog
-
 					pipeline.ForkBranch(
-						pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-							cmd := work.(*cmdWorkpiece)
+						pipeline.NewSyncOp(func(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 							cmd.syncProjectorsStart = tm.Now()
-							err = cmd.appPart.DoSyncActualizer(ctx, work)
+							err = cmd.appPart.DoSyncActualizer(ctx, cmd)
 							cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 							cmd.syncProjectorsStart = tm.Now()
 							if err != nil {
 								cmd.appPartitionRestartScheduled = true
 							}
-
 							return err
 						}),
 					),
-
-					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-						// put WLog
-						cmd := work.(*cmdWorkpiece)
+					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 						if cmd.reapplier != nil {
 							err = cmd.reapplier.PutWLog()
 						} else {

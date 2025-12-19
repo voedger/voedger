@@ -73,7 +73,7 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 	})
 	t.Run("Should panic on nil work", func(t *testing.T) {
 		pipeline := NewSyncPipeline(context.Background(), "my-pipeline",
-			WireFunc("panic-onNil", nil))
+			WireFunc[IWorkpiece]("panic-onNil", nil))
 
 		require.PanicsWithValue(t, "critical error in operator 'panic-onNil': nil work in processSyncOp. Pipeline 'my-pipeline' [operator: panic-onNil]", func() {
 			_ = pipeline.SendSync(nil)
@@ -98,7 +98,7 @@ func Test_checkSyncOperator(t *testing.T) {
 
 	t.Run("Should panic when operator isn't sync", func(t *testing.T) {
 		require.PanicsWithValue(t, "sync pipeline only supports sync operators", func() {
-			checkSyncOperator(WireAsyncOperator("operator", NewAsyncOp(nil)))
+			checkSyncOperator(WireAsyncOperator("operator", NewAsyncOp[IWorkpiece](nil)))
 		})
 	})
 }

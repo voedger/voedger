@@ -506,9 +506,7 @@ func borrowAppPart(_ context.Context, qw *queryWork) error {
 }
 
 func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err error)) *pipeline.WiredOperator {
-	return pipeline.WireFunc(name, func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		return doSync(ctx, work.(*queryWork))
-	})
+	return pipeline.WireFunc(name, doSync)
 }
 
 type queryMessage struct {

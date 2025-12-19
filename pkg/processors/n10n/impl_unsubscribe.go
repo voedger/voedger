@@ -23,8 +23,7 @@ func unsubscribePipeline(requestCtx context.Context, p *implIN10NProc) pipeline.
 	)
 }
 
-func (p *implIN10NProc) unsubscribe(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	n10nWP := work.(*n10nWorkpiece)
+func (p *implIN10NProc) unsubscribe(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
 	projectionKey := in10n.ProjectionKey{
 		App:        n10nWP.appQName,
 		Projection: n10nWP.entityFromURL,
@@ -33,7 +32,6 @@ func (p *implIN10NProc) unsubscribe(ctx context.Context, work pipeline.IWorkpiec
 	return p.n10nBroker.Unsubscribe(n10nWP.channelID, projectionKey)
 }
 
-func reply204NoContent(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	n10nWP := work.(*n10nWorkpiece)
+func reply204NoContent(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
 	return n10nWP.responder.Respond(bus.ResponseMeta{StatusCode: http.StatusNoContent}, nil)
 }

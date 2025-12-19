@@ -26,16 +26,14 @@ func subscribeExtraPipeline(requestCtx context.Context, p *implIN10NProc) pipeli
 	)
 }
 
-func denyBody(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	n10nWP := work.(*n10nWorkpiece)
+func denyBody(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
 	if len(n10nWP.body) > 0 {
 		return errors.New("unexpected body")
 	}
 	return nil
 }
 
-func addProjectionKeyFromURL(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	n10nWP := work.(*n10nWorkpiece)
+func addProjectionKeyFromURL(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
 	n10nWP.subscriptions = append(n10nWP.subscriptions, subscription{
 		entity: n10nWP.entityFromURL,
 		wsid:   n10nWP.wsidFromURL,
@@ -43,7 +41,6 @@ func addProjectionKeyFromURL(ctx context.Context, work pipeline.IWorkpiece) (err
 	return nil
 }
 
-func (p *implIN10NProc) replyOK(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	n10nWP := work.(*n10nWorkpiece)
+func (p *implIN10NProc) replyOK(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
 	return n10nWP.responder.Respond(bus.ResponseMeta{StatusCode: http.StatusOK}, nil)
 }

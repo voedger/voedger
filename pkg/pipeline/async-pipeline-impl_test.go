@@ -19,7 +19,7 @@ func TestAsyncPipeline_SendAsync(t *testing.T) {
 		pipeline := NewAsyncPipeline(
 			testContext{err: expectedErr},
 			"async-pipeline",
-			WireAsyncFunc("async-operator-nop", nil))
+			WireAsyncFunc[IWorkpiece]("async-operator-nop", nil))
 
 		err := pipeline.SendAsync(nil)
 

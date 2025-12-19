@@ -24,8 +24,7 @@ import (
 )
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBKeyRead~impl]
-func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func getBLOBKeyRead(ctx context.Context, bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		existingBLOBIDUint, err := strconvu.ParseUint64(bw.blobMessageRead.existingBLOBIDOrSUUID)
 		if err != nil {
@@ -52,8 +51,7 @@ func getBLOBKeyRead(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_initResponse~impl]
-func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func initResponse(ctx context.Context, bw *blobWorkpiece) (err error) {
 	bw.writer = bw.blobMessageRead.okResponseIniter(
 		httpu.ContentType, bw.blobState.Descr.ContentType,
 		coreutils.BlobName, bw.blobState.Descr.Name,
@@ -62,9 +60,8 @@ func initResponse(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_queryBLOBState~impl]
-func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bw := work.(*blobWorkpiece)
+func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, bw *blobWorkpiece) (err error) {
+	return func(ctx context.Context, bw *blobWorkpiece) (err error) {
 		bw.blobState, err = blobStorage.QueryBLOBState(bw.blobMessageRead.requestCtx, bw.blobKey)
 		if err != nil {
 			if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
@@ -83,8 +80,7 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_downloadBLOBHelper~impl]
-func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func downloadBLOBHelper(ctx context.Context, bw *blobWorkpiece) (err error) {
 	if !bw.blobMessageRead.isAPIv2 {
 		return nil
 	}
@@ -107,9 +103,8 @@ func downloadBLOBHelper(ctx context.Context, work pipeline.IWorkpiece) (err erro
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_readBLOB~impl]
-func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bw := work.(*blobWorkpiece)
+func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, bw *blobWorkpiece) (err error) {
+	return func(ctx context.Context, bw *blobWorkpiece) (err error) {
 		err = blobStorage.ReadBLOB(bw.blobMessageRead.requestCtx, bw.blobKey, nil, bw.writer, iblobstoragestg.RLimiter_Null)
 		if err != nil {
 			logger.Error(fmt.Sprintf("failed to read BLOB: id %s, appQName %s, wsid %d: %s", bw.blobKey.ID(), bw.blobMessageRead.appQName,
@@ -120,8 +115,7 @@ func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Con
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBIDFromOwner~impl]
-func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func getBLOBIDFromOwner(_ context.Context, bw *blobWorkpiece) (err error) {
 	if !bw.blobMessageRead.isAPIv2 || !bw.isPersistent() {
 		// temp blob in APIv2 -> skip, suuid is already known
 		return nil
@@ -162,8 +156,7 @@ func getBLOBIDFromOwner(_ context.Context, work pipeline.IWorkpiece) (err error)
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBMessageRead~impl]
-func getBLOBMessageRead(_ context.Context, work pipeline.IWorkpiece) error {
-	bw := work.(*blobWorkpiece)
+func getBLOBMessageRead(_ context.Context, bw *blobWorkpiece) error {
 	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read)
 	return nil
 }

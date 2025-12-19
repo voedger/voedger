@@ -25,8 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 )
 
-func getRegisterFunc(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func getRegisterFunc(ctx context.Context, bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		bw.registerFuncName = registerPersistentBLOBFuncQName
 		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`,
@@ -43,8 +42,7 @@ func getRegisterFunc(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	return nil
 }
 
-func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func getBLOBKeyWrite(ctx context.Context, bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
@@ -62,9 +60,8 @@ func getBLOBKeyWrite(ctx context.Context, work pipeline.IWorkpiece) (err error) 
 	return nil
 }
 
-func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLimiterFactory) func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	return func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		bw := work.(*blobWorkpiece)
+func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLimiterFactory) func(ctx context.Context, bw *blobWorkpiece) (err error) {
+	return func(ctx context.Context, bw *blobWorkpiece) (err error) {
 		wLimiter := wLimiterFactory()
 		if bw.isPersistent() {
 			key := (bw.blobKey).(*iblobstorage.PersistentBLOBKeyType)
@@ -80,8 +77,7 @@ func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLi
 	}
 }
 
-func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func setBLOBStatusCompleted(ctx context.Context, bw *blobWorkpiece) (err error) {
 	if !bw.isPersistent() {
 		// do not account statuses for temp blobs
 		return nil
@@ -100,8 +96,7 @@ func setBLOBStatusCompleted(ctx context.Context, work pipeline.IWorkpiece) (err 
 	return err
 }
 
-func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-	bw := work.(*blobWorkpiece)
+func registerBLOB(ctx context.Context, bw *blobWorkpiece) (err error) {
 	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageWrite.wsid,
@@ -125,14 +120,12 @@ func registerBLOB(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 	return nil
 }
 
-func getBLOBMessageWrite(_ context.Context, work pipeline.IWorkpiece) error {
-	bw := work.(*blobWorkpiece)
+func getBLOBMessageWrite(_ context.Context, bw *blobWorkpiece) error {
 	bw.blobMessageWrite = bw.blobMessage.(*implIBLOBMessage_Write)
 	return nil
 }
 
-func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
-	bw := work.(*blobWorkpiece)
+func parseQueryParams(_ context.Context, bw *blobWorkpiece) error {
 	if bw.blobMessageWrite.isAPIv2 {
 		bw.blobName = append(bw.blobName, bw.blobMessageWrite.header[coreutils.BlobName])
 		bw.blobContentType = append(bw.blobContentType, bw.blobMessageWrite.header[httpu.ContentType])
@@ -150,8 +143,7 @@ func parseQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
 	return nil
 }
 
-func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
-	bw := work.(*blobWorkpiece)
+func parseMediaType(_ context.Context, bw *blobWorkpiece) error {
 	bw.contentType = bw.blobMessageWrite.header[httpu.ContentType]
 	if len(bw.contentType) == 0 {
 		return nil
@@ -165,8 +157,7 @@ func parseMediaType(_ context.Context, work pipeline.IWorkpiece) error {
 	return nil
 }
 
-func validateQueryParams(_ context.Context, work pipeline.IWorkpiece) error {
-	bw := work.(*blobWorkpiece)
+func validateQueryParams(_ context.Context, bw *blobWorkpiece) error {
 
 	if (len(bw.blobName) > 0 && len(bw.blobContentType) == 0) || (len(bw.blobName) == 0 && len(bw.blobContentType) > 0) {
 		return errors.New("both name and mimeType query params must be specified")
