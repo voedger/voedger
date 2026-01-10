@@ -386,7 +386,7 @@ func (mkb *mockedKeyBuilder) PutQName(field appdef.FieldName, value appdef.QName
 
 func (mkb *mockedKeyBuilder) PutBool(field appdef.FieldName, value bool) {
 	mkb.TestObject.Data[field] = value
-	// if IsSingleton is true, then ID must be set to MinReservedBaseRecordID
+	// if IsSingleton is true, then ID must be set to FirstSingletonID
 	// it is workaround for singleton entities
 	if field == sys.Storage_Record_Field_IsSingleton && value {
 		mkb.TestObject.ID_ = mkb.mockedStorage.GetSingletonID(mkb.Name)

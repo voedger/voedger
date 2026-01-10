@@ -83,22 +83,18 @@ const ReadToTheEnd = int(^uint(0) >> 1)
 // 0                   | NullRecordID             |
 // ────────────────────┼──────────────────────────┤
 // 1                   | MinRawRecordID           |
-//                     |                          |
+// ...                 |                          |
 // 65535               | MaxRawRecordID           |
 // ────────────────────┼──────────────────────────┤
-// 65536               | MinReservedBaseRecordID  |
-//                     |                          |
-//                     |  ┌───────────────────────┤
-// 65537               |  | FirstSingletonID      |
-//                     |  |                       |
-// 66047               |  | MaxSingletonID        |
-//                     |  └───────────────────────┤
-//                     |                          |
-// 66048               |  NonExistingRecordID     |
-//                     |                          |
-// 131071              | MaxReservedBaseRecordID  |
+// 65536               | MinReservedRecordID      |
+//                     | FirstSingletonID         |
+// ...                 |                          |
+// 66047               | MaxSingletonID           |
+// 66048               | NonExistingRecordID      |
+// ...                 |                          |
+// 200000              | MaxReservedRecordID      |
 // ────────────────────┼──────────────────────────┤
-// 131072              | FirstBaseRecordID        |
+// 200001              | FirstUserRecordID        |
 
 const NullWSID = WSID(0)
 
@@ -133,12 +129,12 @@ const MaxNumAppWorkspaces = 0x8000 // 32768
 
 // Reserved WSIDs
 
-const FirtReservedWSID = FirstBaseAppWSID + MaxNumAppWorkspaces // 0x18000, 98304
-const NumReservedWSID = 0x7fff                                  // 32767
+const FirstReservedWSID = FirstBaseAppWSID + MaxNumAppWorkspaces // 0x18000, 98304
+const NumReservedWSID = 0x7fff                                   // 32767
 
 const (
-	GuestWSID               = FirtReservedWSID + iota // 0x18000, 98304
-	LastCurrentReservedWSID                           // Can be changed in the future
+	GuestWSID               = FirstReservedWSID + iota // 0x18000, 98304
+	LastCurrentReservedWSID                            // Can be changed in the future
 )
 
 // User Workspaces
