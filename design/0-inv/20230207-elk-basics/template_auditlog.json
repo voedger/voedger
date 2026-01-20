@@ -1,6 +1,0 @@
-{
-	"index_patterns" : ["security-auditlog*"],
-	"settings" : {
-		"number_of_replicas" : 0
-	}
-}

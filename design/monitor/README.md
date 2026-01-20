@@ -1,3 +1,0 @@
-# Monitor
-
-- [Metrics](metrics.md)
