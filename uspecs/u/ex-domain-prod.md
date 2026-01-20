@@ -12,8 +12,8 @@ Key features:
 - Greenfield and brownfield projects support
 - Optional simplified workflow for brownfield projects
 - Gherkin language for functional specifications
-- Maintaininig actual functional specifications
-- Maintaininig actual architecture and technical design
+- Maintaining actual functional specifications
+- Maintaining actual architecture and technical design
 - Working with multiple domains: by default `prod` and `devops`, can be extended with custom domains
 
 ## External actors
