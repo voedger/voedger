@@ -31,5 +31,5 @@ func TestDurationSeconds(t *testing.T) {
 	dt := DurationType(1)
 	require.Equal(t, 86400, dt.Seconds())
 	dt = DurationType(2)
-	require.Equal(t, 86400*4, dt.Seconds())
+	require.Equal(t, 86400*2, dt.Seconds())
 }

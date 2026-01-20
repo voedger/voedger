@@ -31,5 +31,5 @@ func NewSUUID() SUUID {
 }
 
 func (dt DurationType) Seconds() int {
-	return int(dt*dt) * secondsInDay
+	return int(dt) * secondsInDay
 }

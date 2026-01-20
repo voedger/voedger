@@ -58,8 +58,7 @@ const (
 
 type BLOBMaxSizeType uint64
 
-// DurationType^2 - amount of days to store the BLOB
-// use `DurationType.Seconds() int` as well
+// DurationType - amount of days to store the BLOB
 type DurationType int
 
 type WLimiterType func(wantToWriteBytes uint64) error
