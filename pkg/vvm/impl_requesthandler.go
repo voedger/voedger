@@ -51,7 +51,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 		}
 		if logger.IsVerbose() {
 			// FIXME: eliminate this. Unlogged params are logged
-			logger.Verbose("request body:\n", string(request.Body))
+			logger.Verbose("request body:", string(request.Body))
 		}
 
 		if !vvmApps.Exists(request.AppQName) {
