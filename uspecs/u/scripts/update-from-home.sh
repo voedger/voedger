@@ -47,7 +47,7 @@ SOURCE_DIR="$USPECS_HOME/uspecs/u"
 if [[ $# -ge 1 ]]; then
     TARGET_DIR="$1"
 else
-    TARGET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")'/.." && pwd)"
+    TARGET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fi
 
 # Verify source directory exists
