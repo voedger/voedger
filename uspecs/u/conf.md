@@ -16,8 +16,8 @@
   - Active Change Folder files describe Active Change Request and its implementation
 - Change Folder System Artifacts
   - Change File: `change.md`
-  - Change Technical Design: `change-td.md`
-  - Implementation Plan: `change-impl.md`
+  - Change Technical Design: `td.md`
+  - Implementation Plan: `impl.md`
 - Domain Folder: `$specs_folder/{domain}/`
 - Context Folder: `$specs_folder/{domain}/{context-id}/`
   - Contains
@@ -39,7 +39,7 @@
   - Domain Subsystem Architecture
      or `$specs_folder/{domain}/{subsystem}--arch.md`
   - Context Architecture
-    - `{context-folder}/arch.md`
+    - `{context-folder}/{context}--arch.md`
   - Context Subsystem Architecture
      or `{context-folder}/{subsystem}--arch.md`
   - Feature Technical Design

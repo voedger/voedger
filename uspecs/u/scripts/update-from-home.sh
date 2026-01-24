@@ -9,7 +9,11 @@ set -Eeuo pipefail
 #   from a central uspecs home location to the current project.
 #
 # Usage:
-#   ./update-from-home.sh
+#   ./update-from-home.sh [target-directory]
+#
+# Arguments:
+#   target-directory - Optional path to the uspecs/u directory to update.
+#                      If not provided, uses the directory where this script is located.
 #
 # Prerequisites:
 #   - USPECS_HOME environment variable must be set
@@ -38,7 +42,13 @@ fi
 
 # Set source and target directories based on USPECS_HOME
 SOURCE_DIR="$USPECS_HOME/uspecs/u"
-TARGET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Use provided target directory or default to script's parent directory
+if [[ $# -ge 1 ]]; then
+    TARGET_DIR="$1"
+else
+    TARGET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")'/.." && pwd)"
+fi
 
 # Verify source directory exists
 if [[ ! -d "$SOURCE_DIR" ]]; then
@@ -138,7 +148,7 @@ if [[ -d "$TARGET_DIR" ]]; then
         [[ -z "$dir" ]] && continue
         if [[ ! -d "$SOURCE_DIR/$dir" ]]; then
             echo "  Removing directory: $dir"
-            rm -rf "$TARGET_DIR/$dir" || echo "  Warning: Could not remove directory $dir (may be busy)" >&2
+            rm -rf "${TARGET_DIR:?}/${dir:?}" || echo "  Warning: Could not remove directory $dir (may be busy)" >&2
             ((++removed_dirs))
         fi
     done < <(find . -depth -type d -print0)

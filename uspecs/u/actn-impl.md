@@ -4,7 +4,8 @@
 
 Rules:
 
-- Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`.
+- Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
+  - Use file name patters from there, not from the codebase
 
 Parameters:
 
@@ -133,11 +134,11 @@ Feature: Change request implementation
     And Implementation Plan does not exist
     When Engineer runs uspecs-impl command
     Then Implementation Plan is created
-    And Implementation Plan contains the following sections
-      | Section                                  | Presence conditions |
-      | # Implementation: {Change request title} | Always              |
-      | ## Functional design                     | Always              |
-    And all created sections contain unchecked to-do items
+    And Implementation Plan contains ONLY the following sections
+      | Section                                       | Presence conditions |
+      | # Implementation plan: {Change request title} | Always              |
+      | ## Functional design                          | Always              |
+    And Functional design section contains unchecked to-do items
 
   Scenario: Create Implementation Plan when Functional Design Specifications NOT affected
     Given Active Change Request does NOT affect Functional Design Specifications

@@ -2,29 +2,35 @@
 
 ---
 
-## change.md
+## Change File Template 1
 
-Example:
+Format:
 
 ```markdown
 # Change request: {Change request title}
 
-- issue: [ISSUE-ID: Issue name](link)  (if specified)
+## Why
 
-## Problem
+{1-3 sentences describing the reason, cause, purpose, or belief behind the change request}
 
-1-3 sentences describing the problem. Focus on the need, avoid implementation details.
+## What
 
-## Solution overview
-
-What is being proposed to solve the problem. Start with introductory sentence, follow with capabilities list if applicable.
+{What is being delivered} 
 ```
 
-Rules:
+In What section organize content with introductory sentenses followed by bullet points:
 
-- YAML front matter with uspecs.* prefixed keys is added automatically by uspecs.sh script
-- If issue is not specified skip the line `issue: [ISSUE-ID: Issue name](link)`
-- If issue is specified, try to fetch issue content to fill in Issue attribute, Problem and Solution overview sections
+```markdown
+Introductory sentence1:
+
+- Item 1
+- Item 2
+
+Introductory sentence2:
+
+- Item 1
+- Item 2
+```
 
 ---
 
