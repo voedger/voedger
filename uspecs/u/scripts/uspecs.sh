@@ -70,7 +70,7 @@ cmd_change_frontmatter() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --issue-url)
-                if [ -z "$2" ]; then
+                if [[ $# -lt 2 || -z "$2" ]]; then
                     error "--issue-url requires a URL argument"
                 fi
                 issue_url="$2"

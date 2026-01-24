@@ -114,7 +114,7 @@ git push -u origin "$BRANCH_NAME"
 
 # Create PR to upstream using GitHub CLI
 echo "Creating pull request to upstream..."
-UPSTREAM_REPO="$(git remote get-url upstream | sed 's/.*github.com[:/]\(.*\)\.git/\1/')"
-ORIGIN_OWNER="$(git remote get-url origin | sed 's/.*github.com[:/]\([^/]*\)\/.*/\1/')"
+UPSTREAM_REPO="$(git remote get-url upstream | sed -E 's#.*github.com[:/]##; s#\.git$##')"
+ORIGIN_OWNER="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##; s#/.*##')"
 gh pr create --repo "$UPSTREAM_REPO" --base main --head "${ORIGIN_OWNER}:${BRANCH_NAME}" --title "Update from USPECS_HOME" --body "Automated update from USPECS_HOME"
 echo "Pull request created successfully!"

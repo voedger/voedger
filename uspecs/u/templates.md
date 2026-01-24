@@ -18,7 +18,7 @@ Format:
 {What is being delivered} 
 ```
 
-In What section organize content with introductory sentenses followed by bullet points:
+In What section organize content with introductory sentences followed by bullet points:
 
 ```markdown
 Introductory sentence1:
