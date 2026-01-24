@@ -4,15 +4,15 @@ set -Eeuo pipefail
 # uspecs automation
 #
 # Usage:
-#   uspecs change add <path-to-change-tmp> <change-name-kebab-case>
+#   uspecs change frontmatter <path-to-change-md> [--issue-url <url>]
 #   uspecs change archive <path-to-change-folder>
 #
-# change add:
-#   Creates change folder at <changes-folder>/YYMMDD-<change-name-kebab-case>
-#   Renames change.tmp to change.md and moves into folder with auto-generated metadata:
+# change frontmatter:
+#   Adds frontmatter to existing change.md with auto-generated metadata:
 #     - registered_at: YYYY-MM-DDTHH:MM:SSZ
 #     - change_id: YYMMDD-<change-name-kebab-case>
 #     - baseline: <commit-hash> (if git repository)
+#     - issue_url: <url> (if --issue-url provided)
 #
 # change archive:
 #   Archives change folder to <changes-folder>/archive/YYMMDD-<change-name>
@@ -62,39 +62,54 @@ move_folder() {
     fi
 }
 
-cmd_change_add() {
-    local path_to_change_tmp="$1"
-    local change_name="$2"
+cmd_change_frontmatter() {
+    local path_to_change_md=""
+    local issue_url=""
 
-    if [ -z "$path_to_change_tmp" ]; then
-        error "path-to-change-tmp is required"
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --issue-url)
+                if [ -z "$2" ]; then
+                    error "--issue-url requires a URL argument"
+                fi
+                issue_url="$2"
+                shift 2
+                ;;
+            *)
+                if [ -z "$path_to_change_md" ]; then
+                    path_to_change_md="$1"
+                    shift
+                else
+                    error "Unknown argument: $1"
+                fi
+                ;;
+        esac
+    done
+
+    if [ -z "$path_to_change_md" ]; then
+        error "path-to-change-md is required"
     fi
 
-    if [ -z "$change_name" ]; then
-        error "change-name-kebab-case is required"
+    if [ ! -f "$path_to_change_md" ]; then
+        error "File not found: $path_to_change_md"
     fi
 
-    if [ ! -f "$path_to_change_tmp" ]; then
-        error "File not found: $path_to_change_tmp"
-    fi
+    local change_folder
+    change_folder=$(dirname "$path_to_change_md")
 
-    local changes_folder
-    changes_folder=$(dirname "$path_to_change_tmp")
+    local folder_name
+    folder_name=$(basename "$change_folder")
 
-    local date_prefix
-    date_prefix=$(date -u +"%y%m%d")
-
-    local change_path="${changes_folder}/${date_prefix}-${change_name}"
-
-    if [ -d "$change_path" ]; then
-        error "Change folder already exists: $change_path"
+    if [[ ! "$folder_name" =~ ^[0-9]{6}- ]]; then
+        error "Change folder must follow format YYMMDD-change-name: $folder_name"
     fi
 
     local content
-    content=$(cat "$path_to_change_tmp")
+    content=$(cat "$path_to_change_md")
 
     if [ -z "$content" ]; then
-        error "File is empty: $path_to_change_tmp"
+        error "File is empty: $path_to_change_md"
     fi
 
     local timestamp baseline
@@ -102,27 +117,33 @@ cmd_change_add() {
     baseline=$(get_baseline)
 
     local metadata="---"$'\n'
-    metadata+="uspecs.registered_at: $timestamp"$'\n'
-    metadata+="uspecs.change_id: ${date_prefix}-${change_name}"$'\n'
+    metadata+="registered_at: $timestamp"$'\n'
+    metadata+="change_id: $folder_name"$'\n'
 
     if [ -n "$baseline" ]; then
-        metadata+="uspecs.baseline: $baseline"$'\n'
+        metadata+="baseline: $baseline"$'\n'
+    fi
+
+    if [ -n "$issue_url" ]; then
+        metadata+="issue_url: $issue_url"$'\n'
     fi
 
     metadata+="---"
 
-    mkdir -p "$change_path" || error "Failed to create change folder: $change_path"
-
-    local new_change_file="$change_path/change.md"
+    local temp_file
+    temp_file=$(mktemp)
     {
         echo "$metadata"
         echo ""
         echo "$content"
-    } > "$new_change_file"
+    } > "$temp_file"
 
-    rm "$path_to_change_tmp" || error "Failed to remove original file: $path_to_change_tmp"
+    mv "$temp_file" "$path_to_change_md" || {
+        rm -f "$temp_file"
+        error "Failed to update change.md"
+    }
 
-    echo "Created change: $new_change_file"
+    echo "Added frontmatter to: $path_to_change_md"
 }
 
 convert_links_to_backticks() {
@@ -153,12 +174,12 @@ convert_links_to_backticks() {
         # - Use two passes: one for links with a character before, one for start of line
 
         # First pass: wrap links that have a non-backtick character before them
-        if ! sed -i.bak -E 's/([^`])(\[[^]]+\]\([^)]+\))/\1`\2`/g' "$file"; then
+        if ! sed -i.bak -E "s/([^\`])(\[[^]]+\]\([^)]+\))/\1\`\2\`/g" "$file"; then
             error "Failed to convert links in file: $file"
         fi
 
         # Second pass: wrap links at the start of a line
-        if ! sed -i.bak -E 's/^(\[[^]]+\]\([^)]+\))/`\1`/g' "$file"; then
+        if ! sed -i.bak -E "s/^(\[[^]]+\]\([^)]+\))/\`\1\`/g" "$file"; then
             error "Failed to convert links in file: $file"
         fi
 
@@ -208,21 +229,28 @@ cmd_change_archive() {
     local timestamp
     timestamp=$(get_timestamp)
 
-    # Insert uspecs.archived_at into YAML front matter (before closing ---)
-    local temp_file="${change_file}.tmp"
+    # Insert archived_at into YAML front matter (before closing ---)
+    local temp_file
+    temp_file=$(mktemp)
     awk -v ts="$timestamp" '
         /^---$/ {
             if (count == 0) {
                 print
                 count++
             } else {
-                print "uspecs.archived_at: " ts
+                print "archived_at: " ts
                 print
             }
             next
         }
         { print }
-    ' "$change_file" > "$temp_file" && mv "$temp_file" "$change_file"
+    ' "$change_file" > "$temp_file"
+    if mv "$temp_file" "$change_file"; then
+        :  # Success, continue
+    else
+        rm -f "$temp_file"
+        return 1
+    fi
 
     # Convert all markdown links to backtick-wrapped format
     if ! convert_links_to_backticks "$path_to_change_folder"; then
@@ -269,8 +297,8 @@ main() {
             shift
 
             case "$subcommand" in
-                add)
-                    cmd_change_add "$@"
+                frontmatter)
+                    cmd_change_frontmatter "$@"
                     ;;
                 archive)
                     cmd_change_archive "$@"

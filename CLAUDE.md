@@ -10,11 +10,9 @@
 | Descriptive text        | Sentence case | `Sends transactional emails`           |
 | Section headers         | Sentence case | `## Specifications impact`             |
 
-
 <!-- uspecs:triggering_instructions:begin -->
 
 ## Execution instructions
-
 
 When request mentions:
 
