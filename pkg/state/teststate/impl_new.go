@@ -561,6 +561,7 @@ func (gts *generalTestState) buildAppDef() {
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
 		isequencer.SequencesTrustLevel_0,
+		nil,
 	)
 
 	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)

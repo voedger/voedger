@@ -61,7 +61,7 @@ func TestSequencesTrustLevel(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -208,7 +208,7 @@ func TestEventReapplier(t *testing.T) {
 	}()
 
 	storageProvider := simpleStorageProvider()
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
+	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -254,7 +254,7 @@ func TestEventReapplier(t *testing.T) {
 			require.NoError(reapplier.PutWLog())
 		})
 		t.Run("initially read from storage", func(t *testing.T) {
-			provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
+			provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
 			app, err := provider.BuiltIn(appName)
 			require.NoError(err)
 			var dbPLogEvent istructs.IPLogEvent

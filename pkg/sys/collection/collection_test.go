@@ -196,7 +196,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	Provide(statelessResources)
 
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp, isequencer.SequencesTrustLevel_0)
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp, isequencer.SequencesTrustLevel_0, nil)
 
 	secretReader := isecretsimpl.ProvideSecretReader()
 	n10nBroker, n10nBrokerCleanup := in10nmem.NewN10nBroker(in10n.Quotas{

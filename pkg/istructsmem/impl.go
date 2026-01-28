@@ -33,13 +33,14 @@ import (
 //   - interfaces:
 //     — istructs.IAppStructsProvider
 type appStructsProviderType struct {
-	locker           sync.RWMutex
-	configs          AppConfigsType
-	structures       map[appdef.AppQName]*appStructsType
-	bucketsFactory   irates.BucketsFactoryType
-	appTokensFactory payloads.IAppTokensFactory
-	storageProvider  istorage.IAppStorageProvider
-	seqTrustLevel    isequencer.SequencesTrustLevel
+	locker               sync.RWMutex
+	configs              AppConfigsType
+	structures           map[appdef.AppQName]*appStructsType
+	bucketsFactory       irates.BucketsFactoryType
+	appTokensFactory     payloads.IAppTokensFactory
+	storageProvider      istorage.IAppStorageProvider
+	seqTrustLevel        isequencer.SequencesTrustLevel
+	appTTLStorageFactory istructs.AppTTLStorageFactory
 }
 
 // istructs.IAppStructsProvider.BuiltIn
@@ -64,7 +65,11 @@ func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (struct
 		if err = appCfg.prepare(buckets, appStorage); err != nil {
 			return nil, err
 		}
-		app = newAppStructs(appCfg, buckets, appTokens, provider.seqTrustLevel)
+		var appTTLStorage istructs.IAppTTLStorage
+		if provider.appTTLStorageFactory != nil {
+			appTTLStorage = provider.appTTLStorageFactory(appCfg.ClusterAppID)
+		}
+		app = newAppStructs(appCfg, buckets, appTokens, provider.seqTrustLevel, appTTLStorage)
 		provider.structures[appName] = app
 	}
 	return app, nil
@@ -85,7 +90,11 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 	if err = cfg.prepare(buckets, appStorage); err != nil {
 		return nil, err
 	}
-	app := newAppStructs(cfg, buckets, appTokens, provider.seqTrustLevel)
+	var appTTLStorage istructs.IAppTTLStorage
+	if provider.appTTLStorageFactory != nil {
+		appTTLStorage = provider.appTTLStorageFactory(id)
+	}
+	app := newAppStructs(cfg, buckets, appTokens, provider.seqTrustLevel, appTTLStorage)
 	//provider.structures[name] = app
 	return app, nil
 }
@@ -102,14 +111,16 @@ type appStructsType struct {
 	descr         *descr.Application
 	appTokens     istructs.IAppTokens
 	seqTrustLevel isequencer.SequencesTrustLevel
+	appTTLStorage istructs.IAppTTLStorage
 }
 
-func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens, seqTrustLevel isequencer.SequencesTrustLevel) *appStructsType {
+func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens, seqTrustLevel isequencer.SequencesTrustLevel, appTTLStorage istructs.IAppTTLStorage) *appStructsType {
 	app := appStructsType{
 		config:        appCfg,
 		buckets:       buckets,
 		appTokens:     appTokens,
 		seqTrustLevel: seqTrustLevel,
+		appTTLStorage: appTTLStorage,
 	}
 	app.events = newEvents(&app)
 	app.records = newRecords(&app)
@@ -156,6 +167,11 @@ func (app *appStructsType) ClusterAppID() istructs.ClusterAppID {
 // istructs.IAppStructs.AppQName
 func (app *appStructsType) AppQName() appdef.AppQName {
 	return app.config.Name
+}
+
+// istructs.IAppStructs.AppTTLStorage
+func (app *appStructsType) AppTTLStorage() istructs.IAppTTLStorage {
+	return app.appTTLStorage
 }
 
 func (app *appStructsType) AppTokens() istructs.IAppTokens {
@@ -226,7 +242,6 @@ func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, 
 	ok, _ = app.buckets.TakeTokens(keys, 1)
 	return !ok
 }
-
 
 // istructs.IAppStructs.SyncProjectors
 func (app *appStructsType) SyncProjectors() istructs.Projectors {

@@ -135,7 +135,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0)
+		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
 
 	mockActualizers := &mockActualizerRunner{}
 	mockActualizers.On("SetAppPartitions", mock.Anything).Once()

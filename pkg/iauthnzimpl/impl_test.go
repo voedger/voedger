@@ -484,6 +484,7 @@ func (as *implIAppStructs) AppTokens() istructs.IAppTokens                      
 func (as *implIAppStructs) GetEventReapplier(istructs.IPLogEvent) istructs.IEventReapplier { panic("") }
 func (as *implIAppStructs) SeqTypes() map[istructs.QNameID]map[istructs.QNameID]uint64     { panic("") }
 func (as *implIAppStructs) QNameID(appdef.QName) (istructs.QNameID, error)                 { panic("") }
+func (as *implIAppStructs) AppTTLStorage() istructs.IAppTTLStorage                         { panic("") }
 
 type implIRecords struct {
 	data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}

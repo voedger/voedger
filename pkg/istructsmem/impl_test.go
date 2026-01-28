@@ -93,7 +93,7 @@ func TestBasicUsage(t *testing.T) {
 	}()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -221,7 +221,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -315,7 +315,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
@@ -546,7 +546,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			MaxAllowedPerDuration: 4,
 		})
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
@@ -576,7 +576,7 @@ func Test_Provide(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil, isequencer.SequencesTrustLevel_0)
+		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil, isequencer.SequencesTrustLevel_0, nil)
 		require.NotNil(p)
 
 		_, err := p.BuiltIn(appdef.NewAppQName("test1", "unknownApp"))
@@ -585,7 +585,7 @@ func Test_Provide(t *testing.T) {
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
-		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 		app, err := provider.BuiltIn(test.appName)
 		require.NoError(err)

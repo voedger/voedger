@@ -17,14 +17,15 @@ import (
 
 // Provide: constructs new application structures provider
 func Provide(appConfigs AppConfigsType, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
-	storageProvider istorage.IAppStorageProvider, seqTrustLevel isequencer.SequencesTrustLevel) (provider istructs.IAppStructsProvider) {
+	storageProvider istorage.IAppStorageProvider, seqTrustLevel isequencer.SequencesTrustLevel, appTTLStorageFactory istructs.AppTTLStorageFactory) (provider istructs.IAppStructsProvider) {
 	return &appStructsProviderType{
-		locker:           sync.RWMutex{},
-		configs:          appConfigs,
-		structures:       make(map[appdef.AppQName]*appStructsType),
-		bucketsFactory:   bucketsFactory,
-		appTokensFactory: appTokensFactory,
-		storageProvider:  storageProvider,
-		seqTrustLevel:    seqTrustLevel,
+		locker:               sync.RWMutex{},
+		configs:              appConfigs,
+		structures:           make(map[appdef.AppQName]*appStructsType),
+		bucketsFactory:       bucketsFactory,
+		appTokensFactory:     appTokensFactory,
+		storageProvider:      storageProvider,
+		seqTrustLevel:        seqTrustLevel,
+		appTTLStorageFactory: appTTLStorageFactory,
 	}
 }

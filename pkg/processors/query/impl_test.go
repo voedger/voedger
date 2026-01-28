@@ -62,7 +62,7 @@ var (
 	qNameTestWS           = appdef.NewQName(appdef.SysPackage, "test_wsWS")
 )
 
-const sendTimeout = bus.SendTimeout(10*time.Second)
+const sendTimeout = bus.SendTimeout(10 * time.Second)
 
 func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require := require.New(t)
@@ -237,7 +237,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	atf := payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
-	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, atf, storageProvider, isequencer.SequencesTrustLevel_0)
+	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, atf, storageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{

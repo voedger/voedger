@@ -744,6 +744,28 @@ ALTERABLE WORKSPACE test_wsWS (
 		PRIMARY KEY ((IntFld), StrFld)
 	) AS RESULT OF ApplyCategoryIdx;
 
+	-- TTL Storage test types
+	TYPE TTLStorageParams (
+		Operation text NOT NULL,
+		Key text NOT NULL,
+		Value text,
+		ExpectedValue text,
+		TTLSeconds int32
+	);
+
+	TYPE TTLStorageResult (
+		Ok bool NOT NULL
+	);
+
+	TYPE TTLGetParams (
+		Key text NOT NULL
+	);
+
+	TYPE TTLGetResult (
+		Value text,
+		Exists bool NOT NULL
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
@@ -777,6 +799,9 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND CmdAllowedToAnonymousOnly;
 		QUERY QryAllowedToAnonymousOnly RETURNS void;
+
+		COMMAND TTLStorageCmd(TTLStorageParams) RETURNS TTLStorageResult WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY TTLGetQry(TTLGetParams) RETURNS TTLGetResult WITH Tags=(WorkspaceOwnerFuncTag);
 	);
 
 	ROLE Updated; -- need for invite tests

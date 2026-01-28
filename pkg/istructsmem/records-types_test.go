@@ -207,7 +207,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0)
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)

@@ -55,6 +55,7 @@ type IAppStorage interface {
 
 	// len(cCols) may be 0, in this case the record which was written with zero len(cCols) will be returned
 	// ok == false means that viewrecord does not exist
+	// Note: if the record was put with TTL then BBolt implementation ignores TTL, other - checks TTL
 	// @ConcurrentAccess
 	Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
 

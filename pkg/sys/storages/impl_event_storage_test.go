@@ -175,6 +175,7 @@ func appStructs(appdefSQL string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
 		isequencer.SequencesTrustLevel_0,
+		nil,
 	)
 	structs, err := prov.BuiltIn(appName)
 	if err != nil {

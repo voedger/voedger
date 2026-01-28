@@ -426,6 +426,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
 		isequencer.SequencesTrustLevel_0,
+		nil,
 	)
 	structs, err := prov.BuiltIn(appName)
 	if err != nil {
