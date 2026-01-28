@@ -454,7 +454,7 @@ func newTest() *testEnvironment {
 	test.Storage = teststore.NewStorage(test.appName)
 	test.StorageProvider = teststore.NewStorageProvider(test.Storage)
 
-	test.AppStructsProvider = Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), test.StorageProvider, isequencer.SequencesTrustLevel_0)
+	test.AppStructsProvider = Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), test.StorageProvider, isequencer.SequencesTrustLevel_0, nil)
 	test.AppStructs, err = test.AppStructsProvider.BuiltIn(test.appName)
 	if err != nil {
 		panic(err)

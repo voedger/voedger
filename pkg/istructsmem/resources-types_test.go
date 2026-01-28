@@ -77,7 +77,7 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCUD, NullCommandExec))
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 		var err error
 		app, err = provider.BuiltIn(istructs.AppQName_test1_app1)

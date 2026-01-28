@@ -3156,7 +3156,7 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
 	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
-		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
+		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)
 	statelessResources := istructsmem.NewStatelessResources()
 	vvmCtx, cancel := context.WithCancel(context.Background())
 	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
@@ -3214,7 +3214,7 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
 	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
-		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0)
+		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)
 	statelessResources := istructsmem.NewStatelessResources()
 	vvmCtx, cancel := context.WithCancel(context.Background())
 	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,

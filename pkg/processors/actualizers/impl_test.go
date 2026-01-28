@@ -314,7 +314,7 @@ func deployTestAppEx(
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
-		isequencer.SequencesTrustLevel_0)
+		isequencer.SequencesTrustLevel_0, nil)
 
 	appStructs, err = appStructsProvider.BuiltIn(appName)
 	if err != nil {

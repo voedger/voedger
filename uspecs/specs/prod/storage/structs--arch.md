@@ -1,4 +1,4 @@
-# Context architecture: Structured storage
+# Context subsystem architecture: Structured storage
 
 ## Overview
 

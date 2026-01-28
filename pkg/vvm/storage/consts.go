@@ -17,9 +17,19 @@ const (
 
 	// [~server.design.sequences/cmp.VVMSeqStorageAdapter.KeyPrefixSeqStorageWS~impl]
 	pKeyPrefix_SeqStorage_WS
+
+	pKeyPrefix_AppTTL
 )
 
 const (
 	// [~server.design.sequences/cmp.VVMSeqStorageAdapter.PLogOffsetCC~impl]
 	PLogOffsetCC = uint32(0)
+)
+
+const (
+	MaxKeyLength                = 1024
+	MaxValueLength              = 65536
+	MaxTTLSeconds               = 31536000
+	appTTLPKSize                = 8
+	appTTLValidationErrTemplate = "%w: %w"
 )

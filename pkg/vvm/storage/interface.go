@@ -12,6 +12,7 @@ type ISysVvmStorage interface {
 	CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValue []byte, ttlSeconds int) (ok bool, err error)
 	CompareAndDelete(pKey []byte, cCols []byte, expectedValue []byte) (ok bool, err error)
 	Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
+	TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error)
 	Put(pKey []byte, cCols []byte, value []byte) (err error)
 	PutBatch(batch []istorage.BatchItem) error
 }

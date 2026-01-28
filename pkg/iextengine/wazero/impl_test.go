@@ -263,7 +263,7 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
-		isequencer.SequencesTrustLevel_0)
+		isequencer.SequencesTrustLevel_0, nil)
 	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)

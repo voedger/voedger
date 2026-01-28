@@ -69,7 +69,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0)
+		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
 
 	vvmCtx, cancel := context.WithCancel(context.Background())
 	appParts, cleanup, err := appparts.New2(
