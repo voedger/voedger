@@ -67,7 +67,7 @@ func (s *implAppTTLStorage) CompareAndDelete(key, expectedValue string) (ok bool
 }
 
 func (s *implAppTTLStorage) buildKeys(key string) (pKey, cCols []byte) {
-	pKey = make([]byte, 8)
+	pKey = make([]byte, appTTLPKSize)
 	binary.BigEndian.PutUint32(pKey[0:4], pKeyPrefix_AppTTL)
 	binary.BigEndian.PutUint32(pKey[4:8], s.clusterAppID)
 	cCols = []byte(key)
@@ -76,27 +76,27 @@ func (s *implAppTTLStorage) buildKeys(key string) (pKey, cCols []byte) {
 
 func (s *implAppTTLStorage) validateKey(key string) error {
 	if key == "" {
-		return fmt.Errorf("%w: %w", ErrAppTTLValidation, ErrKeyEmpty)
+		return fmt.Errorf(appTTLValidationErrTemplate, ErrAppTTLValidation, ErrKeyEmpty)
 	}
 	if len(key) > MaxKeyLength {
-		return fmt.Errorf("%w: %w", ErrAppTTLValidation, ErrKeyTooLong)
+		return fmt.Errorf(appTTLValidationErrTemplate, ErrAppTTLValidation, ErrKeyTooLong)
 	}
 	if !utf8.ValidString(key) {
-		return fmt.Errorf("%w: %w", ErrAppTTLValidation, ErrKeyTooLong)
+		return fmt.Errorf(appTTLValidationErrTemplate, ErrAppTTLValidation, ErrKeyInvalidUTF8)
 	}
 	return nil
 }
 
 func (s *implAppTTLStorage) validateValue(value string) error {
 	if len(value) > MaxValueLength {
-		return fmt.Errorf("%w: %w", ErrAppTTLValidation, ErrValueTooLong)
+		return fmt.Errorf(appTTLValidationErrTemplate, ErrAppTTLValidation, ErrValueTooLong)
 	}
 	return nil
 }
 
 func (s *implAppTTLStorage) validateTTL(ttlSeconds int) error {
 	if ttlSeconds <= 0 || ttlSeconds > MaxTTLSeconds {
-		return fmt.Errorf("%w: %w", ErrAppTTLValidation, ErrInvalidTTL)
+		return fmt.Errorf(appTTLValidationErrTemplate, ErrAppTTLValidation, ErrInvalidTTL)
 	}
 	return nil
 }

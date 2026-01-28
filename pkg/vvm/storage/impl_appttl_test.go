@@ -162,6 +162,13 @@ func TestAppTTLStorage_Validation(t *testing.T) {
 		require.ErrorIs(err, ErrKeyTooLong)
 	})
 
+	t.Run("key invalid UTF-8", func(t *testing.T) {
+		invalidUTF8Key := string([]byte{0xff, 0xfe, 0xfd})
+		_, err := ttlStorage.InsertIfNotExists(invalidUTF8Key, "value", testTTLSeconds)
+		require.ErrorIs(err, ErrAppTTLValidation)
+		require.ErrorIs(err, ErrKeyInvalidUTF8)
+	})
+
 	t.Run("value too long", func(t *testing.T) {
 		longValue := string(make([]byte, MaxValueLength+1))
 		_, err := ttlStorage.InsertIfNotExists("key", longValue, testTTLSeconds)

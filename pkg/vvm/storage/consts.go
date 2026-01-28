@@ -27,7 +27,9 @@ const (
 )
 
 const (
-	MaxKeyLength   = 1024
-	MaxValueLength = 65536
-	MaxTTLSeconds  = 31536000
+	MaxKeyLength                = 1024
+	MaxValueLength              = 65536
+	MaxTTLSeconds               = 31536000
+	appTTLPKSize                = 8
+	appTTLValidationErrTemplate = "%w: %w"
 )
