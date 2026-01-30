@@ -216,6 +216,7 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 		return true, nil
 	}
 
+	// note: we do not have expiration info from the underlying storage so we do not cache it
 	return s.storage.TTLGet(pKey, cCols, data)
 }
 
