@@ -15,7 +15,19 @@ Parameters:
 - Output
   - Implementation Plan
 
-Implementation Plan is created/processed according to the rules described in the `Scenarios` section below using definitions and structures from the sections below.
+Flow:
+
+1. Determine which scenario matches from the `Scenarios` section:
+   - If all to-do items are unchecked -> Execute "all to-do items unchecked" scenario
+   - If some to-do items are checked -> Execute "some to-do items checked" scenario
+   - Edge cases (no active change, multiple changes) -> Execute corresponding edge case scenario
+
+2. Within the matching scenario:
+   - For "all to-do items unchecked" scenario: Check conditions in order from Examples table, execute ONLY the first matching action, then stop
+   - For "some to-do items checked" scenario: Implement all unchecked items (stop at Review Item if unchecked)
+   - For edge cases: Follow the specific scenario behavior
+
+3. Use definitions and structures from sections below when executing actions
 
 ## Definitions
 
@@ -204,7 +216,7 @@ Feature: Implementation plan management
       | condition                                                                | action                                                                                                    |
       | `Functional design` section does not exist and it is needed              | Create `Functional design` section with checkbox items referencing spec files                             |
       | `Provisioning and configuration` section does not exist and it is needed | Create `Provisioning and configuration` section with installation/configuration steps                     |
-      | `Technical design` section does not exist and it is needed               | Create `Technical design` section with checkbox items referencing design files |
+      | `Technical design` section does not exist and it is needed               | Create `Technical design` section with checkbox items referencing design files                            |
       | `Construction` section does not exist and it is needed                   | Create `Construction` section and optionally `Quick start` section                                        |
       | Nothing of the above                                                     | Display message "No action needed"                                                                        |
     And AI Agent stops execution after performing the action
