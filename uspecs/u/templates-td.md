@@ -34,8 +34,10 @@ Categories:
 
 - Feature components - designed specifically for this feature
 - Utility components - reusable utilities, include "Used by:" list
-- External components - code in codebase but outside this feature, include "Used by:" list
-- External systems - third-party services, APIs, databases (not in codebase), include "Used by:" list
+- 📦 System components - code in codebase but outside this feature, include "Used by:" list
+- 📁 System storages - databases/caches owned by the system, outside this feature, include "Used by:" list
+- ⚙️ External systems - third-party services, APIs (not in codebase), include "Used by:" list
+- ☁️ External storages - third-party databases, external data sources, include "Used by:" list
 
 Example:
 
@@ -60,17 +62,29 @@ Utility components:
   - Add card expiry validation
   - Used by: PaymentForm
 
-External components:
+📦 System components:
 
 - [ ] update: [CheckoutScreen: StatefulWidget](../../../lib/ui/checkout/checkout_screen.dart)
   - Add OrderSummary section
   - Used by: CheckoutFlow
 
-External systems:
+📁 System storages:
+
+- [OrdersDB: PostgreSQL](../../../docs/db-schema.md#orders)
+  - Stores order records
+  - Used by: OrderRepository
+
+⚙️ External systems:
 
 - [Stripe API: REST API](https://stripe.com/docs/api)
   - Payment processing
   - Used by: PaymentService
+
+☁️ External storages:
+
+- [Stripe Dashboard: External](https://dashboard.stripe.com)
+  - Payment records and analytics
+  - Used by: Finance team (manual)
 
 ## UI hierarchy
 
@@ -99,9 +113,9 @@ CheckoutScreen
 
 ## Key flows
 
-When to include: To describe user/component interactions, control flow.
+When to include: To describe key user/component interactions, control flow. Not more than 3 unless specially asked.
 
-Format: `- [ ] Flow name` followed by Mermaid sequence diagram
+Format: Section with a mermaid sequence diagram.
 
 Rules:
 
@@ -109,59 +123,66 @@ Rules:
 - Use actor keyword for roles
 - Annotate diagrams with emojis:
   - 🎯 Feature components - designed specifically for this feature
-  - 🔧 Utility components - reusable utilities
-  - 📦 External components - code in codebase but outside this feature
-  - ⚙️ External systems - third-party services, APIs, databases (not in codebase)
+  - 🔧 Utility components - reusable utilities, specially to serve feature
+  - 📦 System components - code in codebase but outside this feature
+  - 📁 System storages - databases/caches owned by the system, outside this feature
+  - ⚙️ External systems - third-party services, APIs (not in codebase)
+  - ☁️ External storages - third-party databases, external data sources
 
 Example:
 
 ```markdown
 ## Key flows
 
-- [ ] User submits transaction
+### User submits transaction
 
 ```mermaid
 sequenceDiagram
-    actor 👤User
-    participant 🎯FormScreen
-    participant 🎯FormViewModel
-    participant 📦Repository
-    participant ⚙️GitHubAPI
+    actor User as 👤User
+    participant FormScreen as 🎯FormScreen
+    participant FormViewModel as 🎯FormViewModel
+    participant AuthService as 📦AuthService
+    participant Repository as 📁Repository
+    participant GitHubAPI as ⚙️GitHubAPI
+    participant GitHub as ☁️GitHub
 
-    👤User->>🎯FormScreen: clicks Submit
-    🎯FormScreen->>🎯FormViewModel: submit()
-    🎯FormViewModel->>📦Repository: save(data)
-    📦Repository->>⚙️GitHubAPI: PUT file
-    ⚙️GitHubAPI-->>📦Repository: 200 OK
-    📦Repository-->>🎯FormViewModel: success
-    🎯FormViewModel-->>🎯FormScreen: update state
+    User->> FormScreen: clicks Submit
+    FormScreen ->> FormViewModel: submit()
+    FormViewModel ->> AuthService: getToken()
+    AuthService -->> FormViewModel: token
+    FormViewModel->> Repository: save(data, token)
+    Repository ->> GitHubAPI: PUT file
+    GitHubAPI ->> GitHub: store
+    GitHub -->> GitHubAPI: 200 OK
+    GitHubAPI-->> Repository: 200 OK
+    Repository-->> FormViewModel: success
+    FormViewModel-->> FormScreen: update state
 ```
 
 ---
 
 ## Key data models
 
-When to include: New models, 3+ related entities, non-trivial API contracts.
+When to include: Only what helps understand the design - critical enums, complex relationships, non-obvious constraints. Developers have the code, focus on the concept.
 
-Format: `- [ ] action: [ModelName: Type](path) - key fields: field (type, constraints)`
+Use logical grouping (Domain layer, API layer, Database layer, etc.).
 
 Use Mermaid ERD for 3+ related models with complex relationships.
 
-Example:
-
-```markdown
-## Key data models
+### Example
 
 **Domain layer:**
 
-- [ ] create: [Review: model](internal/domain/review.go)
-  - id (uuid), productId (uuid), rating (int, 1-5), status (enum: PENDING|APPROVED|REJECTED)
+- ReviewStatus: PENDING (awaiting moderation) -> APPROVED (published) or REJECTED (flagged)
 
-- [ ] update: [Product: model](internal/domain/product.go)
-  - Add reviewCount (int) and avgRating (decimal) fields
+**Database relationships:**
 
-**API layer:**
-
-- [ ] create: [CreateReviewRequest: DTO](internal/api/requests.go)
-  - rating (int, 1-5), comment (string, max: 500), imageUrls (string[], max: 3)
+```mermaid
+erDiagram
+    Product ||--o{ Review : has
+    User ||--o{ Review : writes
+    Review {
+        uuid product_id FK
+        string status
+    }
 ```

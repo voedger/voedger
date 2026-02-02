@@ -14,24 +14,54 @@ Parameters:
 - Output
   - Implementation Plan
 
-Implementation Plan is created/processed according to the rules described in the `Implementation scenarios` section below. Some abstract conditions and data structures are explained in subsequent sections.
+Implementation Plan is created/processed according to the rules described in the `Scenarios` section below using definitions and structures from the sections below.
 
-Rules:
+## Definitions
 
-- Each uimpl command execution must:
-  - Strictly follow the Background rules and definitions
-  - Evaluate scenarios in order
-  - Execute the FIRST matching scenario
-  - STOP after executing one scenario
-  - Require another uimpl invocation to proceed to next scenario
+### `Functional design` section does not exist and it is needed
 
-## Conditions
+The section is needed if:
 
-- "affected" (e.g. "If Functional Design Specifications affected by Change Request")
-  - Means specifications should be created/updated/deleted
-  - Particular actions are inferred from Active Change Request description and completed to-do items in Implementation Plan
-- "If Technical Design Specifications affected": follow general "affected" definition plus:
-  - Change Technical Design file should be created if there are some flows that are not covered by other Technical Design Specifications files
+- Domain Files exist and define External actors
+- Change Request description impacts Functional Design Specifications (only files inside `$specs_folder`)
+
+Impact:
+
+- Domain File
+  - Change Request implies introducing new domains
+  - CRUD for concepts, actors, etc.
+- Scenarios File
+  - Change Request implies introducing new features
+  - CRUD for existing scenarios
+- Requirements File
+  - Change Request implies introducing new Requirements File
+    - Try to fit requirements into Scenarios File first
+  - CRUD for requirements
+
+### `Provisioning and configuration` section does not exist and it is needed
+
+The section is needed if Change Request description implies:
+
+- Provisioning
+  - Adding, updating, or removing project dependencies
+  - Installing new tools, SDKs, or applications system-wide
+  - Setting up external services (databases, message queues, etc.)
+- Configuration (including Project Configuration Files)
+  - Modifying environment variables or secrets
+  - Updating build or deployment settings
+  - Changing linter, formatter, or test runner configs
+  - Adjusting CI/CD pipeline definitions
+
+### `Technical design` section does not exist and it is needed
+
+The section is needed if Change Request description implies changes in Technical Design Specifications.
+
+- Change Technical Design is ONLY created when
+  - Change Request describes new flows between system components or/and external actors
+  - These flows are not described by other Technical Design Specifications
+- Feature Technical Design is created when:
+  - Explicitly requested by the user
+  - Codebase follows a pattern of Feature Technical Design per feature (maintain consistency)
 
 ## Structures
 
@@ -43,23 +73,49 @@ Ref. Functional Design Specifications in the `$templates` file.
 
 Ref. `$templates_td` file.
 
+### Section: Provisioning and configuration
+
+Rules:
+
+- Always prefer to use CLI commands
+- For provisioning
+  - Make sure that required components are not already installed
+  - Specify latest possible stable version, always use web search to find it
+  - Detect current OS - provide OS-specific instructions only
+  - Group by category
+  - Prefer vendor-independent alternatives when available
+
+Example:
+
+```markdown
+**Provisioning:**
+
+- [ ] install: Docker 24.0+
+  - `winget install Docker.DockerDesktop` or `https://docs.docker.com/get-docker/`
+
+**Configuration:**
+
+- [ ] update: [package.json](../../package.json): Add express web framework
+  - `npm install express`
+
+- [ ] update: [tsconfig.json](../../tsconfig.json): Enable strict mode
+  - `Manual edit - Set strict: true` 
+
 ### Sections: Functional design, Technical design, Construction
 
 Format:
 
 ```markdown
-- [ ] action: [{folder}/{filename}](relative-path)
-  - Description of changes
+- [ ] {action}: [{folder}/{filename}](relative-path)
+  - {action}: Description of changes
 ```
 
 Rules:
 
 - Always use actual relative paths from the Change File  to particular file (e.g., ../../specs/domain/myctx/my.feature)
 - Use relative paths for both existing files and new files that don't exist yet
-- Functional design section
-  - Use "Cover [behavior]" instead of "Add scenario" or "Include scenario"
-    - Example: "Cover branch push validation (main blocked, feature allowed)"
 - Construction section
+  - If design sections exist, run `git diff <baseline> -- $specs_folder/` to identify exact spec changes (baseline from Change File frontmatter)
   - List all non-specification files that need to be created or modified, not already covered by other sections
   - Includes source files, tests, documentation, scripts, configuration - any file changes
 
@@ -70,18 +126,19 @@ Example:
 ## Functional design
 
 - [ ] update: [myctx/my.feature](../../specs/domain/myctx/my.feature)
-  - Cover branch push validation (main blocked, feature allowed)
+  - add: Branch push validation (main blocked, feature allowed)
+
 
 ### Construction
 
 - [ ] update: [internal/auth/validator.go](../../../internal/auth/validator.go)
-  - Fix null pointer when validating empty email field
+  - fix: null pointer when validating empty email field
 - [ ] update: [internal/auth/validator_test.go](../../../internal/auth/validator_test.go)
-  - Add test case for empty email validation
+  - add: Test case for empty email validation
 - [ ] update: [README.md](../../../README.md)
-  - Update supported Go version to 1.21+
+  - update: supported Go version to 1.21+
 - [ ] create: [scripts/migrate-db.sh](../../../scripts/migrate-db.sh)
-  - Database migration script for auth schema changes
+  - add: Database migration script for auth schema changes
 ```
 
 ### Section: Quick start
@@ -106,79 +163,34 @@ npm run report -- --from=2024-01-01 --to=2024-12-31
 
 ---
 
-## Implementation scenarios
+## Scenarios
 
 ```gherkin
-
-Feature: Change request implementation
+Feature: Implementation plan management
 
   Engineer implements change request
 
-  Background:
-
-    Given Implementation Plan Full Structure
-      | Section                                       | Presence conditions                                                            |
-      | # Implementation plan: {Change request title} | Always                                                                         |
-      | ## Functional design                          | If Functional Design Specifications affected by Change Request                 |
-      | ## System configuration                       | If System configuration affected by Change Request                             |
-      | ## Technical design                           | If Technical Design Specifications affected                                    |
-      | ## Construction                               | If non-specification files affected                                            |
-      | ## Quick start                                | When new features, APIs, CLI commands, or configuration changes are introduced |
-    And Available To-Do Items are defined as follows
-      | Condition                                        | Available To-Do Items                            |
-      | `[ ] Review` or `[ ] review` item exists         | All unchecked items that precede the Review Item |
-      | `[ ] Review` or `[ ] review` item does NOT exist | All unchecked items                              |      
-
-  Scenario: Create Implementation Plan when Functional Design Specifications affected
-    Given Active Change Request affects Functional Design Specifications
-    And Implementation Plan does not exist
+  Scenario Outline: Execute uspecs-impl command, no to-do items active
+    Given no to-do items in Implementation Plan are active
     When Engineer runs uspecs-impl command
-    Then Implementation Plan is created
-    And Implementation Plan contains ONLY the following sections
-      | Section                                       | Presence conditions |
-      | # Implementation plan: {Change request title} | Always              |
-      | ## Functional design                          | Always              |
-    And Functional design section contains unchecked to-do items
+    Then Implementation Plan is created if not existing
+    And AI Agent executes only one (the first available) <action> depending on <condition>
+    Examples:
+      | condition                                                                | action                                                             |
+      | `Functional design` section does not exist and it is needed              | Create `Functional design` section                                 |
+      | `Provisioning and configuration` section does not exist and it is needed | Create `Provisioning and configuration` section                    |
+      | `Technical design` section does not exist and it is needed               | Create `Technical design` section                                  |
+      | `Construction` section does not exist and it is needed                   | Create `Construction` section and optionally `Quick start` section |
+      | Nothing of the above                                                     | Display message "No action needed"                                 |
 
-  Scenario: Create Implementation Plan when Functional Design Specifications NOT affected
-    Given Active Change Request does NOT affect Functional Design Specifications
-    And Implementation Plan does not exist
+  Scenario: Execute uspecs-impl command, to-do items active
+    Given to-do items in Implementation Plan are active
     When Engineer runs uspecs-impl command
-    Then Implementation Plan is created and has all sections from Implementation Plan Full Structure whose Presence conditions are met
-    And all created sections contain unchecked to-do items
+    Then AI Agent implements and checks all To-Do Items in Implementation Plan
+    But it stops on Review Item if it is unchecked
 
-  Scenario: Apply to-do items from Functional design section
-    Given Implementation Plan exists
-    And it contains "## Functional design" section
-    And some to-do items in "## Functional design" section are unchecked
-    When Engineer runs uspecs-impl command
-    Then all Available To-Do Items in Functional design are implemented and checked
-    And missing sections from Implementation Plan Full Structure are created according to Presence conditions
-    And newly created sections contain unchecked to-do items
-    And no other to-do items are implemented/checked
 
-  Scenario: Apply to-do items from non-Functional design sections
-    Given Implementation Plan exists
-    And (Functional design section does not exist) OR (Functional design section is complete)
-    And some other sections are incomplete
-    When Engineer runs uspecs-impl command
-    Then all Available To-Do Items in Implementation Plan are implemented and checked
-
-  Rule: Edge case scenarios
-
-    Scenario: Unchecked Review Item
-      Given Implementation Plan exists
-      And there are no Available To-Do Items
-      And unchecked Review Item exists
-      When Engineer runs uspecs-impl command
-      Then AI Agent displays message "Please review the implementation plan before proceeding and check the [ ] Review item"
-
-    Scenario: Implementation Plan complete - no action needed
-      Given Implementation Plan exists
-      And all to-do items in all sections are checked
-      When Engineer runs uspecs-impl command
-      Then AI Agent displays message "Implementation Plan is complete"
-      And no changes are made to Implementation Plan
+  Rule: Edge cases
 
     Scenario: No Active Change Request exists
       Given no Active Change Request exists in changes folder
@@ -190,6 +202,7 @@ Feature: Change request implementation
       Given multiple Active Change Requests exist in changes folder
       And AI Agent may not infer from the context which one to use
       When Engineer runs uspecs-impl command
-      Then AI Agent displays error "Multiple Active Change Requests found. Please specify change folder"
+      Then AI Agent displays error "Multiple Active Change Requests found. Please specify which one to use"
       And lists all Active Change Request folders
+      And allows Engineer to select one and proceed
 ```

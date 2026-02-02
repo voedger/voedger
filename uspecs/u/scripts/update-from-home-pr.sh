@@ -106,7 +106,7 @@ fi
 # Commit changes
 echo "Committing changes..."
 git add -A
-git commit -m "Update from USPECS_HOME"
+git commit -m "Update from USPECS_HOME ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
 
 # Push to origin
 echo "Pushing branch to origin..."
