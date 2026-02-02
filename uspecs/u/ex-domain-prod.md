@@ -68,4 +68,4 @@ Relationships with external actors:
 
 ## Context map
 
-- conf -> |paremeters| softeng
+- conf -> |parameters| softeng

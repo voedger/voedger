@@ -7,7 +7,7 @@
 When request mentions:
 
 - uchange: Use rules from `uspecs/u/actn-changes.md`
-- uarchive: Use rules from  `uspecs/u/actn-changes.md`
+- uarchive: Use rules from `uspecs/u/actn-changes.md`
 - uimpl: Use rules from `uspecs/u/actn-impl.md`
 - usync: Use rules from `uspecs/u/actn-sync.md`
 - uhow: Use rules from `uspecs/u/actn-how.md`

@@ -45,7 +45,7 @@ Feature: Change Request clarification
   Engineer clarifies and brainstorms Change Request functional and technical design
 
   Background:
-    Given Questions are asked by 3
+    Given AI Agent asks three questions in time
     And Web search is performed when Engineer requests it or when questions involve technology/algorithm/pattern choices
 
   Scenario Outline: Execute uspecs-how command
