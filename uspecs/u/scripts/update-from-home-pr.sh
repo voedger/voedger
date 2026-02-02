@@ -84,8 +84,9 @@ git rebase upstream/main
 echo "Pushing updated main to origin..."
 git push origin main
 
-# Create branch name with timestamp
-BRANCH_NAME="update-from-home-$(date +%y%m%d-%H%M%S)"
+# Create timestamp postfix for branch name and messages
+TIMESTAMP_POSTFIX="$(date +%y%m%d-%H%M%S)"
+BRANCH_NAME="update-uspecs-from-home-${TIMESTAMP_POSTFIX}"
 
 echo "Creating branch: $BRANCH_NAME"
 git checkout -b "$BRANCH_NAME"
@@ -106,7 +107,7 @@ fi
 # Commit changes
 echo "Committing changes..."
 git add -A
-git commit -m "Update from USPECS_HOME ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+git commit -m "Update uspecs from USPECS_HOME (${TIMESTAMP_POSTFIX})"
 
 # Push to origin
 echo "Pushing branch to origin..."
@@ -116,5 +117,5 @@ git push -u origin "$BRANCH_NAME"
 echo "Creating pull request to upstream..."
 UPSTREAM_REPO="$(git remote get-url upstream | sed -E 's#.*github.com[:/]##; s#\.git$##')"
 ORIGIN_OWNER="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##; s#/.*##')"
-gh pr create --repo "$UPSTREAM_REPO" --base main --head "${ORIGIN_OWNER}:${BRANCH_NAME}" --title "Update from USPECS_HOME" --body "Automated update from USPECS_HOME"
+gh pr create --repo "$UPSTREAM_REPO" --base main --head "${ORIGIN_OWNER}:${BRANCH_NAME}" --title "Update uspecs from USPECS_HOME (${TIMESTAMP_POSTFIX})" --body "Automated update uspecs from USPECS_HOME (${TIMESTAMP_POSTFIX})"
 echo "Pull request created successfully!"
