@@ -1,15 +1,5 @@
 # Agents instructions
 
-## Naming conventions
-
-| Category                | Convention    | Example                                |
-|-------------------------|---------------|----------------------------------------|
-| Specs file/folder names | kebab-case    | `spec-impact.md`, `init-project/`      |
-| Entity names in specs   | Title Case    | `Human`, `External System`, `AI Agent` |
-| Gherkin scenarious      | Sentence case | `User registration`, `Email delivery`  |
-| Descriptive text        | Sentence case | `Sends transactional emails`           |
-| Section headers         | Sentence case | `## Specifications impact`             |
-
 <!-- uspecs:triggering_instructions:begin -->
 
 ## Execution instructions
