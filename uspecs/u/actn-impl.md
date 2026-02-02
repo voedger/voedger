@@ -24,7 +24,7 @@ Flow:
 
 2. Within the matching scenario:
    - For "all to-do items unchecked" scenario: Check conditions in order from Examples table, execute ONLY the first matching action, then stop
-   - - For "some to-do items checked" scenario: Implement and check all unchecked items (stop at Review Item if unchecked)
+   - For "some to-do items checked" scenario: Implement and check all unchecked items (stop at Review Item if unchecked)
    - For edge cases: Follow the specific scenario behavior
 
 3. Use definitions and structures from sections below when executing actions
