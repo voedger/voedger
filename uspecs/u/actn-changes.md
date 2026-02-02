@@ -50,7 +50,7 @@ Parameters:
 - Input
   - Active Change Folder path
 - Output
-  - Folder moved to `$changes_folder/archive/yymm/` with archived_at metadata (if no uncompleted items)
+  - Folder moved to `$changes_folder/archive/yymm/` with archived_at metadata (if all items are checked or cancelled)
 
 Flow:
 

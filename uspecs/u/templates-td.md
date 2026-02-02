@@ -28,7 +28,7 @@ Structure:
 
 ## Key components
 
-Format: `- [ ] [ComponentName: Type](path)` with one-line description.
+Format: `- [ComponentName: Type](path)` with one-line description.
 
 Categories:
 
@@ -46,25 +46,25 @@ Example:
 
 Feature components:
 
-- [ ] [OrderSummary: Widget](../../../lib/ui/checkout/order_summary.dart)
+- [OrderSummary: Widget](../../../lib/ui/checkout/order_summary.dart)
   - Displays order items and total price
 
-- [ ] [ItemList: Widget](../../../lib/ui/checkout/item_list.dart)
+- [ItemList: Widget](../../../lib/ui/checkout/item_list.dart)
   - Lists order items with quantities
 
 Utility components:
 
-- [ ] [TotalCalculator: class](../../../lib/utils/total_calculator.dart)
+- [TotalCalculator: class](../../../lib/utils/total_calculator.dart)
   - Add tax calculation for order totals
   - Used by: OrderSummary
 
-- [ ] [PaymentValidator: class](../../../lib/utils/payment_validator.dart)
+- [PaymentValidator: class](../../../lib/utils/payment_validator.dart)
   - Add card expiry validation
   - Used by: PaymentForm
 
 📦 System components:
 
-- [ ] update: [CheckoutScreen: StatefulWidget](../../../lib/ui/checkout/checkout_screen.dart)
+- [CheckoutScreen: StatefulWidget](../../../lib/ui/checkout/checkout_screen.dart)
   - Add OrderSummary section
   - Used by: CheckoutFlow
 
