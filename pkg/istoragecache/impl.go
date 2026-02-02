@@ -201,9 +201,9 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	var key = makeKey(pKey, cCols)
 
 	*data = (*data)[0:0]
-	cachedData, found := s.cache.HasGet(*data, key)
+	cachedData, isCached := s.cache.HasGet(*data, key)
 
-	if found {
+	if isCached {
 		if len(cachedData) == 0 {
 			return false, nil
 		}
@@ -216,8 +216,12 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 		return true, nil
 	}
 
+	ok, err = s.storage.TTLGet(pKey, cCols, data)
+	if err == nil && !ok {
+		s.cache.Set(key, nil)
+	}
 	// note: we do not have expiration info from the underlying storage so we do not cache it
-	return s.storage.TTLGet(pKey, cCols, data)
+	return ok, err
 }
 
 //nolint:revive
@@ -286,9 +290,9 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	key := makeKey(pKey, cCols)
 	*data = (*data)[0:0]
 	cachedData := make([]byte, 0)
-	cachedData, found := s.cache.HasGet(cachedData, key)
+	cachedData, isCached := s.cache.HasGet(cachedData, key)
 
-	if found {
+	if isCached {
 		s.mGetCachedTotal.Increase(1.0)
 		if len(cachedData) == 0 {
 			return false, nil
@@ -326,8 +330,8 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		cachedData, found := s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
-		if !found {
+		cachedData, isCached := s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
+		if !isCached {
 			return false
 		}
 
