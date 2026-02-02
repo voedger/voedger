@@ -178,21 +178,82 @@ echo ""
 echo "Successfully synchronized $SOURCE_DIR to $TARGET_DIR"
 echo ""
 
-# Copy AGENTS.md and CLAUDE.md from USPECS_HOME to target parent directory
+# Function to update triggering instructions section in target file
+update_triggering_instructions() {
+    local source_file="$1"
+    local target_file="$2"
+
+    if [[ ! -f "$source_file" ]]; then
+        echo "Warning: $source_file not found" >&2
+        return 1
+    fi
+
+    local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
+    local end_marker="<!-- uspecs:triggering_instructions:end -->"
+
+    # Extract the triggering instructions section from source
+    local temp_extract
+    temp_extract=$(mktemp)
+    sed -n "/$begin_marker/,/$end_marker/p" "$source_file" > "$temp_extract"
+
+    if [[ ! -s "$temp_extract" ]]; then
+        echo "Warning: No triggering instructions found in $source_file" >&2
+        rm -f "$temp_extract"
+        return 1
+    fi
+
+    # If target file doesn't exist, create with header and extracted section
+    if [[ ! -f "$target_file" ]]; then
+        {
+            echo "# Agent instructions"
+            echo ""
+            cat "$temp_extract"
+        } > "$target_file"
+        rm -f "$temp_extract"
+        return 0
+    fi
+
+    # If target file doesn't have the markers, append the extracted section
+    if ! grep -q "$begin_marker" "$target_file" || ! grep -q "$end_marker" "$target_file"; then
+        {
+            echo ""
+            cat "$temp_extract"
+        } >> "$target_file"
+        rm -f "$temp_extract"
+        return 0
+    fi
+
+    # Create temporary file for the updated content
+    local temp_output
+    temp_output=$(mktemp)
+
+    # Copy everything before the begin marker (excluding the marker line)
+    sed "/$begin_marker/,\$d" "$target_file" > "$temp_output"
+
+    # Append the extracted section from source
+    cat "$temp_extract" >> "$temp_output"
+
+    # Append everything after the end marker (excluding the marker line)
+    sed "1,/$end_marker/d" "$target_file" >> "$temp_output"
+
+    # Replace target file with updated content
+    mv "$temp_output" "$target_file"
+    rm -f "$temp_extract"
+}
+
+# Update triggering instructions section in AGENTS.md and CLAUDE.md
 SOURCE_ROOT="$USPECS_HOME"
 TARGET_ROOT="$(dirname "$(dirname "$TARGET_DIR")")"
 
-if [[ -f "$SOURCE_ROOT/AGENTS.md" ]]; then
-    cp -f "$SOURCE_ROOT/AGENTS.md" "$TARGET_ROOT/"
-    echo "Successfully copied AGENTS.md to $TARGET_ROOT"
+if update_triggering_instructions "$SOURCE_ROOT/AGENTS.md" "$TARGET_ROOT/AGENTS.md"; then
+    echo "Successfully updated triggering instructions in AGENTS.md at $TARGET_ROOT"
 else
-    echo "Warning: AGENTS.md not found at $SOURCE_ROOT/AGENTS.md" >&2
+    echo "Warning: Could not update triggering instructions in AGENTS.md" >&2
 fi
 
-if [[ -f "$SOURCE_ROOT/CLAUDE.md" ]]; then
-    cp -f "$SOURCE_ROOT/CLAUDE.md" "$TARGET_ROOT/"
-    echo "Successfully copied CLAUDE.md to $TARGET_ROOT"
+if update_triggering_instructions "$SOURCE_ROOT/CLAUDE.md" "$TARGET_ROOT/CLAUDE.md"; then
+    echo "Successfully updated triggering instructions in CLAUDE.md at $TARGET_ROOT"
 else
-    echo "Warning: CLAUDE.md not found at $SOURCE_ROOT/CLAUDE.md" >&2
+    echo "Warning: Could not update triggering instructions in CLAUDE.md" >&2
 fi
 

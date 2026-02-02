@@ -1,10 +1,10 @@
 <!-- Example -->
 
-# Domain: devops
+# Domain: Development and operations
 
 ## System
 
-Tools, scripts and configuration files to assist with development, testing, deployment, operation.
+Tools, scripts, and configuration files to assist with development, testing, deployment, and operations
 
 ## External actors
 
@@ -20,10 +20,7 @@ Systems:
 - ⚙️GitHub
   - A platform that allows to store, manage, share code and automate related workflows
 
-## Context map
-
-- 🎯dev -> |supplier-customer| 🎯ops
-  - Deployment automation and tooling
+---
 
 ## Contexts
 
@@ -33,15 +30,22 @@ Development, testing, and release automation.
 
 Relationships with external actors:
 
-- 🎯dev -> |supplier-customer| 👤Developer
+- 🎯dev -> 👤Developer
   - Development tooling and workflows
   - Test tooling and workflows
-- 🎯dev -> |supplier-customer| 👤Maintainer
+- 🎯dev -> 👤Maintainer
   - Release management tooling and workflows
-- ⚙️GitHub -> |supplier-customer| 🎯dev
+- ⚙️GitHub -> 🎯dev
   - Repository hosting
   - CI/CD automation
 
 ### ops
 
 Production operations, monitoring, and incident response.
+
+---
+
+## Context map
+
+- dev -> ops
+  - Deployment automation and tooling

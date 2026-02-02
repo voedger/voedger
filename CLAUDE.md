@@ -16,9 +16,11 @@
 
 When request mentions:
 
-- uchange: Use rules from `uspecs/u/actn-changes.md` to create change
-- uarchive: Use rules from  `uspecs/u/actn-changes.md` to Archive change
-- uimpl: Use rules from `uspecs/u/actn-impl.md` to manage Implementation Plan
+- uchange: Use rules from `uspecs/u/actn-changes.md`
+- uarchive: Use rules from  `uspecs/u/actn-changes.md`
+- uimpl: Use rules from `uspecs/u/actn-impl.md`
+- usync: Use rules from `uspecs/u/actn-sync.md`
+- uhow: Use rules from `uspecs/u/actn-how.md`
 
 Use files from `./uspecs/u` as an initial reference when user mentions uspecs
 

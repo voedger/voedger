@@ -10,12 +10,12 @@ set -Eeuo pipefail
 # change frontmatter:
 #   Adds frontmatter to existing change.md with auto-generated metadata:
 #     - registered_at: YYYY-MM-DDTHH:MM:SSZ
-#     - change_id: YYMMDD-<change-name-kebab-case>
+#     - change_id: ymdHM-<change-name-kebab-case>
 #     - baseline: <commit-hash> (if git repository)
 #     - issue_url: <url> (if --issue-url provided)
 #
 # change archive:
-#   Archives change folder to <changes-folder>/archive/YYMMDD-<change-name>
+#   Archives change folder to <changes-folder>/archive/yymm/ymdHM-<change-name>
 #   Adds archived_at metadata and updates folder date prefix
 
 error() {
@@ -49,7 +49,7 @@ count_uncompleted_items() {
 
 extract_change_name() {
     local folder_name="$1"
-    echo "$folder_name" | sed 's/^[0-9]\{6\}-//'
+    echo "$folder_name" | sed 's/^[0-9]\{10\}-//'
 }
 
 move_folder() {
@@ -101,8 +101,8 @@ cmd_change_frontmatter() {
     local folder_name
     folder_name=$(basename "$change_folder")
 
-    if [[ ! "$folder_name" =~ ^[0-9]{6}- ]]; then
-        error "Change folder must follow format YYMMDD-change-name: $folder_name"
+    if [[ ! "$folder_name" =~ ^[0-9]{10}- ]]; then
+        error "Change folder must follow format ymdHM-change-name: $folder_name"
     fi
 
     local content
@@ -146,11 +146,11 @@ cmd_change_frontmatter() {
     echo "Added frontmatter to: $path_to_change_md"
 }
 
-convert_links_to_backticks() {
+convert_links_to_relative() {
     local folder="$1"
 
     if [ -z "$folder" ]; then
-        error "folder path is required for convert_links_to_backticks"
+        error "folder path is required for convert_links_to_relative"
     fi
 
     if [ ! -d "$folder" ]; then
@@ -168,22 +168,23 @@ convert_links_to_backticks() {
 
     # Process each markdown file
     while IFS= read -r file; do
-        # Use sed to wrap markdown links in backticks
-        # Pattern explanation:
-        # - Match markdown links [text](url) that are NOT already wrapped in backticks
-        # - Use two passes: one for links with a character before, one for start of line
+        # Archive moves folder 2 levels deeper (changes/ -> changes/archive/yymm/)
+        # Only paths starting with ../ need adjustment - add ../../ prefix
+        #
+        # Example: ](../foo) -> ](../../../foo)
+        #
+        # Skip (do not modify):
+        # - http://, https:// (absolute URLs)
+        # - # (anchors)
+        # - / (absolute paths)
+        # - ./ (current directory - stays in same folder)
+        # - filename.ext (same folder files like impl.md, issue.md)
 
-        # First pass: wrap links that have a non-backtick character before them
-        if ! sed -i.bak -E "s/([^\`])(\[[^]]+\]\([^)]+\))/\1\`\2\`/g" "$file"; then
+        # Add ../../ prefix to paths starting with ../
+        # ](../ -> ](../../../
+        if ! sed -i.bak -E 's#\]\(\.\./#](../../../#g' "$file"; then
             error "Failed to convert links in file: $file"
         fi
-
-        # Second pass: wrap links at the start of a line
-        if ! sed -i.bak -E "s/^(\[[^]]+\]\([^)]+\))/\`\1\`/g" "$file"; then
-            error "Failed to convert links in file: $file"
-        fi
-
-        # Remove backup files
         rm -f "${file}.bak"
     done <<< "$md_files"
 
@@ -252,24 +253,29 @@ cmd_change_archive() {
         return 1
     fi
 
-    # Convert all markdown links to backtick-wrapped format
-    if ! convert_links_to_backticks "$path_to_change_folder"; then
-        error "Failed to convert links to backticks"
+    # Add ../ prefix to relative links for archive folder depth
+    if ! convert_links_to_relative "$path_to_change_folder"; then
+        error "Failed to convert links to relative paths"
     fi
 
     local changes_folder
     changes_folder=$(dirname "$path_to_change_folder")
 
     local archive_folder="$changes_folder/archive"
-    mkdir -p "$archive_folder"
 
     local date_prefix
-    date_prefix=$(date -u +"%y%m%d")
+    date_prefix=$(date -u +"%y%m%d%H%M")
+
+    # Extract yymm for subfolder
+    local yymm_prefix="${date_prefix:0:4}"
+
+    local archive_subfolder="$archive_folder/$yymm_prefix"
+    mkdir -p "$archive_subfolder"
 
     local change_name
     change_name=$(extract_change_name "$folder_name")
 
-    local archive_path="$archive_folder/${date_prefix}-${change_name}"
+    local archive_path="$archive_subfolder/${date_prefix}-${change_name}"
 
     if [ -d "$archive_path" ]; then
         error "Archive folder already exists: $archive_path"
