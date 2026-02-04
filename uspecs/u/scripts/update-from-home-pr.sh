@@ -14,7 +14,7 @@ set -Eeuo pipefail
 #   target-directory - Path to the git repository to update
 #
 # Prerequisites:
-#   - upstream and origin remotes must exist in the target repository
+#   - origin remote must exist (upstream remote is optional, will use origin if missing)
 #   - No uncommitted changes in target working directory
 #   - GitHub CLI (gh) must be installed
 #   - USPECS_HOME environment variable must be set
@@ -50,18 +50,20 @@ if [[ -n $(git status --porcelain) ]]; then
     exit 1
 fi
 
-# Verify upstream remote exists
-if ! git remote | grep -q '^upstream$'; then
-    echo "Error: 'upstream' remote does not exist" >&2
-    echo "Please add the upstream remote first." >&2
-    exit 1
-fi
-
 # Verify origin remote exists
 if ! git remote | grep -q '^origin$'; then
     echo "Error: 'origin' remote does not exist" >&2
     echo "Please add the origin remote first." >&2
     exit 1
+fi
+
+# Determine PR remote: use upstream if exists, otherwise use origin
+if git remote | grep -q '^upstream$'; then
+    PR_REMOTE="upstream"
+    echo "Using 'upstream' remote for PR target"
+else
+    PR_REMOTE="origin"
+    echo "No 'upstream' remote found, using 'origin' for PR target"
 fi
 
 # Verify GitHub CLI is installed
@@ -75,25 +77,30 @@ fi
 echo "Switching to main branch..."
 git checkout main
 
-# Update main from upstream with rebase
-echo "Updating main from upstream..."
-git fetch upstream
-git rebase upstream/main
+# Update main from PR remote with rebase
+echo "Updating main from $PR_REMOTE..."
+git fetch "$PR_REMOTE"
+git rebase "$PR_REMOTE/main"
 
 # Push updated main to origin
 echo "Pushing updated main to origin..."
 git push origin main
 
-# Create timestamp postfix for branch name and messages
-TIMESTAMP_POSTFIX="$(date +%y%m%d-%H%M%S)"
-BRANCH_NAME="update-uspecs-from-home-${TIMESTAMP_POSTFIX}"
-
-echo "Creating branch: $BRANCH_NAME"
-git checkout -b "$BRANCH_NAME"
-
 # Run update-from-home.sh with current directory's uspecs/u as target
 echo "Running update-from-home.sh..."
 bash "$SCRIPT_DIR/update-from-home.sh" "$PWD/uspecs/u"
+
+# Read version info for branch name, commit, and PR messages
+VERSION_INFO=$(cat "$PWD/uspecs/version.txt" 2>/dev/null)
+if [[ -z "$VERSION_INFO" ]]; then
+    echo "Error: Failed to read version info from uspecs/version.txt" >&2
+    exit 1
+fi
+
+BRANCH_NAME="update-uspecs-${VERSION_INFO}"
+
+echo "Creating branch: $BRANCH_NAME"
+git checkout -b "$BRANCH_NAME"
 
 # Check if there are any changes to commit
 if [[ -z $(git status --porcelain) ]]; then
@@ -107,15 +114,32 @@ fi
 # Commit changes
 echo "Committing changes..."
 git add -A
-git commit -m "Update uspecs from USPECS_HOME (${TIMESTAMP_POSTFIX})"
+git commit -m "Update uspecs to ${VERSION_INFO}"
 
 # Push to origin
 echo "Pushing branch to origin..."
 git push -u origin "$BRANCH_NAME"
 
-# Create PR to upstream using GitHub CLI
-echo "Creating pull request to upstream..."
-UPSTREAM_REPO="$(git remote get-url upstream | sed -E 's#.*github.com[:/]##; s#\.git$##')"
-ORIGIN_OWNER="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##; s#/.*##')"
-gh pr create --repo "$UPSTREAM_REPO" --base main --head "${ORIGIN_OWNER}:${BRANCH_NAME}" --title "Update uspecs from USPECS_HOME (${TIMESTAMP_POSTFIX})" --body "Automated update uspecs from USPECS_HOME (${TIMESTAMP_POSTFIX})"
+# Create PR using GitHub CLI
+echo "Creating pull request to $PR_REMOTE..."
+PR_REPO="$(git remote get-url "$PR_REMOTE" | sed -E 's#.*github.com[:/]##; s#\.git$##')"
+PR_BODY="Update uspecs/u from USPECS_HOME
+
+Version: ${VERSION_INFO}"
+PR_ARGS=('--repo' "$PR_REPO" '--base' 'main' '--title' "Update uspecs to ${VERSION_INFO}" '--body' "$PR_BODY")
+
+if [[ "$PR_REMOTE" == "upstream" ]]; then
+    # PR from fork to upstream
+    ORIGIN_OWNER="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##; s#/.*##')"
+    gh pr create "${PR_ARGS[@]}" --head "${ORIGIN_OWNER}:${BRANCH_NAME}"
+else
+    # PR within same repo (origin)
+    gh pr create "${PR_ARGS[@]}" --head "$BRANCH_NAME"
+fi
 echo "Pull request created successfully!"
+
+# Clean up local branch (remote branch remains for PR)
+echo "Cleaning up local branch..."
+git checkout main
+git branch -d "$BRANCH_NAME"
+echo "Done!"
