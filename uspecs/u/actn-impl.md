@@ -5,7 +5,7 @@
 Rules:
 
 - Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
-  - Use file name patters from there, not from the codebase
+  - Use file name patterns from there, not from the codebase
 - Critical: Only one scenario must be executed per command run. After executing the action, the AI Agent must stop further processing and wait for the next command.  
 
 Parameters:

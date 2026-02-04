@@ -40,6 +40,21 @@ if [[ ! -d "$USPECS_HOME" ]]; then
     exit 1
 fi
 
+# Verify USPECS_HOME is a git repository (use subshell cd for Windows compatibility)
+if ! (cd "$USPECS_HOME" && git rev-parse --git-dir > /dev/null 2>&1); then
+    echo "Error: USPECS_HOME is not a git repository" >&2
+    exit 1
+fi
+
+# Verify USPECS_HOME has no uncommitted changes
+if [[ -n "$(cd "$USPECS_HOME" && git status --porcelain)" ]]; then
+    echo "Error: USPECS_HOME has uncommitted changes" >&2
+    echo "" >&2
+    echo "Please commit or stash changes in USPECS_HOME before syncing." >&2
+    echo "USPECS_HOME: $USPECS_HOME" >&2
+    exit 1
+fi
+
 # Set source and target directories based on USPECS_HOME
 SOURCE_DIR="$USPECS_HOME/uspecs/u"
 
@@ -76,6 +91,18 @@ if [[ "$SOURCE_DIR_NORMALIZED" == "$TARGET_DIR_NORMALIZED" ]]; then
     echo "" >&2
     echo "Please run this script from a different project directory." >&2
     exit 1
+fi
+
+# Check for uncommitted changes in target directory
+TARGET_ROOT="$(dirname "$(dirname "$TARGET_DIR_NORMALIZED")")"
+if (cd "$TARGET_ROOT" && git rev-parse --git-dir > /dev/null 2>&1); then
+    if [[ -n "$(cd "$TARGET_ROOT" && git status --porcelain)" ]]; then
+        echo "Error: Target directory has uncommitted changes" >&2
+        echo "" >&2
+        echo "Please commit or stash your changes before running this script." >&2
+        echo "Target root: $TARGET_ROOT" >&2
+        exit 1
+    fi
 fi
 
 echo "Source directory: $SOURCE_DIR"
@@ -243,7 +270,6 @@ update_triggering_instructions() {
 
 # Update triggering instructions section in AGENTS.md and CLAUDE.md
 SOURCE_ROOT="$USPECS_HOME"
-TARGET_ROOT="$(dirname "$(dirname "$TARGET_DIR")")"
 
 if update_triggering_instructions "$SOURCE_ROOT/AGENTS.md" "$TARGET_ROOT/AGENTS.md"; then
     echo "Successfully updated triggering instructions in AGENTS.md at $TARGET_ROOT"
@@ -257,3 +283,9 @@ else
     echo "Warning: Could not update triggering instructions in CLAUDE.md" >&2
 fi
 
+# Save version info to uspecs/version.txt
+VERSION_FILE="$TARGET_ROOT/uspecs/version.txt"
+commit=$(cd "$USPECS_HOME" && git rev-parse HEAD | cut -c1-12)
+commit_timestamp=$(cd "$USPECS_HOME" && git show -s --format=%cd --date=format:%Y%m%d%H%M%S HEAD)
+echo "${commit_timestamp}-${commit}" > "$VERSION_FILE"
+echo "Saved version info to $VERSION_FILE"
