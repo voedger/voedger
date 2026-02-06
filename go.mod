@@ -1,15 +1,15 @@
 module github.com/voedger/voedger
 
-go 1.25.6
+go 1.25.7
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.13.2
 	github.com/alecthomas/participle/v2 v2.1.4
-	github.com/aptible/supercronic v0.2.41
+	github.com/aptible/supercronic v0.2.42
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.7
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.54.0
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.55.0
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.24.0
