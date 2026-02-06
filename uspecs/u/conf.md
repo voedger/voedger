@@ -65,6 +65,17 @@
     - Per feature: `{context-folder}/{feature}--td.md`
   - Change Technical Design
 
+### Elements
+
+Review Item, one of:
+
+```markdown
+- [ ] Review
+- [ ] review
+- Review
+- review
+```
+
 ## Definitions
 
 - Change ID: name of Active Change Folder (without path)

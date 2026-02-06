@@ -28,6 +28,11 @@ Structure:
 
 ## Key components
 
+Rules:
+
+- All relative links must be correct paths from the file being edited to the target file
+- Verify that relative paths resolve to the intended file before writing them
+
 Format: `- [ComponentName: Type](path)` with one-line description.
 
 Categories:

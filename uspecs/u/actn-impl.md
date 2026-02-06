@@ -6,7 +6,8 @@ Rules:
 
 - Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
   - Use file name patterns from there, not from the codebase
-- Critical: Only one scenario must be executed per command run. After executing the action, the AI Agent must stop further processing and wait for the next command.  
+- Critical: Only one scenario must be executed per command run. After executing the action, the AI Agent must stop further processing and wait for the next command.
+- All relative links must be correct paths from the file being edited to the target file. Verify that relative paths resolve to the intended file before writing them.
 
 Parameters:
 
@@ -18,13 +19,13 @@ Parameters:
 Flow:
 
 1. Determine which scenario matches from the `Scenarios` section:
-   - If all to-do items are unchecked -> Execute "all to-do items unchecked" scenario
-   - If some to-do items are checked -> Execute "some to-do items checked" scenario
+   - If all to-do items are checked -> Execute "all to-do items checked" scenario
+   - If some to-do items are unchecked -> Execute "some to-do items unchecked" scenario
    - Edge cases (no active change, multiple changes) -> Execute corresponding edge case scenario
 
 2. Within the matching scenario:
-   - For "all to-do items unchecked" scenario: Check conditions in order from Examples table, execute ONLY the first matching action, then stop
-   - For "some to-do items checked" scenario: Implement and check all unchecked items (stop at Review Item if unchecked)
+   - For "all to-do items checked" scenario: Check conditions in order from Examples table, execute ONLY the first matching action, then stop
+   - For "some to-do items unchecked" scenario: Implement and check all unchecked items (stop at Review Item if unchecked)
    - For edge cases: Follow the specific scenario behavior
 
 3. Use definitions and structures from sections below when executing actions
@@ -127,6 +128,7 @@ Example:
 
 - [ ] update: [tsconfig.json](../../tsconfig.json): Enable strict mode
   - `Manual edit - Set strict: true` 
+```  
 
 ### Sections: Functional design, Technical design, Construction
 
@@ -207,22 +209,22 @@ Feature: Implementation plan management
 
   Engineer implements change request
 
-  Scenario Outline: Execute uspecs-impl command, all to-do items unchecked
-    Given all to-do items in Implementation Plan are unchecked
+  Scenario Outline: Execute uspecs-impl command, all to-do items checked
+    Given all to-do items in Implementation Plan are checked
     When Engineer runs uspecs-impl command
     Then Implementation Plan is created if not existing
     And AI Agent executes only one (the first available) <action> depending on <condition>
     Examples:
-      | condition                                                                | action                                                                                                    |
-      | `Functional design` section does not exist and it is needed              | Create `Functional design` section with checkbox items referencing spec files                             |
-      | `Provisioning and configuration` section does not exist and it is needed | Create `Provisioning and configuration` section with installation/configuration steps                     |
-      | `Technical design` section does not exist and it is needed               | Create `Technical design` section with checkbox items referencing design files                            |
-      | `Construction` section does not exist and it is needed                   | Create `Construction` section and optionally `Quick start` section                                        |
-      | Nothing of the above                                                     | Display message "No action needed"                                                                        |
+      | condition                                                                | action                                                                                |
+      | `Functional design` section does not exist and it is needed              | Create `Functional design` section with checkbox items referencing spec files         |
+      | `Provisioning and configuration` section does not exist and it is needed | Create `Provisioning and configuration` section with installation/configuration steps |
+      | `Technical design` section does not exist and it is needed               | Create `Technical design` section with checkbox items referencing design files        |
+      | `Construction` section does not exist and it is needed                   | Create `Construction` section and optionally `Quick start` section                    |
+      | Nothing of the above                                                     | Display message "No action needed"                                                    |
     And AI Agent stops execution after performing the action
 
-  Scenario: Execute uspecs-impl command, some to-do items checked
-    Given some to-do items in Implementation Plan are checked
+  Scenario: Execute uspecs-impl command, some to-do items unchecked
+    Given some to-do items in Implementation Plan are unchecked
     When Engineer runs uspecs-impl command
     Then AI Agent implements and checks all unchecked To-Do Items in Implementation Plan
     But it stops on Review Item if it is unchecked
