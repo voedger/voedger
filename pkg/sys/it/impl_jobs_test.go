@@ -24,7 +24,7 @@ import (
 
 const testJobFireInterval = time.Minute
 
-func TestJobjs_BasicUsage_Builtin(t *testing.T) {
+func TestJobs_BasicUsage_Builtin(t *testing.T) {
 	cfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJob, it.WithUserLogin("login", "1")),
 	)
@@ -136,6 +136,20 @@ func isJobFiredForCurrentInstant_builtin(vit *it.VIT, wsid istructs.WSID, token 
 		}
 	}
 	return false
+}
+
+func TestJobs_SendEmail(t *testing.T) {
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJobSendMail),
+	)
+	vit := it.NewVIT(t, &cfg)
+	defer vit.TearDown()
+
+	email := vit.CaptureEmail()
+	require.Equal(t, "Test Subject", email.Subject)
+	require.Equal(t, "from@test.com", email.From)
+	require.Equal(t, []string{"to@test.com"}, email.To)
+	require.Equal(t, "Test body", email.Body)
 }
 
 func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedMinimalCounterValue int) {
