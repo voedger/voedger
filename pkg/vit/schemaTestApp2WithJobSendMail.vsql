@@ -1,0 +1,11 @@
+-- Copyright (c) 2026-present unTill Software Development Group B.V.
+-- @author Denis Gribanov
+
+APPLICATION app2();
+
+ALTER WORKSPACE sys.AppWorkspaceWS (
+	EXTENSION ENGINE BUILTIN (
+		JOB JobSendEmail '* * * * *' INTENTS(sys.SendMail);
+	);
+);
+

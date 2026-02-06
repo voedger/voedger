@@ -134,6 +134,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		Broker:       in10nBroker,
 		Federation:   iFederation,
 		Time:         iTime,
+		EmailSender:  iEmailSender,
 	}
 	iSchedulerRunner := provideSchedulerRunner(basicSchedulerConfig)
 	v4, err := provideSidecarApps(vvmConfig)

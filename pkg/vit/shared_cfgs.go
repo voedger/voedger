@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -183,6 +184,42 @@ func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, e
 		AppQName:                istructs.AppQName_test1_app2,
 		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
 		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
+	}
+}
+
+func ProvideApp2WithJobSendMail(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
+	sysPackageFS := sysprovide.Provide(cfg)
+	app2PackageFS := parser.PackageFS{
+		Path: app2PkgPath,
+		FS:   SchemaTestApp2WithJobSendMailFS,
+	}
+	cfg.AddJobs(istructsmem.BuiltinJob{
+		Name: appdef.NewQName(app2PkgName, "JobSendEmail"),
+		Func: func(st istructs.IState, intents istructs.IIntents) error {
+			kb, err := st.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
+			if err != nil {
+				return err
+			}
+			kb.PutInt32(sys.Storage_SendMail_Field_Port, 1)
+			kb.PutString(sys.Storage_SendMail_Field_Host, "localhost")
+			kb.PutString(sys.Storage_SendMail_Field_Username, "user")
+			kb.PutString(sys.Storage_SendMail_Field_Password, "pwd")
+			kb.PutString(sys.Storage_SendMail_Field_Subject, "Test Subject")
+			kb.PutString(sys.Storage_SendMail_Field_From, "from@test.com")
+			kb.PutString(sys.Storage_SendMail_Field_To, "to@test.com")
+			kb.PutString(sys.Storage_SendMail_Field_Body, "Test body")
+			_, err = intents.NewValue(kb)
+			return err
+		},
+	})
+	return builtinapps.Def{
+		AppQName: istructs.AppQName_test1_app2,
+		Packages: []parser.PackageFS{sysPackageFS, app2PackageFS},
+		AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
+			NumParts:         1,
+			EnginePoolSize:   appparts.PoolSize(1, 1, 1, 1),
+			NumAppWorkspaces: 1,
+		},
 	}
 }
 
