@@ -1,4 +1,4 @@
-# Changes management
+# Actions: Changes management
 
 Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md`  before proceeding any instructions.
 
@@ -41,7 +41,7 @@ Flow:
 
 ## Definitions
 
-- Change File Template 1: ref. `uspecs/u/templates.md`
+- Change File Template 1: ref. `$templates_folder/tmpl-change.md`
 
 ## Archive change
 

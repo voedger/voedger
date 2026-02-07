@@ -1,4 +1,4 @@
-# Template: How File
+# Template: Decision File
 
 Instructions:
 
@@ -9,7 +9,7 @@ Instructions:
 Example:
 
 ```markdown
-# How: Add user authentication
+# Decisions: Add user authentication
 
 ## Authentication method selection
 

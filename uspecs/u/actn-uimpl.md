@@ -1,4 +1,4 @@
-# uimpl: Change request implementation
+# Action: Change request implementation
 
 ## Implementation overview
 
@@ -25,7 +25,7 @@ Flow:
 
 2. Within the matching scenario:
    - For "all to-do items checked" scenario: Check conditions in order from Examples table, execute ONLY the first matching action, then stop
-   - For "some to-do items unchecked" scenario: Implement and check all unchecked items (stop at Review Item if unchecked)
+   - For "some to-do items unchecked" scenario: Implement each unchecked item and check it immediately after implementation (stop at Review Item if unchecked)
    - For edge cases: Follow the specific scenario behavior
 
 3. Use definitions and structures from sections below when executing actions
@@ -81,13 +81,6 @@ Follow this decision hierarchy (in order):
   - Create when:
     - Explicitly requested by the user
     - OR Codebase follows a pattern of Feature Technical Design per feature (maintain consistency)
-- Last resort: Create Change Technical Design
-  - Create ONLY when:
-    - Change Request implementation requires new components, functions, modules, or data structures
-    - These elements are NOT already described in existing Technical Design Specifications
-    - The change does NOT constitute a cohesive feature (otherwise use Feature TD)
-    - No existing architecture file is appropriate for the changes
-  - The Change Technical Design file should follow the template from `$templates_td`
 
 ## Structures
 
@@ -95,11 +88,11 @@ Follow this decision hierarchy (in order):
 
 ### Functional Design Specifications
 
-Ref. Functional Design Specifications in the `$templates` file.
+Ref. `$templates_folder/tmpl-fd.md` file.
 
 ### Technical Design Specifications
 
-Ref. `$templates_td` file.
+Ref. `$templates_folder/tmpl-td.md` file.
 
 ### Section: Provisioning and configuration
 
@@ -146,13 +139,13 @@ Rules:
 - Always use actual relative paths from the Change File to particular file (e.g., ../../specs/domain/myctx/my.feature)
 - Use relative paths for both existing files and new files that don't exist yet
 - Technical design section
-  - Reference Change Technical Design when creating new design documentation
   - Reference existing architecture files (e.g., `../../specs/prod/apps/vvm-orch--arch.md`) when updating them
-  - Use templates from `$templates_td` for structure of new files
+  - Use templates from `$templates_folder/tmpl-td.md` for structure of new files
 - Construction section
   - If design sections exist, run `git diff <baseline> -- $specs_folder/` to identify exact spec changes (baseline from Change File frontmatter)
   - List all non-specification files that need to be created or modified, not already covered by other sections
   - Includes source files, tests, documentation, scripts, configuration - any file changes
+  - Optional grouping: when items span 3+ distinct dependency categories, group under `###` headers ordered by dependency (foundational changes first, dependent changes after)
 
 Example:
 
@@ -178,6 +171,34 @@ Example:
   - update: supported Go version to 1.21+
 - [ ] create: [scripts/migrate-db.sh](../../../scripts/migrate-db.sh)
   - add: Database migration script for auth schema changes
+```
+
+Example with optional grouping:
+
+```markdown
+## Construction
+
+### Schema changes
+
+- [ ] update: [internal/db/migrations/003_add_roles.sql](../../../internal/db/migrations/003_add_roles.sql)
+  - add: roles table and user_roles junction table
+
+### Function signature changes
+
+- [ ] update: [internal/auth/service.go](../../../internal/auth/service.go)
+  - update: AuthenticateUser to accept RoleChecker parameter
+- [ ] update: [internal/auth/middleware.go](../../../internal/auth/middleware.go)
+  - update: WithAuth middleware to use new AuthenticateUser signature
+
+### Caller updates
+
+- [ ] update: [cmd/server/main.go](../../../cmd/server/main.go)
+  - update: wire RoleChecker into AuthenticateUser calls
+
+### Tests
+
+- [ ] update: [internal/auth/service_test.go](../../../internal/auth/service_test.go)
+  - add: test cases for role-based authentication
 ```
 
 ### Section: Quick start
@@ -226,7 +247,7 @@ Feature: Implementation plan management
   Scenario: Execute uspecs-impl command, some to-do items unchecked
     Given some to-do items in Implementation Plan are unchecked
     When Engineer runs uspecs-impl command
-    Then AI Agent implements and checks all unchecked To-Do Items in Implementation Plan
+    Then AI Agent implements each unchecked To-Do Item and checks it immediately after implementation
     But it stops on Review Item if it is unchecked
 
 

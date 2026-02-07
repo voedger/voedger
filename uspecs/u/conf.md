@@ -5,9 +5,7 @@
 - specs_folder: uspecs/specs
 - changes_folder: uspecs/changes
 - changes_archive: `$changes_folder/archive`
-- templates: uspecs/u/templates.md
-- templates_td: uspecs/u/template-td.md
-  - Template for some Technical Design Specifications
+- templates_folder: uspecs/u/templates
 
 ## Artifacts
 
@@ -18,7 +16,7 @@
     - d: 2-digit day (01-31)
     - H: 2-digit hour (00-23)
     - M: 2-digit minute (00-59)
-    - Must use current local date
+    - Must use current date and time in UTC
     - Example: For 2006-01-02 15:04, use prefix "2601021504"
   - change-name format specification:
     - Use kebab-case
@@ -32,10 +30,11 @@
   - Change File: `change.md`
   - Issue File: `issue.md`
     - Describes the issue that prompted the change, if applicable
-  - Change Technical Design: `td.md`
   - Implementation Plan: `impl.md`
-  - How File: `how.md`
+  - Decision File: `decs.md`
     - Clarification and brainstorming about Change Request functional and technical design
+  - How File: `how.md`
+    - Implementation approach idea for a Change Request
 - Domain Folder: `$specs_folder/{domain}/`
 - Context Folder: `$specs_folder/{domain}/{context-id}/`
   - Contains
@@ -63,7 +62,6 @@
      or `{context-folder}/{subsystem}--arch.md`
   - Feature Technical Design
     - Per feature: `{context-folder}/{feature}--td.md`
-  - Change Technical Design
 
 ### Elements
 
