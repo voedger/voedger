@@ -1,4 +1,4 @@
-# Templates for Architecture and Technical Design files
+# Templates: Technical Design
 
 ## Overview
 
@@ -23,8 +23,6 @@ Structure:
   - `# Context subsystem architecture: {subsystem}`
 - Feature Technical Design
   - `# Feature technical design: {feature}`
-- Change Technical Design
-  - `# Technical design: {change-title}`
 
 ## Key components
 
@@ -90,8 +88,9 @@ Utility components:
 - [Stripe Dashboard: External](https://dashboard.stripe.com)
   - Payment records and analytics
   - Used by: Finance team (manual)
+```
 
-## UI hierarchy
+## UI components
 
 When to include: feature implemented using UI components.
 
@@ -128,7 +127,7 @@ Rules:
 - Use actor keyword for roles
 - Annotate diagrams with emojis:
   - 🎯 Feature components - designed specifically for this feature
-  - 🔧 Utility components - reusable utilities, specially to serve feature
+  - 🔧 Utility components - reusable utilities, specifically to serve the feature
   - 📦 System components - code in codebase but outside this feature
   - 📁 System storages - databases/caches owned by the system, outside this feature
   - ⚙️ External systems - third-party services, APIs (not in codebase)
