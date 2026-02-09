@@ -85,7 +85,7 @@ func closeContextOnCompareAndSwapFailure_KeyChanged[K any, V any](require *requi
 	require.True(ok)
 
 	// trigger the renewal
-	testingu.MockTime.Sleep(seconds10 * time.Second)
+	testingu.MockTime.Sleep(time.Duration(seconds10) * time.Second / 4)
 
 	// The leadership is forcibly released in the background.
 	<-ctx.Done()
@@ -109,7 +109,7 @@ func closeContextOnCompareAndSwapFailure_KeyDeleted[K any, V any](require *requi
 	require.True(ok)
 
 	// trigger the renewal
-	testingu.MockTime.Sleep(seconds10 * time.Second)
+	testingu.MockTime.Sleep(time.Duration(seconds10) * time.Second / 4)
 
 	// The leadership is forcibly released in the background.
 	<-ctx.Done()
@@ -146,7 +146,7 @@ func cleanupDuringRenewal[K any, V any](_ *require.Assertions, elections IElecti
 	ctx := elections.AcquireLeadership(key, val, seconds10)
 
 	{
-		testingu.MockTime.Sleep(time.Duration(seconds10/2) * time.Second)
+		testingu.MockTime.Sleep(time.Duration(seconds10) * time.Second / 4)
 
 		// now force cancel everything.
 		// successful finalizing after that shows that there are no deadlocks caused by simultaneous locks in

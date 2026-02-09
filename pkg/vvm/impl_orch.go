@@ -8,10 +8,8 @@ package vvm
 import (
 	"context"
 	"errors"
-	"os"
 	"time"
 
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/vvm/storage"
 )
@@ -90,28 +88,15 @@ func (vvm *VoedgerVM) shutdowner() {
 	vvm.shutdownedCtxCancel()
 }
 
-// leadershipMonitor is a routine that monitors the leadership context.
 // [~server.design.orch/LeadershipMonitor~impl]
-func (vvm *VoedgerVM) leadershipMonitor(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
+func (vvm *VoedgerVM) leadershipMonitor() {
 	defer vvm.monitorShutWg.Done()
 
 	select {
 	case <-vvm.leadershipCtx.Done():
-		// leadership is lost
-		go vvm.killerRoutine(leadershipDurationSeconds)
 		vvm.updateProblem(ErrLeadershipLost)
 	case <-vvm.monitorShutCtx.Done():
 	}
-}
-
-// killerRoutine is a routine that kills the VVM process after a quarter of the leadership duration
-func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds ielections.LeadershipDurationSeconds) {
-	// [~server.design.orch/processKillThreshold~impl]
-	// nolint:revive
-	processKillThreshold := time.Duration(leadershipDurationSeconds) * time.Second / 4
-	time.Sleep(processKillThreshold)
-	logger.Error("the process is still alive after the time alloted for graceful shutdown -> terminating...")
-	os.Exit(1)
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop
@@ -138,7 +123,7 @@ func (vvm *VoedgerVM) tryToAcquireLeadership(leadershipDurationSeconds ielection
 			if vvm.leadershipCtx != nil {
 				// If leadership is acquired
 				vvm.monitorShutWg.Add(1)
-				go vvm.leadershipMonitor(leadershipDurationSeconds)
+				go vvm.leadershipMonitor()
 				return nil
 			}
 			// Try the next VVM index in the cluster from 1 to numVVM

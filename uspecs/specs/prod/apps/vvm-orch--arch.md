@@ -16,9 +16,9 @@ VVM orchestration manages the lifecycle of VVM goroutines through a leadership-b
 Key mechanisms:
 
 - Leadership acquisition: VVM acquires leadership by writing a TTL record (default: 20s) to storage before starting services, with acquisition timeout of 120s
-- Active renewal: Elections component renews leadership every TTL/2 interval (default: 10s) via CompareAndSwap operations
+- Active renewal: Elections component renews leadership every `LeadershipDurationSeconds / 4` interval (default: 5s) via CompareAndSwap operations with CAS retry logic (up to 3 attempts) on transient errors
+- Proactive killer scheduling: `scheduleKiller()` is called on acquisition and on each successful CAS renewal with `killTime = LeadershipDurationSeconds * 0.8`; killer must never be stopped because goroutines can continue working after VM context is cancelled
 - Passive monitoring: leadershipMonitor goroutine waits for leadership loss notification via context cancellation
-- Automatic termination: killerRoutine forcefully terminates the process (default: 5s after leadership loss) if graceful shutdown fails
 - Sequential shutdown: VVM.Shutdown() terminates goroutines in order, waiting for each to exit before proceeding
 
 The orchestration uses context cancellation for signaling and WaitGroups for synchronization, ensuring all goroutines terminate cleanly during shutdown.
@@ -31,7 +31,6 @@ The orchestration uses context cancellation for signaling and WaitGroups for syn
 VVMHost
 - Launcher
   - LeadershipMonitor
-    - killerRoutine
   - ServicePipeline
 - Shutdowner
 ```
@@ -51,13 +50,17 @@ VVMHost
      - Launcher runs concurrently in background
 
 3. **Launcher** acquires leadership
-   - Launcher calls elections.AcquireLeadership()
+   - Launcher calls elections.AcquireLeadership(key, val, ttl)
      - Blocks here until leadership is acquired
-     - Elections writes leadership record to TTL storage
+     - Elections writes leadership record to TTL storage via `InsertIfNotExist()`
+     - Elections creates internal `killerScheduler` — hardcodes `os.Exit(1)` on timer fire; in tests the killer uses an isolated `ITime` instance (via `NewIsolatedTime()`) so advancing global `MockTime` never triggers the killer
+     - Elections calls `killer.scheduleKiller(LeadershipDurationSeconds * 0.8)` proactively
      - Elections spawns **maintainLeadership** goroutine
-       - Runs timer at TTL/2 interval (e.g., every 2.5s for 5s TTL)
-       - Actively renews leadership by calling CompareAndSwap()
-       - If renewal fails, cancels `leadershipCtx` and exits
+       - Runs timer at `LeadershipDurationSeconds / 4` interval (e.g., every 5s for 20s TTL)
+       - Before each CompareAndSwap call, schedules killer with `LeadershipDurationSeconds * 0.75`
+       - On CAS success, reschedules killer with `LeadershipDurationSeconds * 0.8`
+       - On CAS error, retries up to 2 more times (3 attempts total) with `retryIntervalOnCASErr = LeadershipDurationSeconds / 20`
+       - If all retries fail or CAS returns `!ok`, calls `releaseLeadership()` and exits
      - Returns leadershipCtx when leadership is confirmed
 
 4. Launcher spawns **leadershipMonitor** goroutine
@@ -65,7 +68,7 @@ VVMHost
    - leadershipMonitor goroutine starts
    - Waits passively on `leadershipCtx`.Done()
      - Wakes up when maintainLeadership cancels leadershipCtx
-     - Spawns killerRoutine on leadership loss
+     - Reports leadership loss (killer is already scheduled proactively from maintainLeadership)
    - Launcher continues (does not wait)
 
 5. Launcher spawns **ServicePipeline** goroutine
@@ -79,16 +82,21 @@ VVMHost
    - Remains blocked until VVM.Shutdown() is called
 
 7. **maintainLeadership** detects leadership loss (conditional)
-   - Runs continuously, renewing leadership every TTL/2 interval
-   - If renewal fails (storage error, record gone, network partition, etc.)
-     - maintainLeadership calls releaseLeadership()
-     - releaseLeadership cancels leadershipCtx
+   - Runs continuously, renewing leadership every `LeadershipDurationSeconds / 4` interval
+   - Before each CompareAndSwap call:
+     - Calls `killer.scheduleKiller(LeadershipDurationSeconds * 0.75)` as safety net
+   - If CAS returns error:
+     - Retries up to 2 more times with `retryIntervalOnCASErr = LeadershipDurationSeconds / 20` delay
+     - If all retries fail, calls `releaseLeadership()` and exits
+   - If CAS returns `!ok`:
+     - Calls `releaseLeadership()` and exits
+   - If CAS returns success:
+     - Calls `killer.scheduleKiller(LeadershipDurationSeconds * 0.8)` to extend kill deadline
+     - Continues renewing
+   - On releaseLeadership():
+     - Cancels leadershipCtx
      - leadershipMonitor wakes up on leadershipCtx.Done()
-     - leadershipMonitor spawns killerRoutine
-     - killerRoutine waits for delay period
-     - killerRoutine forcefully terminates process (os.Exit)
-   - If renewal succeeds
-     - maintainLeadership continues renewing
+     - Killer goroutine (already scheduled) will terminate process if graceful shutdown takes too long
 
 ### Shutdown sequence
 
@@ -139,7 +147,7 @@ VVMHost
    - Signals to any waiters that shutdown is complete
    - VVM returns to VVMHost (nil or error)
 
-VVM terminates all goroutines cleanly except killerRoutine (if it was spawned due to leadership loss, it will forcefully terminate the process after its delay).
+VVM terminates all goroutines cleanly. If a killer goroutine was scheduled proactively by `maintainLeadership`, it will forcefully terminate the process after its deadline if graceful shutdown takes too long.
 
 ### Key constants
 
@@ -150,17 +158,26 @@ Orchestration timing constants:
   - TTL duration for leadership record in storage
   - Used by elections component to set TTL on leadership records
 
-- **Leadership renewal interval** = LeadershipDurationSeconds / 2
-  - Location: [pkg/ielections/impl.go](../../../../pkg/ielections/impl.go) (line 58)
-  - Calculated dynamically: `tickerInterval := time.Duration(ttlSeconds) * time.Second / 2`
-  - maintainLeadership goroutine renews leadership at this interval
-  - Example: For 20s TTL, renewal happens every 10s
+- **maintainLeadershipCheckInterval** = LeadershipDurationSeconds / 4
+  - Location: [pkg/ielections/impl.go](../../../../pkg/ielections/impl.go)
+  - Calculated dynamically: `time.Duration(ttlSeconds) * time.Second / 4`
+  - maintainLeadership goroutine checks/renews leadership at this interval
+  - Example: For 20s TTL, check happens every 5s
 
-- **processKillThreshold** = LeadershipDurationSeconds / 4
-  - Location: [pkg/vvm/impl_orch.go](../../../../pkg/vvm/impl_orch.go) (line 111)
-  - Calculated dynamically: `time.Duration(leadershipDurationSeconds) * time.Second / 4`
-  - killerRoutine waits this long before forcefully terminating process
-  - Example: For 20s TTL, process is killed after 5s if still alive
+- **retryIntervalOnCASErr** = LeadershipDurationSeconds / 20
+  - Location: [pkg/ielections/impl.go](../../../../pkg/ielections/impl.go)
+  - Calculated dynamically: `time.Duration(ttlSeconds) * time.Second / 20`
+  - Delay between CAS retry attempts on transient error
+  - Example: For 20s TTL, retry after 1s
+
+- **maxCASRetries** = 2
+  - Location: [pkg/ielections/impl.go](../../../../pkg/ielections/impl.go)
+  - Maximum additional retry attempts after initial CAS failure (3 total attempts)
+
+- **processKillThreshold** = LeadershipDurationSeconds * 0.8
+  - Location: [pkg/ielections/impl.go](../../../../pkg/ielections/impl.go) (via `KillerScheduler.scheduleKiller`)
+  - Scheduled proactively on leadership acquisition and each successful CAS renewal
+  - Example: For 20s TTL, killer fires after 16s from last successful renewal
 
 - **DefaultLeadershipAcquisitionDuration** = 120 seconds
   - Location: [pkg/vvm/consts.go](../../../../pkg/vvm/consts.go)
@@ -172,9 +189,15 @@ Timing relationships:
 ```text
 LeadershipDurationSeconds = 20s (default)
   |
-  +-> Renewal interval = 20s / 2 = 10s (maintainLeadership renews every 10s)
+  +-> Check interval = 20s / 4 = 5s (maintainLeadership checks every 5s)
   |
-  +-> Kill threshold = 20s / 4 = 5s (killerRoutine waits 5s before os.Exit)
+  +-> CAS retry interval = 20s / 20 = 1s (retry delay on CAS error)
+  |
+  +-> Pre-CAS safety killer = 20s * 0.75 = 15s (scheduled before each CAS call)
+  |
+  +-> Post-CAS success killer = 20s * 0.8 = 16s (rescheduled on CAS success)
+  |
+  +-> Max CAS retries = 2 (3 attempts total)
 
 Leadership acquisition timeout = 120s (Launcher tries for up to 2 minutes)
 ```

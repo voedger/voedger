@@ -17,13 +17,14 @@ import (
 
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
-func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipDurationSeconds) context.Context {
+func (e *elections[K, V]) AcquireLeadership(key K, val V, leadershipDurationSeconds LeadershipDurationSeconds) context.Context {
 	if e.isFinalized.Load() {
 		logger.Verbose(fmt.Sprintf("Key=%v: elections cleaned up; cannot acquire leadership", key))
 		return nil
 	}
 
-	inserted, err := e.storage.InsertIfNotExist(key, val, int(ttlSeconds))
+	leadershipStartTime := e.clock.Now()
+	inserted, err := e.storage.InsertIfNotExist(key, val, int(leadershipDurationSeconds))
 	if err != nil {
 		// notest
 		logger.Error(fmt.Sprintf("Key=%v: InsertIfNotExist failed: %v", key, err))
@@ -36,6 +37,10 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipD
 
 	logger.Info(fmt.Sprintf("Key=%v: leadership acquired", key))
 
+	killer := newKillerScheduler(e.clock)
+	killTime := leadershipStartTime.Add(time.Duration(float64(leadershipDurationSeconds)*killDeadlineFactor) * time.Second)
+	killer.scheduleKiller(killTime)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	li := &leaderInfo[K, V]{
 		val:    val,
@@ -47,37 +52,57 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, ttlSeconds LeadershipD
 	li.wg.Add(1)
 	maintainLeadershipStarted := sync.WaitGroup{}
 	maintainLeadershipStarted.Add(1)
-	go e.maintainLeadership(key, val, ttlSeconds, li, &maintainLeadershipStarted)
+	go e.maintainLeadership(key, val, leadershipDurationSeconds, li, &maintainLeadershipStarted, killer)
 	maintainLeadershipStarted.Wait()
 	return ctx
 }
 
-func (e *elections[K, V]) maintainLeadership(key K, val V, ttlSeconds LeadershipDurationSeconds, li *leaderInfo[K, V], maintainLeadershipStarted *sync.WaitGroup) {
+func (e *elections[K, V]) maintainLeadership(key K, val V, leadershipDurationSeconds LeadershipDurationSeconds, li *leaderInfo[K, V], maintainLeadershipStarted *sync.WaitGroup, killer *killerScheduler) {
 	defer li.wg.Done()
 
-	tickerInterval := time.Duration(ttlSeconds) * time.Second / 2
-	ticker := e.clock.NewTimerChan(tickerInterval)
+	maintainLeadershipInterval := time.Duration(leadershipDurationSeconds) * time.Second / maintainIntervalDivisor
+	retryOnCASErrInterval := time.Duration(leadershipDurationSeconds) * time.Second / retryIntervalDivisor
+	maintainLeadershipTimer := e.clock.NewTimerChan(maintainLeadershipInterval)
 	maintainLeadershipStarted.Done()
 	tickerCounter := int64(0)
 
 	for li.ctx.Err() == nil {
 		select {
 		case <-li.ctx.Done():
-			// Voluntarily released or forcibly canceled
 			return
-		case <-ticker:
-			ticker = e.clock.NewTimerChan(tickerInterval)
-			tickerCounter = bumpTickerCounter(tickerCounter, key, tickerInterval)
-			ok, err := e.storage.CompareAndSwap(key, val, val, int(ttlSeconds))
+		case <-maintainLeadershipTimer:
+			maintainLeadershipTimer = e.clock.NewTimerChan(maintainLeadershipInterval)
+			tickerCounter = bumpTickerCounter(tickerCounter, key, maintainLeadershipInterval)
+
+			leadershipStartTime := e.clock.Now()
+
+			// Before compareAndSwap run killer with 0.75 * LeadershipDurationSeconds
+			killer.scheduleKiller(leadershipStartTime.Add(time.Duration(float64(leadershipDurationSeconds)*preCASKillTimeFactor) * time.Second))
+
+			var ok bool
+			var err error
+			for attempt := range maxRetriesOnCASErr + 1 {
+				ok, err = e.storage.CompareAndSwap(key, val, val, int(leadershipDurationSeconds))
+				if err == nil {
+					break
+				}
+				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap attempt %d failed: %v", key, attempt+1, err))
+				if attempt < maxRetriesOnCASErr {
+					e.clock.Sleep(retryOnCASErrInterval)
+				}
+			}
+
 			if err != nil {
-				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap failed, will release: %v", key, err))
+				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap failed after %d attempts => release",
+					key, maxRetriesOnCASErr+1))
+				return
 			}
 
-			if !ok {
+			if ok {
+				killTime := leadershipStartTime.Add(time.Duration(float64(leadershipDurationSeconds)*killDeadlineFactor) * time.Second)
+				killer.scheduleKiller(killTime)
+			} else {
 				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap !ok => release", key))
-			}
-
-			if !ok || err != nil {
 				e.releaseLeadership(key)
 				return
 			}

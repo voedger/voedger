@@ -29,3 +29,9 @@ type leaderInfo[K any, V any] struct {
 }
 
 type LeadershipDurationSeconds int
+
+type killerScheduler struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	clock  timeu.ITime
+}

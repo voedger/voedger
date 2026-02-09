@@ -22,6 +22,8 @@ type IMockTime interface {
 	// implementation must trigger each timer created by IMockTime.NewTimer() if the time has come after adding
 	Add(d time.Duration)
 
+	NewIsolatedTime() timeu.ITime
+
 	// next timer got by NewTimerChan already will contain firing
 	// useful when we do not know the instant when NewTimer() will be called but we advancing the time to make it fire
 	FireNextTimerImmediately()
@@ -101,6 +103,10 @@ func (t *mockedTime) SetOnNextTimerArmed(f func()) {
 type mockTimer struct {
 	c          chan time.Time
 	expiration time.Time
+}
+
+func (t *mockedTime) NewIsolatedTime() timeu.ITime {
+	return NewMockTime()
 }
 
 func (t *mockedTime) Add(d time.Duration) {

@@ -29,6 +29,7 @@ func GetTestVVMCfg(ip net.IP) *VVMConfig {
 	vvmCfg.IP = ip
 	vvmCfg.MetricsServicePort = 0
 	vvmCfg.Time = testingu.MockTime
+
 	vvmCfg.VVMAppsBuilder.Add(istructs.AppQName_test1_app1, func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 		sysPackageFS := sysprovide.Provide(cfg)
 		return builtinapps.Def{
