@@ -14,6 +14,12 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 )
 
+type killerScheduler struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	clock  timeu.ITime
+}
+
 func newKillerScheduler(clock timeu.ITime) *killerScheduler {
 	if p, ok := clock.(interface{ NewIsolatedTime() timeu.ITime }); ok {
 		// happens in tests only
