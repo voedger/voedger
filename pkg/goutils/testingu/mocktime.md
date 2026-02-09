@@ -81,7 +81,7 @@ func TestCacheExpiration(t *testing.T) {
 
 - **[Global instance](mocktime.go#L16)** - Shared MockTime prevents timing inconsistencies
 
-- **[Isolated time](mocktime.go#L24)** - Independent mock time unaffected by global time advances
+- **[Isolated time](mocktime.go#L25)** - Independent mock time unaffected by global time advances
 
 ## Use
 
