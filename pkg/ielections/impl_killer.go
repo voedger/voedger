@@ -24,12 +24,12 @@ func newKillerScheduler(clock timeu.ITime) *killerScheduler {
 }
 
 func (ks *killerScheduler) scheduleKiller(deadline time.Time) {
-	if ks.ctx != nil {
-		ks.cancel()
-	}
 	duration := deadline.Sub(ks.clock.Now())
 	if duration <= 0 {
 		return
+	}
+	if ks.ctx != nil {
+		ks.cancel()
 	}
 	ks.ctx, ks.cancel = context.WithCancel(context.Background())
 	go func(ctx context.Context) {
