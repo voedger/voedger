@@ -753,6 +753,11 @@ func analyzeView(view *ViewStmt, c *iterateCtx) {
 		}
 	}
 
+	if len(view.pkRef.ClusteringColumnsFields) == 0 {
+		c.stmtErr(&view.pkRef.Pos, ErrClusteringColumnsNotDefined)
+		return
+	}
+
 	for ccIndex, ccf := range view.pkRef.ClusteringColumnsFields {
 		fieldIndex, ok := fields[string(ccf.Value)]
 		last := ccIndex == len(view.pkRef.ClusteringColumnsFields)-1
