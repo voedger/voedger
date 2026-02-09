@@ -1110,7 +1110,7 @@ func Test_Views(t *testing.T) {
 				COMMAND Orders()
 			);
 			)
-	`, "file.vsql:4:18: varchar field field1 not supported in partition key")
+	`, "file.vsql:4:18: varchar field field1 not supported in partition key\nfile.vsql:4:17: clustering columns not defined")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
@@ -1122,7 +1122,7 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file.vsql:4:17: bytes field field1 not supported in partition key")
+	`, "file.vsql:4:17: bytes field field1 not supported in partition key\nfile.vsql:4:16: clustering columns not defined")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
@@ -1188,7 +1188,8 @@ func Test_Views(t *testing.T) {
 			);
 			)
 		`, "file.vsql:4:5: record fields are only allowed in sys package",
-			"file.vsql:5:18: record field field1 not supported in partition key")
+			"file.vsql:5:18: record field field1 not supported in partition key",
+			"file.vsql:5:17: clustering columns not defined")
 	})
 
 	t.Run("record field in clustering key", func(t *testing.T) {
@@ -1325,6 +1326,28 @@ func Test_Views2(t *testing.T) {
 		})
 		require.Error(err, "file2.vsql:2:4: projector Proj1 does not declare intent for view test")
 
+	}
+	{
+		ast, err := ParseFile("file2.vsql", `APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				field1 int,
+				PRIMARY KEY((field1))
+			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (sys.View(test));
+				COMMAND Orders()
+			);
+		)
+		`)
+		require.NoError(err)
+		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{ast})
+		require.NoError(err)
+
+		_, err = BuildAppSchema([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg,
+		})
+		require.Error(err, "file2.vsql:4:17: clustering columns not defined")
 	}
 
 }
