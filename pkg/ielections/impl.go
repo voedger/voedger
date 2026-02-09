@@ -38,7 +38,7 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, leadershipDurationSeco
 	logger.Info(fmt.Sprintf("Key=%v: leadership acquired", key))
 
 	killer := newKillerScheduler(e.clock)
-	killTime := leadershipStartTime.Add(time.Duration(float64(leadershipDurationSeconds)*killDeadlineFactor) * time.Second)
+	killTime := leadershipStartTime.Add(durationMult(leadershipDurationSeconds, killDeadlineFactor))
 	killer.scheduleKiller(killTime)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -77,7 +77,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, leadershipDurationSec
 			leadershipStartTime := e.clock.Now()
 
 			// Before compareAndSwap run killer with 0.75 * LeadershipDurationSeconds
-			killer.scheduleKiller(leadershipStartTime.Add(time.Duration(float64(leadershipDurationSeconds)*preCASKillTimeFactor) * time.Second))
+			killer.scheduleKiller(leadershipStartTime.Add(durationMult(leadershipDurationSeconds, preCASKillTimeFactor)))
 
 			var ok bool
 			var err error
@@ -95,11 +95,12 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, leadershipDurationSec
 			if err != nil {
 				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap failed after %d attempts => release",
 					key, maxRetriesOnCASErr+1))
+				e.releaseLeadership(key)
 				return
 			}
 
 			if ok {
-				killTime := leadershipStartTime.Add(time.Duration(float64(leadershipDurationSeconds)*killDeadlineFactor) * time.Second)
+				killTime := leadershipStartTime.Add(durationMult(leadershipDurationSeconds, killDeadlineFactor))
 				killer.scheduleKiller(killTime)
 			} else {
 				logger.Error(fmt.Sprintf("Key=%v: compareAndSwap !ok => release", key))
@@ -108,6 +109,10 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, leadershipDurationSec
 			}
 		}
 	}
+}
+
+func durationMult(seconds LeadershipDurationSeconds, factor float64) time.Duration {
+	return time.Duration(float64(time.Duration(seconds)*time.Second) * factor)
 }
 
 // nolint: revive

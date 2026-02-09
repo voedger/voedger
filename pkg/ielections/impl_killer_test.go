@@ -89,7 +89,7 @@ func Test_killerRescheduleOnCAS(t *testing.T) {
 			clock:   testingu.MockTime,
 		}
 		killer := newKillerScheduler(testingu.MockTime)
-		killer.scheduleKiller(killer.clock.Now().Add(time.Duration(float64(leadershipDuration)*killDeadlineFactor) * time.Second))
+		killer.scheduleKiller(killer.clock.Now().Add(durationMult(leadershipDuration, killDeadlineFactor)))
 
 		ctx, cancel := context.WithCancel(context.Background())
 		li := &leaderInfo[string, string]{val: "v1", ctx: ctx, cancel: cancel}

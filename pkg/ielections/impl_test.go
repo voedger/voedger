@@ -7,6 +7,9 @@ package ielections
 import (
 	"strconv"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // [~server.design.orch/ElectionsTest~impl]
@@ -23,4 +26,11 @@ func TestElections(t *testing.T) {
 			return "testVal" + strconv.Itoa(counter)
 		},
 	})
+}
+
+func TestDurationMult(t *testing.T) {
+	expectedDuration, err := time.ParseDuration("7.5s")
+	require.NoError(t, err)
+	actualDuration := durationMult(10, 0.75)
+	require.Equal(t, expectedDuration, actualDuration)
 }

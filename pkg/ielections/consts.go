@@ -6,9 +6,19 @@
 package ielections
 
 const (
-	maxRetriesOnCASErr      = 2
+	// Maximum number of CompareAndSwap retry attempts on error before releasing leadership
+	maxRetriesOnCASErr = 2
+
+	// Leadership renewal interval = leadershipDuration / maintainIntervalDivisor
 	maintainIntervalDivisor = 4
-	retryIntervalDivisor    = 20
-	preCASKillTimeFactor    = 0.75
-	killDeadlineFactor      = 0.8
+
+	// Delay between CompareAndSwap retry attempts = leadershipDuration / retryIntervalDivisor
+	retryIntervalDivisor = 20
+
+	// Killer deadline factor before attempting to CompareAndSwap: leadershipStart + leadershipDuration * preCASKillTimeFactor
+	preCASKillTimeFactor = 0.75
+	
+	// Killer deadline factor after successful InsertIfNotExist and CompareAndSwap:
+	// leadershipStart + leadershipDuration * killDeadlineFactor
+	killDeadlineFactor = 0.8
 )
