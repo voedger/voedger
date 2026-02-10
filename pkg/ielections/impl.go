@@ -17,13 +17,13 @@ import (
 
 // AcquireLeadership returns nil if leadership is *not* acquired (e.g., error in storage,
 // already local leader, or elections cleaned up), otherwise returns a *non-nil* context.
-func (e *elections[K, V]) AcquireLeadership(key K, val V, leadershipDarationSeconds LeadershipDurationSeconds) context.Context {
+func (e *elections[K, V]) AcquireLeadership(key K, val V, leadershipDurationSeconds LeadershipDurationSeconds) context.Context {
 	if e.isFinalized.Load() {
 		logger.Verbose(fmt.Sprintf("Key=%v: elections cleaned up; cannot acquire leadership", key))
 		return nil
 	}
 
-	inserted, err := e.storage.InsertIfNotExist(key, val, int(leadershipDarationSeconds))
+	inserted, err := e.storage.InsertIfNotExist(key, val, int(leadershipDurationSeconds))
 	if err != nil {
 		// notest
 		logger.Error(fmt.Sprintf("Key=%v: InsertIfNotExist failed: %v", key, err))
@@ -47,7 +47,7 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, leadershipDarationSeco
 	li.wg.Add(1)
 	maintainLeadershipStarted := sync.WaitGroup{}
 	maintainLeadershipStarted.Add(1)
-	go e.maintainLeadership(key, val, leadershipDarationSeconds, li, &maintainLeadershipStarted)
+	go e.maintainLeadership(key, val, leadershipDurationSeconds, li, &maintainLeadershipStarted)
 	maintainLeadershipStarted.Wait()
 	return ctx
 }

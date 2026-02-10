@@ -22,5 +22,5 @@
 
 - [x] update: [pkg/ielections/impl_test.go](../../../pkg/ielections/impl_test.go)
   - add: TestTransientErrorRecovery — CAS retried until no error, leadership retained
-  - add: TestAcuireLeadershipFailureAfterCompareAndSwapError — persistent CAS error leads to leadership loss after deadline
+  - add: TestAcquireLeadershipFailureAfterCompareAndSwapError — persistent CAS error leads to leadership loss after deadline
   - add: TestCleanupDuringCompareAndSwapRetries — cleanup during CAS retries cancels leadership context

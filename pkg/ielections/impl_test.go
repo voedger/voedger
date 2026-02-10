@@ -82,7 +82,7 @@ func TestTransientErrorRecovery(t *testing.T) {
 	<-ctx.Done()
 }
 
-func TestAcuireLeadershipFailureAfterCompareAndSwapError(t *testing.T) {
+func TestAcquireLeadershipFailureAfterCompareAndSwapError(t *testing.T) {
 	require := require.New(t)
 	storage := newTTLStorageMock[string, string]()
 	elections, cleanup := Provide(storage, testingu.MockTime)
