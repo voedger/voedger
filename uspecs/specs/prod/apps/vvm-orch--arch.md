@@ -158,9 +158,14 @@ Orchestration timing constants:
   - TTL duration for leadership record in storage
   - Used by elections component to set TTL on leadership records
 
-- **Leadership renewal interval** = LeadershipDurationSeconds / 4
+- **renewalsPerLeadershipDur** = 4
+  - Location: [pkg/ielections/consts.go](../../../../pkg/ielections/consts.go)
+  - Number of renewals per leadership duration
+  - Leadership is renewed every LeadershipDurationSeconds / renewalsPerLeadershipDur
+
+- **Leadership renewal interval** = LeadershipDurationSeconds / renewalsPerLeadershipDur
   - Location: [pkg/ielections/impl.go](../../../../pkg/ielections/impl.go) (line 58)
-  - Calculated dynamically: `tickerInterval := time.Duration(ttlSeconds) * time.Second / 4`
+  - Calculated dynamically: `tickerInterval := time.Duration(leadershipDurationSeconds) * time.Second / renewalsPerLeadershipDur`
   - maintainLeadership goroutine renews leadership at this interval
   - On error, retries every second during the interval (up to tickerInterval attempts)
   - On !ok, fails fast without retrying
