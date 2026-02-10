@@ -144,5 +144,11 @@ func (t *mockedTime) String() string {
 // NewIsolatedTime creates a new isolated MockTime instance that starts from the same time
 // but advances independently from the original MockTime.
 func (t *mockedTime) NewIsolatedTime() timeu.ITime {
-	return NewMockTime()
+	t.RLock()
+	defer t.RUnlock()
+	return &mockedTime{
+		now:     t.now,
+		RWMutex: sync.RWMutex{},
+		timers:  map[mockTimer]struct{}{},
+	}
 }
