@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -27,3 +28,7 @@ func (nullSchedulerRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ i
 }
 
 func (nullSchedulerRunner) SetAppPartitions(IAppPartitions) {}
+
+func (nullSchedulerRunner) SchedulersTime() timeu.ITime {
+	return timeu.NewITime()
+}

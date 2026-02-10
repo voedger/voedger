@@ -131,6 +131,7 @@ type VVM struct {
 	BuiltInAppsPackages []BuiltInAppPackages
 	TTLStorage          ielections.ITTLStorage[storage.TTLStorageImplKey, string]
 	BuildInfo           *debug.BuildInfo
+	ISchedulerRunner    appparts.ISchedulerRunner
 }
 
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint

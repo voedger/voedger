@@ -628,6 +628,19 @@ func (vit *VIT) TimeAdd(dur time.Duration) {
 	vit.RefreshTokens()
 }
 
+// SchedulerTimeAdd advances the scheduler's isolated time by the given duration.
+// This is used to control job scheduler timing independently from global MockTime.
+// Jobs will only fire when this isolated time is advanced past their scheduled time.
+func (vit *VIT) SchedulerTimeAdd(dur time.Duration) {
+	vit.ISchedulerRunner.SchedulersTime().(testingu.IMockTime).Add(dur)
+}
+
+// SchedulerNow returns the current scheduler's isolated time.
+// This is the time used by job schedulers, which may differ from global MockTime.
+func (vit *VIT) SchedulerNow() time.Time {
+	return vit.ISchedulerRunner.SchedulersTime().Now()
+}
+
 func (vit *VIT) NextName() string {
 	return "name_" + strconv.Itoa(vit.NextNumber())
 }

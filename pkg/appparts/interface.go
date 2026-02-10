@@ -10,6 +10,7 @@ import (
 	"iter"
 	"net/url"
 
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/pipeline"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -137,4 +138,10 @@ type ISchedulerRunner interface {
 
 	// Creates and runs new specified job scheduler for specified application partition and workspace
 	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName)
+
+	// SchedulersTime returns the time instance used by schedulers.
+	// In tests, this returns an isolated MockTime that can be advanced independently
+	// from the global MockTime to control job scheduling.
+	// Used in tests only.
+	SchedulersTime() timeu.ITime
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -90,6 +91,10 @@ func (sr *mockSchedulerRunner) NewAndRun(ctx context.Context, app appdef.AppQNam
 func (sr *mockSchedulerRunner) SetAppPartitions(ap appparts.IAppPartitions) {
 	sr.Called(ap)
 	sr.setAppPartitions(ap)
+}
+
+func (sr *mockSchedulerRunner) SchedulersTime() timeu.ITime {
+	return testingu.MockTime
 }
 
 func Test_DeployActualizersAndSchedulers(t *testing.T) {

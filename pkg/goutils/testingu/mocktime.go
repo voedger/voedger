@@ -28,6 +28,11 @@ type IMockTime interface {
 
 	SetOnNextNewTimerChan(f func())
 	SetOnNextTimerArmed(f func())
+
+	// NewIsolatedTime creates a new isolated MockTime instance that starts from the same time
+	// but advances independently from the original MockTime.
+	// Used to isolate scheduler time from global MockTime in tests.
+	NewIsolatedTime() timeu.ITime
 }
 
 func NewMockTime() IMockTime {
@@ -134,4 +139,10 @@ func (t *mockedTime) String() string {
 	defer t.RUnlock()
 	return fmt.Sprintf("mockedTime{now=%s, timers=%d, fireNextTimerImmediately=%t}",
 		t.now.Format(time.RFC3339Nano), len(t.timers), t.fireNextTimerImmediately)
+}
+
+// NewIsolatedTime creates a new isolated MockTime instance that starts from the same time
+// but advances independently from the original MockTime.
+func (t *mockedTime) NewIsolatedTime() timeu.ITime {
+	return NewMockTime()
 }

@@ -245,6 +245,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		BuiltInAppsPackages: v9,
 		TTLStorage:          ittlStorage,
 		BuildInfo:           buildInfo,
+		ISchedulerRunner:    iSchedulerRunner,
 	}
 	return vvm, func() {
 		cleanup5()
