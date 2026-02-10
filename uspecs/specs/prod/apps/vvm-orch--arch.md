@@ -16,7 +16,7 @@ VVM orchestration manages the lifecycle of VVM goroutines through a leadership-b
 Key mechanisms:
 
 - Leadership acquisition: VVM acquires leadership by writing a TTL record (default: 20s) to storage before starting services, with acquisition timeout of 120s
-- Active renewal: Elections component renews leadership every TTL/2 interval (default: 10s) via CompareAndSwap operations
+- Active renewal: Elections component renews leadership every TTL/4 interval (default: 5s) via CompareAndSwap operations, retrying every second on error within each interval
 - Passive monitoring: leadershipMonitor goroutine waits for leadership loss notification via context cancellation
 - Automatic termination: killerRoutine forcefully terminates the process (default: 5s after leadership loss) if graceful shutdown fails
 - Sequential shutdown: VVM.Shutdown() terminates goroutines in order, waiting for each to exit before proceeding
@@ -55,9 +55,11 @@ VVMHost
      - Blocks here until leadership is acquired
      - Elections writes leadership record to TTL storage
      - Elections spawns **maintainLeadership** goroutine
-       - Runs timer at TTL/2 interval (e.g., every 2.5s for 5s TTL)
+       - Runs timer at TTL/4 interval (e.g., every 1.25s for 5s TTL)
        - Actively renews leadership by calling CompareAndSwap()
-       - If renewal fails, cancels `leadershipCtx` and exits
+       - On error: retries every second during the interval, checking context each iteration
+       - On !ok (value mismatch): fails fast, releases leadership immediately
+       - If all retries within the interval fail, cancels `leadershipCtx` and exits
      - Returns leadershipCtx when leadership is confirmed
 
 4. Launcher spawns **leadershipMonitor** goroutine
@@ -79,8 +81,14 @@ VVMHost
    - Remains blocked until VVM.Shutdown() is called
 
 7. **maintainLeadership** detects leadership loss (conditional)
-   - Runs continuously, renewing leadership every TTL/2 interval
-   - If renewal fails (storage error, record gone, network partition, etc.)
+   - Runs continuously, renewing leadership every TTL/4 interval
+   - On each tick, calls CompareAndSwap()
+     - If !ok (value mismatch, key deleted): fails fast, releases leadership immediately
+     - If error (transient storage failure): retries every second during the interval
+       - Checks context on each retry iteration (exits if context cancelled)
+       - If a retry succeeds: continues to next interval
+       - If all retries fail: releases leadership
+   - On leadership release:
      - maintainLeadership calls releaseLeadership()
      - releaseLeadership cancels leadershipCtx
      - leadershipMonitor wakes up on leadershipCtx.Done()
@@ -150,11 +158,13 @@ Orchestration timing constants:
   - TTL duration for leadership record in storage
   - Used by elections component to set TTL on leadership records
 
-- **Leadership renewal interval** = LeadershipDurationSeconds / 2
+- **Leadership renewal interval** = LeadershipDurationSeconds / 4
   - Location: [pkg/ielections/impl.go](../../../../pkg/ielections/impl.go) (line 58)
-  - Calculated dynamically: `tickerInterval := time.Duration(ttlSeconds) * time.Second / 2`
+  - Calculated dynamically: `tickerInterval := time.Duration(ttlSeconds) * time.Second / 4`
   - maintainLeadership goroutine renews leadership at this interval
-  - Example: For 20s TTL, renewal happens every 10s
+  - On error, retries every second during the interval (up to tickerInterval attempts)
+  - On !ok, fails fast without retrying
+  - Example: For 20s TTL, renewal happens every 5s with up to 5 retry attempts on error
 
 - **processKillThreshold** = LeadershipDurationSeconds / 4
   - Location: [pkg/vvm/impl_orch.go](../../../../pkg/vvm/impl_orch.go) (line 111)
@@ -172,7 +182,10 @@ Timing relationships:
 ```text
 LeadershipDurationSeconds = 20s (default)
   |
-  +-> Renewal interval = 20s / 2 = 10s (maintainLeadership renews every 10s)
+  +-> Renewal interval = 20s / 4 = 5s (maintainLeadership renews every 5s)
+  |     |
+  |     +-> On error: retry every 1s during interval (up to 5 attempts)
+  |     +-> On !ok: fail fast, release immediately
   |
   +-> Kill threshold = 20s / 4 = 5s (killerRoutine waits 5s before os.Exit)
 
