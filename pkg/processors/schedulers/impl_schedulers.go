@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	retrier "github.com/voedger/voedger/pkg/goutils/retry"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -23,12 +24,24 @@ type schedulers struct {
 	cfg      BasicSchedulerConfig
 	wait     sync.WaitGroup
 	appParts appparts.IAppPartitions
+	
+	// Need to fine schedulers control in tests
+	// In tests this time differs from testingu.MockTime and controlled via ISchedulerRunner.SchedulersTime()
+	time timeu.ITime
 }
 
-func newSchedulers(cfg BasicSchedulerConfig) appparts.ISchedulerRunner {
-	return &schedulers{
-		cfg: cfg,
+func newSchedulers(cfg BasicSchedulerConfig) *schedulers {
+	s := &schedulers{
+		cfg:  cfg,
+		time: cfg.Time,
 	}
+	// If cfg.Time supports NewIsolatedTime (e.g., testingu.MockTime in tests),
+	// use it to create an isolated time for schedulers
+	if itp, ok := cfg.Time.(interface{ NewIsolatedTime() timeu.ITime }); ok {
+		s.time = itp.NewIsolatedTime()
+		s.cfg.Time = s.time
+	}
+	return s
 }
 
 // Creates and runs new actualizer for specified partition.
@@ -56,4 +69,11 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 
 func (a *schedulers) SetAppPartitions(ap appparts.IAppPartitions) {
 	a.appParts = ap
+}
+
+// SchedulersTime returns the isolated time used by schedulers.
+// In tests with MockTime, this is an isolated time instance that can be
+// advanced independently from the global MockTime.
+func (a *schedulers) SchedulersTime() timeu.ITime {
+	return a.time
 }
