@@ -6,6 +6,7 @@ package istoragecache
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
@@ -20,6 +21,7 @@ import (
 type cachedAppStorage struct {
 	cache    *fastcache.Cache
 	storage  istorage.IAppStorage
+	cacheMu  sync.Mutex
 	vvm      string
 	appQName appdef.AppQName
 	iTime    timeu.ITime
@@ -141,7 +143,9 @@ func (s *cachedAppStorage) InsertIfNotExists(pKey []byte, cCols []byte, value []
 		}
 
 		d := istorage.DataWithExpiration{Data: value, ExpireAt: expireAt}
+		s.cacheMu.Lock()
 		s.cache.Set(makeKey(pKey, cCols), d.ToBytes())
+		s.cacheMu.Unlock()
 	}
 
 	return ok, nil
@@ -166,7 +170,9 @@ func (s *cachedAppStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, n
 		}
 
 		d := istorage.DataWithExpiration{Data: newValue, ExpireAt: expireAt}
+		s.cacheMu.Lock()
 		s.cache.Set(makeKey(pKey, cCols), d.ToBytes())
+		s.cacheMu.Unlock()
 	}
 
 	return ok, nil
@@ -185,7 +191,9 @@ func (s *cachedAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedV
 	}
 
 	if ok {
+		s.cacheMu.Lock()
 		s.cache.Del(makeKey(pKey, cCols))
+		s.cacheMu.Unlock()
 	}
 
 	return ok, nil
@@ -201,22 +209,37 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	var key = makeKey(pKey, cCols)
 
 	*data = (*data)[0:0]
-	cachedData, found := s.cache.HasGet(*data, key)
 
-	if found {
-		d := istorage.ReadWithExpiration(cachedData)
-
-		if d.IsExpired(s.iTime.Now()) {
-			s.cache.Del(key)
-
+	s.cacheMu.Lock()
+	cachedData, isCached := s.cache.HasGet(*data, key)
+	if isCached {
+		if len(cachedData) == 0 {
+			s.cacheMu.Unlock()
 			return false, nil
 		}
+		d := istorage.ReadWithExpiration(cachedData)
+		if d.IsExpired(s.iTime.Now()) {
+			s.cache.Del(key)
+			s.cacheMu.Unlock()
+			return false, nil
+		}
+		s.cacheMu.Unlock()
 		*data = d.Data
-
-		return len(*data) != 0, nil
+		return true, nil
 	}
+	s.cacheMu.Unlock()
 
-	return s.storage.TTLGet(pKey, cCols, data)
+	ok, err = s.storage.TTLGet(pKey, cCols, data)
+	if err == nil && !ok {
+		s.cacheMu.Lock()
+		_, alreadyCached := s.cache.HasGet(nil, key)
+		if !alreadyCached {
+			s.cache.Set(key, nil)
+		}
+		s.cacheMu.Unlock()
+	}
+	// note: we do not have expiration info from the underlying storage so we do not cache it
+	return ok, err
 }
 
 //nolint:revive
@@ -250,7 +273,9 @@ func (s *cachedAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err err
 
 	if err == nil {
 		data := istorage.DataWithExpiration{Data: value}
+		s.cacheMu.Lock()
 		s.cache.Set(makeKey(pKey, cCols), data.ToBytes())
+		s.cacheMu.Unlock()
 	}
 
 	return err
@@ -266,10 +291,12 @@ func (s *cachedAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 
 	err = s.storage.PutBatch(items)
 	if err == nil {
+		s.cacheMu.Lock()
 		for _, i := range items {
 			data := istorage.DataWithExpiration{Data: i.Value}
 			s.cache.Set(makeKey(i.PKey, i.CCols), data.ToBytes())
 		}
+		s.cacheMu.Unlock()
 	}
 
 	return err
@@ -285,15 +312,15 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 	key := makeKey(pKey, cCols)
 	*data = (*data)[0:0]
 	cachedData := make([]byte, 0)
-	cachedData, ok = s.cache.HasGet(cachedData, key)
+	cachedData, isCached := s.cache.HasGet(cachedData, key)
 
-	if ok {
+	if isCached {
 		s.mGetCachedTotal.Increase(1.0)
-
-		if len(cachedData) != 0 {
-			*data = cachedData[utils.Uint64Size:]
-			return len(*data) != 0, nil
+		if len(cachedData) == 0 {
+			return false, nil
 		}
+		*data = cachedData[utils.Uint64Size:]
+		return true, nil
 	}
 
 	ok, err = s.storage.Get(pKey, cCols, data)
@@ -301,11 +328,19 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		return false, err
 	}
 
-	d := istorage.DataWithExpiration{}
 	if ok {
-		d.Data = *data
+		d := istorage.DataWithExpiration{Data: *data}
+		s.cacheMu.Lock()
+		s.cache.Set(key, d.ToBytes())
+		s.cacheMu.Unlock()
+	} else {
+		s.cacheMu.Lock()
+		_, alreadyCached := s.cache.HasGet(nil, key)
+		if !alreadyCached {
+			s.cache.Set(key, nil)
+		}
+		s.cacheMu.Unlock()
 	}
-	s.cache.Set(key, d.ToBytes())
 
 	return ok, nil
 }
@@ -324,13 +359,17 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {
 	for i := range items {
-		cachedData, ok := s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
-		if !ok {
+		cachedData, isCached := s.cache.HasGet((*items[i].Data)[0:0], makeKey(pKey, items[i].CCols))
+		if !isCached {
 			return false
 		}
 
-		*items[i].Data = cachedData[utils.Uint64Size:]
-		items[i].Ok = len(*items[i].Data) != 0
+		if len(cachedData) == 0 {
+			items[i].Ok = false
+		} else {
+			*items[i].Data = cachedData[utils.Uint64Size:]
+			items[i].Ok = true
+		}
 	}
 	s.mGetBatchCachedTotal.Increase(1.0)
 	return true
@@ -342,13 +381,20 @@ func (s *cachedAppStorage) getBatchFromStorage(pKey []byte, items []istorage.Get
 		return err
 	}
 
+	s.cacheMu.Lock()
 	for _, item := range items {
-		d := istorage.DataWithExpiration{}
 		if item.Ok {
-			d.Data = *item.Data
+			d := istorage.DataWithExpiration{Data: *item.Data}
+			s.cache.Set(makeKey(pKey, item.CCols), d.ToBytes())
+		} else {
+			key := makeKey(pKey, item.CCols)
+			_, alreadyCached := s.cache.HasGet(nil, key)
+			if !alreadyCached {
+				s.cache.Set(key, nil)
+			}
 		}
-		s.cache.Set(makeKey(pKey, item.CCols), d.ToBytes())
 	}
+	s.cacheMu.Unlock()
 
 	return err
 }
