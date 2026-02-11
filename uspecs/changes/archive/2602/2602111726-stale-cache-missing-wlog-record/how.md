@@ -9,7 +9,7 @@
 - In all write methods (`InsertIfNotExists`, `Put`, `PutBatch`, `CompareAndSwap`): lock `cacheMu` around `cache.Set` calls
 - This makes the check-then-set in `Get()` atomic with respect to positive writes from other methods
 - Lock is held only for in-memory `fastcache` operations (nanoseconds), no storage I/O under the lock
-- Add a test in `istoragecache/` that reproduces the race: concurrent `Get()` and `InsertIfNotExists()` on the same key using `SetTestDelayGet` from `istorage/mem/impl.go` to widen the race window
+- Add a test in `istoragecache/` that reproduces the race: concurrent `Get()` and `InsertIfNotExists()` on the same key using a channel-blocking `testStorage.get` stub to deterministically widen the race window
 
 Invariant: `Get()` must never write `nil` to cache after a write method has written valid data for the same key
 
