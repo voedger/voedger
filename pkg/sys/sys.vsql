@@ -479,7 +479,7 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT WorkspaceOwner TO RoleWorkspaceOwner; --backward compatibility
 	GRANT Everyone TO Anonymous;
 	GRANT Everyone TO AuthenticatedUser;
-	GRANT WorkspaceOwner TO BLOBUploader;
+	GRANT BLOBUploader TO WorkspaceOwner;
 
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
 
