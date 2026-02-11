@@ -79,7 +79,6 @@ Sync projectors have `Storage_WLog` with `S_GET` access (`impl_sync_actualizer_s
 - [state/stateprovide/impl_sync_actualizer_state.go](../../../../../pkg/state/stateprovide/impl_sync_actualizer_state.go) -- sync projector `Storage_WLog` with `S_GET` (line 37)
 - [sys/storages/impl_wlog_storage.go](../../../../../pkg/sys/storages/impl_wlog_storage.go) -- `wLogStorage.Get()` calls `ReadWLog` with count=1 (line 99)
 
-archived_at: 2026-02-11T17:26:14Z
 ---
 
 ## What
