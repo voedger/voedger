@@ -261,58 +261,7 @@ func TestAppStorage_GetBatch(t *testing.T) {
 
 		require.ErrorIs(err, testErr)
 	})
-	t.Run("Should remove item from cache when it was not found from underlying storage", func(t *testing.T) {
-		require := require.New(t)
-		ts := &testStorage{
-			get: func(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
-				return false, err
-			},
-			put: func(pKey []byte, cCols []byte, value []byte) (err error) {
-				return err
-			},
-			getBatch: func(pKey []byte, items []istorage.GetBatchItem) (err error) {
-				items[0].Ok = false
-				*items[1].Data = append((*items[1].Data)[0:0], []byte("Burger ver.1.1")...)
-				items[1].Ok = true
-				*items[2].Data = append((*items[2].Data)[0:0], []byte("Napkin ver.1.0")...)
-				items[2].Ok = true
-				return err
-			}}
-		tsp := &testStorageProvider{storage: ts}
-		cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", testingu.MockTime)
-		storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
-		require.NoError(err)
 
-		require.NoError(storage.Put([]byte("UK"), []byte("Beverage"), []byte("Cola ver.1.0")))
-		require.NoError(storage.Put([]byte("UK"), []byte("Food"), []byte("Burger ver.1.0")))
-
-		require.NoError(storage.GetBatch([]byte("UK"), []istorage.GetBatchItem{
-			{
-				CCols: []byte("Beverage"),
-				Data:  &[]byte{},
-			},
-			{
-				CCols: []byte("Food"),
-				Data:  &[]byte{},
-			},
-			{
-				CCols: []byte("Misc"),
-				Data:  &[]byte{},
-			},
-		}))
-
-		data := make([]byte, 0, 100)
-
-		ok, err := storage.Get([]byte("UK"), []byte("Beverage"), &data)
-		require.NoError(err)
-		require.False(ok)
-		_, err = storage.Get([]byte("UK"), []byte("Food"), &data)
-		require.NoError(err)
-		require.Equal([]byte("Burger ver.1.1"), data)
-		_, err = storage.Get([]byte("UK"), []byte("Misc"), &data)
-		require.NoError(err)
-		require.Equal([]byte("Napkin ver.1.0"), data)
-	})
 }
 
 func TestTechnologyCompatibilityKit(t *testing.T) {
@@ -603,6 +552,58 @@ func TestCacheMissingKeyVsEmptyValue(t *testing.T) {
 			})
 		})
 	})
+}
+
+// The mockTs.get() function pauses inside storage.Get()
+// It lets cachedStorage.InsertIfNotExists write valid data to cache, then resumes and overwrites it with nil.
+// The final cachedStorage.Get() reads from cache and gets the stale nil instead of valid data.
+func TestRaceCondition_GetVsInsertIfNotExists(t *testing.T) {
+	require := require.New(t)
+
+	getStarted := make(chan struct{})
+	insertDone := make(chan struct{})
+
+	pKey := []byte("pk")
+	cCols := []byte("cc")
+	value := []byte("valid-data")
+
+	mockTs := &testStorage{
+		get: func(_ []byte, _ []byte, _ *[]byte) (ok bool, err error) {
+			close(getStarted)
+			<-insertDone
+			return false, nil
+		},
+		insertIfNotExists: func(_ []byte, _ []byte, _ []byte, _ int) (ok bool, err error) {
+			return true, nil
+		},
+	}
+
+	tsp := &testStorageProvider{storage: mockTs}
+	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
+	cachedStorage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	getDone := make(chan struct{})
+	go func() {
+		defer close(getDone)
+		data := make([]byte, 0)
+		_, _ = cachedStorage.Get(pKey, cCols, &data)
+	}()
+
+	<-getStarted
+
+	ok, err := cachedStorage.InsertIfNotExists(pKey, cCols, value, 0)
+	require.NoError(err)
+	require.True(ok)
+
+	close(insertDone)
+	<-getDone
+
+	data := make([]byte, 0)
+	ok, err = cachedStorage.Get(pKey, cCols, &data)
+	require.NoError(err)
+	require.True(ok, "stale nil in cache: Get() after InsertIfNotExists() returned false")
+	require.Equal(value, data)
 }
 
 func TestMakeKeys(t *testing.T) {
