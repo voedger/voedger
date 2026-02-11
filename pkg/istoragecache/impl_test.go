@@ -554,9 +554,9 @@ func TestCacheMissingKeyVsEmptyValue(t *testing.T) {
 	})
 }
 
-// The mockTs.get() function pauses inside storage.Get()
-// It lets cachedStorage.InsertIfNotExists write valid data to cache, then resumes and overwrites it with nil.
-// The final cachedStorage.Get() reads from cache and gets the stale nil instead of valid data.
+// Simulates a race where mockTS.get() blocks inside storage.Get()
+// while cachedStorage.InsertIfNotExists writes valid data to the cache, then resumes and reports "not found".
+// Verifies that the cache still contains and returns the valid data (not a stale nil) on subsequent Get() calls.
 func TestRaceCondition_GetVsInsertIfNotExists(t *testing.T) {
 	require := require.New(t)
 
@@ -567,7 +567,7 @@ func TestRaceCondition_GetVsInsertIfNotExists(t *testing.T) {
 	cCols := []byte("cc")
 	value := []byte("valid-data")
 
-	mockTs := &testStorage{
+	mockTS := &testStorage{
 		get: func(_ []byte, _ []byte, _ *[]byte) (ok bool, err error) {
 			close(getStarted)
 			<-insertDone
@@ -578,7 +578,7 @@ func TestRaceCondition_GetVsInsertIfNotExists(t *testing.T) {
 		},
 	}
 
-	tsp := &testStorageProvider{storage: mockTs}
+	tsp := &testStorageProvider{storage: mockTS}
 	cachingStorageProvider := Provide(testCacheSize, tsp, imetrics.Provide(), "vvm", timeu.NewITime())
 	cachedStorage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)

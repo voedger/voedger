@@ -11,7 +11,8 @@
   - add: `cacheMu sync.Mutex` field to `cachedAppStorage` struct
   - update: `Get()` -- lock `cacheMu` around negative-cache write with check-then-set pattern
   - update: `getBatchFromStorage()` -- lock `cacheMu` around negative-cache writes in loop
-  - update: `TTLGet()` -- lock `cacheMu` around negative-cache write with check-then-set pattern
+  - update: `CompareAndDelete()` -- lock `cacheMu` around `cache.Del` call
+  - update: `TTLGet()` -- lock `cacheMu` around cache read, expiration delete, and negative-cache write with check-then-set pattern
   - update: `InsertIfNotExists()` -- lock `cacheMu` around positive-cache write
   - update: `Put()` -- lock `cacheMu` around positive-cache write
   - update: `PutBatch()` -- lock `cacheMu` around positive-cache writes in loop

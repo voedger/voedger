@@ -191,7 +191,9 @@ func (s *cachedAppStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedV
 	}
 
 	if ok {
+		s.cacheMu.Lock()
 		s.cache.Del(makeKey(pKey, cCols))
+		s.cacheMu.Unlock()
 	}
 
 	return ok, nil
@@ -207,20 +209,25 @@ func (s *cachedAppStorage) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok b
 	var key = makeKey(pKey, cCols)
 
 	*data = (*data)[0:0]
-	cachedData, isCached := s.cache.HasGet(*data, key)
 
+	s.cacheMu.Lock()
+	cachedData, isCached := s.cache.HasGet(*data, key)
 	if isCached {
 		if len(cachedData) == 0 {
+			s.cacheMu.Unlock()
 			return false, nil
 		}
 		d := istorage.ReadWithExpiration(cachedData)
 		if d.IsExpired(s.iTime.Now()) {
 			s.cache.Del(key)
+			s.cacheMu.Unlock()
 			return false, nil
 		}
+		s.cacheMu.Unlock()
 		*data = d.Data
 		return true, nil
 	}
+	s.cacheMu.Unlock()
 
 	ok, err = s.storage.TTLGet(pKey, cCols, data)
 	if err == nil && !ok {

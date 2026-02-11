@@ -1,7 +1,7 @@
 ---
 registered_at: 2026-02-11T15:42:52Z
 change_id: 2602111642-stale-cache-missing-wlog-record
-baseline: 9640efecb6d1573402ba830e58ba6698e894239f
+baseline: b79389ff71f5785493e92c20507e61cc305cea27
 archived_at: 2026-02-11T17:26:14Z
 ---
 
