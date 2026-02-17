@@ -14,7 +14,6 @@ type IRequestSender interface {
 	// responseCh must be read out
 	// *responseErr must be checked only after reading out the responseCh
 	// caller must eventually close clientCtx
-	// ErrSendTimeoutExpired
 	SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error)
 }
 

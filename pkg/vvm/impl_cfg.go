@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -41,7 +40,6 @@ func NewVVMDefaultConfig() VVMConfig {
 		Time:                   timeu.NewITime(),
 		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
-		SendTimeout:            bus.DefaultSendTimeout,
 		NumCommandProcessors:   DefaultNumCommandProcessors,
 		NumQueryProcessors:     DefaultNumQueryProcessors,
 		NumBLOBProcessors:      DefaultNumBLOBProcessors,

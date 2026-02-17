@@ -8,7 +8,6 @@ package router
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -196,11 +195,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, request)
 		if err != nil {
 			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
-			status := http.StatusInternalServerError
-			if errors.Is(err, bus.ErrSendTimeoutExpired) {
-				status = http.StatusServiceUnavailable
-			}
-			WriteTextResponse(rw, err.Error(), status)
+			WriteTextResponse(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

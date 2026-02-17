@@ -7,7 +7,5 @@ package bus
 
 import "errors"
 
-var (
-	ErrSendTimeoutExpired = errors.New("send timeout expired")
-	ErrNoConsumer         = errors.New("no consumer for the stream")
-)
+// happens when router is busy writing to the slow http client and does not read the response channel
+var ErrSendResponseTimeout = errors.New("timeout sending response")
