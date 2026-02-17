@@ -34,7 +34,6 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 	startTime := time.Now()
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
-		defer wg.Done()
 		warningTicker := time.NewTicker(noFirstResponseWarningInterval)
 		defer warningTicker.Stop()
 		for clientCtx.Err() == nil {
@@ -48,7 +47,6 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		}
 	})
 	wg.Go(func() {
-		defer wg.Done()
 		select {
 		case responseMeta = <-responder.responseMetaCh:
 			err = clientCtx.Err()
