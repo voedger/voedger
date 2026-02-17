@@ -456,11 +456,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {
 		logger.Error("sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
-		status := http.StatusInternalServerError
-		if errors.Is(err, bus.ErrSendTimeoutExpired) {
-			status = http.StatusServiceUnavailable
-		}
-		WriteTextResponse(rw, err.Error(), status)
+		WriteTextResponse(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

@@ -7,7 +7,4 @@ package bus
 
 import "errors"
 
-var (
-	ErrSendTimeoutExpired = errors.New("send timeout expired")
-	ErrNoConsumer         = errors.New("no consumer for the stream")
-)
+var ErrNoConsumer = errors.New("no consumer for the stream")

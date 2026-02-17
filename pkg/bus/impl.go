@@ -12,56 +12,58 @@ import (
 	"net/http"
 	"runtime/debug"
 	"sync"
-	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request) (responseCh <-chan any, responseMeta ResponseMeta, responseErr *error, err error) {
-	timeoutChan := rs.tm.NewTimerChan(time.Duration(rs.timeout))
 	respWriter := &implResponseWriter{
-		ch:          make(chan any, 1), // buf size 1 to make single write on Respond()
-		clientCtx:   clientCtx,
-		sendTimeout: rs.timeout,
-		tm:          rs.tm,
-		resultErr:   new(error),
+		ch:        make(chan any, 1), // buf size 1 to make single write on Respond()
+		clientCtx: clientCtx,
+		tm:        rs.tm,
+		resultErr: new(error),
 	}
 	responder := &implIResponder{
 		respWriter:     respWriter,
 		responseMetaCh: make(chan ResponseMeta, 1),
 	}
 	handlerPanic := make(chan interface{})
+	done := make(chan struct{})
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		defer func() {
-			wg.Done()
-		}()
-		select {
-		case <-timeoutChan:
-			if err = checkHandlerPanic(handlerPanic); err == nil {
-				err = ErrSendTimeoutExpired
+		defer wg.Done()
+		warningTicker := rs.tm.NewTimerChan(noFirstResponseWarningInterval)
+		for {
+			select {
+			case <-warningTicker:
+				logger.Warning("no first response for", noFirstResponseWarningInterval, "on", req.Resource)
+				warningTicker = rs.tm.NewTimerChan(noFirstResponseWarningInterval)
+			case <-done:
+				return
 			}
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
 		case responseMeta = <-responder.responseMetaCh:
-			err = clientCtx.Err() // to make clientCtx.Done() take priority
+			err = clientCtx.Err()
 		case <-clientCtx.Done():
-			// wrong to close(replier.elems) because possible that elems is being writing at the same time -> data race
-			// clientCxt closed -> ErrNoConsumer on SendElement() according to IReplier contract
-			// so will do nothing here
 			if err = checkHandlerPanic(handlerPanic); err == nil {
-				err = clientCtx.Err() // to make clientCtx.Done() take priority
+				err = clientCtx.Err()
 			}
 		case panicIntf := <-handlerPanic:
 			err = handlePanic(panicIntf)
 		}
+		close(done)
 	}()
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Error("handler panic:", fmt.Sprint(r), "\n", string(debug.Stack()))
-				// will process panic in the goroutine instead of update err here to avoid data race
-				// https://dev.untill.com/projects/#!607751
 				handlerPanic <- r
 			}
 		}()
@@ -127,21 +129,20 @@ func (r *implIResponder) Respond(responseMeta ResponseMeta, obj any) error {
 	responseMeta.mode = RespondMode_Single
 	select {
 	case r.responseMetaCh <- responseMeta:
-		// TODO: rework here: possible: http client disconnected, write to r.respWriter.ch successful, we're thinking that we're replied, but it is not: no socket to write to
 		r.respWriter.ch <- obj // buf size 1
 		close(r.respWriter.ch)
-	default:
-		return ErrNoConsumer
+	case <-r.respWriter.clientCtx.Done():
+		return r.respWriter.clientCtx.Err()
 	}
 	return nil
 }
 
 func (rs *implResponseWriter) Write(obj any) error {
-	sendTimeoutTimerChan := rs.tm.NewTimerChan(time.Duration(rs.sendTimeout))
+	noConsumerTimerChan := rs.tm.NewTimerChan(noConsumerTimeout)
 	select {
 	case rs.ch <- obj:
 	case <-rs.clientCtx.Done():
-	case <-sendTimeoutTimerChan:
+	case <-noConsumerTimerChan:
 		return ErrNoConsumer
 	}
 	return rs.clientCtx.Err()

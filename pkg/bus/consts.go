@@ -7,4 +7,7 @@ package bus
 
 import "time"
 
-const DefaultSendTimeout = SendTimeout(10 * time.Second)
+const (
+	noConsumerTimeout              = 10 * time.Second
+	noFirstResponseWarningInterval = time.Minute
+)

@@ -35,7 +35,7 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 		apps:               make(map[appdef.AppQName]*appInfo),
 		numsAppsWorkspaces: make(map[appdef.AppQName]istructs.NumAppWorkspaces),
 	}
-	httpProcessor.requestSender = bus.NewIRequestSender(timeu.NewITime(), bus.DefaultSendTimeout, httpProcessor.requestHandler)
+	httpProcessor.requestSender = bus.NewIRequestSender(timeu.NewITime(), httpProcessor.requestHandler)
 	if len(params.AcmeDomains) > 0 {
 		for _, domain := range params.AcmeDomains {
 			httpProcessor.AddAcmeDomain(domain)

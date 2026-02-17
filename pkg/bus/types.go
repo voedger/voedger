@@ -7,7 +7,6 @@ package bus
 
 import (
 	"context"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -48,19 +47,15 @@ const (
 )
 
 type implIRequestSender struct {
-	timeout        SendTimeout
 	tm             timeu.ITime
 	requestHandler RequestHandler
 }
 
-type SendTimeout time.Duration
-
 type implResponseWriter struct {
-	ch          chan any
-	clientCtx   context.Context
-	sendTimeout SendTimeout
-	tm          timeu.ITime
-	resultErr   *error
+	ch        chan any
+	clientCtx context.Context
+	tm        timeu.ITime
+	resultErr *error
 }
 
 type implIResponder struct {
