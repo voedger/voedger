@@ -34,7 +34,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 	startTime := time.Now()
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
-		warningTicker := time.NewTicker(noFirstResponseWarningInterval)
+		warningTicker := time.NewTicker(firstResponseWaitWarningInterval)
 		defer warningTicker.Stop()
 		for clientCtx.Err() == nil {
 			select {

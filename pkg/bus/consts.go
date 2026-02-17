@@ -8,6 +8,6 @@ package bus
 import "time"
 
 const (
-	noConsumerTimeout              = 10 * time.Second
-	noFirstResponseWarningInterval = time.Minute
+	noConsumerTimeout                = 10 * time.Second
+	firstResponseWaitWarningInterval = time.Minute
 )
