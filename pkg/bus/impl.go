@@ -37,7 +37,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		defer wg.Done()
 		warningTicker := time.NewTicker(noFirstResponseWarningInterval)
 		defer warningTicker.Stop()
-		for {
+		for clientCtx.Err() == nil {
 			select {
 			case <-warningTicker.C:
 				elapsed := time.Since(startTime)
