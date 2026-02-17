@@ -147,14 +147,15 @@ func TestErrors(t *testing.T) {
 		require.NoError(*respErr)
 	})
 
-	t.Run("client disconnect on send request", func(t *testing.T) {
+	t.Run("client disconnect before send response", func(t *testing.T) {
 		requestHandlerStarted := make(chan interface{})
+		sendRequestDone := make(chan interface{})
 		writeErrCh := make(chan error)
 		clientCtx, disconnectClient := context.WithCancel(context.Background())
 		requestSender := NewIRequestSender(testingu.MockTime, func(requestCtx context.Context, request Request, responder IResponder) {
 			close(requestHandlerStarted)
 			go func() {
-				<-clientCtx.Done()
+				<-sendRequestDone
 				respWriter := responder.StreamJSON(http.StatusOK)
 				writeErrCh <- respWriter.Write("test")
 				respWriter.Close(nil)
@@ -167,7 +168,12 @@ func TestErrors(t *testing.T) {
 		}()
 
 		respCh, _, respErr, err := requestSender.SendRequest(clientCtx, Request{})
+		close(sendRequestDone)
+
+		// context cancelled case is fired in SendRequest()
 		require.ErrorIs(err, context.Canceled)
+
+		// first Write() on server side should fail with context.Canceled
 		err = <-writeErrCh
 		require.ErrorIs(err, context.Canceled)
 		for range respCh {

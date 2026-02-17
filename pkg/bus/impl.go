@@ -53,6 +53,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 				return
 			}
 		}
+		err = clientCtx.Err()
 	})
 	func() {
 		defer func() {
