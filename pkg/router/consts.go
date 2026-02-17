@@ -22,10 +22,11 @@ const (
 	// clients that send data too slowly (slowloris attacks).
 	DefaultRouterReadTimeout = 15
 
-	// covers the time from when the request header is read to when the
-	// response write completes. It protects against slow clients that read
-	// responses too slowly, preventing goroutines and connections from being
-	// held open indefinitely.
+	// corresponds to http.Server.WriteTimeout. For HTTP/1.x it covers the time
+	// from when the connection is accepted until the response write completes.
+	// A value of 0 disables the timeout entirely, which is our default.
+	// It protects against slow clients that read responses too slowly, preventing
+	// goroutines and connections from being held open indefinitely.
 	DefaultRouterWriteTimeout = 0
 
 	URLPlaceholder_wsid           = "wsid"
