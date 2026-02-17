@@ -175,7 +175,7 @@ func TestErrors(t *testing.T) {
 		require.NoError(*respErr)
 	})
 
-	t.Run("no consumer", func(t *testing.T) {
+	t.Run("send response timeout", func(t *testing.T) {
 		writeErrCh := make(chan error)
 		firstWriteDone := make(chan interface{})
 		mayWrite2nd := make(chan interface{})
@@ -199,7 +199,7 @@ func TestErrors(t *testing.T) {
 		close(mayWrite2nd)
 
 		err = <-writeErrCh
-		require.ErrorIs(err, ErrNoConsumer)
+		require.ErrorIs(err, ErrSendResponseTimeout)
 		for range respCh {
 		}
 		require.NoError(*respErr)

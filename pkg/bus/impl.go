@@ -36,20 +36,12 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 	wg.Go(func() {
 		warningTicker := time.NewTicker(firstResponseWaitWarningInterval)
 		defer warningTicker.Stop()
-		for clientCtx.Err() == nil {
-			select {
-			case <-warningTicker.C:
-				elapsed := time.Since(startTime)
-				logger.Warning("no first response for", elapsed, "on", req.Resource)
-			case <-firstReponseReceived:
-				return
-			}
-		}
-	})
-	wg.Go(func() {
 		select {
 		case responseMeta = <-responder.responseMetaCh:
 			err = clientCtx.Err()
+		case <-warningTicker.C:
+			elapsed := time.Since(startTime)
+			logger.Warning("no first response for", elapsed, "on", req.Resource)
 		case <-clientCtx.Done():
 			if err = checkHandlerPanic(handlerPanic); err == nil {
 				err = clientCtx.Err()
@@ -95,12 +87,7 @@ func handlePanic(r interface{}) error {
 
 func (r *implIResponder) StreamJSON(statusCode int) IResponseWriter {
 	r.checkStarted()
-	select {
-	case r.responseMetaCh <- ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: statusCode}:
-	default:
-		// do nothing if no consumer already.
-		// will get ErrNoConsumer on the next Write()
-	}
+	r.responseMetaCh <- ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: statusCode}
 	return r.respWriter
 }
 
@@ -111,12 +98,7 @@ func (r *implIResponder) StreamEvents() IResponseWriter {
 		StatusCode:  http.StatusOK,
 		mode:        RespondMode_StreamEvents,
 	}
-	select {
-	case r.responseMetaCh <- responseMeta:
-	default:
-		// do nothing if no consumer already.
-		// will get ErrNoConsumer on the next Write()
-	}
+	r.responseMetaCh <- responseMeta
 	return r.respWriter
 }
 
@@ -137,12 +119,12 @@ func (r *implIResponder) Respond(responseMeta ResponseMeta, obj any) error {
 }
 
 func (rs *implResponseWriter) Write(obj any) error {
-	noConsumerTimerChan := rs.tm.NewTimerChan(noConsumerTimeout)
+	noConsumerTimerChan := rs.tm.NewTimerChan(sendResponseTimeout)
 	select {
 	case rs.ch <- obj:
 	case <-rs.clientCtx.Done():
 	case <-noConsumerTimerChan:
-		return ErrNoConsumer
+		return ErrSendResponseTimeout
 	}
 	return rs.clientCtx.Err()
 }

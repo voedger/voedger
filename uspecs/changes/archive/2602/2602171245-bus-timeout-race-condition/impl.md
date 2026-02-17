@@ -6,17 +6,17 @@
 
 - [x] update: [pkg/bus/consts.go](../../../pkg/bus/consts.go)
   - remove: `DefaultSendTimeout` exported constant
-  - add: `const noConsumerTimeout = 10 * time.Second` — how long `Write()` waits before deciding there is no consumer
-  - add: `const noFirstResponseWarningInterval = time.Minute`
+  - add: `const sendResponseTimeout = 10 * time.Second` — how long `Write()` waits before returning `ErrSendResponseTimeout`
+  - add: `const firstResponseWaitWarningInterval = time.Minute`
 
 - [x] update: [pkg/bus/errors.go](../../../pkg/bus/errors.go)
   - remove: `ErrSendTimeoutExpired` error variable
-  - keep: `ErrNoConsumer` — needed by `Write()`: if the router is busy sending to a slow internet socket the channel is not read, and the request handler would block on the 3rd `Write()` without this error
+  - rename: `ErrNoConsumer` → `ErrSendResponseTimeout` with message "timeout sending response"
 
 - [x] update: [pkg/bus/types.go](../../../pkg/bus/types.go)
   - remove: `SendTimeout` type (no longer configurable)
   - remove: `timeout` field from `implIRequestSender` (no longer used by `SendRequest()`)
-  - remove: `sendTimeout` field from `implResponseWriter` (replaced by `noConsumerTimeout` const)
+  - remove: `sendTimeout` field from `implResponseWriter` (replaced by `sendResponseTimeout` const)
 
 - [x] update: [pkg/bus/interface.go](../../../pkg/bus/interface.go)
   - remove: `ErrSendTimeoutExpired` from `SendRequest` doc comment
@@ -25,12 +25,14 @@
   - remove: `sendTimeout` parameter from `NewIRequestSender`
 
 - [x] update: [pkg/bus/impl.go](../../../pkg/bus/impl.go)
-  - update: `SendRequest()` — remove `timeoutChan`; separate warning ticker into its own goroutine controlled by a `done` channel; main goroutine `select` only listens on `responseMetaCh`, `clientCtx.Done()`, `handlerPanic`; `defer close(done)` stops the ticker goroutine on exit; stop passing `sendTimeout` to `implResponseWriter`
-  - update: `Write()` — use `noConsumerTimeout` const instead of `rs.sendTimeout` field; keep `ErrNoConsumer` return
-  - update: `Respond()` — replace `default: return ErrNoConsumer` with `<-r.respWriter.clientCtx.Done(): return r.respWriter.clientCtx.Err()` (the only failure case is http client disconnect)
+  - update: `SendRequest()` — remove `timeoutChan`; merge response-awaiting and warning into single goroutine via `wg.Go()`; use `time.NewTicker(firstResponseWaitWarningInterval)` for periodic warnings with elapsed time logging; stop passing `sendTimeout` to `implResponseWriter`
+  - update: `Write()` — use `sendResponseTimeout` const instead of `rs.sendTimeout` field; return `ErrSendResponseTimeout`
+  - update: `Respond()` — replace `default: return ErrNoConsumer` with `<-r.respWriter.clientCtx.Done(): return r.respWriter.clientCtx.Err()`
+  - update: `StreamJSON()` and `StreamEvents()` — replace `select/default` with direct channel send
 
 - [x] update: [pkg/bus/impl_test.go](../../../pkg/bus/impl_test.go)
   - remove: "response timeout" test (`SendRequest` timeout no longer exists)
+  - rename: "no consumer" test → "send response timeout"; `ErrNoConsumer` → `ErrSendResponseTimeout`
   - update: all `NewIRequestSender` calls to remove `sendTimeout` argument
 
 - [x] update: [pkg/bus/utils_test.go](../../../pkg/bus/utils_test.go)
@@ -39,7 +41,6 @@
 
 - [x] update: [pkg/bus/README.md](../../../pkg/bus/README.md)
   - remove: "timeout" alternative from sequence diagram (`SendRequest` no longer times out)
-  - keep: `ErrNoConsumer` in "http client disconnect" alternative — still returned by `Write()`
 
 ### Router package (dependent on bus)
 
