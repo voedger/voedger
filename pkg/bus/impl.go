@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -29,24 +30,24 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		responseMetaCh: make(chan ResponseMeta, 1),
 	}
 	handlerPanic := make(chan interface{})
-	done := make(chan struct{})
+	firstReponseReceived := make(chan struct{})
+	startTime := time.Now()
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		defer wg.Done()
-		warningTicker := rs.tm.NewTimerChan(noFirstResponseWarningInterval)
+		warningTicker := time.NewTicker(noFirstResponseWarningInterval)
+		defer warningTicker.Stop()
 		for {
 			select {
-			case <-warningTicker:
-				logger.Warning("no first response for", noFirstResponseWarningInterval, "on", req.Resource)
-				warningTicker = rs.tm.NewTimerChan(noFirstResponseWarningInterval)
-			case <-done:
+			case <-warningTicker.C:
+				elapsed := time.Since(startTime)
+				logger.Warning("no first response for", elapsed, "on", req.Resource)
+			case <-firstReponseReceived:
 				return
 			}
 		}
-	}()
-	wg.Add(1)
-	go func() {
+	})
+	wg.Go(func() {
 		defer wg.Done()
 		select {
 		case responseMeta = <-responder.responseMetaCh:
@@ -58,8 +59,8 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		case panicIntf := <-handlerPanic:
 			err = handlePanic(panicIntf)
 		}
-		close(done)
-	}()
+		close(firstReponseReceived)
+	})
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
