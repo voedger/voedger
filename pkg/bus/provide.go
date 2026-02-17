@@ -7,9 +7,8 @@ package bus
 
 import "github.com/voedger/voedger/pkg/goutils/timeu"
 
-func NewIRequestSender(tm timeu.ITime, sendTimeout SendTimeout, requestHandler RequestHandler) IRequestSender {
+func NewIRequestSender(tm timeu.ITime, requestHandler RequestHandler) IRequestSender {
 	return &implIRequestSender{
-		timeout:        sendTimeout,
 		tm:             tm,
 		requestHandler: requestHandler,
 	}

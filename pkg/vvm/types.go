@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -147,7 +146,6 @@ type VVMConfig struct {
 	Routes                           map[string]string
 	RoutesRewrite                    map[string]string
 	RouteDomains                     map[string]string
-	SendTimeout                      bus.SendTimeout
 	StorageFactory                   func(time timeu.ITime) (provider istorage.IAppStorageFactory, err error)
 	BLOBMaxSize                      iblobstorage.BLOBMaxSizeType
 	Name                             processors.VVMName

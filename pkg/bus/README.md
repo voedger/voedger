@@ -1,4 +1,3 @@
-
 # Overview
 
 ## Streaming Response
@@ -32,9 +31,6 @@ sequenceDiagram
 
         deactivate router
       deactivate processors
-    else timeout
-      router ->> httpClient: 503 serice unavailable
-      processors ->> processors: next Send(obj) returns ErrNoConsumer
     else http client disconnect
       processors ->> processors: next Send(obj) returns ErrNoConsumer
     end

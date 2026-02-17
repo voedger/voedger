@@ -16,27 +16,38 @@ const (
 	subscriptionsCloseCheckInterval = 100 * time.Millisecond
 	DefaultPort                     = 8822
 	DefaultConnectionsLimit         = 10000
-	DefaultRouterReadTimeout        = 15
-	DefaultRouterWriteTimeout       = 15
-	URLPlaceholder_wsid             = "wsid"
-	URLPlaceholder_appOwner         = "appOwner"
-	URLPlaceholder_appName          = "appName"
-	URLPlaceholder_blobIDOrSUUID    = "blobIDOrSUUID"
-	URLPlaceholder_resourceName     = "resourceName"
-	URLPlaceholder_pkg              = "pkg"
-	URLPlaceholder_table            = "table"
-	URLPlaceholder_id               = "id"
-	URLPlaceholder_command          = "command"
-	URLPlaceholder_query            = "query"
-	URLPlaceholder_view             = "view"
-	URLPlaceholder_workspaceName    = "workspace"
-	URLPlaceholder_rolePkg          = "rolePkg"
-	URLPlaceholder_role             = "role"
-	URLPlaceholder_channelID        = "channelID"
-	URLPlaceholder_field            = "field"
-	hours24                         = 24 * time.Hour
-	DefaultRetryAfterSecondsOn503   = 1
-	defaultN10NExpiresInSeconds     = 60 * 60 * 24 // 24 hours
+
+	//  covers the time from when the connection is accepted to when the
+	// request body is fully read. It protects against slow or malicious
+	// clients that send data too slowly (slowloris attacks).
+	DefaultRouterReadTimeout = 15
+
+	// corresponds to http.Server.WriteTimeout. For HTTP/1.x it covers the time
+	// from when the connection is accepted until the response write completes.
+	// A value of 0 disables the timeout entirely, which is our default.
+	// It protects against slow clients that read responses too slowly, preventing
+	// goroutines and connections from being held open indefinitely.
+	DefaultRouterWriteTimeout = 0
+
+	URLPlaceholder_wsid           = "wsid"
+	URLPlaceholder_appOwner       = "appOwner"
+	URLPlaceholder_appName        = "appName"
+	URLPlaceholder_blobIDOrSUUID  = "blobIDOrSUUID"
+	URLPlaceholder_resourceName   = "resourceName"
+	URLPlaceholder_pkg            = "pkg"
+	URLPlaceholder_table          = "table"
+	URLPlaceholder_id             = "id"
+	URLPlaceholder_command        = "command"
+	URLPlaceholder_query          = "query"
+	URLPlaceholder_view           = "view"
+	URLPlaceholder_workspaceName  = "workspace"
+	URLPlaceholder_rolePkg        = "rolePkg"
+	URLPlaceholder_role           = "role"
+	URLPlaceholder_channelID      = "channelID"
+	URLPlaceholder_field          = "field"
+	hours24                       = 24 * time.Hour
+	DefaultRetryAfterSecondsOn503 = 1
+	defaultN10NExpiresInSeconds   = 60 * 60 * 24 // 24 hours
 )
 
 var (
