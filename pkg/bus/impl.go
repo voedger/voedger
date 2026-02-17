@@ -31,6 +31,7 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 	}
 	handlerPanic := make(chan interface{})
 	startTime := time.Now()
+	warningFired := false
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
 		warningTicker := time.NewTicker(firstResponseWaitWarningInterval)
@@ -38,9 +39,14 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		for clientCtx.Err() == nil {
 			select {
 			case responseMeta = <-responder.responseMetaCh:
+				if warningFired {
+					delay := time.Since(startTime)
+					logger.Warning("response took longer than expected:", delay, "on", req.Resource)
+				}
 				err = clientCtx.Err()
 				return
 			case <-warningTicker.C:
+				warningFired = true
 				elapsed := time.Since(startTime)
 				logger.Warning("no first response for", elapsed, "on", req.Resource)
 			case <-clientCtx.Done():

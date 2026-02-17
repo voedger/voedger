@@ -25,7 +25,7 @@
   - remove: `sendTimeout` parameter from `NewIRequestSender`
 
 - [x] update: [pkg/bus/impl.go](../../../pkg/bus/impl.go)
-  - update: `SendRequest()` — remove `timeoutChan`; merge response-awaiting and warning into single goroutine via `wg.Go()`; use `time.NewTicker(firstResponseWaitWarningInterval)` for periodic warnings with elapsed time logging; stop passing `sendTimeout` to `implResponseWriter`
+  - update: `SendRequest()` — remove `timeoutChan`; merge response-awaiting and warning into single goroutine via `wg.Go()`; use `time.NewTicker(firstResponseWaitWarningInterval)` for periodic warnings with elapsed time logging; track `warningFired` flag; log "response with large delay {delay}" when response arrives after at least one warning; stop passing `sendTimeout` to `implResponseWriter`
   - update: `Write()` — use `sendResponseTimeout` const instead of `rs.sendTimeout` field; return `ErrSendResponseTimeout`
   - update: `Respond()` — replace `default: return ErrNoConsumer` with `<-r.respWriter.clientCtx.Done(): return r.respWriter.clientCtx.Err()`
   - update: `StreamJSON()` and `StreamEvents()` — replace `select/default` with direct channel send
