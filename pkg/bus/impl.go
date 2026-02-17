@@ -30,26 +30,29 @@ func (rs *implIRequestSender) SendRequest(clientCtx context.Context, req Request
 		responseMetaCh: make(chan ResponseMeta, 1),
 	}
 	handlerPanic := make(chan interface{})
-	firstReponseReceived := make(chan struct{})
 	startTime := time.Now()
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
 		warningTicker := time.NewTicker(firstResponseWaitWarningInterval)
 		defer warningTicker.Stop()
-		select {
-		case responseMeta = <-responder.responseMetaCh:
-			err = clientCtx.Err()
-		case <-warningTicker.C:
-			elapsed := time.Since(startTime)
-			logger.Warning("no first response for", elapsed, "on", req.Resource)
-		case <-clientCtx.Done():
-			if err = checkHandlerPanic(handlerPanic); err == nil {
+		for clientCtx.Err() == nil {
+			select {
+			case responseMeta = <-responder.responseMetaCh:
 				err = clientCtx.Err()
+				return
+			case <-warningTicker.C:
+				elapsed := time.Since(startTime)
+				logger.Warning("no first response for", elapsed, "on", req.Resource)
+			case <-clientCtx.Done():
+				if err = checkHandlerPanic(handlerPanic); err == nil {
+					err = clientCtx.Err()
+				}
+				return
+			case panicIntf := <-handlerPanic:
+				err = handlePanic(panicIntf)
+				return
 			}
-		case panicIntf := <-handlerPanic:
-			err = handlePanic(panicIntf)
 		}
-		close(firstReponseReceived)
 	})
 	func() {
 		defer func() {
