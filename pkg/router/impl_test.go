@@ -176,7 +176,7 @@ func TestHandlerPanic(t *testing.T) {
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Contains(t, string(respBodyBytes), "test panic HandlerPanic")
-	expectResp(t, resp, "text/plain", http.StatusInternalServerError)
+	expectResp(t, resp, httpu.ContentType_ApplicationJSON, http.StatusInternalServerError)
 }
 
 func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
