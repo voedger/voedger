@@ -18,6 +18,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -32,9 +33,7 @@ func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 }
 
 func ReplyCommonError(w http.ResponseWriter, msg string, code int) {
-	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
-	w.WriteHeader(code)
-	writeCommonError(w, msg, code)
+	writeCommonError_V2(w, errors.New(msg), code)
 }
 
 func ReplyJSON(w http.ResponseWriter, data string, code int) {
@@ -43,8 +42,17 @@ func ReplyJSON(w http.ResponseWriter, data string, code int) {
 	writeResponse(w, data)
 }
 
-func writeCommonError(w http.ResponseWriter, msg string, code int) bool {
-	return writeResponse(w, fmt.Sprintf(`{"status":%d,"message":%q}`, code, msg))
+func writeCommonError_V2(w http.ResponseWriter, err error, code int) bool {
+	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
+	w.WriteHeader(code)
+	return writeResponse(w, fmt.Sprintf(`{"status":%d,"message":%q}`, code, err.Error()))
+}
+
+func writeCommonError_V1(w http.ResponseWriter, err error, code int) bool {
+	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
+	w.WriteHeader(code)
+	sysErr := coreutils.WrapSysErrorToExact(err, code)
+	return writeResponse(w, sysErr.ToJSON_APIV1())
 }
 
 func writeResponse(w http.ResponseWriter, data string) bool {
