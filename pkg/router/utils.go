@@ -18,7 +18,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -33,6 +32,8 @@ func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 }
 
 func ReplyCommonError(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
+	w.WriteHeader(code)
 	writeCommonError_V2(w, errors.New(msg), code)
 }
 
@@ -43,8 +44,6 @@ func ReplyJSON(w http.ResponseWriter, data string, code int) {
 }
 
 func writeCommonError_V2(w http.ResponseWriter, err error, code int) bool {
-	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
-	w.WriteHeader(code)
 	return writeResponse(w, fmt.Sprintf(`{"status":%d,"message":%q}`, code, err.Error()))
 }
 
