@@ -47,7 +47,6 @@ const (
 	URLPlaceholder_field          = "field"
 	hours24                       = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503 = 1
-	defaultN10NExpiresInSeconds   = 60 * 60 * 24 // 24 hours
 )
 
 var (
@@ -55,7 +54,6 @@ var (
 )
 
 const (
-	fieldLogin       = "login"
-	fieldPassword    = "password"
-	fieldDisplayName = "displayName"
+	fieldLogin    = "login"
+	fieldPassword = "password"
 )
