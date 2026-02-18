@@ -110,7 +110,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			sendSuccess = writeResponse(w, `"error":`+jsonErr)
 		} else {
 			if sendSuccess = writeResponse(w, `"error":`); sendSuccess {
-				sendSuccess = writeCommonError(w, (*responseErr).Error(), http.StatusInternalServerError)
+				sendSuccess = writeCommonError_V2(w, (*responseErr), http.StatusInternalServerError)
 			}
 		}
 	}

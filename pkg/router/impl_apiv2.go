@@ -456,7 +456,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {
 		logger.Error("sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
-		WriteTextResponse(rw, err.Error(), http.StatusInternalServerError)
+		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

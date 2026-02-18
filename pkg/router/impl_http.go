@@ -195,7 +195,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, request)
 		if err != nil {
 			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
-			WriteTextResponse(rw, err.Error(), http.StatusInternalServerError)
+			writeCommonError_V1(rw, err, http.StatusInternalServerError)
 			return
 		}
 
