@@ -15,9 +15,11 @@ Parameters:
 
 - Input
   - Change description
+  - --branch option (optional): create git branch for the change
 - Output
   - Active Change Folder with Change File
   - Issue File (if issue reference provided)
+  - Git branch (if --branch option provided and git repository exists)
 
 Flow:
 
@@ -36,7 +38,19 @@ Flow:
 - Add frontmatter metadata:
   - If issue reference was provided: `bash uspecs/u/scripts/uspecs.sh change frontmatter <absolute-path-to-change-file> --issue-url <issue-url>`
   - If no issue reference: `bash uspecs/u/scripts/uspecs.sh change frontmatter <absolute-path-to-change-file>`
-- STOP after creating the Change File with frontmatter
+- If --branch option provided:
+  - Extract change name from Change Folder name (remove timestamp prefix)
+  - Determine branch name following branch naming rules from conf.md:
+    - Without issue reference: `{change-name}`
+    - With Jira-style issue URL: `{project}-{issue-number}-{change-name}`
+    - With GitHub-style issue URL: `{issue-number}-{change-name}`
+  - Create git branch: `git checkout -b <branch-name>`
+  - If branch creation fails (no git repository, branch exists, etc.):
+    - Report error to user
+    - Continue (do not fail the change creation)
+  - If branch creation succeeds:
+    - Report success to user
+- STOP after creating the Change File with frontmatter (and optionally branch)
 - Show user what was created
 
 ## Definitions
@@ -64,6 +78,8 @@ Flow:
 Feature: Create change request
   Engineer asks AI Agent to create change request
 
+  All scenarios create Active Change Folder with Change File following Change File Template 1.
+
   Scenario: Create change request without issue reference
     When Engineer asks AI Agent to create change request without issue reference
     Then Active Change Folder is created with Change File
@@ -82,4 +98,16 @@ Feature: Create change request
       | ability                        | references                    | issue-file-created-and-contains |
       | has ability to fetch content   | references Issue File         | contains fetched issue content  |
       | does not have ability to fetch | does not reference Issue File | is not created                  |
+
+  Scenario Outline: Create change request with --branch option
+    When Engineer asks AI Agent to create change request with --branch option
+    Then Active Change Folder is created with Change File
+    And Change File follows Change File Template 1
+    And Git branch is created with name following branch naming rules
+    And Branch creation <result> <reason>
+    Examples:
+      | result   | reason                                    |
+      | succeeds | when git repository exists                |
+      | fails    | when git repository does not exist        |
+      | fails    | when branch with same name already exists |
 ```

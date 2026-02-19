@@ -26,6 +26,20 @@
     - Examples: `remove-uspecs-prefix`, `fetch-issue-to-change`, `alpha-code-bp3-endpoints`
   - Can be either Active (in `$changes_folder`) or Archived (in `$changes_archive`)
   - Active Change Folder files describe Active Change Request and its implementation
+  - Branch naming for Change Folder (when --branch option used):
+    - Without issue reference:
+      - Format: `{change-name}` (without timestamp prefix)
+      - Example: For Change Folder `2602141423-branch-option-uchange`, branch name is `branch-option-uchange`
+    - With issue reference:
+      - Jira-style URL (e.g., `https://example.com/browse/PROJ-123`):
+        - Format: `{project}-{issue-number}-{change-name}`
+        - Example: For issue `PROJ-123`, branch name is `PROJ-123-branch-option-uchange`
+      - GitHub-style URL (e.g., `https://github.com/owner/repo/issues/4113`):
+        - Format: `{issue-number}-{change-name}`
+        - Example: For issue `4113`, branch name is `4113-branch-option-uchange`
+      - Issue identifier is extracted from the issue URL
+    - Branch is created from current HEAD after Change Folder and Change File are created
+    - If branch creation fails, error is reported but change creation continues
 - Change Folder System Artifacts
   - Change File: `change.md`
   - Issue File: `issue.md`
