@@ -23,17 +23,10 @@ import (
 
 type httpStorage struct {
 	customClient httpu.IHTTPClient
-	cleanup      func()
 }
 
 func NewHTTPStorage(customClient httpu.IHTTPClient) state.IStateStorage {
-	s := &httpStorage{}
-	if customClient != nil {
-		s.customClient = customClient
-	} else {
-		s.customClient, s.cleanup = httpu.NewIHTTPClient()
-	}
-	return s
+	return &httpStorage{customClient: customClient}
 }
 
 type httpStorageKeyBuilder struct {
