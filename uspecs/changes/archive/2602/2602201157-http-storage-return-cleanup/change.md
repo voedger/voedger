@@ -2,6 +2,7 @@
 registered_at: 2026-02-20T10:53:47Z
 change_id: 2602201053-http-storage-return-cleanup
 baseline: 37f1a7f2d67a3f6ed5c7a6f05f5cb1b476b083b5
+archived_at: 2026-02-20T11:57:58Z
 ---
 
 # Change request: Return httpStorage cleanup to caller
