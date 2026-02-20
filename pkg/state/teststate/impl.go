@@ -96,6 +96,7 @@ func (rt *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	}
 	var bodyReader io.Reader
 	if req.Body != nil {
+		defer req.Body.Close()
 		bodyBytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			return nil, err
@@ -336,29 +337,27 @@ func (ts *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		state := state.StateOpts{
-			CustomHTTPClient:         ts.httpClient,
+		stateOpts := state.StateOpts{
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
 		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
-			IntentsLimit, BundlesLimit, state, ts.emailSender)
+			IntentsLimit, BundlesLimit, stateOpts, ts.emailSender, ts.httpClient)
 	case ProcKind_CommandProcessor:
-		state := state.StateOpts{
+		stateOpts := state.StateOpts{
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
-			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state, originFunc)
+			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, stateOpts, originFunc)
 	case ProcKind_QueryProcessor:
-		state := state.StateOpts{
-			CustomHTTPClient:         ts.httpClient,
+		stateOpts := state.StateOpts{
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
 		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
-			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback, state)
+			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback, stateOpts, ts.httpClient)
 	}
 }
 

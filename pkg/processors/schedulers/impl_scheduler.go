@@ -106,6 +106,7 @@ func (a *scheduler) runJob() {
 		a.conf.IntentsLimit,
 		a.conf.stateOpts,
 		a.conf.EmailSender,
+		a.conf.HTTPClient,
 	)
 
 	if err = borrowedPartition.Invoke(a.ctx, a.job, state, state); err != nil {

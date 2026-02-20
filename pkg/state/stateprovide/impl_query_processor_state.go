@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -85,7 +86,7 @@ func implProvideQueryProcessorState(
 	resultBuilderFunc state.ObjectBuilderFunc,
 	federation federation.IFederation,
 	queryCallbackFunc state.ExecQueryCallbackFunc,
-	stateOpts state.StateOpts) state.IHostState {
+	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) state.IHostState {
 
 	state := &queryProcessorState{
 		hostState:     newHostState(ctx, "QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
@@ -100,7 +101,7 @@ func implProvideQueryProcessorState(
 	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
 	state.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET|S_READ)
-	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(stateOpts.CustomHTTPClient), S_READ)
+	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(httpClient), S_READ)
 	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federation, itokens, stateOpts.FederationCommandHandler), S_GET)
 	state.addStorage(sys.Storage_FederationBlob, storages.NewFederationBlobStorage(appStructsFunc, wsidFunc, federation, itokens, stateOpts.FederationBlobHandler), S_READ)
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)

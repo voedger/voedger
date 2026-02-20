@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -34,7 +35,8 @@ type BasicAsyncActualizerConfig struct {
 	Broker       in10n.IN10nBroker
 	Federation   federation.IFederation
 
-	StateOpts state.StateOpts
+	StateOpts  state.StateOpts
+	HTTPClient httpu.IHTTPClient
 
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc

@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -28,7 +29,7 @@ func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 
 func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, partitionIDFunc state.PartitionIDFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
 	secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
-	intentsLimit, bundlesLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender) state.IBundledHostState {
+	intentsLimit, bundlesLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender, httpClient httpu.IHTTPClient) state.IBundledHostState {
 
 	state := &asyncActualizerState{
 		bundledHostState: &bundledHostState{
@@ -48,7 +49,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.A
 	state.addStorage(sys.Storage_Event, storages.NewEventStorage(eventFunc), S_GET)
 	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET|S_READ)
 	state.addStorage(sys.Storage_SendMail, storages.NewSendMailStorage(emailSender), S_GET|S_INSERT)
-	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(stateOpts.CustomHTTPClient), S_READ)
+	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(httpClient), S_READ)
 	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, stateOpts.FederationCommandHandler), S_GET)
 	state.addStorage(sys.Storage_FederationBlob, storages.NewFederationBlobStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, stateOpts.FederationBlobHandler), S_READ)
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)

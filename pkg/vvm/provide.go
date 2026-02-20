@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/filesu"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -229,6 +230,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		storage.NewElectionsTTLStorage,
 		provideStateOpts,
 		n10n.NewIN10NProc,
+		provideHTTPClient,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -252,6 +254,10 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 
 func provideStateOpts() state.StateOpts {
 	return state.StateOpts{}
+}
+
+func provideHTTPClient() (httpu.IHTTPClient, func()) {
+	return httpu.NewIHTTPClient()
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
@@ -331,6 +337,7 @@ func provideBasicAsyncActualizerConfig(
 	federation federation.IFederation,
 	stateCfg state.StateOpts,
 	emailSender state.IEmailSender,
+	httpClient httpu.IHTTPClient,
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
@@ -343,6 +350,7 @@ func provideBasicAsyncActualizerConfig(
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
 		EmailSender:   emailSender,
+		HTTPClient:    httpClient,
 	}
 }
 
@@ -813,22 +821,24 @@ func provideOpBLOBProcessors(numBLOBWorkers istructs.NumBLOBProcessors, blobServ
 
 func provideQueryProcessors_V1(qpCount istructs.NumQueryProcessors, qc QueryChannel_V1, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
-	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V1 {
+	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader,
+	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) OperatorQueryProcessors_V1 {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
-			string(vvm), authn, tokens, federation, statelessResources, secretReader)))
+			string(vvm), authn, tokens, federation, statelessResources, secretReader, stateOpts, httpClient)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
 func provideQueryProcessors_V2(qpCount istructs.NumQueryProcessors, qc QueryChannel_V2, appParts appparts.IAppPartitions, qpFactory query2.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
-	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V2 {
+	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader,
+	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) OperatorQueryProcessors_V2 {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics,
-			string(vvm), authn, tokens, federation, statelessResources, secretReader)))
+			string(vvm), authn, tokens, federation, statelessResources, secretReader, stateOpts, httpClient)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
