@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -33,7 +34,8 @@ type BasicSchedulerConfig struct {
 	Federation   federation.IFederation
 	Time         timeu.ITime
 
-	stateOpts state.StateOpts
+	stateOpts  state.StateOpts
+	HTTPClient httpu.IHTTPClient
 
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc

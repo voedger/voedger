@@ -195,6 +195,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		a.conf.BundlesLimit,
 		a.conf.StateOpts,
 		a.conf.EmailSender,
+		a.conf.HTTPClient,
 	)
 
 	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.PartitionID)

@@ -151,7 +151,7 @@ func Test_BasicUsage(t *testing.T) {
 	originFunc := func() string { return "" }
 
 	// Create states for Command processor and Actualizer
-	actualizerState := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil)
+	actualizerState := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
 	cmdProcState := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc, state.NullOpts, originFunc)
 
 	// Create extension package from WASM
@@ -783,7 +783,7 @@ func Test_WithState(t *testing.T) {
 
 	// build app
 	appFunc := func() istructs.IAppStructs { return app }
-	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil)
+	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
 
 	// build packages
 	moduleURL := testModuleURL("./_testdata/basicusage/pkg.wasm")
@@ -856,7 +856,7 @@ func Test_StatePanic(t *testing.T) {
 			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
 		})
 	appFunc := func() istructs.IAppStructs { return app }
-	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil)
+	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
 
 	const extname = "wrongFieldName"
 	const undefinedPackage = "undefinedPackage"

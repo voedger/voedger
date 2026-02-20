@@ -5,18 +5,20 @@
 package teststate
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"fmt"
 	"io"
+	"net/http"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -49,6 +51,7 @@ type testState struct {
 	plogOffset            istructs.Offset
 	secretReader          isecrets.ISecretReader
 	httpHandler           HTTPHandlerFunc
+	httpClient            httpu.IHTTPClient
 	federationCmdHandler  state.FederationCommandHandler
 	federationBlobHandler state.FederationBlobHandler
 	uniquesHandler        state.UniquesHandler
@@ -75,9 +78,58 @@ func NewTestState(processorKind int, packagePath string, createWorkspaces ...Tes
 	ts.ctx = context.Background()
 	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
+	ts.httpClient, _ = httpu.NewIHTTPClientWithTransport(&testRoundTripper{ts: ts})
 	ts.buildAppDef(packagePath, "..", createWorkspaces...)
 	ts.buildState(processorKind)
 	return ts
+}
+
+// testRoundTripper implements http.RoundTripper to route HTTP requests through the test handler.
+// This bridges httpu.IHTTPClient (used by httpStorage) with HTTPHandlerFunc (used by tests).
+type testRoundTripper struct {
+	ts *testState
+}
+
+func (rt *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	if rt.ts.httpHandler == nil {
+		panic("http handler not set")
+	}
+	var bodyReader io.Reader
+	if req.Body != nil {
+		defer req.Body.Close()
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
+	}
+	headers := make(map[string]string)
+	for k, vals := range req.Header {
+		if len(vals) > 0 {
+			headers[k] = vals[0]
+		}
+	}
+	httpReq := HTTPRequest{
+		Method:  req.Method,
+		URL:     req.URL.String(),
+		Body:    bodyReader,
+		Headers: headers,
+	}
+	resp, err := rt.ts.httpHandler(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	header := make(http.Header)
+	for k, vals := range resp.Headers {
+		for _, v := range vals {
+			header.Add(k, v)
+		}
+	}
+	return &http.Response{
+		StatusCode: resp.Status,
+		Header:     header,
+		Body:       io.NopCloser(bytes.NewReader(resp.Body)),
+	}, nil
 }
 
 type secretReader struct {
@@ -154,24 +206,6 @@ func (ts *testState) ResultBuilder() istructs.IObjectBuilder {
 		panic(fmt.Sprintf("%v is not a command", qname))
 	}
 	return ts.appStructs.ObjectBuilder(command.Result().QName())
-}
-
-func (ts *testState) Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error) {
-	if ts.httpHandler == nil {
-		panic("http handler not set")
-	}
-	req := HTTPRequest{
-		Timeout: timeout,
-		Method:  method,
-		URL:     url,
-		Body:    body,
-		Headers: headers,
-	}
-	resp, err := ts.httpHandler(req)
-	if err != nil {
-		return 0, nil, nil, err
-	}
-	return resp.Status, resp.Body, resp.Headers, nil
 }
 
 func (ts *testState) PutQuery(wsid istructs.WSID, name appdef.FullQName, argb QueryArgBuilderCallback) {
@@ -303,29 +337,27 @@ func (ts *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		state := state.StateOpts{
-			CustomHTTPClient:         ts,
+		stateOpts := state.StateOpts{
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
 		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
-			IntentsLimit, BundlesLimit, state, ts.emailSender)
+			IntentsLimit, BundlesLimit, stateOpts, ts.emailSender, ts.httpClient)
 	case ProcKind_CommandProcessor:
-		state := state.StateOpts{
+		stateOpts := state.StateOpts{
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
 		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
-			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state, originFunc)
+			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, stateOpts, originFunc)
 	case ProcKind_QueryProcessor:
-		state := state.StateOpts{
-			CustomHTTPClient:         ts,
+		stateOpts := state.StateOpts{
 			FederationCommandHandler: ts.emulateFederationCmd,
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
 		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
-			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback, state)
+			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback, stateOpts, ts.httpClient)
 	}
 }
 
@@ -459,7 +491,7 @@ func (ts *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	return offs
 }
 
-func (ts *testState) PutHTTPHandler(handler HTTPHandlerFunc) {
+func (ts *testState) PutHTTPMock(handler HTTPHandlerFunc) {
 	ts.httpHandler = handler
 }
 

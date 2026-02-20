@@ -36,7 +36,8 @@ import (
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, itokens itokens.ITokens, federation federation.IFederation,
-	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService {
+	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader,
+	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) pipeline.IService {
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
 		for ctx.Err() == nil {
@@ -54,7 +55,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.Release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, itokens, federation, statelessResources)
+						p = newQueryProcessorPipeline(ctx, authn, itokens, federation, statelessResources, stateOpts, httpClient)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -118,7 +119,8 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 
 // IStatelessResources need only for determine the exact result type of ANY
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator,
-	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
+	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources,
+	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
@@ -263,7 +265,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() istructs.ExecQueryCallback {
 					return qw.callbackFunc
 				},
-				state.NullOpts,
+				stateOpts,
+				httpClient,
 			)
 			qw.execQueryArgs.State = qw.state
 			qw.execQueryArgs.Intents = qw.state

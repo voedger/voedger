@@ -47,7 +47,7 @@ func Test_ActualizerStorages(t *testing.T) {
 	})
 
 	// Call the extension to test SendMail, HTTP and Secret
-	test.PutHTTPHandler(func(req teststate.HTTPRequest) (resp teststate.HTTPResponse, err error) {
+	test.PutHTTPMock(func(req teststate.HTTPRequest) (resp teststate.HTTPResponse, err error) {
 		if req.Method == "GET" {
 			return teststate.HTTPResponse{Status: 200, Body: []byte("Ivan")}, nil
 		}
