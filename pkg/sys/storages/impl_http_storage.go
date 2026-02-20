@@ -23,10 +23,17 @@ import (
 
 type httpStorage struct {
 	customClient httpu.IHTTPClient
+	cleanup      func()
 }
 
 func NewHTTPStorage(customClient httpu.IHTTPClient) state.IStateStorage {
-	return &httpStorage{customClient: customClient}
+	s := &httpStorage{}
+	if customClient != nil {
+		s.customClient = customClient
+	} else {
+		s.customClient, s.cleanup = httpu.NewIHTTPClient()
+	}
+	return s
 }
 
 type httpStorageKeyBuilder struct {
@@ -134,11 +141,10 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		return fmt.Errorf("'url': %w", ErrNotFound)
 	}
 
-	method := http.MethodGet
+	opts := []httpu.ReqOptFunc{httpu.WithMethod(http.MethodGet)}
 	if kb.method != "" {
-		method = kb.method
+		opts = []httpu.ReqOptFunc{httpu.WithMethod(kb.method)}
 	}
-	opts := []httpu.ReqOptFunc{httpu.WithMethod(method)}
 	for k, v := range kb.headers {
 		opts = append(opts, httpu.WithHeaders(k, v))
 	}

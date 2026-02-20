@@ -33,7 +33,7 @@ type BasicSchedulerConfig struct {
 	Federation   federation.IFederation
 	Time         timeu.ITime
 
-	StateOpts state.StateOpts
+	stateOpts state.StateOpts
 
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc

@@ -96,7 +96,6 @@ func (rt *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	}
 	var bodyReader io.Reader
 	if req.Body != nil {
-		defer req.Body.Close()
 		bodyBytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			return nil, err

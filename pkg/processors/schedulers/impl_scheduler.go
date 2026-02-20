@@ -104,7 +104,7 @@ func (a *scheduler) runJob() {
 		a.conf.Federation,
 		func() int64 { return a.conf.Time.Now().Unix() },
 		a.conf.IntentsLimit,
-		a.conf.StateOpts,
+		a.conf.stateOpts,
 		a.conf.EmailSender,
 	)
 

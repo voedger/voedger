@@ -42,7 +42,6 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/vvm/engines"
@@ -395,7 +394,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		serviceChannel,
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader, state.StateOpts{})
+		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -1173,7 +1172,7 @@ func TestRateLimiter(t *testing.T) {
 		serviceChannel,
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader, state.StateOpts{})
+		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 	systemToken := getSystemToken(appTokens)
 	body := []byte(`{
@@ -1219,7 +1218,7 @@ func TestAuthnz(t *testing.T) {
 		serviceChannel,
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader, state.StateOpts{})
+		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {

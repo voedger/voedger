@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -22,9 +21,7 @@ import (
 
 func TestHTTPStorage_BasicUsage(t *testing.T) {
 	require := require.New(t)
-	client, cleanup := httpu.NewIHTTPClient()
-	defer cleanup()
-	storage := NewHTTPStorage(client)
+	storage := NewHTTPStorage(nil)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(http.MethodPost, r.Method)
 		require.Equal("my-value", r.Header.Get("my-header"))
@@ -57,18 +54,14 @@ func TestHTTPStorage_BasicUsage(t *testing.T) {
 func TestHTTPStorage_Timeout(t *testing.T) {
 	t.Run("Should panic when url not found", func(t *testing.T) {
 		require := require.New(t)
-		client, cleanup := httpu.NewIHTTPClient()
-		defer cleanup()
-		storage := NewHTTPStorage(client)
+		storage := NewHTTPStorage(nil)
 		k := storage.NewKeyBuilder(appdef.NullQName, nil)
 		err := storage.(state.IWithRead).Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 		require.ErrorIs(err, ErrNotFound)
 	})
 	t.Run("Should return error on timeout", func(t *testing.T) {
 		require := require.New(t)
-		client, cleanup := httpu.NewIHTTPClient()
-		defer cleanup()
-		storage := NewHTTPStorage(client)
+		storage := NewHTTPStorage(nil)
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(time.Millisecond * 20)
 		}))
@@ -81,9 +74,7 @@ func TestHTTPStorage_Timeout(t *testing.T) {
 	})
 	t.Run("Should not return error on timeout", func(t *testing.T) {
 		require := require.New(t)
-		client, cleanup := httpu.NewIHTTPClient()
-		defer cleanup()
-		storage := NewHTTPStorage(client)
+		storage := NewHTTPStorage(nil)
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(time.Millisecond * 20)
 		}))

@@ -14,11 +14,10 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/state"
 )
 
 type ServiceFactory func(serviceChannel iprocbus.ServiceChannel,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, itokens itokens.ITokens,
 	federation federation.IFederation,
-	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader, stateOpts state.StateOpts) pipeline.IService
+	statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) pipeline.IService

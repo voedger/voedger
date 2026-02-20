@@ -18,7 +18,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	"github.com/voedger/voedger/pkg/state"
 )
 
 func TestWrongTypes(t *testing.T) {
@@ -36,7 +35,7 @@ func TestWrongTypes(t *testing.T) {
 		appParts,
 		3, // maxPrepareQueries
 
-		imetrics.Provide(), "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader, state.StateOpts{})
+		imetrics.Provide(), "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)
