@@ -134,10 +134,11 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		return fmt.Errorf("'url': %w", ErrNotFound)
 	}
 
-	opts := []httpu.ReqOptFunc{httpu.WithMethod(http.MethodGet)}
+	method := http.MethodGet
 	if kb.method != "" {
-		opts = []httpu.ReqOptFunc{httpu.WithMethod(kb.method)}
+		method = kb.method
 	}
+	opts := []httpu.ReqOptFunc{httpu.WithMethod(method)}
 	for k, v := range kb.headers {
 		opts = append(opts, httpu.WithHeaders(k, v))
 	}
