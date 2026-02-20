@@ -7,30 +7,33 @@ package storages
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-var requestNumber int64
-
 type httpStorage struct {
-	customClient state.IHTTPClient
+	customClient httpu.IHTTPClient
+	cleanup      func()
 }
 
-func NewHTTPStorage(customClient state.IHTTPClient) state.IStateStorage {
-	return &httpStorage{
-		customClient: customClient,
+func NewHTTPStorage(customClient httpu.IHTTPClient) state.IStateStorage {
+	s := &httpStorage{}
+	if customClient != nil {
+		s.customClient = customClient
+	} else {
+		s.customClient, s.cleanup = httpu.NewIHTTPClient()
 	}
+	return s
 }
 
 type httpStorageKeyBuilder struct {
@@ -137,15 +140,23 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 	if kb.url == "" {
 		return fmt.Errorf("'url': %w", ErrNotFound)
 	}
-	method := http.MethodGet
+
+	opts := []httpu.ReqOptFunc{httpu.WithMethod(http.MethodGet)}
 	if kb.method != "" {
-		method = kb.method
+		opts = []httpu.ReqOptFunc{httpu.WithMethod(kb.method)}
 	}
+	for k, v := range kb.headers {
+		opts = append(opts, httpu.WithHeaders(k, v))
+	}
+
 	timeout := defaultHTTPClientTimeout
 	if kb.timeout != 0 {
 		timeout = kb.timeout
 	}
-	var body io.Reader = nil
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var body io.Reader
 	if len(kb.body) > 0 {
 		body = bytes.NewReader(kb.body)
 	}
@@ -160,53 +171,15 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		})
 	}
 
-	if s.customClient != nil {
-		resStatus, resBody, resHeaders, err := s.customClient.Request(timeout, method, kb.url, body, kb.headers)
-		if err != nil {
-			return errorResult(err)
-		}
-		return callback(nil, &httpValue{
-			body:       resBody,
-			header:     resHeaders,
-			statusCode: resStatus,
-		})
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, method, kb.url, body)
-	if err != nil {
+	resp, err := s.customClient.ReqReader(ctx, kb.url, body, opts...)
+	if err != nil && !errors.Is(err, httpu.ErrUnexpectedStatusCode) {
 		return errorResult(err)
-	}
-
-	for k, v := range kb.headers {
-		req.Header.Add(k, v)
-	}
-	var reqNumber int64
-	if logger.IsVerbose() {
-		reqNumber = atomic.AddInt64(&requestNumber, 1)
-		logger.Verbose("req ", reqNumber, ": ", method, " ", kb.url, " body: ", string(kb.body))
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return errorResult(err)
-	}
-	defer res.Body.Close()
-
-	bb, err := io.ReadAll(res.Body)
-	if err != nil {
-		return errorResult(err)
-	}
-
-	if logger.IsVerbose() {
-		logger.Verbose("resp ", reqNumber, ": ", res.StatusCode, " body: ", string(bb))
 	}
 
 	return callback(nil, &httpValue{
-		body:       bb,
-		header:     res.Header,
-		statusCode: res.StatusCode,
+		body:       []byte(resp.Body),
+		header:     resp.HTTPResp.Header,
+		statusCode: resp.HTTPResp.StatusCode,
 	})
 }
 

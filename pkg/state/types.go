@@ -6,10 +6,9 @@ package state
 
 import (
 	"context"
-	"io"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -53,10 +52,6 @@ type UniquesHandler = func(entity appdef.QName, wsid istructs.WSID, data map[str
 type EventsFunc func() istructs.IEvents
 type RecordsFunc func() istructs.IRecords
 
-type IHTTPClient interface {
-	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
-}
-
 type IEmailSender interface {
 	Send(host string, msg EmailMessage, opts ...mail.Option) error
 }
@@ -73,7 +68,7 @@ type EmailMessage struct {
 type StateOpts struct {
 	FederationCommandHandler FederationCommandHandler
 	FederationBlobHandler    FederationBlobHandler
-	CustomHTTPClient         IHTTPClient
+	CustomHTTPClient         httpu.IHTTPClient
 	UniquesHandler           UniquesHandler
 }
 
