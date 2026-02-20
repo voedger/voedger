@@ -22,18 +22,13 @@ import (
 )
 
 type httpStorage struct {
-	customClient httpu.IHTTPClient
-	cleanup      func()
+	httpClient httpu.IHTTPClient
 }
 
-func NewHTTPStorage(customClient httpu.IHTTPClient) state.IStateStorage {
-	s := &httpStorage{}
-	if customClient != nil {
-		s.customClient = customClient
-	} else {
-		s.customClient, s.cleanup = httpu.NewIHTTPClient()
+func NewHTTPStorage(httpClient httpu.IHTTPClient) state.IStateStorage {
+	return &httpStorage{
+		httpClient: httpClient,
 	}
-	return s
 }
 
 type httpStorageKeyBuilder struct {
@@ -172,7 +167,7 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		})
 	}
 
-	resp, err := s.customClient.ReqReader(ctx, kb.url, body, opts...)
+	resp, err := s.httpClient.ReqReader(ctx, kb.url, body, opts...)
 	if err != nil && !errors.Is(err, httpu.ErrUnexpectedStatusCode) {
 		return errorResult(err)
 	}
