@@ -36,4 +36,4 @@
 
 - [x] update: [pkg/sys/storages/impl_http_storage_test.go](../../../pkg/sys/storages/impl_http_storage_test.go)
   - update: tests that pass `nil` to `NewHTTPStorage` to create `httpu.IHTTPClient` explicitly and pass it
-- [ ] Review
+- [x] Review
