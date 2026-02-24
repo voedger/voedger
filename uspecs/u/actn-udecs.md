@@ -2,24 +2,25 @@
 
 ## Overview
 
-AI Agent identifies top 5 uncertainties in Change Request, answers them with alternatives, writes to Decision File.
+Identify top 5 uncertainties in Change Request, answer them with alternatives, and write to Decision File.
+
+## Instructions
 
 Rules:
 
-- Follow definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
+- Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
 - First alternative is the recommended choice
 - Web search when Engineer requests it or when choosing between technologies/algorithms/patterns
 - Integrate into existing Decision File, skip already covered uncertainties
 
-Input:
+Parameters:
 
-- Existing Decision File (if any)
-- Optional: area focus (natural language like "focus on authentication", "clarify database design")
-- Optional: web search (--web flag or phrases like "with web search", "use web", "web")
-
-Output:
-
-- Updated Decision File (see `$templates_folder/tmpl-decs.md`)
+- Input
+  - Existing Decision File (if any)
+  - Optional: area focus (natural language like "focus on authentication", "clarify database design")
+  - Optional: web search (--web flag or phrases like "with web search", "use web", "web")
+- Output
+  - Updated Decision File (see `{templates_folder}/tmpl-decs.md`)
 
 ## Scenarios
 

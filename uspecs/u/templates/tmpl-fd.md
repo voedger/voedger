@@ -4,6 +4,9 @@
 
 Rules:
 
+- Create very concise scenarios
+- Focus on user-facing behavior (what the user observes), not internal implementation steps
+- Place validation errors, failures, and error recovery under `Rule: Edge cases`
 - Prefer Scenario Outlines with Examples tables over multiple similar Scenarios
 - Use data tables in steps for inline structured data
 
@@ -29,6 +32,14 @@ Feature: Payment processing
       | Cash        | true         | 50.00      | 49.00  | succeed                                  |
       | Cash        | true         | 50.00      | 75.00  | be rejected with "Exceeds maximum limit" |
       | Credit Card | false        | 100.00     | 50.00  | be rejected with "Method not available"  |
+
+  Rule: Edge cases
+
+    Scenario: Waiter processes payment with no payment methods configured
+      Given no payment methods are configured for the location
+      When Waiter attempts to process a payment
+      Then error "No payment methods available" is displayed
+      And payment is not created
 ```
 
 ## Requirements File (*reqs.md) template
