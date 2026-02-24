@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/filesu"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -124,7 +125,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	stateOpts := provideStateOpts()
 	iEmailSender := vvmConfig.EmailSender
-	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, stateOpts, iEmailSender)
+	ihttpClient, cleanup3 := provideHTTPClient()
+	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, stateOpts, iEmailSender, ihttpClient)
 	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
@@ -139,6 +141,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iSchedulerRunner := provideSchedulerRunner(basicSchedulerConfig)
 	v4, err := provideSidecarApps(vvmConfig)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -158,12 +161,14 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iSchemasCache := vvmConfig.SchemasCache
 	builtInAppsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2, iSchemasCache)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizerRunner, iSchedulerRunner, bucketsFactoryType, iStatelessResources, builtInAppsArtefacts, vvmName, iMetrics)
+	iAppPartitions, cleanup4, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizerRunner, iSchedulerRunner, bucketsFactoryType, iStatelessResources, builtInAppsArtefacts, vvmName, iMetrics)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -177,17 +182,18 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	queryChannel_V1 := provideQueryChannel_V1(serviceChannelFactory)
 	queryprocessorServiceFactory := queryprocessor.ProvideServiceFactory()
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
-	operatorQueryProcessors_V1 := provideQueryProcessors_V1(numQueryProcessors, queryChannel_V1, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iTokens, iFederation, iStatelessResources, iSecretReader)
+	operatorQueryProcessors_V1 := provideQueryProcessors_V1(numQueryProcessors, queryChannel_V1, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iTokens, iFederation, iStatelessResources, iSecretReader, stateOpts, ihttpClient)
 	queryChannel_V2 := provideQueryChannel_V2(serviceChannelFactory)
 	query2ServiceFactory := query2.ProvideServiceFactory()
-	operatorQueryProcessors_V2 := provideQueryProcessors_V2(numQueryProcessors, queryChannel_V2, iAppPartitions, query2ServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iTokens, iFederation, iStatelessResources, iSecretReader)
+	operatorQueryProcessors_V2 := provideQueryProcessors_V2(numQueryProcessors, queryChannel_V2, iAppPartitions, query2ServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iTokens, iFederation, iStatelessResources, iSecretReader, stateOpts, ihttpClient)
 	numBLOBProcessors := vvmConfig.NumBLOBProcessors
 	blobServiceChannel := provideBLOBChannel(serviceChannelFactory)
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
 	wLimiterFactory := provideWLimiterFactory(blobMaxSizeType)
 	operatorBLOBProcessors := provideOpBLOBProcessors(numBLOBProcessors, blobServiceChannel, iblobStorage, wLimiterFactory)
-	iAppPartitionsController, cleanup4, err := apppartsctl.New(iAppPartitions)
+	iAppPartitionsController, cleanup5, err := apppartsctl.New(iAppPartitions)
 	if err != nil {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -198,6 +204,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	routerAppStoragePtr := provideRouterAppStoragePtr(iAppStorageProvider)
 	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, iTime, iAppPartitions, v6, v4, iTokens, iAppStorageProvider, blobAppStoragePtr, routerAppStoragePtr)
 	if err != nil {
+		cleanup5()
 		cleanup4()
 		cleanup3()
 		cleanup2()
@@ -213,11 +220,12 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	queryProcessorsChannelGroupIdxType_V1 := provideProcessorChannelGroupIdxQuery_V1(vvmConfig)
 	queryProcessorsChannelGroupIdxType_V2 := provideProcessorChannelGroupIdxQuery_V2(vvmConfig)
 	vvmApps := provideVVMApps(v6)
-	in10NProc, cleanup5 := n10n.NewIN10NProc(vvmCtx, in10nBroker, iAuthenticator, iAppTokensFactory, iAppStructsProvider)
+	in10NProc, cleanup6 := n10n.NewIN10NProc(vvmCtx, in10nBroker, iAuthenticator, iAppTokensFactory, iAppStructsProvider)
 	requestHandler := provideRequestHandler(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType_V1, queryProcessorsChannelGroupIdxType_V2, numCommandProcessors, vvmApps, in10NProc)
 	iRequestSender := bus.NewIRequestSender(iTime, requestHandler)
 	v7, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider, v4)
 	if err != nil {
+		cleanup6()
 		cleanup5()
 		cleanup4()
 		cleanup3()
@@ -247,6 +255,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		ISchedulerRunner:    iSchedulerRunner,
 	}
 	return vvm, func() {
+		cleanup6()
 		cleanup5()
 		cleanup4()
 		cleanup3()
@@ -315,6 +324,10 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 
 func provideStateOpts() state.StateOpts {
 	return state.StateOpts{}
+}
+
+func provideHTTPClient() (httpu.IHTTPClient, func()) {
+	return httpu.NewIHTTPClient()
 }
 
 func provideIVVMAppTTLStorage(prov istorage.IAppStorageProvider) (storage.ISysVvmStorage, error) {
@@ -394,6 +407,7 @@ func provideBasicAsyncActualizerConfig(
 
 	stateCfg state.StateOpts,
 	emailSender state.IEmailSender,
+	httpClient httpu.IHTTPClient,
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
@@ -406,6 +420,7 @@ func provideBasicAsyncActualizerConfig(
 		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
 		EmailSender:   emailSender,
+		HTTPClient:    httpClient,
 	}
 }
 
@@ -873,20 +888,22 @@ func provideOpBLOBProcessors(numBLOBWorkers istructs.NumBLOBProcessors, blobServ
 
 func provideQueryProcessors_V1(qpCount istructs.NumQueryProcessors, qc QueryChannel_V1, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory, imetrics2 imetrics.IMetrics,
 	vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
-	tokens itokens.ITokens, federation2 federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V1 {
+	tokens itokens.ITokens, federation2 federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader,
+	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) OperatorQueryProcessors_V1 {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics2, string(vvm), authn, tokens, federation2, statelessResources, secretReader)))
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics2, string(vvm), authn, tokens, federation2, statelessResources, secretReader, stateOpts, httpClient)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
 func provideQueryProcessors_V2(qpCount istructs.NumQueryProcessors, qc QueryChannel_V2, appParts appparts.IAppPartitions, qpFactory query2.ServiceFactory, imetrics2 imetrics.IMetrics,
 	vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator,
-	tokens itokens.ITokens, federation2 federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader) OperatorQueryProcessors_V2 {
+	tokens itokens.ITokens, federation2 federation.IFederation, statelessResources istructsmem.IStatelessResources, secretReader isecrets.ISecretReader,
+	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) OperatorQueryProcessors_V2 {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	for i := 0; i < int(qpCount); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics2, string(vvm), authn, tokens, federation2, statelessResources, secretReader)))
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), appParts, int(mpq), imetrics2, string(vvm), authn, tokens, federation2, statelessResources, secretReader, stateOpts, httpClient)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
@@ -911,5 +928,6 @@ func provideServicePipeline(
 	publicEndpoint PublicEndpointServiceOperator,
 	appStorageProvider istorage.IAppStorageProvider,
 ) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors_v1), pipeline.ForkBranch(opQueryProcessors_v2), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint))
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors_v1), pipeline.ForkBranch(opQueryProcessors_v2), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opBLOBProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)), pipeline.ForkBranch(pipeline.ServiceOperator(appStorageProvider)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint),
+	)
 }

@@ -28,7 +28,7 @@ func TestQueryProcessorState(t *testing.T) {
 		}
 	}
 
-	qps := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, nil, nil, nil, nil, nil, nil, nil, istructs.NewNullObjectBuilder, nil, execQueryCallbackFunc, state.StateOpts{})
+	qps := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, nil, nil, nil, nil, nil, nil, nil, istructs.NewNullObjectBuilder, nil, execQueryCallbackFunc, state.StateOpts{}, nil)
 	kb, err := qps.KeyBuilder(sys.Storage_Result, appdef.NullQName)
 	require.NoError(err)
 	require.NotNil(kb)

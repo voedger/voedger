@@ -12,7 +12,7 @@ import (
 	"slices"
 )
 
-func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func()) {
+func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, cleanup func()) {
 	// set linger - see https://github.com/voedger/voedger/issues/415
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -24,11 +24,19 @@ func NewIHTTPClient(defaultOpts ...ReqOptFunc) (client IHTTPClient, clenup func(
 		err = conn.(*net.TCPConn).SetLinger(0)
 		return conn, err
 	}
+	return newIHTTPClient(tr, defaultOpts...)
+}
+
+func NewIHTTPClientWithTransport(transport http.RoundTripper, defaultOpts ...ReqOptFunc) (client IHTTPClient, cleanup func()) {
+	return newIHTTPClient(transport, defaultOpts...)
+}
+
+func newIHTTPClient(transport http.RoundTripper, defaultOpts ...ReqOptFunc) (client IHTTPClient, cleanup func()) {
 	opts := slices.Clone(mandatoryOpts)
 	opts = append(opts, WithDefaultRetryPolicy())
 	opts = append(opts, defaultOpts...)
 	client = &implIHTTPClient{
-		client:      &http.Client{Transport: tr},
+		client:      &http.Client{Transport: transport},
 		defaultOpts: opts,
 	}
 	return client, client.CloseIdleConnections
