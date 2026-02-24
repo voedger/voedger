@@ -17,7 +17,7 @@
 
 ## DDD
 
-- Domain: targeted subject area of a computer system
+- Domain: target subject area of a computer system
   - Pre-existing domains are `prod` and `devops`
     - `prod`: The business logic and customer-facing capabilities of the product - what the product does for its users
     - `devops`: development, testing, delivery, deployment, maintenance (monitoring, observability etc.) aspects of the product

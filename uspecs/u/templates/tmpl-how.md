@@ -35,4 +35,4 @@ References:
 
 ## Further iterations (How File exists)
 
-AI Agent decides which key elements to add based on existing How File content and Change Request context. Use format from `$templates_folder/tmpl-td.md`. Do not be exhaustive - cover only what matters most.
+AI Agent decides which key elements to add based on existing How File content and Change Request context. Use format from `{templates_folder}/tmpl-td.md`. Do not be exhaustive - cover only what matters most.

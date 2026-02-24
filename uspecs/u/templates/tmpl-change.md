@@ -1,8 +1,4 @@
-# Templates: Change File
-
-## Change File Template 1
-
-Format:
+# Template: Change File
 
 ```markdown
 # Change request: {Change request title}
