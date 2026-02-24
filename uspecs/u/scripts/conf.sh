@@ -31,6 +31,13 @@ esac
 _TEMP_DIRS=()
 _TEMP_FILES=()
 
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
+    _script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    # shellcheck source=_lib/utils.sh
+    source "$_script_dir/_lib/utils.sh"
+    checkcmds curl
+fi
+
 error() {
     echo "Error: $1" >&2
     exit 1
@@ -292,11 +299,11 @@ show_operation_plan() {
         echo ""
         echo "Pull request:"
 
-        # Get PR info from pr.sh
-        local pr_output pr_remote default_branch target_repo_url pr_branch
-        if pr_output=$(bash "$script_dir/_lib/pr.sh" info 2>&1); then
-            pr_remote=$(echo "$pr_output" | grep '^pr_remote=' | cut -d= -f2)
-            default_branch=$(echo "$pr_output" | grep '^default_branch=' | cut -d= -f2)
+        local -A pr_info
+        local pr_remote="" default_branch="" target_repo_url="" pr_branch=""
+        if get_pr_info "$script_dir/_lib/pr.sh" pr_info 2>/dev/null; then
+            pr_remote="${pr_info[pr_remote]:-}"
+            default_branch="${pr_info[default_branch]:-}"
             target_repo_url=$(git remote get-url "$pr_remote" 2>/dev/null)
 
             # Use branch-safe version string for PR branch name
@@ -309,8 +316,7 @@ show_operation_plan() {
             echo "  Base branch: $default_branch"
             echo "  PR branch: $pr_branch"
         else
-            echo "  Failed to determine PR details:"
-            echo "$pr_output" | sed 's/^/    /'
+            echo "  Failed to determine PR details"
         fi
     fi
     echo "=========================================="
@@ -350,12 +356,31 @@ replace_uspecs_u() {
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
 }
 
+upgrade_markers() {
+    local file="$1"
+    sed_inplace "$file" "s/<!-- uspecs:triggering_instructions:begin -->/<!-- uspecs:begin -->/g; s/<!-- uspecs:triggering_instructions:end -->/<!-- uspecs:end -->/g"
+}
+
+# Check that both begin and end markers are present in a file.
+# Returns 0 if both found, 1 otherwise.
+has_markers() {
+    local file="$1"
+    local begin_marker="$2"
+    local end_marker="$3"
+    grep -q "$begin_marker" "$file" && grep -q "$end_marker" "$file"
+}
+
 inject_instructions() {
     local source_file="$1"
     local target_file="$2"
 
-    local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
-    local end_marker="<!-- uspecs:triggering_instructions:end -->"
+    local begin_marker="<!-- uspecs:begin -->"
+    local end_marker="<!-- uspecs:end -->"
+
+    # Upgrade old markers in target first, so we always work with new markers below
+    if [[ -f "$target_file" ]]; then
+        upgrade_markers "$target_file"
+    fi
 
     if [[ ! -f "$source_file" ]]; then
         echo "Warning: Source file not found: $source_file" >&2
@@ -380,7 +405,7 @@ inject_instructions() {
         return 0
     fi
 
-    if ! grep -q "$begin_marker" "$target_file" || ! grep -q "$end_marker" "$target_file"; then
+    if ! has_markers "$target_file" "$begin_marker" "$end_marker"; then
         {
             echo ""
             cat "$temp_extract"
@@ -393,7 +418,7 @@ inject_instructions() {
     sed "/$begin_marker/,\$d" "$target_file" > "$temp_output"
     cat "$temp_extract" >> "$temp_output"
     sed "1,/$end_marker/d" "$target_file" >> "$temp_output"
-    mv "$temp_output" "$target_file"
+    cat "$temp_output" > "$target_file"
 }
 
 remove_instructions() {
@@ -403,17 +428,16 @@ remove_instructions() {
         return 0
     fi
 
-    local begin_marker="<!-- uspecs:triggering_instructions:begin -->"
-    local end_marker="<!-- uspecs:triggering_instructions:end -->"
+    local begin_marker="<!-- uspecs:begin -->"
+    local end_marker="<!-- uspecs:end -->"
 
-    if ! grep -q "$begin_marker" "$target_file" || ! grep -q "$end_marker" "$target_file"; then
+    upgrade_markers "$target_file"
+
+    if ! has_markers "$target_file" "$begin_marker" "$end_marker"; then
         return 0
     fi
 
-    local temp_output
-    temp_output=$(create_temp_file)
-    sed "/$begin_marker/,/$end_marker/d" "$target_file" > "$temp_output"
-    mv "$temp_output" "$target_file"
+    sed_inplace "$target_file" "/$begin_marker/,/$end_marker/d"
 }
 
 write_metadata() {
@@ -884,11 +908,9 @@ cmd_im() {
         local timestamp
         timestamp=$(get_timestamp)
 
-        local temp_metadata
-        temp_metadata=$(create_temp_file)
-        sed "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" "$metadata_file" | \
-            sed "s/^modified_at: .*/modified_at: $timestamp/" > "$temp_metadata"
-        mv "$temp_metadata" "$metadata_file"
+        sed_inplace "$metadata_file" \
+            -e "s/^invocation_methods: .*/invocation_methods: [$new_methods_str]/" \
+            -e "s/^modified_at: .*/modified_at: $timestamp/"
 
         echo ""
         echo "Invocation methods updated successfully!"

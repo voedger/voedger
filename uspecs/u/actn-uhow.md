@@ -1,22 +1,23 @@
-# Action: Implementation approach
+# Action: How
 
 ## Overview
 
-AI Agent gives an idea about implementation approach for a Change Request, writes to How File.
+Give an idea about implementation approach for a Change Request, write to How File.
+
+## Instructions
 
 Rules:
 
-- Follow definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
+- Always read `uspecs/u/concepts.md` and `uspecs/u/conf.md` before proceeding and follow the definitions and rules defined there
 - Focus on approach, not on detailed design
 
-Input:
+Parameters:
 
-- Change File and other files in Active Change Folder
-- Existing How File (if any)
-
-Output:
-
-- Updated How File (see `$templates_folder/tmpl-how.md`)
+- Input
+  - Change File and other files in Active Change Folder
+  - Existing How File (if any)
+- Output
+  - Updated How File (see `{templates_folder}/tmpl-how.md`)
 
 ## Scenarios
 
