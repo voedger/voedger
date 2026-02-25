@@ -22,7 +22,7 @@ func CopyBytes(src []byte) []byte {
 
 // Write int8 to buf
 func WriteInt8(buf *bytes.Buffer, value int8) {
-	buf.Write([]byte{byte(value)})
+	buf.Write([]byte{byte(value)}) //nolint G115 intentional bit-pattern preserving conversion for serialization
 }
 
 // Write byte to buf
@@ -172,7 +172,7 @@ func ReadInt8(buf *bytes.Buffer) (int8, error) {
 	if e == io.EOF {
 		e = io.ErrUnexpectedEOF
 	}
-	return int8(i), e
+	return int8(i), e //nolint G115 intentional bit-pattern preserving conversion for serialization
 }
 
 // Reads byte from buf

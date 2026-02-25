@@ -625,7 +625,7 @@ type element struct {
 }
 
 func (e element) NewOutputRow() IOutputRow {
-	fields := make([]string, 0)
+	fields := make([]string, 0, len(e.fields)+len(e.refs))
 	for _, field := range e.fields {
 		fields = append(fields, field.Field())
 	}

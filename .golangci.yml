@@ -39,6 +39,7 @@ linters:
         - G101
         - G601
         - G602
+        - G117 # exported fields like "Pwd" matches secret pattern
     misspell:
       ignore-rules:
         - untill
@@ -83,6 +84,7 @@ linters:
         - gosec
         - revive
         - goconst
+        - prealloc
         path: _test.go
       - linters:
         - errcheck
@@ -93,6 +95,9 @@ linters:
       - linters:
         - staticcheck
         text: should not use underscores
+      - linters:
+        - prealloc
+        path: pkg/vit/
     paths:
       - third_party$
       - builtin$

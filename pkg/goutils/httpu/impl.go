@@ -118,7 +118,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 		if err != nil {
 			return nil, err
 		}
-		resp, err := c.client.Do(req)
+		resp, err := c.client.Do(req) //nolint G704 URL is intentionally caller-provided
 		if err != nil {
 			return nil, err
 		}

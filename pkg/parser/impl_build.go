@@ -247,7 +247,7 @@ func (c *buildContext) tags() error {
 		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
 			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
-			featureAndComments := make([]string, 0)
+			featureAndComments := make([]string, 0, 2)
 			featureAndComments = append(featureAndComments, tag.Feature)
 			featureAndComments = append(featureAndComments, tag.Comments...)
 			builder.AddTag(qname, featureAndComments...)

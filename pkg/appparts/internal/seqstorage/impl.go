@@ -15,7 +15,7 @@ import (
 func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offset isequencer.PLogOffset, batcher func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error) error {
 	return ss.events.ReadPLog(ctx, ss.partitionID, istructs.Offset(offset), istructs.ReadToTheEnd,
 		func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-			batch := []isequencer.SeqValue{}
+			batch := make([]isequencer.SeqValue, 0, 2)
 			argType := ss.appDef.Type(event.ArgumentObject().QName())
 
 			// odocs

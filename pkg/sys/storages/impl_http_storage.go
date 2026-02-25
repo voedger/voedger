@@ -191,13 +191,13 @@ func (v *httpValue) AsBytes(string) []byte { return v.body }
 func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) } // nolint G115
 func (v *httpValue) AsString(name string) string {
 	if name == sys.Storage_HTTP_Field_Header {
-		var res strings.Builder
+		res := &strings.Builder{}
 		for k, v := range v.header {
 			if len(v) > 0 {
 				if res.Len() > 0 {
 					res.WriteString("\n")
 				}
-				res.WriteString(fmt.Sprintf("%s: %s", k, v[0])) // FIXME: len(v)>2 ?
+				fmt.Fprintf(res, "%s: %s", k, v[0]) // FIXME: len(v)>2 ?
 			}
 		}
 		return res.String()
