@@ -27,7 +27,8 @@ set -Eeuo pipefail
 #       Requires git repository, clean working tree, PR branch (ending with --pr)
 #
 # pr mergedef:
-#   Validates preconditions and merges pr_remote/default_branch into the current branch.
+#   Validates preconditions, fetches pr_remote/default_branch, and merges it into the current branch.
+#   On success outputs: change_branch=<name>, default_branch=<name>, change_branch_head=<sha>
 #
 # pr create --title <title> --body <body>:
 #   Creates a PR from the current change branch (delegates to _lib/pr.sh changepr).
@@ -43,11 +44,6 @@ error() {
 
 get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
-}
-
-is_git_repo() {
-    local dir="$1"
-    (cd "$dir" && git rev-parse --git-dir > /dev/null 2>&1)
 }
 
 get_baseline() {
@@ -67,7 +63,7 @@ get_folder_name() {
 count_uncompleted_items() {
     local folder="$1"
     local count
-    count=$(grep -r "^\s*-\s*\[ \]" "$folder"/*.md 2>/dev/null | wc -l)
+    count=$(_grep -r "^[[:space:]]*-[[:space:]]*\[ \]" "$folder"/*.md 2>/dev/null | wc -l)
     echo "${count:-0}" | tr -d ' '
 }
 
@@ -131,7 +127,7 @@ read_conf_param() {
     fi
 
     local line raw
-    line=$(grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
+    line=$(_grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
     raw="${line#*: }"
 
     if [ -z "$raw" ]; then
@@ -346,7 +342,7 @@ cmd_change_archive() {
         echo "Cannot archive: $uncompleted_count uncompleted todo item(s) found"
         echo ""
         echo "Uncompleted items:"
-        grep -rn "^\s*-\s*\[ \]" "$path_to_change_folder"/*.md 2>/dev/null | sed 's/^/  /'
+        _grep -rn "^[[:space:]]*-[[:space:]]*\[ \]" "$path_to_change_folder"/*.md 2>/dev/null | sed 's/^/  /'
         echo ""
         echo "Complete or cancel todo items before archiving"
         exit 1
@@ -466,12 +462,19 @@ cmd_change_archive() {
 
         (cd "$project_dir" && git checkout "$default_branch" 2>&1)
 
+        local deleted_branch_hash=""
         if (cd "$project_dir" && git show-ref --verify --quiet "refs/heads/$branch_name"); then
+            deleted_branch_hash=$(cd "$project_dir" && git rev-parse "refs/heads/$branch_name")
             (cd "$project_dir" && git branch -D "$branch_name" 2>&1)
         else
             echo "Warning: branch '$branch_name' not found, skipping branch deletion" >&2
         fi
         (cd "$project_dir" && git branch -dr "origin/$branch_name") 2>/dev/null || true
+
+        if [ -n "$deleted_branch_hash" ]; then
+            echo "Deleted branch: $branch_name ($deleted_branch_hash)"
+            echo "To restore: git branch $branch_name $deleted_branch_hash"
+        fi
     fi
 
     echo "Archived change: $changes_folder_rel/archive/$yymm_prefix/${date_prefix}-${change_name}"

@@ -16,7 +16,7 @@ Parameters:
   - Active Change Folder path
 - Output
   - Folder moved to `{changes_folder}/archive`
-  - If on PR branch and Engineer confirms: git commit and push with message, branch and refs removed
+  - If on PR branch and Engineer confirms: git commit and push with message, branch and refs removed, deleted branch hash and restore instructions reported
 
 Flow:
 
@@ -26,7 +26,7 @@ Flow:
       1. Archive + git cleanup (commit, push, delete local branch and remote tracking ref)
       2. Archive only (no git operations)
       3. Cancel
-    - On option 1: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name> -d`
+    - On option 1: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name> -d`; script output includes deleted branch hash and restore instructions - relay to Engineer
     - On option 2: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name>`
     - On option 3: abort, no action taken
   - Otherwise: `bash uspecs/u/scripts/uspecs.sh change archive <change-folder-name>`

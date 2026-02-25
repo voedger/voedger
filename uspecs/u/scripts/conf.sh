@@ -47,6 +47,13 @@ get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
 
+native_path() {
+    case "$OSTYPE" in
+        msys*|cygwin*) cygpath -m "$1" ;;
+        *)             echo "$1" ;;
+    esac
+}
+
 get_project_dir() {
     local script_path="${BASH_SOURCE[0]}"
     if [[ -z "$script_path" || ! -f "$script_path" ]]; then
@@ -57,7 +64,7 @@ get_project_dir() {
     # Go up 3 levels: scripts -> u -> uspecs -> project_dir
     local project_dir
     project_dir=$(cd "$script_dir/../../.." && pwd)
-    echo "$project_dir"
+    native_path "$project_dir"
 }
 
 check_not_installed() {
@@ -98,7 +105,7 @@ load_config() {
 
 get_latest_tag() {
     curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        grep '"name":' | \
+        _grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
         head -n 1
 }
@@ -110,9 +117,9 @@ get_latest_minor_tag() {
 
     local result
     result=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        grep '"name":' | \
+        _grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
-        grep "^$major\.$minor\." | \
+        _grep "^$major\.$minor\." | \
         head -n 1 || true)
     echo "${result:-$current_version}"
 }
@@ -125,9 +132,9 @@ get_latest_commit_info() {
     local response
     response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
     local sha
-    sha=$(echo "$response" | grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
+    sha=$(echo "$response" | _grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
     local commit_date
-    commit_date=$(echo "$response" | grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
+    commit_date=$(echo "$response" | _grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
     echo "$sha $commit_date"
 }
 
@@ -301,10 +308,10 @@ show_operation_plan() {
 
         local -A pr_info
         local pr_remote="" default_branch="" target_repo_url="" pr_branch=""
-        if get_pr_info "$script_dir/_lib/pr.sh" pr_info 2>/dev/null; then
+        if get_pr_info "$script_dir/_lib/pr.sh" pr_info "$project_dir" 2>/dev/null; then
             pr_remote="${pr_info[pr_remote]:-}"
             default_branch="${pr_info[default_branch]:-}"
-            target_repo_url=$(git remote get-url "$pr_remote" 2>/dev/null)
+            target_repo_url=$(git -C "$project_dir" remote get-url "$pr_remote" 2>/dev/null)
 
             # Use branch-safe version string for PR branch name
             local version_branch
@@ -367,7 +374,7 @@ has_markers() {
     local file="$1"
     local begin_marker="$2"
     local end_marker="$3"
-    grep -q "$begin_marker" "$file" && grep -q "$end_marker" "$file"
+    _grep -q "$begin_marker" "$file" && _grep -q "$end_marker" "$file"
 }
 
 inject_instructions() {
@@ -547,7 +554,7 @@ cmd_apply() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --project-dir) project_dir="$2"; shift 2 ;;
+            --project-dir) project_dir=$(native_path "$2"); shift 2 ;;
             --version) version="$2"; shift 2 ;;
             --commit) commit="$2"; shift 2 ;;
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
@@ -583,7 +590,7 @@ cmd_apply() {
 
     # PR: fast-forward default branch (may update local uspecs.yml)
     if [[ "$pr_flag" == "true" ]]; then
-        bash "$script_dir/_lib/pr.sh" ffdefault
+        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
     fi
 
     local -A config
@@ -614,8 +621,8 @@ cmd_apply() {
     local branch_name="${command_name}-uspecs-${version_string_branch}"
     local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
-        prev_branch=$(git symbolic-ref --short HEAD)
-        bash "$script_dir/_lib/pr.sh" prbranch "$branch_name"
+        prev_branch=$(cd "$project_dir" && git symbolic-ref --short HEAD)
+        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" prbranch "$branch_name")
     fi
 
     # Save existing metadata for update/upgrade
@@ -662,13 +669,13 @@ cmd_apply() {
         pr_info_file=$(create_temp_file)
 
         # Capture PR info from stderr while showing normal output
-        bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
-            --next-branch "$prev_branch" --delete-branch 2> "$pr_info_file"
+        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
+            --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
 
         # Parse PR info from temp file
-        pr_url=$(grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
-        pr_branch=$(grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
-        pr_base=$(grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
+        pr_url=$(_grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
+        pr_branch=$(_grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
+        pr_base=$(_grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
     fi
 
     echo ""
@@ -705,7 +712,8 @@ cmd_install() {
         error "At least one invocation method (--nlia or --nlic) is required"
     fi
 
-    local project_dir="$PWD"
+    local project_dir
+    project_dir=$(native_path "$PWD")
 
     check_not_installed "$project_dir"
 
