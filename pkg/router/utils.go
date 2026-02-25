@@ -58,7 +58,7 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 	if onBeforeWriteResponse != nil {
 		onBeforeWriteResponse(w)
 	}
-	if _, err := w.Write([]byte(data)); err != nil {
+	if _, err := w.Write([]byte(data)); err != nil { //nolint G705 data is always JSON; Content-Type is set to application/json by all callers
 		stack := debug.Stack()
 		log.Println("failed to write response:", err, "\n", string(stack))
 		return false

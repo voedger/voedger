@@ -82,7 +82,7 @@ func viewRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	if len(qw.queryParams.Constraints.Order) != 0 || qw.queryParams.Constraints.Skip > 0 || qw.queryParams.Constraints.Limit > 0 {
 		oo = append(oo, pipeline.WireAsyncOperator("Aggregator", newAggregator(qw.queryParams)))
 	}
-	fields := make([]appdef.IField, 0)
+	fields := make([]appdef.IField, 0, 2)
 	fields = append(fields, qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().ClustCols().Fields()...)
 	fields = append(fields, qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Value().Fields()...)
 	o, err := newFilter(qw, fields)
