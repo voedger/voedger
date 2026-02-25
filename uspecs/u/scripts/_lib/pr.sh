@@ -22,7 +22,11 @@ set -Eeuo pipefail
 #       Fetch pr_remote and create a local branch from its default branch.
 #
 #   pr.sh mergedef
-#       Fetch pr_remote and merge pr_remote/default_branch into the current branch.
+#       Validate preconditions, fetch pr_remote/default_branch, and merge it into the current branch.
+#       On success outputs:
+#           change_branch=<name>
+#           default_branch=<name>
+#           change_branch_head=<sha>  (HEAD before the merge)
 #
 #   pr.sh diff specs
 #       Output git diff of the specs folder between HEAD and pr_remote/default_branch.
@@ -75,7 +79,7 @@ read_conf_param() {
     fi
 
     local line raw
-    line=$(grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
+    line=$(_grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
     raw="${line#*: }"
 
     if [ -z "$raw" ]; then
@@ -93,7 +97,7 @@ error() {
 }
 
 determine_pr_remote() {
-    if git remote | grep -q '^upstream$'; then
+    if git remote | _grep -q '^upstream$'; then
         echo "upstream"
     else
         echo "origin"
@@ -120,17 +124,8 @@ gh_create_pr() {
 
 check_prerequisites() {
     # Check if git repository exists
-    local dir="$PWD"
-    local found_git=false
-    while [[ "$dir" != "/" ]]; do
-        if [[ -d "$dir/.git" ]]; then
-            found_git=true
-            break
-        fi
-        dir=$(dirname "$dir")
-    done
-    if [[ "$found_git" == "false" ]]; then
-        error "No git repository found"
+    if ! is_git_repo "$PWD"; then
+        error "No git repository found at $PWD"
     fi
 
     # Check if GitHub CLI is installed
@@ -139,7 +134,7 @@ check_prerequisites() {
     fi
 
     # Check if origin remote exists
-    if ! git remote | grep -q '^origin$'; then
+    if ! git remote | _grep -q '^origin$'; then
         error "'origin' remote does not exist"
     fi
 
@@ -197,16 +192,26 @@ cmd_ffdefault() {
     local current_branch
     current_branch=$(git symbolic-ref --short HEAD)
 
+    local switched=false
     if [[ "$current_branch" != "$default_branch" ]]; then
-        error "Current branch '$current_branch' is not the default branch '$default_branch'"
+        echo "Switching from '$current_branch' to '$default_branch'..."
+        git checkout "$default_branch"
+        switched=true
+        trap 'git merge --abort 2>/dev/null || true; git checkout "$current_branch"' EXIT
     fi
 
     echo "Fetching $pr_remote/$default_branch..."
     git fetch "$pr_remote" "$default_branch" 2>&1
 
-    echo "Fast-forwarding $current_branch..."
+    echo "Fast-forwarding $default_branch..."
     if ! git merge --ff-only "$pr_remote/$default_branch" 2>&1; then
-        error "Cannot fast-forward '$current_branch' to '$pr_remote/$default_branch'. The branches have diverged."
+        error "Cannot fast-forward '$default_branch' to '$pr_remote/$default_branch'. The branches have diverged."
+    fi
+
+    if [[ "$switched" == "true" ]]; then
+        trap - EXIT
+        echo "Switching back to '$current_branch'..."
+        git checkout "$current_branch"
     fi
 }
 
@@ -275,14 +280,6 @@ cmd_pr() {
 }
 
 cmd_mergedef() {
-    local validate_only=false
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --validate) validate_only=true; shift ;;
-            *) error "Unknown flag: $1" ;;
-        esac
-    done
-
     check_prerequisites
 
     local pr_remote default_branch current_branch
@@ -298,17 +295,18 @@ cmd_mergedef() {
         error "Current branch '$current_branch' ends with '--pr'; cannot create PR from a PR branch"
     fi
 
-    if [[ "$validate_only" == "true" ]]; then
-        echo "change_branch=$current_branch"
-        echo "default_branch=$default_branch"
-        return 0
-    fi
+    local change_branch_head
+    change_branch_head=$(git rev-parse HEAD)
 
     echo "Fetching $pr_remote/$default_branch..."
     git fetch "$pr_remote" "$default_branch" 2>&1
 
     echo "Merging $pr_remote/$default_branch into $current_branch..."
     git merge "$pr_remote/$default_branch" 2>&1
+
+    echo "change_branch=$current_branch"
+    echo "default_branch=$default_branch"
+    echo "change_branch_head=$change_branch_head"
 }
 
 cmd_diff() {
