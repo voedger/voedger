@@ -264,11 +264,7 @@ func (b *sendWriteResult) DoSync(_ context.Context, work pipeline.IWorkpiece) (e
 	if logger.IsVerbose() {
 		logger.Verbose("blob write error:", sysError.HTTPStatus, ":", sysError.Message)
 	}
-	if bw.blobMessageWrite.isAPIv2 {
-		bw.blobMessageWrite.errorResponder(sysError.HTTPStatus, sysError)
-	} else {
-		bw.blobMessageWrite.errorResponder(sysError.HTTPStatus, sysError.Message)
-	}
+	bw.blobMessageWrite.errorResponder(sysError)
 	return nil
 }
 

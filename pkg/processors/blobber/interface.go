@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -41,4 +42,4 @@ type IRequestHandler interface {
 }
 
 // implemented in e.g. router package
-type ErrorResponder func(ststusCode int, args ...interface{})
+type ErrorResponder func(sysError coreutils.SysError)
