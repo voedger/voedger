@@ -6,13 +6,13 @@
 package router
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -23,8 +23,8 @@ func (s *httpService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef
 			logger.Verbose("blob write request:", req.URL.String())
 		}
 		if !s.blobRequestHandler.HandleWrite(data.appQName, data.wsid, data.header, req.Context(), req.URL.Query(),
-			newBLOBOKResponseIniter(rw, http.StatusOK), req.Body, func(statusCode int, args ...interface{}) {
-				WriteTextResponse(rw, fmt.Sprint(args...), statusCode)
+			newBLOBOKResponseIniter(rw, http.StatusOK), req.Body, func(sysErr coreutils.SysError) {
+				writeCommonError_V1(rw, sysErr, sysErr.HTTPStatus)
 			}, s.requestSender) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
@@ -40,8 +40,8 @@ func (s *httpService) blobHTTPRequestHandler_Read(numsAppsWorkspaces map[appdef.
 		vars := mux.Vars(req)
 		existingBLOBIDOrSUID := vars[URLPlaceholder_blobIDOrSUUID]
 		if !s.blobRequestHandler.HandleRead(data.appQName, data.wsid, data.header, req.Context(),
-			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
-				WriteTextResponse(rw, fmt.Sprint(args...), statusCode)
+			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
+				writeCommonError_V1(rw, sysErr, sysErr.HTTPStatus)
 			}, existingBLOBIDOrSUID, s.requestSender) {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))

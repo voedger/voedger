@@ -174,7 +174,7 @@ func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (er
 		if logger.IsVerbose() {
 			logger.Verbose("blob read error:", sysError.HTTPStatus, ":", sysError.Message)
 		}
-		bw.blobMessageRead.errorResponder(sysError.HTTPStatus, sysError)
+		bw.blobMessageRead.errorResponder(sysError)
 		return nil
 	}
 	return bw.resultErr

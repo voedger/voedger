@@ -340,8 +340,8 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			panic(err)
 		}
 		if !blobRequestHandler.HandleRead_V2(data.appQName, data.wsid, data.header, req.Context(),
-			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
-				replyErr(rw, args[0].(error))
+			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
+				replyErr(rw, sysErr)
 			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
 			replyServiceUnavailable(rw)
 		}
@@ -354,8 +354,8 @@ func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHa
 		vars := mux.Vars(req)
 		suuid := iblobstorage.SUUID(vars[URLPlaceholder_blobIDOrSUUID])
 		if !blobRequestHandler.HandleReadTemp_V2(data.appQName, data.wsid, data.header, req.Context(),
-			newBLOBOKResponseIniter(rw, http.StatusOK), func(statusCode int, args ...interface{}) {
-				replyErr(rw, args[0].(error))
+			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
+				replyErr(rw, sysErr)
 			}, requestSender, suuid) {
 			replyServiceUnavailable(rw)
 		}
@@ -366,8 +366,8 @@ func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequest
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		if !blobRequestHandler.HandleWriteTemp_V2(data.appQName, data.wsid, data.header, req.Context(),
-			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
-				replyErr(rw, args[0].(error))
+			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(sysErr coreutils.SysError) {
+				replyErr(rw, sysErr)
 			}, requestSender) {
 			replyServiceUnavailable(rw)
 		}
@@ -381,8 +381,8 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
 		if !blobRequestHandler.HandleWrite_V2(data.appQName, data.wsid, data.header, req.Context(),
-			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(statusCode int, args ...interface{}) {
-				replyErr(rw, args[0].(error))
+			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(sysErr coreutils.SysError) {
+				replyErr(rw, sysErr)
 			}, requestSender, ownerRecord, ownerRecordField) {
 			replyServiceUnavailable(rw)
 		}
