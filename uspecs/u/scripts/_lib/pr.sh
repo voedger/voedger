@@ -48,10 +48,11 @@ set -Eeuo pipefail
 #       If no changes exist, switch to --next-branch and exit cleanly.
 #
 #   pr.sh ffdefault
-#       Fetch pr_remote/default and fast-forward current branch to it
+#       Fetch pr_remote/default_branch and fast-forward the local default branch to it.
+#       Switches to the default branch if not already on it, and leaves there after completion.
 #       Fail fast if any of the following conditions are true:
-#           current branch is not default
-#           current branch is not clean
+#           working directory is not clean
+#           branches have diverged (fast-forward not possible)
 
 
 
@@ -192,12 +193,9 @@ cmd_ffdefault() {
     local current_branch
     current_branch=$(git symbolic-ref --short HEAD)
 
-    local switched=false
     if [[ "$current_branch" != "$default_branch" ]]; then
-        echo "Switching from '$current_branch' to '$default_branch'..."
+        echo "Switching to '$default_branch'..."
         git checkout "$default_branch"
-        switched=true
-        trap 'git merge --abort 2>/dev/null || true; git checkout "$current_branch"' EXIT
     fi
 
     echo "Fetching $pr_remote/$default_branch..."
@@ -206,12 +204,6 @@ cmd_ffdefault() {
     echo "Fast-forwarding $default_branch..."
     if ! git merge --ff-only "$pr_remote/$default_branch" 2>&1; then
         error "Cannot fast-forward '$default_branch' to '$pr_remote/$default_branch'. The branches have diverged."
-    fi
-
-    if [[ "$switched" == "true" ]]; then
-        trap - EXIT
-        echo "Switching back to '$current_branch'..."
-        git checkout "$current_branch"
     fi
 }
 
