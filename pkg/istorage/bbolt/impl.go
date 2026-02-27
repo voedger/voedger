@@ -662,11 +662,10 @@ func extractPKAndCCols(ttlKey []byte) ([]byte, []byte, error) {
 func makeTTLKey(pKey, cCols []byte, expireAt int64) []byte {
 	// key = 8 bytes for expireAt + 8 bytes for length of pKey + pKey + cCols
 	totalLength := 2*utils.Uint64Size + len(pKey) + len(cCols)
-	ttlKey := make([]byte, totalLength, totalLength+len(pKey)+len(cCols))
-	binary.BigEndian.AppendUint64(ttlKey, uint64(expireAt))  // nolint G115
-	binary.BigEndian.AppendUint64(ttlKey, uint64(len(pKey))) // nolint G115
+	ttlKey := make([]byte, 0, totalLength)
+	ttlKey = binary.BigEndian.AppendUint64(ttlKey, uint64(expireAt))  // nolint G115
+	ttlKey = binary.BigEndian.AppendUint64(ttlKey, uint64(len(pKey))) // nolint G115
 	ttlKey = append(ttlKey, pKey...)
 	ttlKey = append(ttlKey, cCols...)
-
 	return ttlKey
 }
