@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -89,34 +90,57 @@ func TestBackgroundCleaner(t *testing.T) {
 	defer cleanupTestData(params)
 
 	r := require.New(t)
-	iTime := testingu.MockTime
+	iTime := testingu.NewMockTime()
 	factory := Provide(params, iTime)
 	storageProvider := istorageimpl.Provide(factory)
 
-	// get the required AppStorage for the app
+	// Synchronize with the background cleaner goroutine arming its first timer
+	firstTimerArmed := make(chan struct{})
+	iTime.SetOnNextTimerArmed(func() { close(firstTimerArmed) })
+
 	storage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
 	r.NoError(err)
+	<-firstTimerArmed
 
-	// cleanup interval is 1 hour
-	// this value expires in 1 hour
+	// this value expires in 1 hour (50*60 = 3000s < 3600s)
 	ok, err := storage.InsertIfNotExists([]byte("pKey"), []byte("cCols1"), []byte("value1"), 50*60)
 	r.NoError(err)
 	r.True(ok)
-	// this value does NOT expire in 1 hour
+	// this value does NOT expire in 1 hour (61*60 = 3660s > 3600s)
 	ok, err = storage.InsertIfNotExists([]byte("pKey"), []byte("cCols2"), []byte("value2"), 61*60)
 	r.NoError(err)
 	r.True(ok)
 
+	// Detect when cleanup cycle completes: goroutine re-arms its timer after cleanup
+	cleanerDone := make(chan struct{})
+	iTime.SetOnNextNewTimerChan(func() { close(cleanerDone) })
+
 	iTime.Sleep(time.Hour)
+	<-cleanerDone
 
 	value := make([]byte, 0)
 	ok, err = storage.TTLGet([]byte("pKey"), []byte("cCols2"), &value)
 	r.NoError(err)
 	r.True(ok)
 
-	ok, err = storage.TTLGet([]byte("pKey"), []byte("cCols1"), &value)
+	// Verify cCols1 is physically deleted from the bbolt data bucket
+	impl := storage.(*appStorageType)
+	err = impl.db.View(func(tx *bolt.Tx) error {
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		r.NotNil(dataBucket)
+		bucket := dataBucket.Bucket([]byte("pKey"))
+		r.NotNil(bucket) // cCols2 still exists so bucket must remain
+		start := time.Now()
+		for time.Since(start) < time.Second {
+			if bucket.Get(safeKey([]byte("cCols1"))) == nil {
+				return nil
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		r.FailNow("cCols1 not deleted from data bucket after TTL expiration")
+		return nil
+	})
 	r.NoError(err)
-	r.False(ok)
 }
 
 func prepareTestData() (params ParamsType) {
@@ -133,6 +157,43 @@ func cleanupTestData(params ParamsType) {
 		os.RemoveAll(params.DBDir)
 		params.DBDir = ""
 	}
+}
+
+// https://untill.atlassian.net/browse/AIR-3091
+func TestBackgroundCleaner_ExpiredDataNotRemoved(t *testing.T) {
+	params := prepareTestData()
+	defer cleanupTestData(params)
+
+	r := require.New(t)
+	iTime := testingu.NewMockTime()
+	factory := Provide(params, iTime)
+	storageProvider := istorageimpl.Provide(factory)
+
+	storage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
+	r.NoError(err)
+
+	// Insert a record with a 30-minute TTL — should expire well before cleanup runs.
+	ok, err := storage.InsertIfNotExists([]byte("myKey"), []byte("myCol"), []byte("myValue"), 30*60)
+	r.NoError(err)
+	r.True(ok)
+
+	// Advance time by 2 hours: the 30-min TTL has long expired AND
+	// the 1-hour cleanup interval has triggered, so the background cleaner has run.
+	iTime.Sleep(2 * time.Hour)
+
+	// TTLGet correctly reports the record as expired (it checks expiration in the data itself).
+	val := make([]byte, 0)
+	ok, err = storage.TTLGet([]byte("myKey"), []byte("myCol"), &val)
+	r.NoError(err)
+	r.False(ok, "TTLGet should report expired record as not found")
+
+	// But the data is still physically present in the database!
+	// A working background cleaner should have removed it.
+	// Using Get (non-TTL read) to prove the data was NOT cleaned up.
+	val = make([]byte, 0)
+	ok, err = storage.Get([]byte("myKey"), []byte("myCol"), &val)
+	r.NoError(err)
+	r.False(ok, "expired record should have been physically removed by the background cleaner, but it was not — makeTTLKey bug")
 }
 
 func TestAppStorageFactory_StopGoroutines(t *testing.T) {
