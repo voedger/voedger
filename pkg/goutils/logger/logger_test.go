@@ -9,8 +9,7 @@
 package logger_test
 
 import (
-	"bytes"
-	"io"
+	"context"
 	"os"
 	"strconv"
 	"strings"
@@ -56,12 +55,6 @@ func Test_BasicUsage(t *testing.T) {
 		logger.SetLogLevel(logger.LogLevelInfo)
 		logger.Warning("You should see my warning")
 		logger.Warning("You should see my info")
-	}
-
-	// Let see how it looks when using from methods
-	{
-		m := mystruct{}
-		m.iWantToLog()
 	}
 }
 
@@ -239,49 +232,169 @@ func Test_CheckSetLevels(t *testing.T) {
 
 }
 
-type mystruct struct {
+func TestLoggerCtx_BasicUsage(t *testing.T) {
+	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+	ctx := context.Background()
+	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_VApp, "untill.fiscalcloud")
+	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Feat, "magicmenu")
+	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_ReqID, 42)
+	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_WSID, 100)
+	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Extension, "c.sys.UploadBLOBHelper")
+	logger.InfoCtx(ctx, "hello ctx")
+	logger.VerboseCtx(ctx, "hello ctx")
+	logger.ErrorCtx(ctx, "hello ctx")
 }
 
-func (m *mystruct) iWantToLog() {
-	logger.Error("OOPS")
+// captureCtxOutput captures output produced by *Ctx logging functions.
+// It redirects slog writers to the captured pipes for the duration of f.
+func captureCtxOutput(f func()) (stdout, stderr string) {
+	stdout, stderr, _ = testingu.CaptureStdoutStderr(func() error {
+		logger.SetCtxWriters(os.Stdout, os.Stderr)
+		f()
+		return nil
+	})
+	logger.SetCtxWriters(os.Stdout, os.Stderr)
+	return
+}
+
+func Test_WithContextAttrs(t *testing.T) {
+	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+
+	t.Run("attrs appear in stdout", func(t *testing.T) {
+		require := require.New(t)
+		ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_VApp, "untill.fiscalcloud")
+		ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Feat, "magicmenu")
+		stdout, stderr := captureCtxOutput(func() {
+			logger.VerboseCtx(ctx, "hello ctx")
+		})
+		require.Empty(stderr)
+		require.Contains(stdout, "hello ctx")
+		require.Contains(stdout, "vapp=untill.fiscalcloud")
+		require.Contains(stdout, "feat=magicmenu")
+	})
+
+	t.Run("attrs accumulate across WithContextAttrs calls", func(t *testing.T) {
+		require := require.New(t)
+		ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_VApp, "myapp")
+		ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Feat, "myfeat")
+		stdout, _ := captureCtxOutput(func() {
+			logger.VerboseCtx(ctx, "accumulated")
+		})
+		require.Contains(stdout, "vapp=myapp")
+		require.Contains(stdout, "feat=myfeat")
+	})
+
+	t.Run("same key is overwritten", func(t *testing.T) {
+		require := require.New(t)
+		ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_VApp, "first")
+		ctx = logger.WithContextAttrs(ctx, logger.LogAttr_VApp, "second")
+		stdout, _ := captureCtxOutput(func() {
+			logger.VerboseCtx(ctx, "overwrite")
+		})
+		require.Contains(stdout, "vapp=second")
+		require.NotContains(stdout, "vapp=first")
+	})
+}
+
+func Test_CtxFuncs_StandardAttrs(t *testing.T) {
+	require := require.New(t)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
+
+	ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_ReqID, 42)
+	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_WSID, 100)
+	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Extension, "c.sys.UploadBLOBHelper")
+
+	stdout, _ := captureCtxOutput(func() {
+		logger.InfoCtx(ctx, "standard attrs")
+	})
+	require.Contains(stdout, "reqid=42")
+	require.Contains(stdout, "wsid=100")
+	require.Contains(stdout, "extension=c.sys.UploadBLOBHelper")
+}
+
+func Test_CtxFuncs_LevelFiltering(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("VerboseCtx suppressed at Info level", func(t *testing.T) {
+		require := require.New(t)
+		logger.SetLogLevel(logger.LogLevelInfo)
+		defer logger.SetLogLevel(logger.LogLevelInfo)
+		stdout, stderr, err := testingu.CaptureStdoutStderr(func() error {
+			logger.VerboseCtx(ctx, "should not appear")
+			return nil
+		})
+		require.NoError(err)
+		require.Empty(stdout)
+		require.Empty(stderr)
+	})
+
+	t.Run("TraceCtx suppressed at Info level", func(t *testing.T) {
+		require := require.New(t)
+		logger.SetLogLevel(logger.LogLevelInfo)
+		defer logger.SetLogLevel(logger.LogLevelInfo)
+		stdout, stderr, err := testingu.CaptureStdoutStderr(func() error {
+			logger.TraceCtx(ctx, "should not appear")
+			return nil
+		})
+		require.NoError(err)
+		require.Empty(stdout)
+		require.Empty(stderr)
+	})
+
+	t.Run("ErrorCtx goes to stderr", func(t *testing.T) {
+		require := require.New(t)
+		logger.SetLogLevel(logger.LogLevelError)
+		defer logger.SetLogLevel(logger.LogLevelInfo)
+		ctx2 := logger.WithContextAttrs(ctx, "k", "v")
+		stdout, stderr := captureCtxOutput(func() {
+			logger.ErrorCtx(ctx2, "boom")
+		})
+		require.Empty(stdout)
+		require.Contains(stderr, "boom")
+		require.Contains(stderr, "k=v")
+	})
+
+	t.Run("WarningCtx visible at Warning level", func(t *testing.T) {
+		require := require.New(t)
+		logger.SetLogLevel(logger.LogLevelWarning)
+		defer logger.SetLogLevel(logger.LogLevelInfo)
+		stdout, _ := captureCtxOutput(func() {
+			logger.WarningCtx(ctx, "warn msg")
+		})
+		require.Contains(stdout, "warn msg")
+	})
+}
+
+func Test_CtxFuncs_EmptyContext(t *testing.T) {
+	require := require.New(t)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+
+	stdout, _ := captureCtxOutput(func() {
+		logger.VerboseCtx(context.Background(), "no attrs")
+	})
+	require.Contains(stdout, "no attrs")
 }
 
 func TestMultithread(t *testing.T) {
-	require := require.New(t)
-	r, w, err := os.Pipe()
-	require.NoError(err)
-	oldStdout := os.Stdout
-	defer func() { os.Stdout = oldStdout }()
-	os.Stdout = w
-	wg := sync.WaitGroup{}
-	wg.Add(1000)
-
 	toLog := []string{}
 	for i := 0; i < 100; i++ {
 		toLog = append(toLog, strings.Repeat(strconv.Itoa(i), 10))
 	}
 
-	for i := 0; i < 1000; i++ {
-		go func() {
-			for i := 0; i < 100; i++ {
-				logger.Info(toLog[i])
-			}
-			wg.Done()
-		}()
-	}
+	wg := sync.WaitGroup{}
+	wg.Add(1000)
 
-	stdout := ""
-	wait := make(chan struct{})
-	go func() {
-		buf := bytes.NewBuffer(nil)
-		_, err := io.Copy(buf, r)
-		require.NoError(err)
-		stdout = buf.String()
-		close(wait)
-	}()
-	wg.Wait()
-	w.Close()
-	<-wait
+	stdout, _ := captureCtxOutput(func() {
+		for i := 0; i < 1000; i++ {
+			go func() {
+				for i := 0; i < 100; i++ {
+					logger.Info(toLog[i])
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	})
 
 	logged := strings.Split(stdout, "\n")
 outer:

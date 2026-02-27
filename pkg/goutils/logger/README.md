@@ -1,64 +1,54 @@
 # Logger
 
-Structured logging with hierarchical levels and automatic caller
-information. Provides thread-safe logging with customizable output
-formatting and level-based filtering.
+Structured logging with hierarchical levels, automatic caller
+information, and context-aware attribute propagation. Provides
+thread-safe logging with customizable output formatting and
+level-based filtering.
 
 ## Problem
 
-Go's standard log package lacks level-based filtering and structured
-output formatting, forcing developers to implement verbose logging
-infrastructure manually.
+Go's standard `log` package lacks level-based filtering, caller
+tracking, and context attribute propagation, forcing developers
+to implement repetitive logging infrastructure manually.
 
 <details>
 <summary>Without logger</summary>
 
 ```go
-// Manual level checking and formatting - error-prone boilerplate
+// Manual level checking and formatting - boilerplate everywhere
 var logLevel int = 3 // Info level
 var mu sync.Mutex
 
-func logError(msg string, args ...interface{}) {
+func logError(args ...interface{}) {
     if logLevel >= 1 { // boilerplate: manual level check
         mu.Lock() // boilerplate: manual thread safety
         defer mu.Unlock()
-        pc, file, line, _ := runtime.Caller(1) // boilerplate: stack trace
-        fn := runtime.FuncForPC(pc)
-        funcName := "unknown"
-        if fn != nil {
-            funcName = fn.Name() // common mistake: not handling nil
-        }
-        timestamp := time.Now().Format("01/02 15:04:05.000")
-        fmt.Fprintf(os.Stderr, "%s: ERROR: [%s:%d]: %s",
-            timestamp, funcName, line, fmt.Sprintf(msg, args...))
-    }
-}
-
-func logInfo(msg string, args ...interface{}) {
-    if logLevel >= 3 { // boilerplate: repeated level logic
-        mu.Lock()
-        defer mu.Unlock()
-        // boilerplate: duplicate formatting code
-        pc, file, line, _ := runtime.Caller(1)
+        // boilerplate: manual stack trace
+        pc, _, line, _ := runtime.Caller(1)
         fn := runtime.FuncForPC(pc)
         funcName := "unknown"
         if fn != nil {
             funcName = fn.Name()
         }
         timestamp := time.Now().Format("01/02 15:04:05.000")
-        fmt.Fprintf(os.Stdout, "%s: INFO: [%s:%d]: %s",
-            timestamp, funcName, line, fmt.Sprintf(msg, args...))
+        fmt.Fprintf(os.Stderr, "%s: ERROR: [%s:%d]: %s\n",
+            timestamp, funcName, line, fmt.Sprint(args...))
     }
 }
 
-func expensiveOperation() string {
-    // common mistake: always computing expensive debug info
-    return strings.Join(getAllDebugInfo(), ", ")
+// boilerplate: duplicate code for every level
+func logInfo(args ...interface{}) { /* same boilerplate */ }
+
+// Structured attributes must be threaded manually through calls
+func handleRequest(reqID int64, wsID int64) {
+    // boilerplate: pass ids explicitly to every log call
+    logInfo("started requestID=%d wsID=%d", reqID, wsID)
+    processPayment(reqID, wsID) // must thread ids everywhere
 }
 
-func main() {
-    logError("Connection failed: %s", "timeout")
-    logInfo("Debug info: %s", expensiveOperation()) // always computed
+func processPayment(reqID int64, wsID int64) {
+    // boilerplate: repeat ids in every log call
+    logInfo("payment processed reqID=%d wsID=%d", reqID, wsID)
 }
 ```
 
@@ -68,19 +58,22 @@ func main() {
 <summary>With logger</summary>
 
 ```go
-import "github.com/voedger/voedger/pkg/goutils/logger"
+import (
+    "context"
+    "github.com/voedger/voedger/pkg/goutils/logger"
+)
 
-func main() {
-    logger.Error("Connection failed:", "timeout")
+func handleRequest(ctx context.Context, reqID, wsID int64) {
+    ctx = logger.WithContextAttrs(ctx,
+        logger.AttrReqID(reqID),
+        logger.AttrWSID(wsID),
+    )
+    logger.InfoCtx(ctx, "started")  // attrs included automatically
+    processPayment(ctx)             // just pass ctx
+}
 
-    // Conditional logging avoids expensive operations
-    if logger.IsVerbose() {
-        logger.Verbose("Debug info:", expensiveOperation())
-    }
-
-    // Temporary level changes with automatic restore
-    defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
-    logger.Trace("Detailed execution flow")
+func processPayment(ctx context.Context) {
+    logger.InfoCtx(ctx, "payment processed") // attrs still there
 }
 ```
 
@@ -88,38 +81,39 @@ func main() {
 
 ## Features
 
-- **[Level filtering](logger.go#L22)** - Hierarchical log levels with
-  atomic level switching
+- **Level filtering** - Hierarchical levels (`Error`→`Trace`) with
+  atomic switching and restore-on-defer
   - [Level constants: logger.go#L22](logger.go#L22)
-  - [Atomic level checking: impl.go#L37](impl.go#L37)
+  - [Atomic level check: impl.go#L37](impl.go#L37)
   - [Level restoration: logger.go#L36](logger.go#L36)
-- **[Caller tracking](impl.go#L42)** - Automatic function name and line
-  number extraction
+- **Caller tracking** - Automatic function name and line number
+  in every log entry
   - [Stack frame analysis: impl.go#L42](impl.go#L42)
-  - [Formatted output generation: impl.go#L55](impl.go#L55)
+  - [Formatted output: impl.go#L55](impl.go#L55)
   - [Skip frame control: logger.go#L64](logger.go#L64)
-- **[Output customization](logger.go#L88)** - Pluggable output handlers
-  with stderr/stdout routing
-  - [Custom PrintLine function: logger.go#L88](logger.go#L88)
-  - [Default output routing: logger.go#L90](logger.go#L90)
-- **[Performance optimization](logger.go#L68)** - Level guards prevent
-  expensive operations
-  - [Conditional logging checks: logger.go#L68](logger.go#L68)
+- **Context-aware logging** - `*Ctx` functions read `slog.Attr`
+  values from `context.Context` and append them to each entry
+  - [WithContextAttrs: loggerctx.go#L28](loggerctx.go#L28)
+  - [Standard attr constructors: loggerctx.go#L45](loggerctx.go#L45)
+  - [Shared logCtx: loggerctx.go#L75](loggerctx.go#L75)
+- **Output customization** - Pluggable `PrintLine` with automatic
+  stderr/stdout routing per level
+  - [PrintLine hook: logger.go#L88](logger.go#L88)
+  - [Default routing: logger.go#L90](logger.go#L90)
+- **[Performance guards](logger.go#L68)** - `IsVerbose()`,
+  `IsTrace()`, etc. prevent computing expensive arguments
 
 ## Use
 
 See [basic usage test](logger_test.go#L25)
 
-## Example Output
+## Example output
 
-```
-09/29 13:29:04.355: *****: [core-logger.Test_BasicUsage:22]: Hello world arg1 arg2
-09/29 13:29:04.373: !!!: [core-logger.Test_BasicUsage:23]: My warning
+```text
+09/29 13:29:04.355: *****: [core-logger.Test_BasicUsage:22]: Error
 09/29 13:29:04.374: ===: [core-logger.Test_BasicUsage:24]: My info
-09/29 13:29:04.374: ---: [core-logger.Test_BasicUsage:35]: Now you should see my Trace
-09/29 13:29:04.374: !!!: [core-logger.Test_BasicUsage:41]: You should see my warning
-09/29 13:29:04.374: !!!: [core-logger.Test_BasicUsage:42]: You should see my info
 09/29 13:29:04.374: *****: [core-logger.(*mystruct).iWantToLog:55]: OOPS
+time=...T14:05:26.461+03:00 level=INFO msg="started" src=myapp.handleRequest:12 reqid=42 wsid=1001
 ```
 
 ## Links
