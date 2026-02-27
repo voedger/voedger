@@ -64,10 +64,8 @@ import (
 )
 
 func handleRequest(ctx context.Context, reqID, wsID int64) {
-    ctx = logger.WithContextAttrs(ctx,
-        logger.AttrReqID(reqID),
-        logger.AttrWSID(wsID),
-    )
+    ctx = logger.WithContextAttrs(ctx, logger.LogAttr_ReqID, reqID)
+    ctx = logger.WithContextAttrs(ctx, logger.LogAttr_WSID, wsID)
     logger.InfoCtx(ctx, "started")  // attrs included automatically
     processPayment(ctx)             // just pass ctx
 }

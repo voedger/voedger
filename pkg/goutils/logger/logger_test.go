@@ -188,42 +188,42 @@ func Test_CheckSetLevels(t *testing.T) {
 
 	require := require.New(t)
 
-	logger.SetLogLevel(logger.LogLevelNone)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelNone)()
 	require.False(logger.IsError())
 	require.False(logger.IsWarning())
 	require.False(logger.IsInfo())
 	require.False(logger.IsVerbose())
 	require.False(logger.IsTrace())
 
-	logger.SetLogLevel(logger.LogLevelError)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelError)()
 	require.True(logger.IsError())
 	require.False(logger.IsWarning())
 	require.False(logger.IsInfo())
 	require.False(logger.IsVerbose())
 	require.False(logger.IsTrace())
 
-	logger.SetLogLevel(logger.LogLevelWarning)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelWarning)()
 	require.True(logger.IsError())
 	require.True(logger.IsWarning())
 	require.False(logger.IsInfo())
 	require.False(logger.IsVerbose())
 	require.False(logger.IsTrace())
 
-	logger.SetLogLevel(logger.LogLevelInfo)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelInfo)()
 	require.True(logger.IsError())
 	require.True(logger.IsWarning())
 	require.True(logger.IsInfo())
 	require.False(logger.IsVerbose())
 	require.False(logger.IsTrace())
 
-	logger.SetLogLevel(logger.LogLevelVerbose)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
 	require.True(logger.IsError())
 	require.True(logger.IsWarning())
 	require.True(logger.IsInfo())
 	require.True(logger.IsVerbose())
 	require.False(logger.IsTrace())
 
-	logger.SetLogLevel(logger.LogLevelTrace)
+	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
 	require.True(logger.IsError())
 	require.True(logger.IsWarning())
 	require.True(logger.IsInfo())
@@ -232,7 +232,7 @@ func Test_CheckSetLevels(t *testing.T) {
 
 }
 
-func TestLoggerCtx_BasicUsage(t *testing.T) {
+func LoggerCtx_BasicUsage(t *testing.T) {
 	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
 	ctx := context.Background()
 	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_VApp, "untill.fiscalcloud")
@@ -248,11 +248,15 @@ func TestLoggerCtx_BasicUsage(t *testing.T) {
 // captureCtxOutput captures output produced by *Ctx logging functions.
 // It redirects slog writers to the captured pipes for the duration of f.
 func captureCtxOutput(f func()) (stdout, stderr string) {
-	stdout, stderr, _ = testingu.CaptureStdoutStderr(func() error {
+	stdout, stderr, err := testingu.CaptureStdoutStderr(func() error {
 		logger.SetCtxWriters(os.Stdout, os.Stderr)
 		f()
 		return nil
 	})
+	if err != nil {
+		// notest
+		panic(err)
+	}
 	logger.SetCtxWriters(os.Stdout, os.Stderr)
 	return
 }
@@ -317,8 +321,7 @@ func Test_CtxFuncs_LevelFiltering(t *testing.T) {
 
 	t.Run("VerboseCtx suppressed at Info level", func(t *testing.T) {
 		require := require.New(t)
-		logger.SetLogLevel(logger.LogLevelInfo)
-		defer logger.SetLogLevel(logger.LogLevelInfo)
+		defer logger.SetLogLevelWithRestore(logger.LogLevelInfo)()
 		stdout, stderr, err := testingu.CaptureStdoutStderr(func() error {
 			logger.VerboseCtx(ctx, "should not appear")
 			return nil

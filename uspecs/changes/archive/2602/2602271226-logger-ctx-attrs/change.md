@@ -32,7 +32,7 @@ Add standard slog atributes:
 
 Supporting additions:
 
-- `logger.WithContextAttrs(ctx context.Context, attrs ...slog.Attr)` – returns a new context with the given attributes appended to any already stored
+- `logger.WithContextAttrs(ctx context.Context, name string, value any)` – returns a new context with the given attributes appended to any already stored
 
 ## How
 
