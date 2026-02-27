@@ -94,7 +94,6 @@ func TestBackgroundCleaner(t *testing.T) {
 	factory := Provide(params, iTime)
 	storageProvider := istorageimpl.Provide(factory)
 
-	// Synchronize with the background cleaner goroutine arming its first timer
 	firstTimerArmed := make(chan struct{})
 	iTime.SetOnNextTimerArmed(func() { close(firstTimerArmed) })
 
@@ -102,16 +101,19 @@ func TestBackgroundCleaner(t *testing.T) {
 	r.NoError(err)
 	<-firstTimerArmed
 
-	// this value expires in 1 hour (50*60 = 3000s < 3600s)
+	// expires in 1 hour (50*60 = 3000s < 3600s)
 	ok, err := storage.InsertIfNotExists([]byte("pKey"), []byte("cCols1"), []byte("value1"), 50*60)
 	r.NoError(err)
 	r.True(ok)
-	// this value does NOT expire in 1 hour (61*60 = 3660s > 3600s)
+	// does NOT expire in 1 hour (61*60 = 3660s > 3600s)
 	ok, err = storage.InsertIfNotExists([]byte("pKey"), []byte("cCols2"), []byte("value2"), 61*60)
 	r.NoError(err)
 	r.True(ok)
+	// expires in 1 hour — nil clustering columns (exercises safeKey path in makeTTLKey/removeKey)
+	ok, err = storage.InsertIfNotExists([]byte("pKey2"), nil, []byte("value3"), 50*60)
+	r.NoError(err)
+	r.True(ok)
 
-	// Detect when cleanup cycle completes: goroutine re-arms its timer after cleanup
 	cleanerDone := make(chan struct{})
 	iTime.SetOnNextNewTimerChan(func() { close(cleanerDone) })
 
@@ -123,21 +125,18 @@ func TestBackgroundCleaner(t *testing.T) {
 	r.NoError(err)
 	r.True(ok)
 
-	// Verify cCols1 is physically deleted from the bbolt data bucket
+	// cleanerDone guarantees the cleanup transaction committed; verify physical deletion
 	impl := storage.(*appStorageType)
 	err = impl.db.View(func(tx *bolt.Tx) error {
 		dataBucket := tx.Bucket([]byte(dataBucketName))
 		r.NotNil(dataBucket)
+
 		bucket := dataBucket.Bucket([]byte("pKey"))
-		r.NotNil(bucket) // cCols2 still exists so bucket must remain
-		start := time.Now()
-		for time.Since(start) < time.Second {
-			if bucket.Get(safeKey([]byte("cCols1"))) == nil {
-				return nil
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
+		r.NotNil(bucket) // cCols2 still lives, so sub-bucket must remain
 		r.Nil(bucket.Get(safeKey([]byte("cCols1"))), "cCols1 not deleted from data bucket after TTL expiration")
+
+		// pKey2 had only the nil-cCols entry; removeKey must have deleted the whole sub-bucket
+		r.Nil(dataBucket.Bucket([]byte("pKey2")), "pKey2 bucket not deleted after nil-cCols TTL expiration")
 		return nil
 	})
 	r.NoError(err)

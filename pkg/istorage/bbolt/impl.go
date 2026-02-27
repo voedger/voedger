@@ -243,7 +243,7 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 			return nil
 		}
 
-		v := bucket.Get(cCols)
+		v := bucket.Get(safeKey(cCols))
 		if v == nil {
 			return nil
 		}
@@ -495,7 +495,7 @@ func (s *appStorageType) findValue(pKey, cCols, value []byte) (found bool, err e
 			return nil
 		}
 
-		v := bucket.Get(cCols)
+		v := bucket.Get(safeKey(cCols))
 		if v == nil {
 			return nil
 		}
@@ -583,7 +583,9 @@ func (s *appStorageType) removeKey(tx *bolt.Tx, ttlKey []byte) error {
 			return err
 		}
 		// if the bucket is empty, then delete it
-		if bucket.Stats().KeyN == 0 {
+		// Note: bucket.Stats().KeyN is not updated within a transaction, so use cursor instead
+		k, _ := bucket.Cursor().First()
+		if k == nil {
 			if err := dataBucket.DeleteBucket(pKey); err != nil {
 				return err
 			}
@@ -660,13 +662,15 @@ func extractPKAndCCols(ttlKey []byte) ([]byte, []byte, error) {
 
 // makeTTLKey creates a key for TTL bucket from the primary key, clustering columns and expireAt
 func makeTTLKey(pKey, cCols []byte, expireAt int64) []byte {
-	// key = 8 bytes for expireAt + 8 bytes for length of pKey + pKey + cCols
-	totalLength := 2*utils.Uint64Size + len(pKey) + len(cCols)
+	// key = 8 bytes for expireAt + 8 bytes for length of pKey + pKey + safeKey(cCols)
+	// safeKey is used so that extractPKAndCCols returns the same key used in the data bucket
+	safeCCols := safeKey(cCols)
+	totalLength := 2*utils.Uint64Size + len(pKey) + len(safeCCols)
 	ttlKey := make([]byte, 0, totalLength)
 	ttlKey = binary.BigEndian.AppendUint64(ttlKey, uint64(expireAt))  // nolint G115
 	ttlKey = binary.BigEndian.AppendUint64(ttlKey, uint64(len(pKey))) // nolint G115
 	ttlKey = append(ttlKey, pKey...)
-	ttlKey = append(ttlKey, cCols...)
+	ttlKey = append(ttlKey, safeCCols...)
 
 	return ttlKey
 }
