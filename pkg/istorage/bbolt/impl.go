@@ -667,5 +667,6 @@ func makeTTLKey(pKey, cCols []byte, expireAt int64) []byte {
 	ttlKey = binary.BigEndian.AppendUint64(ttlKey, uint64(len(pKey))) // nolint G115
 	ttlKey = append(ttlKey, pKey...)
 	ttlKey = append(ttlKey, cCols...)
+
 	return ttlKey
 }
