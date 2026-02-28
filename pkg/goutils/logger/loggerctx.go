@@ -20,7 +20,7 @@ func SetCtxWriters(out, err io.Writer) {
 	slogErr = slog.New(slog.NewTextHandler(err, ctxHandlerOpts))
 }
 
-// WithContextAttrs returns a new context with the given slog attributes
+// WithContextAttrs returns a new context with the given key-value attributes
 // added to any already stored. Attributes with the same key are overwritten.
 // Thread-safe: uses a fresh sync.Map per call so callers do not share mutable state.
 func WithContextAttrs(ctx context.Context, name string, value any) context.Context {
