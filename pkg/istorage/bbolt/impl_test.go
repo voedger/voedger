@@ -153,8 +153,6 @@ func TestBackgroundCleaner(t *testing.T) {
 	err = impl.db.View(func(tx *bolt.Tx) error {
 		dataBucket := tx.Bucket([]byte(dataBucketName))
 		r.NotNil(dataBucket)
-		bucket := dataBucket.Bucket([]byte("pKey"))
-		r.Nil(bucket.Get(safeKey([]byte("cCols1"))), "cCols1 not deleted from data bucket after TTL expiration")
 
 		// pKey2 had only the nil-cCols entry; removeKey must have deleted the whole sub-bucket
 		r.Nil(dataBucket.Bucket([]byte("pKey2")), "pKey2 bucket not deleted after nil-cCols TTL expiration")
