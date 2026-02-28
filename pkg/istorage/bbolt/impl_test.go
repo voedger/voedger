@@ -7,7 +7,6 @@
 package bbolt
 
 import (
-	"errors"
 	"os"
 	"testing"
 	"time"
@@ -129,27 +128,28 @@ func TestBackgroundCleaner(t *testing.T) {
 	// cleanerDone guarantees the cleanup transaction committed; verify physical deletion
 	// wait for deletion
 	impl := storage.(*appStorageType)
-	err = func() error {
-		start := time.Now()
-		checked := false
-		for time.Since(start) < time.Second {
-			err = impl.db.View(func(tx *bolt.Tx) error {
-				dataBucket := tx.Bucket([]byte(dataBucketName))
-				bucket := dataBucket.Bucket([]byte("pKey"))
-				toBeDeleted := bucket.Get(safeKey([]byte("cCols1")))
-				if len(toBeDeleted) == 0 {
-					checked = true
-				}
+	r.Eventually(func() bool {
+		var deleted bool
+		viewErr := impl.db.View(func(tx *bolt.Tx) error {
+			dataBucket := tx.Bucket([]byte(dataBucketName))
+			if dataBucket == nil {
+				// if data bucket is gone, key is gone
+				deleted = true
 				return nil
-			})
-			if checked || err != nil {
-				return err
 			}
-			time.Sleep(50 * time.Millisecond)
-		}
-		return errors.New("cCols1 not deleted from data bucket after TTL expiration")
-	}()
-	r.NoError(err)
+			bucket := dataBucket.Bucket([]byte("pKey"))
+			if bucket == nil {
+				// if pkey bucket is gone, key is gone
+				deleted = true
+				return nil
+			}
+			toBeDeleted := bucket.Get(safeKey([]byte("cCols1")))
+			deleted = len(toBeDeleted) == 0
+			return nil
+		})
+		r.NoError(viewErr)
+		return deleted
+	}, time.Second, 50*time.Millisecond, "cCols1 not deleted from data bucket after TTL expiration")
 	err = impl.db.View(func(tx *bolt.Tx) error {
 		dataBucket := tx.Bucket([]byte(dataBucketName))
 		r.NotNil(dataBucket)
