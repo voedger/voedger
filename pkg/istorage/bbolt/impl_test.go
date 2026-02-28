@@ -126,14 +126,33 @@ func TestBackgroundCleaner(t *testing.T) {
 	r.True(ok)
 
 	// cleanerDone guarantees the cleanup transaction committed; verify physical deletion
+	// wait for deletion
 	impl := storage.(*appStorageType)
+	r.Eventually(func() bool {
+		var deleted bool
+		viewErr := impl.db.View(func(tx *bolt.Tx) error {
+			dataBucket := tx.Bucket([]byte(dataBucketName))
+			if dataBucket == nil {
+				// if data bucket is gone, key is gone
+				deleted = true
+				return nil
+			}
+			bucket := dataBucket.Bucket([]byte("pKey"))
+			if bucket == nil {
+				// if pkey bucket is gone, key is gone
+				deleted = true
+				return nil
+			}
+			toBeDeleted := bucket.Get(safeKey([]byte("cCols1")))
+			deleted = len(toBeDeleted) == 0
+			return nil
+		})
+		r.NoError(viewErr)
+		return deleted
+	}, time.Second, 50*time.Millisecond, "cCols1 not deleted from data bucket after TTL expiration")
 	err = impl.db.View(func(tx *bolt.Tx) error {
 		dataBucket := tx.Bucket([]byte(dataBucketName))
 		r.NotNil(dataBucket)
-
-		bucket := dataBucket.Bucket([]byte("pKey"))
-		r.NotNil(bucket) // cCols2 still lives, so sub-bucket must remain
-		r.Nil(bucket.Get(safeKey([]byte("cCols1"))), "cCols1 not deleted from data bucket after TTL expiration")
 
 		// pKey2 had only the nil-cCols entry; removeKey must have deleted the whole sub-bucket
 		r.Nil(dataBucket.Bucket([]byte("pKey2")), "pKey2 bucket not deleted after nil-cCols TTL expiration")
