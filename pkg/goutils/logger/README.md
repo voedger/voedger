@@ -89,11 +89,11 @@ func processPayment(ctx context.Context) {
   - [Stack frame analysis: impl.go#L42](impl.go#L42)
   - [Formatted output: impl.go#L55](impl.go#L55)
   - [Skip frame control: logger.go#L64](logger.go#L64)
-- **Context-aware logging** - `*Ctx` functions read `slog.Attr`
-  values from `context.Context` and append them to each entry
+- **Context-aware logging** - `*Ctx` functions read logging key/value
+  pairs stored in `context.Context` and append them to each entry
   - [WithContextAttrs: loggerctx.go#L28](loggerctx.go#L28)
   - [Standard attr constructors: loggerctx.go#L45](loggerctx.go#L45)
-  - [Shared logCtx: loggerctx.go#L75](loggerctx.go#L75)
+  - [Shared log context storage: loggerctx.go#L75](loggerctx.go#L75)
 - **Output customization** - Pluggable `PrintLine` with automatic
   stderr/stdout routing per level
   - [PrintLine hook: logger.go#L88](logger.go#L88)

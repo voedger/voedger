@@ -19,16 +19,16 @@ Add context-aware logging functions to the `logger` package:
 - `ErrorCtx(ctx context.Context, args ...interface{})` – logs at Error level, enriching the entry with `slog.Attr` values stored in `ctx`
 and so on.
 
-Add standard slog atributes:
+Add standard slog attributes:
 
 - vapp={string}
-  - examples: untill.fiscalcloud, unitll.airsbp
+  - examples: untill.fiscalcloud, untill.airsbp
 - feat={string}
   - examples: magicmenu
 - reqid={requestIDNumber}
 - wsid={wsidNumber}
 - extension={string}
-  - exmpales: c.sys.UploadBLOBHelper
+  - examples: c.sys.UploadBLOBHelper
 
 Supporting additions:
 
