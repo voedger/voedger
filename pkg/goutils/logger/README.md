@@ -64,8 +64,10 @@ import (
 )
 
 func handleRequest(ctx context.Context, reqID, wsID int64) {
-    ctx = logger.WithContextAttrs(ctx, logger.LogAttr_ReqID, reqID)
-    ctx = logger.WithContextAttrs(ctx, logger.LogAttr_WSID, wsID)
+    ctx = logger.WithContextAttrs(ctx, map[string]any{
+        logger.LogAttr_ReqID: reqID,
+        logger.LogAttr_WSID:  wsID,
+    })
     logger.InfoCtx(ctx, "started")  // attrs included automatically
     processPayment(ctx)             // just pass ctx
 }
@@ -91,9 +93,9 @@ func processPayment(ctx context.Context) {
   - [Skip frame control: logger.go#L64](logger.go#L64)
 - **Context-aware logging** - `*Ctx` functions read logging key/value
   pairs stored in `context.Context` and append them to each entry
-  - [WithContextAttrs: loggerctx.go#L28](loggerctx.go#L28)
-  - [Standard attr constructors: loggerctx.go#L45](loggerctx.go#L45)
-  - [Shared log context storage: loggerctx.go#L75](loggerctx.go#L75)
+  - [WithContextAttrs: loggerctx.go#L23](loggerctx.go#L23)
+  - [Ctx logging functions: loggerctx.go#L31](loggerctx.go#L31)
+  - [sLogAttrsFromCtx: loggerctx.go#L68](loggerctx.go#L68)
 - **Output customization** - Pluggable `PrintLine` with automatic
   stderr/stdout routing per level
   - [PrintLine hook: logger.go#L88](logger.go#L88)
@@ -110,7 +112,6 @@ See [basic usage test](logger_test.go#L25)
 ```text
 09/29 13:29:04.355: *****: [core-logger.Test_BasicUsage:22]: Error
 09/29 13:29:04.374: ===: [core-logger.Test_BasicUsage:24]: My info
-09/29 13:29:04.374: *****: [core-logger.(*mystruct).iWantToLog:55]: OOPS
 time=...T14:05:26.461+03:00 level=INFO msg="started" src=myapp.handleRequest:12 reqid=42 wsid=1001
 ```
 
