@@ -55,6 +55,7 @@ func initResponse(ctx context.Context, bw *blobWorkpiece) (err error) {
 	bw.writer = bw.blobMessageRead.okResponseIniter(
 		httpu.ContentType, bw.blobState.Descr.ContentType,
 		coreutils.BlobName, bw.blobState.Descr.Name,
+		httpu.ContentLength, strconvu.UintToString(bw.blobState.Size),
 	)
 	return nil
 }

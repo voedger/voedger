@@ -129,26 +129,15 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
 	optFuncs ...httpu.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
 	url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/docs/%s/%d/blobs/%s`, appQName.Owner(), appQName.Name(), wsid, ownerRecord, ownerID, ownerRecordField)
-	optFuncs = append(optFuncs, httpu.WithResponseHandler(func(httpResp *http.Response) {}))
-	resp, err := f.get(url, optFuncs...)
-	if err != nil {
-		return res, err
-	}
-	if resp.HTTPResp.StatusCode != http.StatusOK {
-		return iblobstorage.BLOBReader{}, nil
-	}
-	res = iblobstorage.BLOBReader{
-		DescrType: iblobstorage.DescrType{
-			Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
-			ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
-		},
-		ReadCloser: resp.HTTPResp.Body,
-	}
-	return res, nil
+	return f.readBLOB(url, optFuncs...)
 }
 
 func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...httpu.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
 	url := fmt.Sprintf(`api/v2/apps/%s/%s/workspaces/%d/tblobs/%s`, appQName.Owner(), appQName.Name(), wsid, blobSUUID)
+	return f.readBLOB(url, optFuncs...)
+}
+
+func (f *implIFederation) readBLOB(url string, optFuncs ...httpu.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
 	optFuncs = append(optFuncs, httpu.WithResponseHandler(func(httpResp *http.Response) {}))
 	resp, err := f.get(url, optFuncs...)
 	if err != nil {
@@ -157,12 +146,17 @@ func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.W
 	if resp.HTTPResp.StatusCode != http.StatusOK {
 		return iblobstorage.BLOBReader{}, nil
 	}
+	blobSize, err := blobSizeFromHeader(resp)
+	if err != nil {
+		return iblobstorage.BLOBReader{}, err
+	}
 	res = iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
 			Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
 			ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
 		},
 		ReadCloser: resp.HTTPResp.Body,
+		BLOBSize:   blobSize,
 	}
 	return res, nil
 }

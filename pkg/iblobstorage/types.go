@@ -72,4 +72,5 @@ type blobPrefix uint64
 type BLOBReader struct {
 	io.ReadCloser
 	DescrType
+	BLOBSize uint64
 }
