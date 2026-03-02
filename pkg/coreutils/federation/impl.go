@@ -137,12 +137,18 @@ func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID,
 	if resp.HTTPResp.StatusCode != http.StatusOK {
 		return iblobstorage.BLOBReader{}, nil
 	}
+	blobSize, err := blobSizeFromHeader(resp)
+	if err != nil {
+		// notest
+		return res, err
+	}
 	res = iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
 			Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
 			ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
 		},
 		ReadCloser: resp.HTTPResp.Body,
+		BLOBSize:   blobSize,
 	}
 	return res, nil
 }
@@ -157,12 +163,18 @@ func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.W
 	if resp.HTTPResp.StatusCode != http.StatusOK {
 		return iblobstorage.BLOBReader{}, nil
 	}
+	blobSize, err := blobSizeFromHeader(resp)
+	if err != nil {
+		// notest
+		return res, err
+	}
 	res = iblobstorage.BLOBReader{
 		DescrType: iblobstorage.DescrType{
 			Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
 			ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
 		},
 		ReadCloser: resp.HTTPResp.Body,
+		BLOBSize:   blobSize,
 	}
 	return res, nil
 }

@@ -16,6 +16,7 @@ import (
 const (
 	Authorization                                = "Authorization"
 	ContentType                                  = "Content-Type"
+	ContentLength                                = "Content-Length"
 	ContentDisposition                           = "Content-Disposition"
 	Accept                                       = "Accept"
 	Origin                                       = "Origin"

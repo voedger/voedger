@@ -105,7 +105,14 @@ func downloadBLOBHelper(ctx context.Context, bw *blobWorkpiece) (err error) {
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_readBLOB~impl]
 func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, bw *blobWorkpiece) (err error) {
 	return func(ctx context.Context, bw *blobWorkpiece) (err error) {
-		err = blobStorage.ReadBLOB(bw.blobMessageRead.requestCtx, bw.blobKey, nil, bw.writer, iblobstoragestg.RLimiter_Null)
+		stateCallback := func(state iblobstorage.BLOBState) error {
+			_ = bw.blobMessageRead.okResponseIniter(
+				// [~server.apiv2.blobs/cmp.blobber.ServicePipeline_initResponse~impl]
+				httpu.ContentLength, strconvu.UintToString(state.Size),
+			)
+			return nil
+		}
+		err = blobStorage.ReadBLOB(bw.blobMessageRead.requestCtx, bw.blobKey, stateCallback, bw.writer, iblobstoragestg.RLimiter_Null)
 		if err != nil {
 			logger.Error(fmt.Sprintf("failed to read BLOB: id %s, appQName %s, wsid %d: %s", bw.blobKey.ID(), bw.blobMessageRead.appQName,
 				bw.blobMessageRead.wsid, err.Error()))

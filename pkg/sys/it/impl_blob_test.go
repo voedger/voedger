@@ -69,6 +69,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.NoError(err)
 	require.Equal(httpu.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
+	require.EqualValues(len(expBLOB), blobReader.BLOBSize)
 	require.Equal(expBLOB, actualBLOBContent)
 
 	// [~server.apiv2.blobs/it.TestBlobsRead~impl]
@@ -81,6 +82,7 @@ func TestBasicUsage_Persistent(t *testing.T) {
 	require.Equal(httpu.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
+	require.EqualValues(len(expBLOB), blobReader.BLOBSize)
 
 	// read, authorize over escaped cookies
 	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, it.QNameDocWithBLOB, "Blob", ownerID,
@@ -297,6 +299,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	require.NoError(err)
 	require.Equal(httpu.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
+	require.EqualValues(len(expBLOB), blobReader.BLOBSize)
 	require.Equal(expBLOB, actualBLOBContent)
 
 	t.Run("expiration", func(t *testing.T) {
@@ -376,6 +379,7 @@ func TestAPIv1v2BackwardCompatibility(t *testing.T) {
 	require.Equal(httpu.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal(coreutils.BlobName, blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
+	require.EqualValues(len(expBLOB), blobReader.BLOBSize)
 }
 
 func TestODocWithBLOB(t *testing.T) {
@@ -403,6 +407,7 @@ func TestODocWithBLOB(t *testing.T) {
 	require.Equal(httpu.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("test", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
+	require.EqualValues(len(expBLOB), blobReader.BLOBSize)
 }
 
 func TestBLOBsPseudoWSIDToAppWSID(t *testing.T) {
@@ -430,4 +435,5 @@ func TestBLOBsPseudoWSIDToAppWSID(t *testing.T) {
 	require.Equal(httpu.ContentType_ApplicationXBinary, blobReader.ContentType)
 	require.Equal("blob name", blobReader.Name)
 	require.Equal(expBLOB, actualBLOBContent)
+	require.EqualValues(len(expBLOB), blobReader.BLOBSize)
 }
