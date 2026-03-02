@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"sync"
 )
 
 // SetCtxWriters replaces the writers used by all *Ctx logging functions.
@@ -20,20 +19,10 @@ func SetCtxWriters(out, err io.Writer) {
 	slogErr = slog.New(slog.NewTextHandler(err, ctxHandlerOpts))
 }
 
-// WithContextAttrs returns a new context with the given slog attributes
-// added to any already stored. Attributes with the same key are overwritten.
-// Thread-safe: uses a fresh sync.Map per call so callers do not share mutable state.
-func WithContextAttrs(ctx context.Context, name string, value any) context.Context {
-	prev, _ := ctx.Value(ctxKey{}).(*sync.Map)
-	m := &sync.Map{}
-	if prev != nil {
-		prev.Range(func(k, v any) bool {
-			m.Store(k, v)
-			return true
-		})
-	}
-	m.Store(name, value)
-	return context.WithValue(ctx, ctxKey{}, m)
+// WithContextAttrs returns a new context with the given attributes added. Later calls shadow earlier ones for the same key.
+func WithContextAttrs(ctx context.Context, attrs map[string]any) context.Context {
+	prev, _ := ctx.Value(ctxKey{}).(*logAttrs)
+	return context.WithValue(ctx, ctxKey{}, &logAttrs{attrs: attrs, parent: prev})
 }
 
 // Context-aware logging functions. Each reads slog.Attr values stored in ctx
@@ -77,14 +66,18 @@ func logCtx(ctx context.Context, level TLogLevel, slogLevel slog.Level, args ...
 }
 
 func sLogAttrsFromCtx(ctx context.Context) []any {
-	m, _ := ctx.Value(ctxKey{}).(*sync.Map)
-	if m == nil {
-		return nil
+	node, _ := ctx.Value(ctxKey{}).(*logAttrs)
+	seen := map[string]bool{}
+	attrs := []any{}
+	for node != nil {
+		for k := range node.attrs {
+			if seen[k] {
+				continue
+			}
+			seen[k] = true
+			attrs = append(attrs, slog.Any(k, node.attrs[k]))
+		}
+		node = node.parent
 	}
-	var attrs []any
-	m.Range(func(k, v any) bool {
-		attrs = append(attrs, slog.Any(k.(string), v))
-		return true
-	})
 	return attrs
 }

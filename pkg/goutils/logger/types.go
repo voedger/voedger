@@ -6,3 +6,8 @@
 package logger
 
 type ctxKey struct{}
+
+type logAttrs struct {
+	attrs  map[string]any
+	parent *logAttrs
+}

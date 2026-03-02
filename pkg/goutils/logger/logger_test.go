@@ -232,14 +232,15 @@ func Test_CheckSetLevels(t *testing.T) {
 
 }
 
-func LoggerCtx_BasicUsage(t *testing.T) {
+func TestLoggerCtx_BasicUsage(t *testing.T) {
 	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
-	ctx := context.Background()
-	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_VApp, "untill.fiscalcloud")
-	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Feat, "magicmenu")
-	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_ReqID, 42)
-	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_WSID, 100)
-	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Extension, "c.sys.UploadBLOBHelper")
+	ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+		logger.LogAttr_VApp:      "untill.fiscalcloud",
+		logger.LogAttr_Feat:      "magicmenu",
+		logger.LogAttr_ReqID:     42,
+		logger.LogAttr_WSID:      100,
+		logger.LogAttr_Extension: "c.sys.UploadBLOBHelper",
+	})
 	logger.InfoCtx(ctx, "hello ctx")
 	logger.VerboseCtx(ctx, "hello ctx")
 	logger.ErrorCtx(ctx, "hello ctx")
@@ -266,8 +267,10 @@ func Test_WithContextAttrs(t *testing.T) {
 
 	t.Run("attrs appear in stdout", func(t *testing.T) {
 		require := require.New(t)
-		ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_VApp, "untill.fiscalcloud")
-		ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Feat, "magicmenu")
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+			logger.LogAttr_VApp: "untill.fiscalcloud",
+			logger.LogAttr_Feat: "magicmenu",
+		})
 		stdout, stderr := captureCtxOutput(func() {
 			logger.VerboseCtx(ctx, "hello ctx")
 		})
@@ -279,8 +282,8 @@ func Test_WithContextAttrs(t *testing.T) {
 
 	t.Run("attrs accumulate across WithContextAttrs calls", func(t *testing.T) {
 		require := require.New(t)
-		ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_VApp, "myapp")
-		ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Feat, "myfeat")
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_VApp: "myapp"})
+		ctx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_Feat: "myfeat"})
 		stdout, _ := captureCtxOutput(func() {
 			logger.VerboseCtx(ctx, "accumulated")
 		})
@@ -290,8 +293,8 @@ func Test_WithContextAttrs(t *testing.T) {
 
 	t.Run("same key is overwritten", func(t *testing.T) {
 		require := require.New(t)
-		ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_VApp, "first")
-		ctx = logger.WithContextAttrs(ctx, logger.LogAttr_VApp, "second")
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_VApp: "first"})
+		ctx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_VApp: "second"})
 		stdout, _ := captureCtxOutput(func() {
 			logger.VerboseCtx(ctx, "overwrite")
 		})
@@ -304,9 +307,11 @@ func Test_CtxFuncs_StandardAttrs(t *testing.T) {
 	require := require.New(t)
 	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
 
-	ctx := logger.WithContextAttrs(context.Background(), logger.LogAttr_ReqID, 42)
-	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_WSID, 100)
-	ctx = logger.WithContextAttrs(ctx, logger.LogAttr_Extension, "c.sys.UploadBLOBHelper")
+	ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+		logger.LogAttr_ReqID:     42,
+		logger.LogAttr_WSID:      100,
+		logger.LogAttr_Extension: "c.sys.UploadBLOBHelper",
+	})
 
 	stdout, _ := captureCtxOutput(func() {
 		logger.InfoCtx(ctx, "standard attrs")
@@ -348,7 +353,7 @@ func Test_CtxFuncs_LevelFiltering(t *testing.T) {
 		require := require.New(t)
 		logger.SetLogLevel(logger.LogLevelError)
 		defer logger.SetLogLevel(logger.LogLevelInfo)
-		ctx2 := logger.WithContextAttrs(ctx, "k", "v")
+		ctx2 := logger.WithContextAttrs(ctx, map[string]any{"k": "v"})
 		stdout, stderr := captureCtxOutput(func() {
 			logger.ErrorCtx(ctx2, "boom")
 		})
