@@ -5,7 +5,7 @@
 ### Refactor read path
 
 - [x] update: [pkg/processors/blobber/impl_read.go](../../../pkg/processors/blobber/impl_read.go)
-  - update: `provideReadBLOB` — add stateCallback passed to `ReadBLOB` that calls `okResponseIniter` with only `httpu.ContentLength` (from `state.Size`), discarding the returned writer; `initResponse` is kept to set `Content-Type` and `BlobName` as before
+  - update: `initResponse` — add `httpu.ContentLength` (from `bw.blobState.Size`) to the `okResponseIniter` call alongside `Content-Type` and `BlobName`
 
 ### Add `BLOBSize` to `BLOBReader`
 
@@ -13,8 +13,8 @@
   - add: `BLOBSize uint64` field to `BLOBReader`
 
 - [x] update: [pkg/coreutils/federation/impl.go](../../../pkg/coreutils/federation/impl.go)
-  - add: `blobSizeFromHeader` helper to parse blob size from `Content-Length` response header
-  - update: `ReadBLOB` and `ReadTempBLOB` — populate `BLOBSize` via `blobSizeFromHeader`
+  - add: private `readBLOB` method with `blobSizeFromHeader` helper — populates `BLOBSize` from `Content-Length` response header
+  - update: `ReadBLOB` and `ReadTempBLOB` — delegate to `readBLOB`
 
 ### Tests
 
