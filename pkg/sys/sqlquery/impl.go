@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
@@ -129,12 +130,12 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		}
 
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
-		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
-		if source.Entity() == "blob" {
-			// FIXME: eliminate this hack
-			// sys.BLOB translates to sys.blob by vitess-sqlparser
-			// https://github.com/voedger/voedger/issues/3708
-			source = appdef.NewQName(appdef.SysPackage, "BLOB")
+		source := recoverTableName(appStructs.AppDef(), appdef.NewQName(table.Qualifier.String(), table.Name.String()))
+
+		if withFields, ok := appStructs.AppDef().Type(source).(appdef.IWithFields); ok && !f.acceptAll {
+			for field := range f.fields {
+				f.fields[recoverFieldName(withFields, field)] = true
+			}
 		}
 
 		kind := appStructs.AppDef().Type(source).Kind()
@@ -166,7 +167,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			if op.EntityID > 0 {
 				return errors.New("ID must not be specified on select from view")
 			}
-			return readViewRecords(ctx, wsID, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
+			return readViewRecords(ctx, wsID, source, whereExpr, appStructs, f, callback)
 		case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
 			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
 				http.StatusBadRequest)
@@ -187,7 +188,8 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
 
-		return fmt.Errorf("do not know how to read from the requested %s, %s", source, kind)
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest,
+			fmt.Sprintf("do not know how to read from the requested %s, %s", source, kind))
 	}
 }
 
@@ -260,6 +262,34 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 		return 0, false, fmt.Errorf("unsupported expression: %T", r)
 	}
 	return o, eq, nil
+}
+
+// vitess-sqlparser lowercases all identifiers; recover the original case from the schema
+func recoverTableName(appDef appdef.IAppDef, source appdef.QName) appdef.QName {
+	switch source {
+	case plog, wlog:
+		return source
+	}
+	if appDef.Type(source).Kind() == appdef.TypeKind_null {
+		for _, t := range appDef.Types() {
+			if strings.EqualFold(t.QName().Pkg(), source.Pkg()) && strings.EqualFold(t.QName().Entity(), source.Entity()) {
+				return t.QName()
+			}
+		}
+	}
+	return source
+}
+
+// vitess-sqlparser lowercases all identifiers; recover the original case from the schema
+func recoverFieldName(withFields appdef.IWithFields, name string) string {
+	if withFields.Field(name) == nil {
+		for _, f := range withFields.Fields() {
+			if strings.EqualFold(f.Name(), name) {
+				return f.Name()
+			}
+		}
+	}
+	return name
 }
 
 func getFilter(f func(string) bool) coreutils.MapperOpt {
