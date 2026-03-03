@@ -107,6 +107,10 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		}
 		s := stmt.(*sqlparser.Select)
 
+		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
+		sourceTableName := recoverTableName(appStructs.AppDef(), appdef.NewQName(table.Qualifier.String(), table.Name.String()))
+		sourceTableType := appStructs.AppDef().Type(sourceTableName)
+
 		f := &filter{fields: make(map[string]bool)}
 		for _, intf := range s.SelectExprs {
 			switch expr := intf.(type) {
@@ -114,11 +118,17 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				f.acceptAll = true
 			case *sqlparser.AliasedExpr:
 				column := expr.Expr.(*sqlparser.ColName)
+				fieldName := ""
 				if !column.Qualifier.Name.IsEmpty() {
-					f.fields[fmt.Sprintf("%s.%s", column.Qualifier.Name, column.Name)] = true
+					fieldName = fmt.Sprintf("%s.%s", column.Qualifier.Name, column.Name)
 				} else {
-					f.fields[column.Name.String()] = true
+					fieldName = column.Name.String()
 				}
+				if sourceTableType.QName() != appdef.NullQName { // null if e.g. sys.plog, sys.wlog
+					fieldName = recoverFieldName(sourceTableType.(appdef.IWithFields), fieldName)
+				}
+
+				f.fields[fieldName] = true
 			}
 		}
 
@@ -129,17 +139,8 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			whereExpr = s.Where.Expr
 		}
 
-		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
-		source := recoverTableName(appStructs.AppDef(), appdef.NewQName(table.Qualifier.String(), table.Name.String()))
-
-		if withFields, ok := appStructs.AppDef().Type(source).(appdef.IWithFields); ok && !f.acceptAll {
-			for field := range f.fields {
-				f.fields[recoverFieldName(withFields, field)] = true
-			}
-		}
-
-		kind := appStructs.AppDef().Type(source).Kind()
-		if _, ok := appStructs.AppDef().Type(source).(appdef.IStructure); ok {
+		kind := appStructs.AppDef().Type(sourceTableName).Kind()
+		if _, ok := appStructs.AppDef().Type(sourceTableName).(appdef.IStructure); ok {
 			// is a structure -> check ACL
 			switch kind {
 			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc:
@@ -149,7 +150,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				}
 				apppart := args.Workpiece.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
 				roles := args.Workpiece.(interface{ Roles() []appdef.QName }).Roles()
-				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, source, fields, roles)
+				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, sourceTableName, fields, roles)
 				if err != nil {
 					// notest
 					if errors.Is(err, appdef.ErrNotFoundError) {
@@ -167,12 +168,12 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			if op.EntityID > 0 {
 				return errors.New("ID must not be specified on select from view")
 			}
-			return readViewRecords(ctx, wsID, source, whereExpr, appStructs, f, callback)
+			return readViewRecords(ctx, wsID, sourceTableName, whereExpr, appStructs, f, callback)
 		case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
+			return coreutils.WrapSysError(readRecords(wsID, sourceTableName, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
 				http.StatusBadRequest)
 		default:
-			if source != plog && source != wlog {
+			if sourceTableName != plog && sourceTableName != wlog {
 				break
 			}
 			limit, offset, e := params(whereExpr, s.Limit, istructs.Offset(op.EntityID))
@@ -182,14 +183,14 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			appParts := args.Workpiece.(interface {
 				AppPartitions() appparts.IAppPartitions
 			}).AppPartitions()
-			if source == plog {
+			if sourceTableName == plog {
 				return readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
 			}
 			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
 
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest,
-			fmt.Sprintf("do not know how to read from the requested %s, %s", source, kind))
+			fmt.Sprintf("do not know how to read from the requested %s, %s", sourceTableName, kind))
 	}
 }
 

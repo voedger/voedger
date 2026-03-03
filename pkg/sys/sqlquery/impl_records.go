@@ -68,9 +68,11 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 
 	if !f.acceptAll {
 		if withFields, ok := qNameType.(appdef.IWithFields); ok {
+			recoveredFields := make(map[string]bool, len(f.fields))
 			for field := range f.fields {
-				f.fields[recoverFieldName(withFields, field)] = true
+				recoveredFields[recoverFieldName(withFields, field)] = true
 			}
+			f.fields = recoveredFields
 		}
 	}
 
