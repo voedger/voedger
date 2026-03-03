@@ -245,7 +245,7 @@ func TestSqlQuery_wlog(t *testing.T) {
 	})
 	t.Run("Should return error when field not found in def", func(t *testing.T) {
 		body := `{"args":{"Query":"select abracadabra from sys.wlog"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("field 'abracadabra' not found in def"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("field 'abracadabra' not found in def"))
 	})
 }
 
@@ -381,11 +381,15 @@ func TestSqlQuery_view_records(t *testing.T) {
 	})
 	t.Run("Should return error when operator not supported", func(t *testing.T) {
 		body = `{"args":{"Query":"select * from sys.CollectionView where partKey > 1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported operator: >"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported operator: >"))
 	})
 	t.Run("Should return error when expression not supported", func(t *testing.T) {
 		body = `{"args":{"Query":"select * from sys.CollectionView where partKey = 1 or docQname = 'app1pkg.payments'"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported expression: *sqlparser.OrExpr"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported expression: *sqlparser.OrExpr"))
+	})
+	t.Run("Should return error when field does not exist in value def", func(t *testing.T) {
+		body = `{"args":{"Query":"select abracadabra from sys.CollectionView where PartKey = 1"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("field 'abracadabra' does not exist in 'sys.CollectionView' value def"))
 	})
 	t.Run("Should recover lowercased table and field names", func(t *testing.T) {
 		require := require.New(t)

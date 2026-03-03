@@ -20,8 +20,17 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 	view := appdef.View(appStructs.AppDef().Type, viewRecordQName)
 
 	if !f.acceptAll {
+		allowedFields := make(map[string]bool, view.Key().FieldCount()+view.Value().FieldCount())
+		for _, f := range view.Key().Fields() {
+			allowedFields[f.Name()] = true
+		}
+		for _, f := range view.Value().Fields() {
+			allowedFields[f.Name()] = true
+		}
 		for field := range f.fields {
-			f.fields[recoverFieldName(view, field)] = true
+			if !allowedFields[field] {
+				return fmt.Errorf("field '%s' does not exist in '%s' value def", field, viewRecordQName)
+			}
 		}
 	}
 
@@ -44,7 +53,7 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 			}
 
 			kk = append(kk, keyPart{
-				name:  name,
+				name:  recoverFieldName(view, name),
 				value: r.Right.(*sqlparser.SQLVal).Val,
 			})
 		case *sqlparser.AndExpr:
