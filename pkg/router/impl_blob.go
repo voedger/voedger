@@ -21,7 +21,7 @@ func (s *httpService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		reqCtxWithAttribs := withLogAttribs(req.Context(), data, bus.Request{Resource: "sys._Blob_Write"}, req)
 		logServeRequest(reqCtxWithAttribs)
-		if !s.blobRequestHandler.HandleWrite(data.appQName, data.wsid, data.header, req.Context(), req.URL.Query(),
+		if !s.blobRequestHandler.HandleWrite(data.appQName, data.wsid, data.header, reqCtxWithAttribs, req.URL.Query(),
 			newBLOBOKResponseIniter(rw, http.StatusOK), req.Body, func(sysErr coreutils.SysError) {
 				writeCommonError_V1(rw, sysErr, sysErr.HTTPStatus)
 			}, s.requestSender) {
@@ -37,7 +37,7 @@ func (s *httpService) blobHTTPRequestHandler_Read(numsAppsWorkspaces map[appdef.
 		logServeRequest(reqCtxWithAttribs)
 		vars := mux.Vars(req)
 		existingBLOBIDOrSUID := vars[URLPlaceholder_blobIDOrSUUID]
-		if !s.blobRequestHandler.HandleRead(data.appQName, data.wsid, data.header, req.Context(),
+		if !s.blobRequestHandler.HandleRead(data.appQName, data.wsid, data.header, reqCtxWithAttribs,
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
 				writeCommonError_V1(rw, sysErr, sysErr.HTTPStatus)
 			}, existingBLOBIDOrSUID, s.requestSender) {

@@ -46,8 +46,10 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				AppQName:         request.AppQName,
 				ChannelIDFromURL: request.Resource,
 			}
-			// why this Handle() is not hung, the n10n proc is busy with the previous long-polling request, isn't it? - a new pipeline is created per each request
-			// why not via procbus? Not necessary, n10n is limited already by subscriptions per subject, per login etc
+			// This Handle call does not block even if the n10n processor is busy with a previous long-polling request,
+			// because a new pipeline is created for each request.
+			// The call is made directly instead of via procbus; n10n concurrency is already limited by the number of
+			// subscriptions per subject and per login.
 			n10nProc.Handle(requestCtx, n10nArgs)
 			return
 		}
