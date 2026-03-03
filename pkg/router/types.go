@@ -6,11 +6,11 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"net/http"
 	"net/url"
-	"sync"
 	"sync/atomic"
 
 	"github.com/gorilla/mux"
@@ -47,7 +47,6 @@ type httpService struct {
 	server             *http.Server
 	listener           net.Listener
 	n10n               in10n.IN10nBroker
-	blobWG             sync.WaitGroup
 	requestSender      bus.IRequestSender
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
@@ -56,6 +55,7 @@ type httpService struct {
 	iTokens            itokens.ITokens
 	federation         federation.IFederation
 	appTokensFactory   payloads.IAppTokensFactory
+	rootLogCtx         context.Context // initialized on Run()
 }
 
 type httpsService struct {

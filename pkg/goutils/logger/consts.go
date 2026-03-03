@@ -12,6 +12,7 @@ import (
 
 const (
 	logCtxSkipFrames = 3
+	slogLevelTrace   = 4
 )
 
 const (
@@ -26,13 +27,13 @@ var (
 	// ctxHandlerOpts disables handler-level filtering (isEnabled() already gates all calls)
 	// and maps internal slog levels to the names used by the logger package.
 	ctxHandlerOpts = &slog.HandlerOptions{
-		Level: slog.LevelDebug - 4,
+		Level: slog.LevelDebug - slogLevelTrace,
 		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.LevelKey {
 				switch a.Value.Any().(slog.Level) {
 				case slog.LevelDebug:
 					a.Value = slog.StringValue("VERBOSE")
-				case slog.LevelDebug - 4:
+				case slog.LevelDebug - slogLevelTrace:
 					a.Value = slog.StringValue("TRACE")
 				}
 			}

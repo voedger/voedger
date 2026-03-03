@@ -6,6 +6,7 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -16,11 +17,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/processors"
 )
 
 var onBeforeWriteResponse func(w http.ResponseWriter) // not nil in tests only
@@ -134,4 +138,51 @@ func createBusRequest(data validatedData, req *http.Request) bus.Request {
 		res.Query[k] = v[0]
 	}
 	return res
+}
+
+func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Request, req *http.Request) context.Context {
+	extension := busRequest.Resource
+	if busRequest.IsAPIV2 {
+		if busRequest.QName == appdef.NullQName {
+			extension = apiPathToExtension(processors.APIPath(busRequest.APIPath))
+		} else {
+			extension = busRequest.QName.String()
+		}
+	}
+	newReqID := fmt.Sprintf("%s-%d", globalServerStartTime, reqID.Add(1))
+	return logger.WithContextAttrs(ctx, map[string]any{
+		logger.LogAttr_ReqID:     newReqID,
+		logger.LogAttr_WSID:      data.wsid,
+		logger.LogAttr_App:       data.appQName,
+		logger.LogAttr_Extension: extension,
+		logAttrib_Origin:         req.Header.Get(httpu.Origin),
+	})
+}
+
+func logServeRequest(ctx context.Context) {
+	if logger.IsVerbose() {
+		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "")
+	}
+}
+
+func apiPathToExtension(apiPath processors.APIPath) string {
+	switch apiPath {
+	case processors.APIPath_Docs:
+		return "sys._Docs"
+	case processors.APIPath_CDocs:
+		return "sys._CDocs"
+	case processors.APIPaths_Schema:
+		return "sys._Schema"
+	case processors.APIPath_Schemas_WorkspaceRoles:
+		return "sys._Schemas_WorkspaceRoles"
+	case processors.APIPath_Schemas_WorkspaceRole:
+		return "sys._Schemas_WorkspaceRole"
+	case processors.APIPath_Auth_Login:
+		return "sys._Auth_Login"
+	case processors.APIPath_Auth_Refresh:
+		return "sys._Auth_Refresh"
+	case processors.APIPath_Users:
+		return "sys._Users"
+	}
+	return strconv.Itoa(int(apiPath))
 }

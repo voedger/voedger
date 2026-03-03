@@ -171,7 +171,7 @@ func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces m
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPaths_Schema)
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -181,7 +181,7 @@ func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWork
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRoles)
 		busRequest.WorkspaceQName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_workspaceName])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -257,7 +257,7 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.IsN10N = true
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -276,7 +276,7 @@ func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istru
 			return
 		}
 
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -310,7 +310,7 @@ func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspa
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Auth_Refresh)
 		busRequest.Method = http.MethodGet
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -324,7 +324,7 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 		queryParams := map[string]string{}
 		queryParams["args"] = string(busRequest.Body)
 		busRequest.Query = queryParams
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -396,7 +396,7 @@ func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorks
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRole)
 		busRequest.WorkspaceQName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_workspaceName])
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_rolePkg], data.vars[URLPlaceholder_role])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -406,7 +406,7 @@ func requestHandlerV2_view(reqSender bus.IRequestSender, numsAppsWorkspaces map[
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Views)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_view])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -423,7 +423,7 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], entity)
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
@@ -442,20 +442,30 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_table])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data)
 	})
 }
 
-func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter) {
+func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter, data validatedData) {
+	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
+
 	// req's BaseContext is router service's context. See service.Start()
 	// router app closing or client disconnected -> req.Context() is done
 	// will create new cancellable context and cancel it if http section send is failed.
-	// requestCtx.Done() -> SendRequest implementation will notify the handler that the consumer has left us
-	requestCtx, cancel := context.WithCancel(req.Context())
+	// case: the client is gracefully disconnected
+	// 	- reqCtxWithExtensionAttrib is done, no additional cancelation needed
+	// case: the ethernet cable is broken
+	//   - reqCtxWithExtensionAttrib is not done
+	//   - the router is failed to send data to the client.
+	//   - need to explicitly cancel the context to inform the handler that the client is gone.
+	requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 	defer cancel() // to avoid context leak
+
+	logServeRequest(requestCtx)
+
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {
-		logger.Error("sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
+		logger.ErrorCtx(requestCtx, "sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
 		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}

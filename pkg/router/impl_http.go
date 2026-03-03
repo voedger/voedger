@@ -78,13 +78,13 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,
 	}
-
 	return nil
 }
 
 func (s *httpService) preRun(ctx context.Context) {
+	s.rootLogCtx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_App: "sys/voedger"})
 	s.server.BaseContext = func(l net.Listener) context.Context {
-		return ctx // need to track both client disconnect and app finalize
+		return s.rootLogCtx // need to track both client disconnect and app finalize
 	}
 	s.log("starting on %s", s.listener.Addr().(*net.TCPAddr).String())
 }
@@ -98,14 +98,15 @@ func (s *httpService) Run(ctx context.Context) {
 }
 
 func (s *httpService) log(format string, args ...interface{}) {
-	logger.Info(fmt.Sprintf("%s: %s", s.name, fmt.Sprintf(format, args...)))
+	logger.LogCtx(s.rootLogCtx, 1, logger.LogLevelInfo, fmt.Sprintf("%s: %s", s.name, fmt.Sprintf(format, args...)))
 }
 
 // pipeline.IService
 func (s *httpService) Stop() {
 	// ctx here is used to avoid eternal waiting for close idle connections and listeners
 	// all connections and listeners are closed in the explicit way (they're tracks ctx.Done()) so it is not necessary to track ctx here
-	if err := s.server.Shutdown(context.Background()); err != nil {
+	ctx := context.Background()
+	if err := s.server.Shutdown(ctx); err != nil {
 		s.log("Shutdown() failed: %s", err.Error())
 		s.listener.Close()
 		s.server.Close()
@@ -115,7 +116,6 @@ func (s *httpService) Stop() {
 			time.Sleep(subscriptionsCloseCheckInterval)
 		}
 	}
-	s.blobWG.Wait()
 }
 
 func (s *httpService) GetPort() int {
@@ -184,31 +184,33 @@ func (s *httpService) registerHandlersV1() {
 
 func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		request := createBusRequest(data, req)
+		busRequest := createBusRequest(data, req)
+
+		reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
 		// will create new cancellable context and cancel it if write to http socket is failed.
 		// requestCtx.Done() -> SendRequest2 implementation will notify the handler that the consumer has left us
-		requestCtx, cancel := context.WithCancel(req.Context())
+		requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 		defer cancel() // to avoid context leak
-		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, request)
+
+		logServeRequest(requestCtx)
+
+		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)
 		if err != nil {
-			logger.Error("sending request to VVM on", request.Resource, "is failed:", err, ". Body:\n", string(request.Body))
+			logger.ErrorCtx(requestCtx, "sending request to VVM on", busRequest.Resource, "is failed:", err, ". Body:\n", string(busRequest.Body))
 			writeCommonError_V1(rw, err, http.StatusInternalServerError)
 			return
 		}
 
 		initResponse(rw, responseMeta)
-		reply_v1(requestCtx, rw, responseCh, responseErr, responseMeta.ContentType, cancel, request, responseMeta.Mode())
+		reply_v1(requestCtx, rw, responseCh, responseErr, responseMeta.ContentType, cancel, busRequest, responseMeta.Mode())
 	})
 }
 
 func corsHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if logger.IsVerbose() {
-			logger.Verbose("serving", r.Method, r.URL.Path, ", origin", r.Header.Get(httpu.Origin))
-		}
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Blob-Name")
 		if r.Method == "OPTIONS" {
