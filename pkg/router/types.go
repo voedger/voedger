@@ -6,6 +6,7 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -56,6 +57,7 @@ type httpService struct {
 	iTokens            itokens.ITokens
 	federation         federation.IFederation
 	appTokensFactory   payloads.IAppTokensFactory
+	rootLogCtx         context.Context // initialized on Run()
 }
 
 type httpsService struct {
@@ -64,7 +66,7 @@ type httpsService struct {
 }
 
 type acmeService struct {
-	http.Server
+	*httpService
 }
 
 type route struct {

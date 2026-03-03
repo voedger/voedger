@@ -12,16 +12,15 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func (s *httpService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		if logger.IsVerbose() {
-			logger.Verbose("blob write request:", req.URL.String())
-		}
+		reqCtxWithAttribs := withLogAttribs(req.Context(), data, bus.Request{Resource: "blob write"}, req)
+		logServeRequest(reqCtxWithAttribs, req)
 		if !s.blobRequestHandler.HandleWrite(data.appQName, data.wsid, data.header, req.Context(), req.URL.Query(),
 			newBLOBOKResponseIniter(rw, http.StatusOK), req.Body, func(sysErr coreutils.SysError) {
 				writeCommonError_V1(rw, sysErr, sysErr.HTTPStatus)
@@ -34,9 +33,8 @@ func (s *httpService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef
 
 func (s *httpService) blobHTTPRequestHandler_Read(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		if logger.IsVerbose() {
-			logger.Verbose("blob read request:", req.URL.String())
-		}
+		reqCtxWithAttribs := withLogAttribs(req.Context(), data, bus.Request{Resource: "blob read"}, req)
+		logServeRequest(reqCtxWithAttribs, req)
 		vars := mux.Vars(req)
 		existingBLOBIDOrSUID := vars[URLPlaceholder_blobIDOrSUUID]
 		if !s.blobRequestHandler.HandleRead(data.appQName, data.wsid, data.header, req.Context(),

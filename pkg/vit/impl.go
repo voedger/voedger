@@ -169,8 +169,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
 	// get rid of huge amount of logs reporting about workspaces init process
-	loggerRestore := logger.SetLogLevelWithRestore(logger.LogLevelWarning)
-	defer loggerRestore()
+	defer logger.SetLogLevelWithRestore(logger.LogLevelWarning)()
 
 	// launch the server
 	// leadership duration - ten years to avoid leadership expiration when time bumps in tests (including 1 day add on each test)

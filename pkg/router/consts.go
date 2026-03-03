@@ -6,6 +6,7 @@
 package router
 
 import (
+	"sync/atomic"
 	"time"
 )
 
@@ -47,10 +48,13 @@ const (
 	URLPlaceholder_field          = "field"
 	hours24                       = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503 = 1
+	logAttrib_Origin              = "origin"
 )
 
 var (
-	onRequestCtxClosed func() = nil // used in tests
+	onRequestCtxClosed    func() = nil // used in tests
+	reqID                        = atomic.Uint64{}
+	globalServerStartTime        = time.Now().Format("01021504")
 )
 
 const (
