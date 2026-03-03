@@ -24,7 +24,6 @@ const (
 	allowedGoroutinesNumDiff                   = 200
 	field_Input                                = "Input"
 	testEmailsAwaitingTimeout                  = 5 * time.Second
-	testTimeMillis                             = 1649667286774
 	testRegistryPartsNum                       = 2
 	testAppPartsNum                            = 5
 	WSAECONNREFUSED              syscall.Errno = 10061

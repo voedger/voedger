@@ -20,18 +20,15 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 	view := appdef.View(appStructs.AppDef().Type, viewRecordQName)
 
 	if !f.acceptAll {
-		allowedFields := make(map[string]bool, view.Key().FieldCount()+view.Value().FieldCount())
-		for _, f := range view.Key().Fields() {
-			allowedFields[f.Name()] = true
-		}
-		for _, f := range view.Value().Fields() {
-			allowedFields[f.Name()] = true
-		}
+		recovered := make(map[string]bool, len(f.fields))
 		for field := range f.fields {
-			if !allowedFields[field] {
-				return fmt.Errorf("field '%s' does not exist in '%s' value def", field, viewRecordQName)
+			corrected, err := recoverFieldName(view, field)
+			if err != nil {
+				return fmt.Errorf("field '%s' does not exist in %s", field, viewRecordQName)
 			}
+			recovered[corrected] = true
 		}
+		f.fields = recovered
 	}
 
 	kk := make([]keyPart, 0)
@@ -78,11 +75,13 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 
 	kb := appStructs.ViewRecords().KeyBuilder(viewRecordQName)
 
-	for _, k := range kk {
-		f := view.Key().Field(k.name)
-		if f == nil {
+	for i, k := range kk {
+		correctedName, e := recoverFieldName(view.Key(), k.name)
+		if e != nil {
 			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
 		}
+		kk[i].name = correctedName
+		f := view.Key().Field(correctedName)
 		switch f.DataKind() {
 		case appdef.DataKind_int32:
 			fallthrough
