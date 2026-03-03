@@ -44,13 +44,10 @@ func (s *httpsService) Run(ctx context.Context) {
 
 // pipeline.IService
 func (s *httpService) Prepare(work interface{}) (err error) {
-
 	s.router = mux.NewRouter()
 
 	// https://dev.untill.com/projects/#!627072
 	s.router.SkipClean(true)
-
-	s.handler = s.router
 
 	s.registerRouterCheckerHandler()
 
@@ -65,10 +62,6 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		return err
 	}
 
-	return s.prepareBasicServer()
-}
-
-func (s *httpService) prepareBasicServer() (err error) {
 	if s.listener, err = net.Listen("tcp", s.listenAddress); err != nil {
 		return err
 	}
@@ -81,7 +74,7 @@ func (s *httpService) prepareBasicServer() (err error) {
 
 	s.server = &http.Server{
 		Addr:         s.listenAddress,
-		Handler:      s.handler,
+		Handler:      s.router,
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,
 	}
