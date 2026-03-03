@@ -461,7 +461,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 	defer cancel() // to avoid context leak
 
-	logServeRequest(requestCtx, req)
+	logServeRequest(requestCtx)
 
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {

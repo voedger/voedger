@@ -197,7 +197,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 		defer cancel() // to avoid context leak
 
-		logServeRequest(requestCtx, req)
+		logServeRequest(requestCtx)
 
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)
 		if err != nil {
