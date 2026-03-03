@@ -125,7 +125,9 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 					fieldName = column.Name.String()
 				}
 				if sourceTableType.QName() != appdef.NullQName { // null if e.g. sys.plog, sys.wlog
-					fieldName = recoverFieldName(sourceTableType.(appdef.IWithFields), fieldName)
+					if sourceTableWithFields, ok := sourceTableType.(appdef.IWithFields); ok {
+						fieldName = recoverFieldName(sourceTableWithFields, fieldName)
+					}
 				}
 
 				f.fields[fieldName] = true
@@ -168,7 +170,8 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			if op.EntityID > 0 {
 				return errors.New("ID must not be specified on select from view")
 			}
-			return readViewRecords(ctx, wsID, sourceTableName, whereExpr, appStructs, f, callback)
+			return coreutils.WrapSysError(readViewRecords(ctx, wsID, sourceTableName, whereExpr, appStructs, f, callback),
+				http.StatusBadRequest)
 		case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
 			return coreutils.WrapSysError(readRecords(wsID, sourceTableName, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
 				http.StatusBadRequest)
@@ -184,9 +187,11 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				AppPartitions() appparts.IAppPartitions
 			}).AppPartitions()
 			if sourceTableName == plog {
-				return readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
+				return coreutils.WrapSysError(readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts),
+					http.StatusBadRequest)
 			}
-			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
+			return coreutils.WrapSysError(readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef()),
+				http.StatusBadRequest)
 		}
 
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest,

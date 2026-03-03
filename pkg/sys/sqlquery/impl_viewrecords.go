@@ -22,10 +22,10 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 	if !f.acceptAll {
 		allowedFields := make(map[string]bool, view.Key().FieldCount()+view.Value().FieldCount())
 		for _, f := range view.Key().Fields() {
-			allowedFields[recoverFieldName(view, f.Name())] = true
+			allowedFields[f.Name()] = true
 		}
 		for _, f := range view.Value().Fields() {
-			allowedFields[recoverFieldName(view, f.Name())] = true
+			allowedFields[f.Name()] = true
 		}
 		for field := range f.fields {
 			if !allowedFields[field] {
