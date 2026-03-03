@@ -45,7 +45,7 @@ func WarningCtx(ctx context.Context, args ...interface{}) {
 }
 
 func TraceCtx(ctx context.Context, args ...interface{}) {
-	logCtx(ctx, LogLevelTrace, slog.LevelDebug-4, logCtxSkipFrames, args...)
+	logCtx(ctx, LogLevelTrace, slog.LevelDebug-slogLevelTrace, logCtxSkipFrames, args...)
 }
 
 // skipStackFrames is relative to the caller
