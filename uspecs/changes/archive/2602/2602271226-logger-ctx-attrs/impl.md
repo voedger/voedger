@@ -3,7 +3,7 @@
 ## Construction
 
 - [x] create: [logger/consts.go](../../../pkg/goutils/logger/consts.go)
-  - add: `LogAttr_VApp`, `LogAttr_Feat`, `LogAttr_ReqID`, `LogAttr_WSID`, `LogAttr_Extension` string constants
+  - add: `LogAttr_App`, `LogAttr_Feat`, `LogAttr_ReqID`, `LogAttr_WSID`, `LogAttr_Extension` string constants
   - add: `logCtxSkipFrames` const
   - add: `ctxHandlerOpts` with `ReplaceAttr` to emit `VERBOSE`/`TRACE` instead of `DEBUG`/`DEBUG-4`
   - add: pre-built `slogOut`/`slogErr` globals

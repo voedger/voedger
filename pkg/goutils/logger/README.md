@@ -96,6 +96,16 @@ func processPayment(ctx context.Context) {
   - [WithContextAttrs: loggerctx.go#L23](loggerctx.go#L23)
   - [Ctx logging functions: loggerctx.go#L31](loggerctx.go#L31)
   - [sLogAttrsFromCtx: loggerctx.go#L68](loggerctx.go#L68)
+  - **Predefined attribute key constants** ([consts.go](consts.go#L17))
+
+    | Constant            | Key         | Example value |
+    | ------------------- | ----------- | ------------- |
+    | `LogAttr_App`       | `app`       | `my.app`      |
+    | `LogAttr_Feat`      | `feat`      | `magicmenu`   |
+    | `LogAttr_ReqID`     | `reqid`     | `42`          |
+    | `LogAttr_WSID`      | `wsid`      | `1001`        |
+    | `LogAttr_Extension` | `extension` | `myFunc`      |
+
 - **Output customization** - Pluggable `PrintLine` with automatic
   stderr/stdout routing per level
   - [PrintLine hook: logger.go#L88](logger.go#L88)

@@ -12,7 +12,10 @@ import (
 
 const (
 	logCtxSkipFrames = 3
-	LogAttr_VApp      = "vapp"
+)
+
+const (
+	LogAttr_App       = "app"
 	LogAttr_Feat      = "feat"
 	LogAttr_ReqID     = "reqid"
 	LogAttr_WSID      = "wsid"

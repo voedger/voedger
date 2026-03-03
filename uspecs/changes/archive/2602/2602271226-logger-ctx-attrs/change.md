@@ -21,7 +21,7 @@ and so on.
 
 Add standard slog attributes:
 
-- vapp={string}
+- app={string}
   - examples: untill.fiscalcloud, untill.airsbp
 - feat={string}
   - examples: magicmenu
