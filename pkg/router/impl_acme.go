@@ -6,22 +6,16 @@
 package router
 
 import (
-	"context"
-	"errors"
 	"net"
-	"net/http"
+
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 )
 
 // pipeline.IService
-func (s *acmeService) Prepare(work interface{}) error {
-	return nil
-}
-
-// pipeline.IService
-func (s *acmeService) Run(ctx context.Context) {
-	s.preRun(ctx)
-	s.log("starting on %s", s.listener.Addr().(*net.TCPAddr).String())
-	if err := s.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		s.log("ListenAndServe() error: %s", err.Error())
+func (s *acmeService) Prepare(work interface{}) (err error) {
+	if s.listener, err = net.Listen("tcp", httpu.ListenAddr(ACMEPort)); err != nil {
+		return err
 	}
+	s.listeningPort.Store(ACMEPort)
+	return nil
 }

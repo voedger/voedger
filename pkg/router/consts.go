@@ -12,6 +12,7 @@ import (
 
 const (
 	HTTPSPort                       = 443
+	ACMEPort                        = 80
 	DefaultACMEServerReadTimeout    = 5 * time.Second
 	DefaultACMEServerWriteTimeout   = 5 * time.Second
 	subscriptionsCloseCheckInterval = 100 * time.Millisecond
