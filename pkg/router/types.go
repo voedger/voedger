@@ -56,6 +56,7 @@ type httpService struct {
 	federation         federation.IFederation
 	appTokensFactory   payloads.IAppTokensFactory
 	rootLogCtx         context.Context // initialized on Run()
+	handler            http.Handler
 }
 
 type httpsService struct {

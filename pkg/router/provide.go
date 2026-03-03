@@ -62,11 +62,12 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 	}
 
 	// handle Lets Encrypt callback over 80 port - only port 80 allowed
-	acmeService := getHTTPService("ACME server", "80", RouterParams{
+	acmeService := getHTTPService("ACME server", httpu.ListenAddr(ACMEPort), RouterParams{
 		ReadTimeout:  int(DefaultACMEServerReadTimeout.Seconds()),
 		WriteTimeout: int(DefaultACMEServerWriteTimeout.Seconds()),
 		Port:         ACMEPort,
 	}, nil, nil, nil, nil, nil, nil, nil)
+	acmeService.handler = crtMgr.HTTPHandler(nil)
 	return httpsService, acmeService, adminSrv
 }
 

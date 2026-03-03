@@ -44,10 +44,13 @@ func (s *httpsService) Run(ctx context.Context) {
 
 // pipeline.IService
 func (s *httpService) Prepare(work interface{}) (err error) {
+
 	s.router = mux.NewRouter()
 
 	// https://dev.untill.com/projects/#!627072
 	s.router.SkipClean(true)
+
+	s.handler = s.router
 
 	s.registerRouterCheckerHandler()
 
@@ -78,7 +81,7 @@ func (s *httpService) prepareBasicServer() (err error) {
 
 	s.server = &http.Server{
 		Addr:         s.listenAddress,
-		Handler:      s.router,
+		Handler:      s.handler,
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,
 	}
