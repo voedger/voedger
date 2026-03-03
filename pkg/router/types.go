@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"sync"
 	"sync/atomic"
 
 	"github.com/gorilla/mux"
@@ -48,7 +47,6 @@ type httpService struct {
 	server             *http.Server
 	listener           net.Listener
 	n10n               in10n.IN10nBroker
-	blobWG             sync.WaitGroup
 	requestSender      bus.IRequestSender
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string

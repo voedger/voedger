@@ -117,7 +117,6 @@ func (s *httpService) Stop() {
 			time.Sleep(subscriptionsCloseCheckInterval)
 		}
 	}
-	s.blobWG.Wait()
 }
 
 func (s *httpService) GetPort() int {
