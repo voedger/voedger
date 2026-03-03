@@ -62,6 +62,10 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		return err
 	}
 
+	return s.prepareBasicServer()
+}
+
+func (s *httpService) prepareBasicServer() (err error) {
 	if s.listener, err = net.Listen("tcp", s.listenAddress); err != nil {
 		return err
 	}
@@ -78,7 +82,6 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,
 	}
-
 	return nil
 }
 

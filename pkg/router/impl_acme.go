@@ -5,17 +5,14 @@
 
 package router
 
-import (
-	"net"
-
-	"github.com/voedger/voedger/pkg/goutils/httpu"
-)
+import "log"
 
 // pipeline.IService
 func (s *acmeService) Prepare(work interface{}) (err error) {
-	if s.listener, err = net.Listen("tcp", httpu.ListenAddr(ACMEPort)); err != nil {
+	if err := s.prepareBasicServer(); err != nil {
 		return err
 	}
-	s.listeningPort.Store(ACMEPort)
+	filteringLogger := log.New(&filteringWriter{log.Default().Writer()}, log.Default().Prefix(), log.Default().Flags())
+	s.server.ErrorLog = filteringLogger
 	return nil
 }

@@ -50,7 +50,7 @@ func TraceCtx(ctx context.Context, args ...interface{}) {
 
 // skipStackFrames is relative to the caller
 func LogCtx(ctx context.Context, skipStackFrames int, level TLogLevel, args ...interface{}) {
-	slogLevel := slog.LevelDebug - 4
+	slogLevel := slog.LevelDebug - slogLevelTrace
 	switch level {
 	case LogLevelVerbose:
 		slogLevel = slog.LevelDebug

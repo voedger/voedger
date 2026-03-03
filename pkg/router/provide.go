@@ -7,8 +7,6 @@ package router
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -64,18 +62,11 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 	}
 
 	// handle Lets Encrypt callback over 80 port - only port 80 allowed
-	filteringLogger := log.New(&filteringWriter{log.Default().Writer()}, log.Default().Prefix(), log.Default().Flags())
-	acmeService := &acmeService{
-		httpService: &httpService{
-			server: &http.Server{
-				Addr:         ":80",
-				Handler:      crtMgr.HTTPHandler(nil),
-				ReadTimeout:  DefaultACMEServerReadTimeout,
-				WriteTimeout: DefaultACMEServerWriteTimeout,
-				ErrorLog:     filteringLogger,
-			},
-		},
-	}
+	acmeService := getHTTPService("ACME server", "80", RouterParams{
+		ReadTimeout:  int(DefaultACMEServerReadTimeout.Seconds()),
+		WriteTimeout: int(DefaultACMEServerWriteTimeout.Seconds()),
+		Port:         ACMEPort,
+	}, nil, nil, nil, nil, nil, nil, nil)
 	return httpsService, acmeService, adminSrv
 }
 
