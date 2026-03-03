@@ -2,6 +2,7 @@
 registered_at: 2026-03-03T10:51:37Z
 change_id: 2603031051-sqlquery-recover-correct-case
 baseline: b69e2dfee3306dad9a7f413776939b42ba130ff4
+archived_at: 2026-03-03T14:05:17Z
 ---
 
 # Change request: Recover correct case in parsed SQL query fields and tables
