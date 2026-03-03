@@ -82,6 +82,10 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 		}
 		kk[i].name = correctedName
 		f := view.Key().Field(correctedName)
+		if f == nil {
+			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
+		}
+
 		switch f.DataKind() {
 		case appdef.DataKind_int32:
 			fallthrough
