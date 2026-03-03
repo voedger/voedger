@@ -130,21 +130,12 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		}
 
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
-		source, err := recoverTableName(appStructs.AppDef(), appdef.NewQName(table.Qualifier.String(), table.Name.String()))
-		if err != nil {
-			return coreutils.NewHTTPError(http.StatusBadRequest, err)
-		}
+		source := recoverTableName(appStructs.AppDef(), appdef.NewQName(table.Qualifier.String(), table.Name.String()))
 
 		if withFields, ok := appStructs.AppDef().Type(source).(appdef.IWithFields); ok && !f.acceptAll {
-			recovered := make(map[string]bool, len(f.fields))
 			for field := range f.fields {
-				corrected, e := recoverFieldName(withFields, field)
-				if e != nil {
-					return coreutils.NewHTTPError(http.StatusBadRequest, e)
-				}
-				recovered[corrected] = true
+				f.fields[recoverFieldName(withFields, field)] = true
 			}
-			f.fields = recovered
 		}
 
 		kind := appStructs.AppDef().Type(source).Kind()
@@ -274,31 +265,31 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 }
 
 // vitess-sqlparser lowercases all identifiers; recover the original case from the schema
-func recoverTableName(appDef appdef.IAppDef, source appdef.QName) (appdef.QName, error) {
+func recoverTableName(appDef appdef.IAppDef, source appdef.QName) appdef.QName {
 	switch source {
 	case plog, wlog:
-		return source, nil
+		return source
 	}
 	if appDef.Type(source).Kind() == appdef.TypeKind_null {
 		for _, t := range appDef.Types() {
 			if strings.EqualFold(t.QName().Pkg(), source.Pkg()) && strings.EqualFold(t.QName().Entity(), source.Entity()) {
-				return t.QName(), nil
+				return t.QName()
 			}
 		}
 	}
-	return source, nil
+	return source
 }
 
 // vitess-sqlparser lowercases all identifiers; recover the original case from the schema
-func recoverFieldName(withFields appdef.IWithFields, name string) (string, error) {
+func recoverFieldName(withFields appdef.IWithFields, name string) string {
 	if withFields.Field(name) == nil {
 		for _, f := range withFields.Fields() {
 			if strings.EqualFold(f.Name(), name) {
-				return f.Name(), nil
+				return f.Name()
 			}
 		}
 	}
-	return name, nil
+	return name
 }
 
 func getFilter(f func(string) bool) coreutils.MapperOpt {

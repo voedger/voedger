@@ -20,15 +20,9 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 	view := appdef.View(appStructs.AppDef().Type, viewRecordQName)
 
 	if !f.acceptAll {
-		recovered := make(map[string]bool, len(f.fields))
 		for field := range f.fields {
-			corrected, err := recoverFieldName(view, field)
-			if err != nil {
-				return fmt.Errorf("field '%s' does not exist in %s", field, viewRecordQName)
-			}
-			recovered[corrected] = true
+			f.fields[recoverFieldName(view, field)] = true
 		}
-		f.fields = recovered
 	}
 
 	kk := make([]keyPart, 0)
@@ -76,10 +70,7 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 	kb := appStructs.ViewRecords().KeyBuilder(viewRecordQName)
 
 	for i, k := range kk {
-		correctedName, e := recoverFieldName(view.Key(), k.name)
-		if e != nil {
-			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
-		}
+		correctedName := recoverFieldName(view.Key(), k.name)
 		kk[i].name = correctedName
 		f := view.Key().Field(correctedName)
 		if f == nil {
