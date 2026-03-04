@@ -5,12 +5,14 @@
 package commandprocessor
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +28,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -823,4 +826,71 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		appTokens:         appTokens,
 		sysAuthHeader:     getAuthHeader(systemToken),
 	}
+}
+
+type stubPLogEvent struct {
+	istructs.IPLogEvent
+	wlogOffset istructs.Offset
+}
+
+func (s *stubPLogEvent) WLogOffset() istructs.Offset { return s.wlogOffset }
+
+type stubRawEvent struct {
+	istructs.IRawEvent
+	plogOffset istructs.Offset
+}
+
+func (s *stubRawEvent) PLogOffset() istructs.Offset { return s.plogOffset }
+
+func TestLogEventAndCUDs(t *testing.T) {
+	articleQName := appdef.NewQName("test", "Article")
+
+	newCmd := func() *cmdWorkpiece {
+		return &cmdWorkpiece{
+			cmdMes:    &implICommandMessage{requestCtx: context.Background()},
+			pLogEvent: &stubPLogEvent{wlogOffset: 42},
+			rawEvent:  &stubRawEvent{plogOffset: 100},
+			idGeneratorReporter: &implIDGeneratorReporter{
+				generatedIDs: map[istructs.RecordID]istructs.RecordID{1: 78097},
+			},
+			parsedCUDs: []parsedCUD{
+				{
+					opKind: appdef.OperationKind_Insert,
+					id:     1,
+					qName:  articleQName,
+					fields: coreutils.MapObject{"name": "testArticle"},
+				},
+			},
+		}
+	}
+
+	t.Run("verbose level emits event and cud log entries", func(t *testing.T) {
+		require := require.New(t)
+		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+
+		var buf bytes.Buffer
+		logger.SetCtxWriters(&buf, &buf)
+		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+
+		require.NoError(logEventAndCUDs(context.Background(), newCmd()))
+
+		out := buf.String()
+		require.Contains(out, "woffset=42")
+		require.Contains(out, "poffset=100")
+		require.Contains(out, "rectype=test.Article")
+		require.Contains(out, "recid=78097")
+		require.Contains(out, "op=Insert")
+	})
+
+	t.Run("info level emits nothing", func(t *testing.T) {
+		require := require.New(t)
+		defer logger.SetLogLevelWithRestore(logger.LogLevelInfo)()
+
+		var buf bytes.Buffer
+		logger.SetCtxWriters(&buf, &buf)
+		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+
+		require.NoError(logEventAndCUDs(context.Background(), newCmd()))
+		require.Empty(buf.String())
+	})
 }

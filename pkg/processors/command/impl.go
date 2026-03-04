@@ -328,6 +328,47 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, cmd *cmdWorkpiece) (err error
 	return
 }
 
+func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
+	if !logger.IsVerbose() {
+		return nil
+	}
+	ctx := cmd.cmdMes.RequestCtx()
+	argsJSON := []byte("{}")
+	if cmd.argsObject != nil {
+		argsMap := coreutils.ObjectToMap(cmd.argsObject, cmd.appStructs.AppDef())
+		argsJSON, err = json.Marshal(argsMap)
+		if err != nil {
+			// notest
+			return err
+		}
+	}
+	wLogOffset := cmd.workspace.NextWLogOffset
+	logger.VerboseCtx(ctx, fmt.Sprintf("event woffset=%d poffset=%d args=%s",
+		wLogOffset, cmd.rawEvent.PLogOffset(), argsJSON))
+	for i, cud := range cmd.parsedCUDs {
+		actualID := istructs.RecordID(cud.id) // nolint G115
+		if cud.opKind == appdef.OperationKind_Insert {
+			if id, ok := cmd.idGeneratorReporter.generatedIDs[istructs.RecordID(cud.id)]; ok { // nolint G115
+				actualID = id
+			}
+		}
+		newFieldsJSON, err := json.Marshal(cud.fields)
+		if err != nil {
+			// notest
+			return err
+		}
+		oldFieldsJSON := []byte("{}")
+		if cud.existingRecord != nil {
+			if b, err := json.Marshal(coreutils.FieldsToMap(cud.existingRecord, cmd.appStructs.AppDef())); err == nil {
+				oldFieldsJSON = b
+			}
+		}
+		logger.VerboseCtx(ctx, fmt.Sprintf("cud%d rectype=%s recid=%d op=%s newfields=%s oldfields=%s",
+			i, cud.qName, actualID, cud.opKind.TrimString(), newFieldsJSON, oldFieldsJSON))
+	}
+	return nil
+}
+
 func getWSDesc(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 	return err
