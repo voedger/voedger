@@ -361,7 +361,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		oldFieldsJSON := []byte("{}")
 		if cud.existingRecord != nil {
 			oldFieldsJSON, err = json.Marshal(coreutils.FieldsToMap(cud.existingRecord, cmd.appStructs.AppDef()))
-			if err == nil {
+			if err != nil {
 				// notest
 				return err
 			}
