@@ -2,6 +2,7 @@
 registered_at: 2026-03-04T18:19:40Z
 change_id: 2603041819-improve-cmdproc-logging
 baseline: ae8c403a67439e9cbc987fe7693b7879c561b495
+archived_at: 2026-03-04T19:45:16Z
 ---
 
 # Change request: Improve logging in command processor
