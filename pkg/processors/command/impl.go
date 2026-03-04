@@ -332,7 +332,10 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if !logger.IsVerbose() {
 		return nil
 	}
-	ctx := cmd.cmdMes.RequestCtx()
+	ctx := logger.WithContextAttrs(cmd.cmdMes.RequestCtx(), map[string]any{
+		"woffset": cmd.pLogEvent.WLogOffset(),
+		"poffset": cmd.rawEvent.PLogOffset(),
+	})
 	argsJSON := []byte("{}")
 	if cmd.argsObject != nil {
 		argsMap := coreutils.ObjectToMap(cmd.argsObject, cmd.appStructs.AppDef())
@@ -342,9 +345,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 			return err
 		}
 	}
-	wLogOffset := cmd.workspace.NextWLogOffset
-	logger.VerboseCtx(ctx, fmt.Sprintf("event woffset=%d poffset=%d args=%s",
-		wLogOffset, cmd.rawEvent.PLogOffset(), argsJSON))
+	logger.VerboseCtx(ctx, fmt.Sprintf("args=%s", argsJSON))
 	for i, cud := range cmd.parsedCUDs {
 		actualID := istructs.RecordID(cud.id) // nolint G115
 		if cud.opKind == appdef.OperationKind_Insert {
@@ -359,8 +360,10 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		}
 		oldFieldsJSON := []byte("{}")
 		if cud.existingRecord != nil {
-			if b, err := json.Marshal(coreutils.FieldsToMap(cud.existingRecord, cmd.appStructs.AppDef())); err == nil {
-				oldFieldsJSON = b
+			oldFieldsJSON, err = json.Marshal(coreutils.FieldsToMap(cud.existingRecord, cmd.appStructs.AppDef()))
+			if err == nil {
+				// notest
+				return err
 			}
 		}
 		logger.VerboseCtx(ctx, fmt.Sprintf("cud%d rectype=%s recid=%d op=%s newfields=%s oldfields=%s",

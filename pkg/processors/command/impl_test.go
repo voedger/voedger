@@ -861,6 +861,9 @@ func TestLogEventAndCUDs(t *testing.T) {
 					fields: coreutils.MapObject{"name": "testArticle"},
 				},
 			},
+			workspace: &workspace{
+				NextWLogOffset: 42,
+			},
 		}
 	}
 
