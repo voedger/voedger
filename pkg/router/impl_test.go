@@ -427,10 +427,12 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandl
 
 func setUp(t *testing.T, requestHandler bus.RequestHandler) *testRouter {
 	rp := RouterParams{
-		Port:             0,
-		WriteTimeout:     DefaultRouterWriteTimeout,
-		ReadTimeout:      DefaultRouterReadTimeout,
-		ConnectionsLimit: DefaultConnectionsLimit,
+		HTTPServerParams: HTTPServerParams{
+			Port:             0,
+			WriteTimeout:     DefaultRouterWriteTimeout,
+			ReadTimeout:      DefaultRouterReadTimeout,
+			ConnectionsLimit: DefaultConnectionsLimit,
+		},
 	}
 	router := &testRouter{
 		wg:                   &sync.WaitGroup{},
