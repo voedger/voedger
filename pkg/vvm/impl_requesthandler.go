@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
@@ -52,10 +51,6 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 			// subscriptions per subject and per login.
 			n10nProc.Handle(requestCtx, n10nArgs)
 			return
-		}
-		if logger.IsVerbose() {
-			// FIXME: eliminate this. Unlogged params are logged
-			logger.Verbose("request body:", string(request.Body))
 		}
 
 		if !vvmApps.Exists(request.AppQName) {
