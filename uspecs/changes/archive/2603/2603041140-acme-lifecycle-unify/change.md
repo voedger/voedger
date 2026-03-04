@@ -2,6 +2,7 @@
 registered_at: 2026-03-04T10:19:38Z
 change_id: 2603041019-acme-lifecycle-unify
 baseline: d36ff04c9d60dbebdd5129eb498d46d0bbee21e0
+archived_at: 2026-03-04T11:40:06Z
 ---
 
 # Change request: Refactor pkg/router service and parameter hierarchy
