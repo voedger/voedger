@@ -7,6 +7,8 @@ package router
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -26,15 +28,13 @@ import (
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getRouterService("HTTP server", httpu.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
+	httpServ := getHTTPService("HTTP server", httpu.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
 		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
 	adminEndpoint := fmt.Sprintf("%s:%d", httpu.LocalhostIP, rp.AdminPort)
-	adminSrv = getRouterService("Admin HTTP server", adminEndpoint, RouterParams{
-		HTTPServerParams: HTTPServerParams{
-			WriteTimeout:     rp.WriteTimeout,
-			ReadTimeout:      rp.ReadTimeout,
-			ConnectionsLimit: rp.ConnectionsLimit,
-		},
+	adminSrv = getHTTPService("Admin HTTP server", adminEndpoint, RouterParams{
+		WriteTimeout:     rp.WriteTimeout,
+		ReadTimeout:      rp.ReadTimeout,
+		ConnectionsLimit: rp.ConnectionsLimit,
 	}, broker, nil, requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
 
 	if rp.Port != HTTPSPort {
@@ -59,45 +59,40 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 	}
 	httpServ.name = "HTTPS server"
 	httpsService := &httpsService{
-		routerService: httpServ,
-		crtMgr:        crtMgr,
+		httpService: httpServ,
+		crtMgr:      crtMgr,
 	}
 
 	// handle Lets Encrypt callback over 80 port - only port 80 allowed
+	filteringLogger := log.New(&filteringWriter{log.Default().Writer()}, log.Default().Prefix(), log.Default().Flags())
 	acmeService := &acmeService{
-		httpServer: getHTTPServer("ACME HTTP server", ":80", HTTPServerParams{
-			WriteTimeout: int(DefaultACMEServerWriteTimeout.Seconds()),
-			ReadTimeout:  int(DefaultACMEServerReadTimeout.Seconds()),
-		}),
-		handler: crtMgr.HTTPHandler(nil),
+		Server: http.Server{
+			Addr:         ":80",
+			ReadTimeout:  DefaultACMEServerReadTimeout,
+			WriteTimeout: DefaultACMEServerWriteTimeout,
+			Handler:      crtMgr.HTTPHandler(nil),
+			ErrorLog:     filteringLogger,
+		},
 	}
 	return httpsService, acmeService, adminSrv
 }
 
-func getRouterService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
+func getHTTPService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
 	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
-	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) *routerService {
-	return &routerService{
-		httpServer:         getHTTPServer(name, listenAddress, rp.HTTPServerParams),
-		routeDefault:       rp.RouteDefault,
-		routes:             rp.Routes,
-		routesRewrite:      rp.RoutesRewrite,
-		routeDomains:       rp.RouteDomains,
+	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) *httpService {
+	httpServ := &httpService{
+		RouterParams:       rp,
 		n10n:               broker,
 		requestSender:      requestSender,
 		numsAppsWorkspaces: numsAppsWorkspaces,
+		listenAddress:      listenAddress,
+		name:               name,
 		blobRequestHandler: blobRequestHandler,
 		iTokens:            iTokens,
 		federation:         federation,
 		appTokensFactory:   appTokensFactory,
 	}
-}
 
-func getHTTPServer(name string, listenAddress string, params HTTPServerParams) httpServer {
-	return httpServer{
-		HTTPServerParams: params,
-		listenAddress:    listenAddress,
-		name:             name,
-	}
+	return httpServ
 }

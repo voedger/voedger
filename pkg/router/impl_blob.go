@@ -17,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func (s *routerService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func (s *httpService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		reqCtxWithAttribs := withLogAttribs(req.Context(), data, bus.Request{Resource: "sys._Blob_Write"}, req)
 		logServeRequest(reqCtxWithAttribs)
@@ -31,7 +31,7 @@ func (s *routerService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appd
 	})
 }
 
-func (s *routerService) blobHTTPRequestHandler_Read(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func (s *httpService) blobHTTPRequestHandler_Read(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		reqCtxWithAttribs := withLogAttribs(req.Context(), data, bus.Request{Resource: "sys._Blob_Read"}, req)
 		logServeRequest(reqCtxWithAttribs)
