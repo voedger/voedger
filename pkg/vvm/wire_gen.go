@@ -626,15 +626,17 @@ func provideMetricsServicePortGetter(ms metrics.MetricsService) func() metrics.M
 
 func provideRouterParams(cfg *VVMConfig, port VVMPortType) router.RouterParams {
 	res := router.RouterParams{
-		WriteTimeout:         cfg.RouterWriteTimeout,
-		ReadTimeout:          cfg.RouterReadTimeout,
-		ConnectionsLimit:     cfg.RouterConnectionsLimit,
+		HTTPServerParams: router.HTTPServerParams{
+			Port:             int(port),
+			WriteTimeout:     cfg.RouterWriteTimeout,
+			ReadTimeout:      cfg.RouterReadTimeout,
+			ConnectionsLimit: cfg.RouterConnectionsLimit,
+		},
 		HTTP01ChallengeHosts: cfg.RouterHTTP01ChallengeHosts,
 		RouteDefault:         cfg.RouteDefault,
 		Routes:               cfg.Routes,
 		RoutesRewrite:        cfg.RoutesRewrite,
 		RouteDomains:         cfg.RouteDomains,
-		Port:                 int(port),
 	}
 	return res
 }
