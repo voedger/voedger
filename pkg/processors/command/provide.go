@@ -5,7 +5,9 @@
 package commandprocessor
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -93,7 +95,8 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 						}
 						return err
 					})),
-				)))
+				)),
+			)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("borrowAppPart", borrowAppPart),
 				pipeline.WireFunc("getCmdQName", getCmdQName),
@@ -160,12 +163,13 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 						defer cmd.Release()
 						cmd.metrics.increase(CommandsTotal, 1.0)
 						cmdHandlingErr := cmdPipeline.SendSync(cmd)
-						if cmdHandlingErr != nil {
-							logger.Error(fmt.Sprintf("%d/%s exec error: %s", cmd.cmdMes.WSID(), cmd.cmdMes.QName(), cmdHandlingErr))
-						}
+						logHandlingError(cmd, cmdHandlingErr)
 						sendResponse(cmd, cmdHandlingErr)
+						if cmdHandlingErr == nil {
+							logSuccess(cmd)
+						}
 						if cmd.appPartitionRestartScheduled {
-							logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
+							logger.WarningCtx(cmd.cmdMes.RequestCtx(), fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
 							delete(cmdProc.appsPartitions, cmd.cmdMes.AppQName())
 						}
 					}()
@@ -177,4 +181,30 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 			}
 		})
 	}
+}
+
+func logHandlingError(cmd *cmdWorkpiece, err error) {
+	if err == nil {
+		return
+	}
+	var buf bytes.Buffer
+	body := ""
+	if err := json.Compact(&buf, cmd.cmdMes.Body()); err != nil {
+		body = string(cmd.cmdMes.Body())
+	} else {
+		body = buf.String()
+	}
+	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelVerbose, err, ", body: ", body)
+}
+
+func logSuccess(cmd *cmdWorkpiece) {
+	if !logger.IsVerbose() {
+		return
+	}
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, cmd.cmdMes.Body()); err != nil {
+		// notest: impossible
+		panic(err)
+	}
+	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelVerbose, "result: ", cmd.cmdResToLog, ", body: ", buf.String())
 }

@@ -307,8 +307,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		// notest
 		return nil, err
 	}
-	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(),
-		ap.nextPLogOffset, string(worskapcesJSON)))
+	logger.InfoCtx(cmd.cmdMes.RequestCtx(), "partition ", cmd.cmdMes.PartitionID(), " recovered: nextPLogOffset ", ap.nextPLogOffset, ", workspaces ", string(worskapcesJSON))
 	return ap, nil
 }
 
@@ -400,7 +399,7 @@ func getPrincipalsRoles(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	return nil
 }
 
-func (cmdProc *cmdProc) authorizeRequest(_ context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) authorizeRequest(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	ws := cmd.iWorkspace
 	if ws == nil {
 		// c.sys.CreateWorkspace
@@ -416,8 +415,8 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, cmd *cmdWorkpiece) (
 	if !newACLOk && !oldACLOk {
 		return coreutils.NewHTTPErrorf(http.StatusForbidden)
 	}
-	if !newACLOk && oldACLOk {
-		logger.Verbose("newACL not ok, but oldACL ok.", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
+	if !newACLOk && oldACLOk && logger.IsVerbose() {
+		logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "newACL not ok, but oldACL ok. ", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
 	}
 	return nil
 }
@@ -767,7 +766,7 @@ func checkIsActiveInCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	return nil
 }
 
-func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) authorizeRequestCUDs(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	ws := cmd.iWorkspace
 	if ws == nil {
 		// c.sys.CreateWorkspace
@@ -785,8 +784,8 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, cmd *cmdWorkpiec
 		if !newACLOk && !oldACLOk {
 			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
-		if !newACLOk && oldACLOk {
-			logger.Verbose("newACL not ok, but oldACL ok.", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
+		if !newACLOk && oldACLOk && logger.IsVerbose() {
+			logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "newACL not ok, but oldACL ok. ", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
 		}
 	}
 	return
@@ -812,13 +811,15 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 	return coreutils.WrapSysError(err, http.StatusBadRequest)
 }
 
-func (cmdProc *cmdProc) notifyAsyncActualizers(_ context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) notifyAsyncActualizers(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
 		Projection: actualizers.PLogUpdatesQName,
 		WS:         istructs.WSID(cmd.cmdMes.PartitionID()),
 	}, cmd.rawEvent.PLogOffset())
-	logger.Verbose("async actualizers are notified: offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmd.cmdMes.PartitionID())
+	if logger.IsVerbose() {
+		logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "async actualizers are notified: offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmd.cmdMes.PartitionID())
+	}
 	return nil
 }
 
@@ -840,16 +841,13 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")
-		if logger.IsVerbose() {
-			logger.Verbose("generated IDs:", cmd.idGeneratorReporter.generatedIDs)
-		}
 	}
 	if cmd.cmdResult != nil {
 		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.appStructs.AppDef())
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
 			// notest
-			logger.Error("failed to marshal response: " + err.Error())
+			logger.ErrorCtx(cmd.cmdMes.RequestCtx(), "failed to marshal response: "+err.Error(), ", response: ", cmdResult)
 			return
 		}
 		body.WriteString(`,"Result":`)
@@ -876,6 +874,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 		res = string(camelCasedResBytes)
 	}
+	cmd.cmdResToLog = res
 	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, res)
 }
 

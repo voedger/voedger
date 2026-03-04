@@ -91,6 +91,7 @@ type cmdWorkpiece struct {
 	statusCodeOfSuccess          int
 	reapplier                    istructs.IEventReapplier
 	commandCtxStorage            istructs.IStateValue
+	cmdResToLog                  string
 }
 
 type implIDGeneratorReporter struct {
