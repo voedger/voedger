@@ -187,24 +187,22 @@ func logHandlingError(cmd *cmdWorkpiece, err error) {
 	if err == nil {
 		return
 	}
-	var buf bytes.Buffer
-	body := ""
-	if err := json.Compact(&buf, cmd.cmdMes.Body()); err != nil {
-		body = string(cmd.cmdMes.Body())
-	} else {
-		body = buf.String()
-	}
-	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelVerbose, err, ", body: ", body)
+	body := compactBody(cmd.cmdMes.Body())
+	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelError, err, ", body: ", body)
 }
 
 func logSuccess(cmd *cmdWorkpiece) {
 	if !logger.IsVerbose() {
 		return
 	}
+	body := compactBody(cmd.cmdMes.Body())
+	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelVerbose, "result: ", cmd.cmdResToLog, ", body: ", body)
+}
+
+func compactBody(body []byte) string {
 	var buf bytes.Buffer
-	if err := json.Compact(&buf, cmd.cmdMes.Body()); err != nil {
-		// notest: impossible
-		panic(err)
+	if err := json.Compact(&buf, body); err != nil {
+		return string(body)
 	}
-	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelVerbose, "result: ", cmd.cmdResToLog, ", body: ", buf.String())
+	return buf.String()
 }

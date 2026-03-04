@@ -15,14 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func JSONUnprettify(b []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	if err := json.Compact(&buf, b); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
 func JSONUnmarshal(b []byte, ptrToPayload interface{}) error {
 	reader := bytes.NewReader(b)
 	decoder := json.NewDecoder(reader)
