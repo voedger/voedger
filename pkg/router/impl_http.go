@@ -96,7 +96,7 @@ func (s *httpServer) prepareBasicServer(handler http.Handler) (err error) {
 }
 
 func (s *httpServer) preRun(ctx context.Context) {
-	s.rootLogCtx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_App: "sys/voedger"})
+	s.rootLogCtx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_VApp: "sys/voedger"})
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return s.rootLogCtx // need to track both client disconnect and app finalize
 	}
