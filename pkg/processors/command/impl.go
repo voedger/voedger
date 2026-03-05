@@ -337,7 +337,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		"poffset": cmd.rawEvent.PLogOffset(),
 		"evqname": cmd.pLogEvent.QName(),
 	})
-	argsJSON := []byte{}
+	argsJSON := []byte("{}")
 	if cmd.argsObject != nil {
 		argsMap := coreutils.ObjectToMap(cmd.argsObject, cmd.appStructs.AppDef())
 		argsJSON, err = json.Marshal(argsMap)

@@ -26,7 +26,7 @@ For each CUD from the resulting event (use actual IDs, not raw IDs; take CUDs fr
 - create new context with attribs:
   - `rectype` (e.g. `untill.cdoc.article`)
   - `recid` (e.g. `78097`)
-  - `op` — insert, update, activate, deactivate etc
+  - `op` — create, update, activate, deactivate etc
 - log msg: new fields, old fields with this context
 - do not use this context anymore
 
