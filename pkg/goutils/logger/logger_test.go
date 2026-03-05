@@ -235,7 +235,7 @@ func Test_CheckSetLevels(t *testing.T) {
 func TestLoggerCtx_BasicUsage(t *testing.T) {
 	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
 	ctx := logger.WithContextAttrs(context.Background(), map[string]any{
-		logger.LogAttr_App:       "untill.fiscalcloud",
+		logger.LogAttr_VApp:      "untill.fiscalcloud",
 		logger.LogAttr_Feat:      "magicmenu",
 		logger.LogAttr_ReqID:     42,
 		logger.LogAttr_WSID:      100,
@@ -268,7 +268,7 @@ func Test_WithContextAttrs(t *testing.T) {
 	t.Run("attrs appear in stdout", func(t *testing.T) {
 		require := require.New(t)
 		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
-			logger.LogAttr_App:  "untill.fiscalcloud",
+			logger.LogAttr_VApp: "untill.fiscalcloud",
 			logger.LogAttr_Feat: "magicmenu",
 		})
 		stdout, stderr := captureCtxOutput(func() {
@@ -276,30 +276,30 @@ func Test_WithContextAttrs(t *testing.T) {
 		})
 		require.Empty(stderr)
 		require.Contains(stdout, "hello ctx")
-		require.Contains(stdout, "app=untill.fiscalcloud")
+		require.Contains(stdout, "vapp=untill.fiscalcloud")
 		require.Contains(stdout, "feat=magicmenu")
 	})
 
 	t.Run("attrs accumulate across WithContextAttrs calls", func(t *testing.T) {
 		require := require.New(t)
-		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_App: "myapp"})
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_VApp: "myapp"})
 		ctx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_Feat: "myfeat"})
 		stdout, _ := captureCtxOutput(func() {
 			logger.VerboseCtx(ctx, "accumulated")
 		})
-		require.Contains(stdout, "app=myapp")
+		require.Contains(stdout, "vapp=myapp")
 		require.Contains(stdout, "feat=myfeat")
 	})
 
 	t.Run("same key is overwritten", func(t *testing.T) {
 		require := require.New(t)
-		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_App: "first"})
-		ctx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_App: "second"})
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_VApp: "first"})
+		ctx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_VApp: "second"})
 		stdout, _ := captureCtxOutput(func() {
 			logger.VerboseCtx(ctx, "overwrite")
 		})
-		require.Contains(stdout, "app=second")
-		require.NotContains(stdout, "app=first")
+		require.Contains(stdout, "vapp=second")
+		require.NotContains(stdout, "vapp=first")
 	})
 }
 

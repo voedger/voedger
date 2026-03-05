@@ -335,6 +335,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	ctx := logger.WithContextAttrs(cmd.cmdMes.RequestCtx(), map[string]any{
 		"woffset": cmd.pLogEvent.WLogOffset(),
 		"poffset": cmd.rawEvent.PLogOffset(),
+		"evqname": cmd.pLogEvent.QName(),
 	})
 	argsJSON := []byte("{}")
 	if cmd.argsObject != nil {
@@ -346,30 +347,47 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		}
 	}
 	logger.VerboseCtx(ctx, fmt.Sprintf("args=%s", argsJSON))
-	for i, cud := range cmd.parsedCUDs {
-		actualID := istructs.RecordID(cud.id) // nolint G115
-		if cud.opKind == appdef.OperationKind_Insert {
-			if id, ok := cmd.idGeneratorReporter.generatedIDs[istructs.RecordID(cud.id)]; ok { // nolint G115
-				actualID = id
-			}
+	oldRecs := make(map[istructs.RecordID]istructs.IRecord, len(cmd.parsedCUDs))
+	for _, pc := range cmd.parsedCUDs {
+		if pc.existingRecord != nil {
+			oldRecs[istructs.RecordID(pc.id)] = pc.existingRecord // nolint G115
 		}
-		newFieldsJSON, err := json.Marshal(cud.fields)
+	}
+	for cud := range cmd.pLogEvent.CUDs {
+		newFieldsJSON, err := json.Marshal(coreutils.FieldsToMap(cud, cmd.appStructs.AppDef()))
 		if err != nil {
 			// notest
 			return err
 		}
 		oldFieldsJSON := []byte("{}")
-		if cud.existingRecord != nil {
-			oldFieldsJSON, err = json.Marshal(coreutils.FieldsToMap(cud.existingRecord, cmd.appStructs.AppDef()))
+		if oldRec, ok := oldRecs[cud.ID()]; ok {
+			oldFieldsJSON, err = json.Marshal(coreutils.FieldsToMap(oldRec, cmd.appStructs.AppDef()))
 			if err != nil {
 				// notest
 				return err
 			}
 		}
-		logger.VerboseCtx(ctx, fmt.Sprintf("cud%d rectype=%s recid=%d op=%s newfields=%s oldfields=%s",
-			i, cud.qName, actualID, cud.opKind.TrimString(), newFieldsJSON, oldFieldsJSON))
+		cudCtx := logger.WithContextAttrs(ctx, map[string]any{
+			"rectype": cud.QName(),
+			"recid":   cud.ID(),
+			"op":      cudOp(cud),
+		})
+		logger.VerboseCtx(cudCtx, fmt.Sprintf("newfields=%s, oldfields=%s", newFieldsJSON, oldFieldsJSON))
 	}
 	return nil
+}
+
+func cudOp(cud istructs.ICUDRow) string {
+	if cud.IsNew() {
+		return "create"
+	}
+	if cud.IsDeactivated() {
+		return "deactivate"
+	}
+	if cud.IsActivated() {
+		return "activate"
+	}
+	return "update"
 }
 
 func getWSDesc(_ context.Context, cmd *cmdWorkpiece) (err error) {

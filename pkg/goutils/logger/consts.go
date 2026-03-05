@@ -16,7 +16,7 @@ const (
 )
 
 const (
-	LogAttr_App       = "app"
+	LogAttr_VApp      = "vapp"
 	LogAttr_Feat      = "feat"
 	LogAttr_ReqID     = "reqid"
 	LogAttr_WSID      = "wsid"

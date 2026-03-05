@@ -100,7 +100,7 @@ func processPayment(ctx context.Context) {
 
     | Constant            | Key         | Example value |
     | ------------------- | ----------- | ------------- |
-    | `LogAttr_App`       | `app`       | `my.app`      |
+    | `LogAttr_VApp`      | `vapp`      | `my.app`      |
     | `LogAttr_Feat`      | `feat`      | `magicmenu`   |
     | `LogAttr_ReqID`     | `reqid`     | `42`          |
     | `LogAttr_WSID`      | `wsid`      | `1001`        |

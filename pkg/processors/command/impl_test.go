@@ -828,44 +828,19 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	}
 }
 
-type stubPLogEvent struct {
-	istructs.IPLogEvent
-	wlogOffset istructs.Offset
-}
-
-func (s *stubPLogEvent) WLogOffset() istructs.Offset { return s.wlogOffset }
-
-type stubRawEvent struct {
-	istructs.IRawEvent
-	plogOffset istructs.Offset
-}
-
-func (s *stubRawEvent) PLogOffset() istructs.Offset { return s.plogOffset }
-
 func TestLogEventAndCUDs(t *testing.T) {
-	articleQName := appdef.NewQName("test", "Article")
+	testQName := appdef.NewQName("test", "Article")
+	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 
-	newCmd := func() *cmdWorkpiece {
-		return &cmdWorkpiece{
-			cmdMes:    &implICommandMessage{requestCtx: context.Background()},
-			pLogEvent: &stubPLogEvent{wlogOffset: 42},
-			rawEvent:  &stubRawEvent{plogOffset: 100},
-			idGeneratorReporter: &implIDGeneratorReporter{
-				generatedIDs: map[istructs.RecordID]istructs.RecordID{1: 78097},
-			},
-			parsedCUDs: []parsedCUD{
-				{
-					opKind: appdef.OperationKind_Insert,
-					id:     1,
-					qName:  articleQName,
-					fields: coreutils.MapObject{"name": "testArticle"},
-				},
-			},
-			workspace: &workspace{
-				NextWLogOffset: 42,
-			},
-		}
-	}
+	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		wsb.AddCDoc(testQName).AddField("Name", appdef.DataKind_string, false)
+		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
+	})
+	defer tearDown(app)
 
 	t.Run("verbose level emits event and cud log entries", func(t *testing.T) {
 		require := require.New(t)
@@ -875,14 +850,38 @@ func TestLogEventAndCUDs(t *testing.T) {
 		logger.SetCtxWriters(&buf, &buf)
 		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
 
-		require.NoError(logEventAndCUDs(context.Background(), newCmd()))
+		// insert
+		req := bus.Request{
+			WSID:     1,
+			AppQName: istructs.AppQName_untill_airs_bp,
+			Resource: "c.sys.CUD",
+			Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.Article","Name":"hello"}}]}`),
+			Header:   app.sysAuthHeader,
+		}
+		cmdRespMeta, cmdResp, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
+		require.NoError(sysErr)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+		newID := cmdResp.NewIDs["1"]
+		require.NotZero(newID)
 
 		out := buf.String()
-		require.Contains(out, "woffset=42")
-		require.Contains(out, "poffset=100")
-		require.Contains(out, "rectype=test.Article")
-		require.Contains(out, "recid=78097")
-		require.Contains(out, "op=Insert")
+		require.Contains(out, "evqname=sys.CUD")
+		require.Contains(out, fmt.Sprintf("rectype=%s", testQName))
+		require.Contains(out, fmt.Sprintf("recid=%d", newID))
+		require.Contains(out, "op=create")
+
+		// update: newfields=world, oldfields=hello
+		buf.Reset()
+		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.Article","Name":"world"}}]}`, newID))
+		cmdRespMeta, _, sysErr = bus.GetCommandResponse(app.ctx, app.requestSender, req)
+		require.NoError(sysErr)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+
+		out = buf.String()
+		require.Contains(out, fmt.Sprintf("recid=%d", newID))
+		require.Contains(out, "op=update")
+		require.Contains(out, "world")
+		require.Contains(out, "hello")
 	})
 
 	t.Run("info level emits nothing", func(t *testing.T) {
@@ -893,7 +892,15 @@ func TestLogEventAndCUDs(t *testing.T) {
 		logger.SetCtxWriters(&buf, &buf)
 		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
 
-		require.NoError(logEventAndCUDs(context.Background(), newCmd()))
-		require.Empty(buf.String())
+		req := bus.Request{
+			WSID:     1,
+			AppQName: istructs.AppQName_untill_airs_bp,
+			Resource: "c.sys.CUD",
+			Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.Article"}}]}`),
+			Header:   app.sysAuthHeader,
+		}
+		_, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
+		require.NoError(sysErr)
+		require.NotContains(buf.String(), "evqname")
 	})
 }

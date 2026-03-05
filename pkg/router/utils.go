@@ -153,7 +153,7 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 	return logger.WithContextAttrs(ctx, map[string]any{
 		logger.LogAttr_ReqID:     newReqID,
 		logger.LogAttr_WSID:      data.wsid,
-		logger.LogAttr_App:       data.appQName,
+		logger.LogAttr_VApp:      data.appQName,
 		logger.LogAttr_Extension: extension,
 		logAttrib_Origin:         req.Header.Get(httpu.Origin),
 	})
@@ -161,7 +161,7 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 
 func logServeRequest(ctx context.Context) {
 	if logger.IsVerbose() {
-		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "")
+		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "request accepted")
 	}
 }
 
