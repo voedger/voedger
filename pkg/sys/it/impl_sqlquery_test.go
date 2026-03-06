@@ -5,6 +5,7 @@
 package sys_it
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -627,4 +628,109 @@ func TestQNameFieldConditions(t *testing.T) {
 	// just expecting no errors on condition on field with qname type
 	body := `{"args":{"Query":"select * from app1pkg.ViewWithQName where IntFld = 42 and QName = 'app1pkg.category'"},"elements":[{"fields":["Result"]}]}`
 	vit.PostWS(ws, "q.sys.SqlQuery", body)
+}
+
+func TestBlobFunctions_BasicUsage(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	expBLOB := []byte{1, 2, 3, 4, 5}
+	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "myblob", httpu.ContentType_ApplicationXBinary, expBLOB,
+		it.QNameDocWithBLOB, it.Field_Blob, httpu.WithAuthorizeBy(ws.Owner.Token))
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, blobID)
+	docID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	t.Run("blobinfo on doc", func(t *testing.T) {
+		require := require.New(t)
+		body := fmt.Sprintf(`{"args":{"Query":"select blobinfo(Blob) from app1pkg.DocWithBLOB.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow(0)[0].(string)), &m))
+		info := m["blobinfo(Blob)"].(map[string]interface{})
+		require.Equal("myblob", info["name"])
+		require.Equal(httpu.ContentType_ApplicationXBinary, info["mimetype"])
+		require.EqualValues(len(expBLOB), info["size"])
+	})
+
+	t.Run("blobtext with binary blob returns base64", func(t *testing.T) {
+		require := require.New(t)
+		body := fmt.Sprintf(`{"args":{"Query":"select blobtext(Blob) from app1pkg.DocWithBLOB.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow(0)[0].(string)), &m))
+		require.Equal(base64.StdEncoding.EncodeToString(expBLOB), m["blobtext(Blob)"])
+	})
+
+	t.Run("blobinfo and blobtext in one request", func(t *testing.T) {
+		require := require.New(t)
+		body := fmt.Sprintf(`{"args":{"Query":"select blobinfo(Blob), blobtext(Blob) from app1pkg.DocWithBLOB.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow(0)[0].(string)), &m))
+		info := m["blobinfo(Blob)"].(map[string]interface{})
+		require.Equal("myblob", info["name"])
+		require.Equal(httpu.ContentType_ApplicationXBinary, info["mimetype"])
+		require.EqualValues(len(expBLOB), info["size"])
+		require.Equal(base64.StdEncoding.EncodeToString(expBLOB), m["blobtext(Blob)"])
+	})
+
+	t.Run("blobtext with text blob returns plain text", func(t *testing.T) {
+		require := require.New(t)
+		textContent := []byte("hello")
+		textBlobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "textblob", httpu.ContentType_TextPlain, textContent,
+			it.QNameDocWithBLOB, it.Field_Blob, httpu.WithAuthorizeBy(ws.Owner.Token))
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, textBlobID)
+		textDocID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		body = fmt.Sprintf(`{"args":{"Query":"select blobtext(Blob) from app1pkg.DocWithBLOB.%d"},"elements":[{"fields":["Result"]}]}`, textDocID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow(0)[0].(string)), &m))
+		require.Equal(string(textContent), m["blobtext(Blob)"])
+	})
+
+	t.Run("blobtext with startFrom", func(t *testing.T) {
+		require := require.New(t)
+		body := fmt.Sprintf(`{"args":{"Query":"select blobtext(Blob, 2) from app1pkg.DocWithBLOB.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow(0)[0].(string)), &m))
+		require.Equal(base64.StdEncoding.EncodeToString(expBLOB[2:]), m["blobtext(Blob)"])
+	})
+
+}
+
+func TestBlobFunctionsErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	cases := []struct {
+		name  string
+		query string
+		err   string
+	}{
+		{name: "non-singleton -> ID must be provided", query: "select blobinfo(Blob) from app1pkg.DocWithBLOB", err: "blob functions require a document ID or a singleton"},
+		{name: "WHERE clause is not allowed because >1 records could be in result", query: "select blobinfo(Blob) from app1pkg.DocWithBLOB where Blob = 123", err: "WHERE clause is not allowed with blobinfo/blobtext functions"},
+		{name: "blobinfo no args", query: "select blobinfo() from app1pkg.DocWithBLOB.123", err: "blobinfo requires at least one argument (field name)"},
+		{name: "blobtext no args", query: "select blobtext() from app1pkg.DocWithBLOB.123", err: "blobtext requires at least one argument (field name)"},
+		{name: "blob func arg must be a field name", query: "select blobinfo(123) from app1pkg.DocWithBLOB.123", err: "blobinfo: first argument must be a field name"},
+		{name: "blobinfo accepts only one arg", query: "select blobinfo(Blob, 123) from app1pkg.DocWithBLOB.123", err: "blobinfo does not accept a second argument"},
+		{name: "blobtext accepts at most two args", query: "select blobtext(Blob, 123, 456) from app1pkg.DocWithBLOB.123", err: "blobtext accepts at most 2 arguments"},
+		{name: "blobtext second arg must be an integer", query: "select blobtext(Blob, 123.456) from app1pkg.DocWithBLOB.123", err: "blobtext: second argument (startFrom) must be an integer"},
+		{name: "blobtext startFrom must be non-negative", query: "select blobtext(Blob, -1) from app1pkg.DocWithBLOB.123", err: "blobtext: startFrom must be non-negative"},
+		{name: "blobtext startFrom must be correct positive", query: "select blobtext(Blob, 9999999999999999999999999999) from app1pkg.DocWithBLOB.123", err: "blobtext: invalid startFrom value"},
+		{name: "unknown function", query: "select unknownfunc(Blob) from app1pkg.DocWithBLOB.123", err: "unsupported function: unknownfunc"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, c.query)
+			vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400(c.err)).Println()
+		})
+	}
 }

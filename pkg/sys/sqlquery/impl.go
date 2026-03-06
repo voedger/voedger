@@ -16,20 +16,23 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.ITokens, blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr, tm timeu.ITime) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
@@ -103,7 +106,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		}
 		stmt, err := sqlparser.Parse(op.CleanSQL)
 		if err != nil {
-			return err
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, err.Error())
 		}
 		s := stmt.(*sqlparser.Select)
 
@@ -112,33 +115,54 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		sourceTableType := appStructs.AppDef().Type(sourceTableName)
 
 		f := &filter{fields: make(map[string]bool)}
+		var blobFuncs []blobFuncDesc
 		for _, intf := range s.SelectExprs {
 			switch expr := intf.(type) {
 			case *sqlparser.StarExpr:
 				f.acceptAll = true
 			case *sqlparser.AliasedExpr:
-				column := expr.Expr.(*sqlparser.ColName)
-				fieldName := ""
-				if !column.Qualifier.Name.IsEmpty() {
-					fieldName = fmt.Sprintf("%s.%s", column.Qualifier.Name, column.Name)
-				} else {
-					fieldName = column.Name.String()
-				}
-				if sourceTableType.QName() != appdef.NullQName { // null if e.g. sys.plog, sys.wlog
-					if sourceTableWithFields, ok := sourceTableType.(appdef.IWithFields); ok {
-						fieldName = recoverFieldName(sourceTableWithFields, fieldName)
+				switch colExpr := expr.Expr.(type) {
+				case *sqlparser.ColName:
+					column := expr.Expr.(*sqlparser.ColName)
+					fieldName := ""
+					if !column.Qualifier.Name.IsEmpty() {
+						fieldName = fmt.Sprintf("%s.%s", column.Qualifier.Name, column.Name)
+					} else {
+						fieldName = column.Name.String()
 					}
-				}
+					if sourceTableType.QName() != appdef.NullQName { // null if e.g. sys.plog, sys.wlog
+						if sourceTableWithFields, ok := sourceTableType.(appdef.IWithFields); ok {
+							fieldName = recoverFieldName(sourceTableWithFields, fieldName)
+						}
+					}
 
-				f.fields[fieldName] = true
+					f.fields[fieldName] = true
+				case *sqlparser.FuncExpr:
+					bf, err := parseFuncExpr(colExpr, sourceTableType)
+					if err != nil {
+						return coreutils.NewHTTPError(http.StatusBadRequest, err)
+					}
+					blobFuncs = append(blobFuncs, bf)
+				default:
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported select expression:", colExpr)
+				}
 			}
 		}
+
+		hasRequestedBlobFunctions := len(blobFuncs) > 0
 
 		var whereExpr sqlparser.Expr
 		if s.Where == nil {
 			whereExpr = nil
 		} else {
 			whereExpr = s.Where.Expr
+		}
+
+		// Validate blob function constraints
+		if hasRequestedBlobFunctions {
+			if whereExpr != nil {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "WHERE clause is not allowed with blobinfo/blobtext functions")
+			}
 		}
 
 		kind := appStructs.AppDef().Type(sourceTableName).Kind()
@@ -170,9 +194,16 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			if op.EntityID > 0 {
 				return errors.New("ID must not be specified on select from view")
 			}
+			if hasRequestedBlobFunctions {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "blob functions are not supported on views")
+			}
 			return coreutils.WrapSysError(readViewRecords(ctx, wsID, sourceTableName, whereExpr, appStructs, f, callback),
 				http.StatusBadRequest)
 		case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
+			if hasRequestedBlobFunctions {
+				return handleRequestedBlobFunctions(ctx, args.State, blobFuncs, blobHandlerPtr, requestSenderPtr,
+					wsID, sourceTableName, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID))
+			}
 			return coreutils.WrapSysError(readRecords(wsID, sourceTableName, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
 				http.StatusBadRequest)
 		default:
@@ -197,6 +228,56 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest,
 			fmt.Sprintf("do not know how to read from the requested %s, %s", sourceTableName, kind))
 	}
+}
+
+func handleRequestedBlobFunctions(ctx context.Context, state istructs.IState, blobFuncs []blobFuncDesc,
+	blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr,
+	wsID istructs.WSID, sourceTableName appdef.QName, whereExpr sqlparser.Expr, appStructs istructs.IAppStructs,
+	f *filter, callback istructs.ExecQueryCallback, recordID istructs.RecordID) error {
+	isSingleton := false
+	if iSingleton, ok := appStructs.AppDef().Type(sourceTableName).(appdef.ISingleton); ok {
+		isSingleton = iSingleton.Singleton()
+	}
+	if !isSingleton && recordID == 0 {
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "blob functions require a document ID or a singleton")
+	}
+
+	subjKB, err := state.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
+	if err != nil {
+		// notest
+		return err
+	}
+	subj, err := state.MustExist(subjKB)
+	if err != nil {
+		// notest
+		return err
+	}
+	token := subj.AsString(sys.Storage_RequestSubject_Field_Token)
+
+	blobResults, err := executeBlobFunctions(ctx, blobFuncs, blobHandlerPtr, requestSenderPtr,
+		state.App(), wsID, sourceTableName, recordID, token)
+	if err != nil {
+		return err
+	}
+
+	if len(f.fields) > 0 || f.acceptAll {
+		wrappedCallback := func(obj istructs.IObject) error {
+			recJSON := obj.AsString("")
+			merged, err := mergeJSONWithBlobResults(recJSON, blobResults)
+			if err != nil {
+				return err
+			}
+			return callback(&result{value: merged})
+		}
+		return coreutils.WrapSysError(readRecords(wsID, sourceTableName, whereExpr, appStructs, f, wrappedCallback, recordID),
+			http.StatusBadRequest)
+	}
+
+	resultJSON, err := blobFuncResultToJSON(blobResults)
+	if err != nil {
+		return err
+	}
+	return callback(&result{value: resultJSON})
 }
 
 func params(expr sqlparser.Expr, limit *sqlparser.Limit, simpleOffset istructs.Offset) (int, istructs.Offset, error) {

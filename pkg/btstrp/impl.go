@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
@@ -19,13 +20,16 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
 func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, appparts appparts.IAppPartitions,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
-	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (err error) {
+	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr,
+	blobHandlerPtr blobprocessor.IRequestHandlerPtr, blobHandler blobprocessor.IRequestHandler,
+	requestSenderPtr bus.IRequestSenderPtr, requestSender bus.IRequestSender) (err error) {
 
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, time); err != nil {
@@ -41,6 +45,10 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 		// notest
 		return err
 	}
+
+	*requestSenderPtr = requestSender
+
+	*blobHandlerPtr = blobHandler
 
 	// appparts: deploy single clusterApp partition
 	appparts.DeployApp(istructs.AppQName_sys_cluster, nil, clusterApp.Def, clusterapp.ClusterAppNumPartitions,

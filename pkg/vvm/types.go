@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -99,6 +100,7 @@ type VVMPortSource struct {
 	getter      func() VVMPortType
 	adminGetter func() int
 }
+type RequestSenderSource func() bus.IRequestSender
 type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
 type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController

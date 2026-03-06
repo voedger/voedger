@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/btstrp"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
@@ -25,6 +26,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/parser"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -60,11 +62,18 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		defer cleanup()
 		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
+		requestSenderPtr := bus.IRequestSenderPtr(new(bus.IRequestSender))
+		blobHandlerPtr := blobprocessor.IRequestHandlerPtr(new(blobprocessor.IRequestHandler))
+		testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
+		testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
 		err := btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
-			nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
+			nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage, blobHandlerPtr, testBlobRequestHandler, requestSenderPtr, testRequestSender)
 		require.NoError(err)
 		require.NotNil(*blobStorage)
 		require.NotNil(*routerStorage)
+		require.NotNil(*requestSenderPtr)
+		require.NotNil(*blobHandlerPtr)
+
 	})
 
 	t.Run("panic on NumPartitions change", func(t *testing.T) {
@@ -76,11 +85,15 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		}()
 		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
+		requestSenderPtr := bus.IRequestSenderPtr(new(bus.IRequestSender))
+		blobHandlerPtr := blobprocessor.IRequestHandlerPtr(new(blobprocessor.IRequestHandler))
+		testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
+		testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
 		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num partitions changed: app %[1]s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumParts, otherApps[0].AppDeploymentDescriptor.NumParts-1), func() {
 			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
-				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
+				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage, blobHandlerPtr, testBlobRequestHandler, requestSenderPtr, testRequestSender)
 		})
 	})
 
@@ -97,8 +110,12 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces-1), func() {
 			blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 			routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
+			requestSenderPtr := bus.IRequestSenderPtr(new(bus.IRequestSender))
+			blobHandlerPtr := blobprocessor.IRequestHandlerPtr(new(blobprocessor.IRequestHandler))
+			testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
+			testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
 			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
-				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
+				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage, blobHandlerPtr, testBlobRequestHandler, requestSenderPtr, testRequestSender)
 		})
 	})
 }
