@@ -43,7 +43,7 @@ func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps 
 	journal.Provide(sr, eps)
 	builtin.Provide(sr, buildInfo, storageProvider)
 	workspace.Provide(sr, time, itokens, federation, itokens, wsPostInitFunc, eps)
-	sqlquery.Provide(sr, federation, itokens, blobHandlerPtr, requestSenderPtr, time)
+	sqlquery.Provide(sr, federation, itokens, blobHandlerPtr, requestSenderPtr)
 	verifier.Provide(sr, itokens, federation, asp, smtpCfg)
 	authnz.Provide(sr, itokens, atf)
 	invite.Provide(sr, time, federation, itokens, smtpCfg)

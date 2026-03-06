@@ -4,7 +4,7 @@
 
 Use `blobprocessor.IRequestHandler.HandleRead_V2` (confidence: high).
 
-Rationale: `change.md` explicitly mandates using `blobprocessor.IRequestHandler`. `HandleRead_V2(appQName, wsid, header, ctx, okResponseIniter, errorResponder, ownerRecord, fieldName, ownerID, requestSender)` handles BLOB ID resolution from the owner record field and `q.sys.DownloadBLOBAuthnz` internally. `blobprocessor.IRequestHandler` is wired in the VVM (`wire_gen.go`: `blobprocessor.NewIRequestHandler`) and reachable by adding it as a parameter to `sqlquery.Provide` → `sysprovide/provide.go` → VVM wire. A `bus.IRequestSender` is instantiated locally per-request inside the query function body (`bus.NewIRequestSender`) — it is not injected as an external parameter.
+Rationale: `change.md` explicitly mandates using `blobprocessor.IRequestHandler`. `HandleRead_V2(appQName, wsid, header, ctx, okResponseIniter, errorResponder, ownerRecord, fieldName, ownerID, requestSender)` handles BLOB ID resolution from the owner record field and `q.sys.DownloadBLOBAuthnz` internally. The final implementation wires `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr` through `sqlquery.Provide` → `sysprovide.ProvideStateless` → VVM bootstrap wiring, then passes the bootstrap-settled sender into `HandleRead_V2`.
 
 Alternatives:
 
@@ -13,9 +13,9 @@ Alternatives:
 
 ## 2. Size field in blobinfo() result
 
-Add an `X-BLOB-Size` header to the blobber pipeline's `initResponse` step and read it from the `okResponseIniter` headers captured in the sqlquery handler (confidence: high).
+Use the standard `Content-Length` header in the blobber pipeline's `initResponse` step and read it from the `okResponseIniter` headers captured in the sqlquery handler (confidence: high).
 
-Rationale: `blobprocessor.HandleRead_V2` delivers blob metadata only through the headers passed to `okResponseIniter` (`Content-Type`, `X-BLOB-Name`). Size is not currently exposed there; it is available inside the blobber pipeline as `bw.blobState.Size`. Extending `initResponse` in `impl_read.go` to emit `X-BLOB-Size` is a minimal, self-contained change that makes size available without downloading BLOB data. `blobinfo()` then calls `HandleRead_V2` with a discard `io.Writer` and reads name, content-type, and size from the headers.
+Rationale: `blobprocessor.HandleRead_V2` delivers blob metadata through the headers passed to `okResponseIniter`. Size is available inside the blobber pipeline as `bw.blobState.Size`, so emitting `Content-Length` in `initResponse` exposes it without downloading BLOB data. This also aligns sqlquery metadata capture with federation BLOB reads, where `readBLOB` parses the same header into `iblobstorage.BLOBReader.BLOBSize`.
 
 Alternatives:
 
@@ -46,13 +46,15 @@ Alternatives:
 - Reject in `dml` package (confidence: low)
   - `dml` would need to understand blob function semantics; mixes concerns
 
-## 5. Auth token propagation to federation.ReadBLOB
+## 5. Wiring bootstrap-settled interfaces into sqlquery
 
-Pass the caller's token via `httpu.WithAuthorizeBy(token)` to `federation.ReadBLOB` (confidence: high).
+Group bootstrap-settled interface pointers in `btstrp.SettledInterfacePtrs` and pass that struct through VVM wiring (confidence: high).
 
-Rationale: Inside `provideExecQrySQLQuery`, the auth token is available from the query state: `args.State.(interface{ Token() string }).Token()` — the same mechanism used by federation calls elsewhere in the function (e.g., cross-workspace queries). Passing the token in `ReadBLOB` ensures the blobber's `q.sys.DownloadBLOBAuthnz` check is satisfied under the caller's identity without any extra token minting.
+Rationale: the final implementation settles four interface pointers during bootstrap: blobber app storage, router app storage, blob handler, and request sender. Grouping them in `SettledInterfacePtrs` keeps bootstrap ownership local to `btstrp`, reduces loose parameters across `btstrp.Bootstrap`, `provideBootstrapOperator`, `provideStatelessResources`, and the generated wire file, and lets sqlquery consume the settled handler/sender pointers without introducing another VVM-local container.
 
 Alternatives:
 
-- Use a system token (confidence: low)
-  - Bypasses per-user authorization; security risk
+- Pass four separate pointer parameters through bootstrap and VVM wiring (confidence: medium)
+  - Works but spreads one concept across multiple signatures and test helpers
+- Introduce a VVM-local grouping type instead of a bootstrap-owned one (confidence: low)
+  - Hides a bootstrap concept outside the package that actually settles those pointers

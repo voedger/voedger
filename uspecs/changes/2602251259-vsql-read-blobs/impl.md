@@ -47,40 +47,44 @@
 ### SqlQuery: parse blob functions and wire blobprocessor
 
 - [x] update: [pkg/sys/sqlquery/provide.go](../../pkg/sys/sqlquery/provide.go)
-  - update: `Provide` signature to accept `blobprocessor.IRequestHandlerPtr`, `bus.IRequestSenderPtr`, and `timeu.ITime`; pass them to `provideExecQrySQLQuery`
+  - update: `Provide` signature to accept `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr`; pass them to `provideExecQrySQLQuery`
 - [x] update: [pkg/sys/sysprovide/provide.go](../../pkg/sys/sysprovide/provide.go)
   - update: `ProvideStateless` to accept `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr`, pass them to `sqlquery.Provide`
 - [x] update: [pkg/sys/sqlquery/impl.go](../../pkg/sys/sqlquery/impl.go)
-  - update: `provideExecQrySQLQuery` to accept `blobprocessor.IRequestHandlerPtr`, `bus.IRequestSenderPtr`, and `timeu.ITime`
+  - update: `provideExecQrySQLQuery` to accept `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr`
   - add: Parse `*sqlparser.FuncExpr` in SELECT walk to detect `blobinfo`/`blobtext` and extract field name + optional `startFrom`
   - add: Reject WHERE clause when blob functions are present
   - add: Validate blob functions require docID or singleton
-  - add: Call `IRequestHandler.HandleRead_V2` with a locally-created `bus.IRequestSender` for each blob function; build `blobinfo` JSON / `blobtext` content from captured response headers and writer
+  - add: Call `IRequestHandler.HandleRead_V2` with the settled `bus.IRequestSenderPtr` for requested blob functions; build `blobinfo` JSON / `blobtext` content from captured response headers and writer
   - refactor: extract record blob-function execution into dedicated helper to keep select flow simpler
 - [x] create: [pkg/sys/sqlquery/impl_blobfuncs.go](../../pkg/sys/sqlquery/impl_blobfuncs.go)
   - add: `blobFuncDesc` struct and parsing logic (`parseBlobFuncExpr`)
   - add: `executeBlobFunctions`, `executeBlobRead` functions
+  - add: group requested blob functions by field name so one blob read can serve both `blobinfo()` and `blobtext()` for the same field
   - add: `limitedBlobWriter` for capped byte capture with offset skip
   - add: `mergeJSONWithBlobResults` for combining record data with blob results
 
 ### VVM wiring
 
+- [x] update: [pkg/btstrp/types.go](../../pkg/btstrp/types.go)
+  - add: `SettledInterfacePtrs` to group bootstrap-settled blob/router storage, blob handler, and request sender pointers
 - [x] update: [pkg/btstrp/impl.go](../../pkg/btstrp/impl.go)
-  - update: `Bootstrap` signature to accept `blobHandlerPtr`, `blobHandler`, `requestSenderPtr`, `requestSender`; assign handler/sender values to pointers during bootstrap
+  - update: `Bootstrap` signature to accept `SettledInterfacePtrs` plus concrete `blobHandler` and `requestSender`; assign settled storage, handler, and sender values through the struct during bootstrap
 - [x] update: [pkg/vvm/provide.go](../../pkg/vvm/provide.go)
-  - update: `provideStatelessResources` to accept and pass `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr`
-  - add: `provideBlobHandlerPtr` and `provideIRequestSenderPtr` factory functions
-  - update: `provideBootstrapOperator` to accept and forward handler/sender ptr+value
+  - update: `provideStatelessResources` and `provideBootstrapOperator` to accept `btstrp.SettledInterfacePtrs`
+  - add: `provideBlobHandlerPtr`, `provideIRequestSenderPtr`, and `provideSettledInterfacePtrs` factory functions for grouped bootstrap wiring
+  - update: pass grouped settled pointers into `sysprovide.ProvideStateless` and `btstrp.Bootstrap`
 - [x] Review
 - [x] update: [pkg/vvm/wire_gen.go](../../pkg/vvm/wire_gen.go)
-  - update: Create `iRequestHandlerPtr` and `iRequestSenderPtr` before `provideStatelessResources`; move handler/sender creation before `provideBootstrapOperator`; fill pointers during bootstrap
+  - update: create settled interface pointers before `provideStatelessResources`, assemble `settledInterfacePtrs`, and pass it into `provideStatelessResources` and `provideBootstrapOperator`
 
 ### Tests
 
 - [x] update: [pkg/sys/it/impl_blob_test.go](../../pkg/sys/it/impl_blob_test.go)
   - add: `BLOBSize` assertions to existing persistent, temporary, APIv1v2, ODoc, and PseudoWSID blob tests
 - [x] update: [pkg/sys/it/impl_bootstrap_test.go](../../pkg/sys/it/impl_bootstrap_test.go)
-  - update: `Bootstrap` calls in all test scenarios to pass new `blobHandlerPtr`, `blobHandler`, `requestSenderPtr`, `requestSender` parameters
+  - update: `Bootstrap` calls in all test scenarios to pass `btstrp.SettledInterfacePtrs` plus concrete blob handler and request sender
+  - add: `newSettledInterfacePtrs` helper and assertions for settled storage, handler, and sender values
 - [x] update: [pkg/sys/it/impl_sqlquery_test.go](../../pkg/sys/it/impl_sqlquery_test.go)
   - add: Integration tests for `blobinfo()` on a doc with blob field
   - add: Integration tests for `blobtext()` with text and binary blobs, with and without `startFrom`

@@ -227,9 +227,9 @@ func blobFuncResultToJSON(blobResults map[string]interface{}) (string, error) {
 
 func parseFuncExpr(funcExpr *sqlparser.FuncExpr, sourceTableType appdef.IType) (blobFuncDesc, error) {
 	switch funcExpr.Name.Lowered() {
-		case blobFuncBlobInfo, blobFuncBlobText:
-			return parseBlobFuncExpr(funcExpr, sourceTableType)
-		default:
+	case blobFuncBlobInfo, blobFuncBlobText:
+		return parseBlobFuncExpr(funcExpr, sourceTableType)
+	default:
 		return blobFuncDesc{}, fmt.Errorf("unsupported function: %s", funcExpr.Name.String())
 	}
 }

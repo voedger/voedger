@@ -60,19 +60,16 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 		appParts, cleanup := appparts.NewTestAppParts(vit.IAppStructsProvider)
 		defer cleanup()
-		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
-		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-		requestSenderPtr := bus.IRequestSenderPtr(new(bus.IRequestSender))
-		blobHandlerPtr := blobprocessor.IRequestHandlerPtr(new(blobprocessor.IRequestHandler))
+		settledInterfacePtrs := newSettledInterfacePtrs()
 		testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 		testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
 		err := btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
-			nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage, blobHandlerPtr, testBlobRequestHandler, requestSenderPtr, testRequestSender)
+			nil, vit.ITokens, vit.IAppStorageProvider, settledInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		require.NoError(err)
-		require.NotNil(*blobStorage)
-		require.NotNil(*routerStorage)
-		require.NotNil(*requestSenderPtr)
-		require.NotNil(*blobHandlerPtr)
+		require.NotNil(*settledInterfacePtrs.BlobberAppStorage)
+		require.NotNil(*settledInterfacePtrs.RouterAppStorage)
+		require.NotNil(*settledInterfacePtrs.RequestSender)
+		require.NotNil(*settledInterfacePtrs.BlobHandler)
 
 	})
 
@@ -83,17 +80,14 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumParts--
 		}()
-		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
-		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-		requestSenderPtr := bus.IRequestSenderPtr(new(bus.IRequestSender))
-		blobHandlerPtr := blobprocessor.IRequestHandlerPtr(new(blobprocessor.IRequestHandler))
+		settledInterfacePtrs := newSettledInterfacePtrs()
 		testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 		testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
 		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num partitions changed: app %[1]s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumParts, otherApps[0].AppDeploymentDescriptor.NumParts-1), func() {
 			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
-				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage, blobHandlerPtr, testBlobRequestHandler, requestSenderPtr, testRequestSender)
+				nil, vit.ITokens, vit.IAppStorageProvider, settledInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		})
 	})
 
@@ -108,16 +102,22 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num application workspaces changed: app %[1]s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorkspaces=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces-1), func() {
-			blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
-			routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-			requestSenderPtr := bus.IRequestSenderPtr(new(bus.IRequestSender))
-			blobHandlerPtr := blobprocessor.IRequestHandlerPtr(new(blobprocessor.IRequestHandler))
+			settledInterfacePtrs := newSettledInterfacePtrs()
 			testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 			testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
 			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
-				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage, blobHandlerPtr, testBlobRequestHandler, requestSenderPtr, testRequestSender)
+				nil, vit.ITokens, vit.IAppStorageProvider, settledInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		})
 	})
+}
+
+func newSettledInterfacePtrs() btstrp.SettledInterfacePtrs {
+	return btstrp.SettledInterfacePtrs{
+		BlobberAppStorage: iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage)),
+		RouterAppStorage:  dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage)),
+		BlobHandler:       blobprocessor.IRequestHandlerPtr(new(blobprocessor.IRequestHandler)),
+		RequestSender:     bus.IRequestSenderPtr(new(bus.IRequestSender)),
+	}
 }
 
 func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWorkspaces, storage istorage.IAppStorageFactory) it.VITConfig {
