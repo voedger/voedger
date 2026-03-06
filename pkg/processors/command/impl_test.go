@@ -835,6 +835,7 @@ func TestLogEventAndCUDs(t *testing.T) {
 
 	var buf syncBuffer
 	logger.SetCtxWriters(&buf, &buf)
+	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
 
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName).AddField("Name", appdef.DataKind_string, false)
@@ -844,10 +845,7 @@ func TestLogEventAndCUDs(t *testing.T) {
 		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
-	defer func() {
-		tearDown(app)
-		logger.SetCtxWriters(os.Stdout, os.Stderr)
-	}()
+	defer tearDown(app)
 
 	t.Run("verbose level emits event and cud log entries", func(t *testing.T) {
 		require := require.New(t)
