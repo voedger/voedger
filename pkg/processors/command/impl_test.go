@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -832,6 +833,9 @@ func TestLogEventAndCUDs(t *testing.T) {
 	testQName := appdef.NewQName("test", "Article")
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 
+	var buf syncBuffer
+	logger.SetCtxWriters(&buf, &buf)
+
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName).AddField("Name", appdef.DataKind_string, false)
 		wsb.AddCommand(cudQName)
@@ -840,15 +844,16 @@ func TestLogEventAndCUDs(t *testing.T) {
 		wsb.AddRole(iauthnz.QNameRoleSystem)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
-	defer tearDown(app)
+	defer func() {
+		tearDown(app)
+		logger.SetCtxWriters(os.Stdout, os.Stderr)
+	}()
 
 	t.Run("verbose level emits event and cud log entries", func(t *testing.T) {
 		require := require.New(t)
 		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
 
-		var buf bytes.Buffer
-		logger.SetCtxWriters(&buf, &buf)
-		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+		buf.Reset()
 
 		// insert
 		req := bus.Request{
@@ -888,9 +893,7 @@ func TestLogEventAndCUDs(t *testing.T) {
 		require := require.New(t)
 		defer logger.SetLogLevelWithRestore(logger.LogLevelInfo)()
 
-		var buf bytes.Buffer
-		logger.SetCtxWriters(&buf, &buf)
-		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+		buf.Reset()
 
 		req := bus.Request{
 			WSID:     1,
@@ -903,4 +906,27 @@ func TestLogEventAndCUDs(t *testing.T) {
 		require.NoError(sysErr)
 		require.NotContains(buf.String(), "evqname")
 	})
+}
+
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (sb *syncBuffer) Write(p []byte) (n int, err error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
+}
+
+func (sb *syncBuffer) String() string {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.String()
+}
+
+func (sb *syncBuffer) Reset() {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	sb.buf.Reset()
 }
