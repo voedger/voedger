@@ -1,0 +1,1 @@
+{"version":"1.0","branch_type":1,"description":"fix data race in TestLogEventAndCUDs","issue_url":"https://untill.atlassian.net/browse/AIR-3224"}
