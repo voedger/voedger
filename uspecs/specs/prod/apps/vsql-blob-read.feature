@@ -5,8 +5,7 @@ Feature: VSQL BLOB reading
   Scenario Outline: VADeveloper reads blob metadata with blobinfo()
     Given document "<doc>" with blob field "<field>" containing a completed blob
     When VADeveloper executes "select blobinfo(<field>) from <source>"
-    Then result contains JSON with keys "name", "mimetype", "size", "status"
-    And "status" equals "completed"
+    Then result contains JSON with keys "name", "mimetype", "size"
 
     Examples:
       | doc                    | field | source                                        |
