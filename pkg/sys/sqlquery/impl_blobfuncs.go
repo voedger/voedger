@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
@@ -19,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
@@ -32,7 +34,7 @@ const (
 type blobFuncDesc struct {
 	funcName  string // "blobinfo" or "blobtext"
 	fieldName string // blob field name
-	startFrom int64  // for blobtext, optional byte offset
+	startFrom uint64 // for blobtext, optional byte offset
 }
 
 func executeBlobFunctions(
@@ -56,7 +58,7 @@ func executeBlobFunctions(
 	type fieldRequest struct {
 		wantInfo  bool
 		wantText  bool
-		startFrom int64
+		startFrom uint64
 	}
 
 	var fieldOrder []string
@@ -102,7 +104,7 @@ func executeBlobRead(
 	ctx context.Context,
 	fieldName string,
 	wantContent bool,
-	startFrom int64,
+	startFrom uint64,
 	blobHandlerPtr blobprocessor.IRequestHandlerPtr,
 	requestSenderPtr bus.IRequestSenderPtr,
 	appQName appdef.AppQName,
@@ -115,13 +117,14 @@ func executeBlobRead(
 	var blobErr error
 
 	var contentWriter = io.Discard
-	var writer *limitedBlobWriter
+	var rLimiter iblobstorage.RLimiterType
+	var writer *blobTextCapture
 	if wantContent {
-		writer = &limitedBlobWriter{
-			skipBytes: startFrom,
-			maxBytes:  blobTextMaxBytes,
-		}
+		writer = newBlobTextCapture(startFrom, blobTextMaxBytes)
 		contentWriter = writer
+		rLimiter = writer.limit
+	} else {
+		rLimiter = stopReadImmediately
 	}
 
 	okResponseIniter := func(headersKeyValue ...string) io.Writer {
@@ -137,10 +140,10 @@ func executeBlobRead(
 
 	ok := (*blobHandlerPtr).HandleRead_V2(appQName, wsid, header, ctx,
 		okResponseIniter, errorResponder,
-		ownerRecord, fieldName, ownerID, *requestSenderPtr)
+		ownerRecord, fieldName, ownerID, *requestSenderPtr, rLimiter)
 
 	if !ok {
-		return nil, nil, fmt.Errorf("blob processor is unavailable")
+		return nil, nil, coreutils.NewHTTPErrorf(http.StatusServiceUnavailable)
 	}
 	if blobErr != nil {
 		return nil, nil, blobErr
@@ -177,42 +180,33 @@ func isTextMIME(contentType string) bool {
 	return strings.HasPrefix(ct, "text/") || ct == httpu.ContentType_ApplicationJSON
 }
 
-// limitedBlobWriter skips the first skipBytes bytes, then captures at most maxBytes bytes.
-type limitedBlobWriter struct {
-	skipBytes int64
-	maxBytes  int
-	skipped   int64
-	buf       []byte
+func stopReadImmediately(uint64) error {
+	return iblobstorage.ErrReadLimitReached
 }
 
-func (w *limitedBlobWriter) Write(p []byte) (int, error) {
-	n := len(p)
-	remaining := p
-
-	// Skip bytes if needed
-	if w.skipped < w.skipBytes {
-		toSkip := w.skipBytes - w.skipped
-		if int64(len(remaining)) <= toSkip {
-			w.skipped += int64(len(remaining))
-			return n, nil
-		}
-		remaining = remaining[toSkip:]
-		w.skipped = w.skipBytes
-	}
-
-	// Capture up to maxBytes
-	if len(w.buf) < w.maxBytes {
-		space := w.maxBytes - len(w.buf)
-		if len(remaining) > space {
-			remaining = remaining[:space]
-		}
-		w.buf = append(w.buf, remaining...)
-	}
-
-	return n, nil
+func newBlobTextCapture(startFrom uint64, maxBytes uint64) *blobTextCapture {
+	return &blobTextCapture{startFrom: startFrom, endPos: startFrom + maxBytes}
 }
 
-func (w *limitedBlobWriter) Bytes() []byte {
+func (w *blobTextCapture) limit(wantReadBytes uint64) error {
+	if w.blobPos >= w.endPos {
+		return iblobstorage.ErrReadLimitReached
+	}
+	w.blobPos += wantReadBytes
+	return nil
+}
+
+func (w *blobTextCapture) Write(p []byte) (int, error) {
+	chunkStart := w.blobPos - uint64(len(p))
+	from := max(w.startFrom, chunkStart) - chunkStart
+	to := min(w.endPos, w.blobPos) - chunkStart
+	if from < to {
+		w.buf = append(w.buf, p[from:to]...)
+	}
+	return len(p), nil
+}
+
+func (w *blobTextCapture) Bytes() []byte {
 	return w.buf
 }
 
@@ -277,12 +271,9 @@ func parseBlobFuncExpr(funcExpr *sqlparser.FuncExpr, sourceTableType appdef.ITyp
 		if !ok || sqlVal.Type != sqlparser.IntVal {
 			return blobFuncDesc{}, fmt.Errorf("%s: second argument (startFrom) must be an integer", funcName)
 		}
-		startFrom, err := strconvu.ParseInt64(string(sqlVal.Val))
+		startFrom, err := strconvu.ParseUint64(string(sqlVal.Val))
 		if err != nil {
 			return blobFuncDesc{}, fmt.Errorf("%s: invalid startFrom value: %w", funcName, err)
-		}
-		if startFrom < 0 {
-			return blobFuncDesc{}, fmt.Errorf("%s: startFrom must be non-negative", funcName)
 		}
 		bf.startFrom = startFrom
 	}

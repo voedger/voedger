@@ -5,6 +5,7 @@
 package sys_it
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -22,6 +23,8 @@ import (
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	it "github.com/voedger/voedger/pkg/vit"
+	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
+	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func TestBasicUsage_SqlQuery(t *testing.T) {
@@ -703,6 +706,34 @@ func TestBlobFunctions_BasicUsage(t *testing.T) {
 		require.Equal(base64.StdEncoding.EncodeToString(expBLOB[2:]), m["blobtext(Blob)"])
 	})
 
+	t.Run("blobtext applies startFrom and max bytes", func(t *testing.T) {
+		require := require.New(t)
+		vitCfg := it.NewOwnVITConfig(
+			it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+				it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+				it.WithUserLogin("login", "pwd"),
+				it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+			),
+			it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+				cfg.BLOBMaxSize = 20000
+			}),
+		)
+		vit := it.NewVIT(t, &vitCfg)
+		defer vit.TearDown()
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		textContent := bytes.Repeat([]byte("0123456789"), 1500)
+		textBlobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "bigtext", httpu.ContentType_TextPlain, textContent,
+			it.QNameDocWithBLOB, it.Field_Blob, httpu.WithAuthorizeBy(ws.Owner.Token))
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocWithBLOB","Blob":%d}}]}`, textBlobID)
+		textDocID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		body = fmt.Sprintf(`{"args":{"Query":"select blobtext(Blob, 5000) from app1pkg.DocWithBLOB.%d"},"elements":[{"fields":["Result"]}]}`, textDocID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow(0)[0].(string)), &m))
+		require.Equal(string(textContent[5000:15000]), m["blobtext(Blob)"])
+	})
+
 }
 
 func TestBlobFunctionsErrors(t *testing.T) {
@@ -723,7 +754,7 @@ func TestBlobFunctionsErrors(t *testing.T) {
 		{name: "blobinfo accepts only one arg", query: "select blobinfo(Blob, 123) from app1pkg.DocWithBLOB.123", err: "blobinfo does not accept a second argument"},
 		{name: "blobtext accepts at most two args", query: "select blobtext(Blob, 123, 456) from app1pkg.DocWithBLOB.123", err: "blobtext accepts at most 2 arguments"},
 		{name: "blobtext second arg must be an integer", query: "select blobtext(Blob, 123.456) from app1pkg.DocWithBLOB.123", err: "blobtext: second argument (startFrom) must be an integer"},
-		{name: "blobtext startFrom must be non-negative", query: "select blobtext(Blob, -1) from app1pkg.DocWithBLOB.123", err: "blobtext: startFrom must be non-negative"},
+		{name: "blobtext startFrom must be non-negative", query: "select blobtext(Blob, -1) from app1pkg.DocWithBLOB.123", err: "blobtext: invalid startFrom value"},
 		{name: "blobtext startFrom must be correct positive", query: "select blobtext(Blob, 9999999999999999999999999999) from app1pkg.DocWithBLOB.123", err: "blobtext: invalid startFrom value"},
 		{name: "unknown function", query: "select unknownfunc(Blob) from app1pkg.DocWithBLOB.123", err: "unsupported function: unknownfunc"},
 	}

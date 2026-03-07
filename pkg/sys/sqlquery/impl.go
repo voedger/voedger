@@ -143,7 +143,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 					}
 					blobFuncs = append(blobFuncs, bf)
 				default:
-					return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported select expression:", colExpr)
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported select expression:", sqlparser.String(colExpr))
 				}
 			}
 		}
