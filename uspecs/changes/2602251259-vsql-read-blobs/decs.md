@@ -1,60 +1,91 @@
 # Decisions: VSQL BLOB reading via blobinfo() and blobtext()
 
-## 1. BLOB access path: blobprocessor.IRequestHandler vs federation.ReadBLOB
+## 1. BLOB access path and read control
 
-Use `blobprocessor.IRequestHandler.HandleRead_V2` (confidence: high).
+Use `blobprocessor.IRequestHandler.HandleRead_V2(..., rLimiter)` as the only read path from sqlquery
 
-Rationale: `change.md` explicitly mandates using `blobprocessor.IRequestHandler`. `HandleRead_V2(appQName, wsid, header, ctx, okResponseIniter, errorResponder, ownerRecord, fieldName, ownerID, requestSender)` handles BLOB ID resolution from the owner record field and `q.sys.DownloadBLOBAuthnz` internally. The final implementation wires `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr` through `sqlquery.Provide` → `sysprovide.ProvideStateless` → VVM bootstrap wiring, then passes the bootstrap-settled sender into `HandleRead_V2`.
+Rationale: `change.md` explicitly requires `blobprocessor.IRequestHandler`. The actual implementation wires `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr` through `sqlquery.Provide` → `sysprovide.ProvideStateless` → VVM bootstrap wiring, then calls `HandleRead_V2` for each requested BLOB field. The current handler signature also accepts `iblobstorage.RLimiterType`, which lets sqlquery stop reads early without bypassing BLOB ID resolution or `q.sys.DownloadBLOBAuthnz`
 
 Alternatives:
 
 - `federation.IFederation.ReadBLOB` (confidence: low)
-  - `federation` uses HTTP round-trips through the external URL, adding latency; bypasses the direct procbus path used by all other in-process BLOB reads
+  - adds an HTTP round-trip and bypasses the in-process blobber path used by other reads
+- direct storage reads from sqlquery (confidence: low)
+  - would duplicate blobber lookup and authorization logic
 
-## 2. Size field in blobinfo() result
+## 2. blobinfo() metadata comes from headers and must not require body download
 
-Use the standard `Content-Length` header in the blobber pipeline's `initResponse` step and read it from the `okResponseIniter` headers captured in the sqlquery handler (confidence: high).
+Use headers captured by `okResponseIniter` and stop metadata-only reads immediately with `iblobstorage.ErrReadLimitReached`
 
-Rationale: `blobprocessor.HandleRead_V2` delivers blob metadata through the headers passed to `okResponseIniter`. Size is available inside the blobber pipeline as `bw.blobState.Size`, so emitting `Content-Length` in `initResponse` exposes it without downloading BLOB data. This also aligns sqlquery metadata capture with federation BLOB reads, where `readBLOB` parses the same header into `iblobstorage.BLOBReader.BLOBSize`.
-
-Alternatives:
-
-- Download BLOB data and count bytes for size (confidence: low)
-  - Wastes bandwidth for large blobs; incompatible with the intent of a metadata-only function
-- Return size as 0 / omit it from blobinfo() (confidence: low)
-  - Loses important metadata; contradicts `change.md` requirement
-
-## 3. SELECT clause with mixed fields and blob functions
-
-Parse `*sqlparser.FuncExpr` in the SELECT walk loop alongside `*sqlparser.AliasedExpr` (confidence: high).
-
-Rationale: The existing SELECT parser in `impl.go` already iterates `s.SelectExprs`. Adding a `*sqlparser.FuncExpr` case lets the parser collect blob function descriptors (name + arguments) alongside regular field names. Both regular-field results and blob function results are merged into the single per-row JSON object returned by the callback. A separate query operation for blob functions is unnecessary complexity.
+Rationale: the blobber pipeline already knows `name`, `mimetype`, and `size` before streaming body chunks. The final implementation emits `Content-Length` from `initResponse`, captures `X-BLOB-Name`, `Content-Type`, and `Content-Length` in sqlquery, then uses a limiter that stops before the first chunk write when only `blobinfo()` is requested. This keeps `blobinfo()` metadata-only in practice, not only in intent
 
 Alternatives:
 
-- Make blob functions a separate top-level statement type in `dml` (confidence: low)
-  - Breaks backward compatibility with the `select` syntax shown in `change.md`; over-engineered for two functions
+- read the whole BLOB into `io.Discard` and count bytes (confidence: low)
+  - wastes I/O and defeats the metadata-only use case
+- add a separate metadata-only blob API (confidence: medium)
+  - possible, but larger than needed because the existing read pipeline already exposes the metadata
 
-## 4. WHERE clause rejection location
+## 3. Bounded blobtext() reads use both a limiter and a capture writer
 
-Reject blob-function queries with a WHERE clause in `impl.go` (sqlquery), after parsing, not in `dml` (confidence: high).
+Use `iblobstorage.RLimiterType` to stop future chunk reads and `blobTextCapture` to crop the wanted byte window inside accepted chunks
 
-Rationale: The `dml` package parses query strings into an `Op` struct and handles workspace/entity routing; it does not see SQL AST details like whether specific SELECT expressions are function calls. The sqlquery `impl.go` already has the parsed AST and the list of detected blob functions, making it the natural place to enforce the constraint `"WHERE clause not allowed with blobinfo/blobtext"`.
+Rationale: `blobtext(field, startFrom)` needs two properties at once:
 
-Alternatives:
+- exact slicing inside the current chunk
+- early stop once the requested range is fully covered
 
-- Reject in `dml` package (confidence: low)
-  - `dml` would need to understand blob function semantics; mixes concerns
-
-## 5. Wiring bootstrap-settled interfaces into sqlquery
-
-Group bootstrap-settled interface pointers in `btstrp.SettledInterfacePtrs` and pass that struct through VVM wiring (confidence: high).
-
-Rationale: the final implementation settles four interface pointers during bootstrap: blobber app storage, router app storage, blob handler, and request sender. Grouping them in `SettledInterfacePtrs` keeps bootstrap ownership local to `btstrp`, reduces loose parameters across `btstrp.Bootstrap`, `provideBootstrapOperator`, `provideStatelessResources`, and the generated wire file, and lets sqlquery consume the settled handler/sender pointers without introducing another VVM-local container.
+The final implementation keeps stream position in `blobTextCapture`, passes `writer.limit` into `HandleRead_V2`, and has storage treat `iblobstorage.ErrReadLimitReached` as an intentional stop rather than corruption. This replaces the older writer-only limiting approach while preserving exact `startFrom` behavior on chunked storage
 
 Alternatives:
 
-- Pass four separate pointer parameters through bootstrap and VVM wiring (confidence: medium)
-  - Works but spreads one concept across multiple signatures and test helpers
-- Introduce a VVM-local grouping type instead of a bootstrap-owned one (confidence: low)
-  - Hides a bootstrap concept outside the package that actually settles those pointers
+- writer-only limiting such as `limitedBlobWriter` (confidence: medium)
+  - simpler, but still reads unnecessary chunks after the result is already complete
+- limiter-only slicing (confidence: low)
+  - cannot express partial-chunk `startFrom` and end-window cropping by itself
+
+## 4. blobtext() offset parsing uses unsigned values
+
+Parse `startFrom` as `uint64` and store it as `uint64` in blob-function descriptors and capture helpers
+
+Rationale: the final implementation parses the second argument with `strconvu.ParseUint64` and carries it through `blobFuncDesc`, `fieldRequest`, `executeBlobRead`, and `newBlobTextCapture` as `uint64`. This matches the actual domain of byte offsets and naturally rejects negative values or oversized integers through unsigned parsing
+
+Alternatives:
+
+- parse as signed integer and reject negatives later (confidence: medium)
+  - works, but models a byte offset with a wider value space than needed
+
+## 5. SELECT clause handling stays inside sqlquery and merges blob results into row JSON
+
+Parse `*sqlparser.FuncExpr` in the SELECT loop, group requests by field name, and merge blob results into the row JSON returned by sqlquery
+
+Rationale: the existing SELECT parser in `impl.go` already walks `s.SelectExprs`. The final implementation collects `blobinfo` and `blobtext` descriptors there, validates them there, executes one BLOB read per field, then merges the produced values into the same JSON object as regular selected fields. This keeps the feature inside normal `select` execution instead of inventing a separate query shape
+
+Alternatives:
+
+- make blob functions a separate statement type in `dml` (confidence: low)
+  - breaks the desired SQL shape and spreads blob-function semantics outside sqlquery
+
+## 6. Blob-function constraints are enforced in sqlquery, not in dml
+
+Reject blob-function queries with a `WHERE` clause and without a concrete record ID on non-singletons in `impl.go`
+
+Rationale: `dml` parses routing-level query structure, but sqlquery owns the AST and knows whether blob functions are present. The final implementation enforces both constraints where the blob-function descriptors are already available, which keeps validation close to execution
+
+Alternatives:
+
+- reject in `dml` (confidence: low)
+  - would require `dml` to understand sqlquery-only function semantics
+
+## 7. Bootstrap-settled interfaces are grouped in SettledInterfacePtrs
+
+Group bootstrap-settled interface pointers in `btstrp.SettledInterfacePtrs` and pass that struct through VVM wiring
+
+Rationale: the final implementation settles blobber app storage, router app storage, blob handler, and request sender during bootstrap. Grouping them in `SettledInterfacePtrs` keeps that ownership in `btstrp`, reduces loose parameters across bootstrap and VVM provider functions, and lets sqlquery consume the settled handler and sender pointers without another container
+
+Alternatives:
+
+- pass separate pointer parameters through bootstrap and VVM wiring (confidence: medium)
+  - works, but spreads one concept across more signatures and test helpers
+- introduce a VVM-local grouping type (confidence: low)
+  - hides a bootstrap-owned concept outside the package that actually settles it
