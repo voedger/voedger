@@ -60,6 +60,7 @@ type implIBLOBMessage_Read struct {
 
 	// APIv1
 	existingBLOBIDOrSUUID string
+	rLimiter              iblobstorage.RLimiterType
 
 	// APIv2
 	ownerRecord      appdef.QName
