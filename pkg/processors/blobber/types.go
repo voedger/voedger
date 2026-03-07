@@ -112,3 +112,5 @@ type implIRequestHandler struct {
 func (m *implIBLOBMessage_base) Release() {
 	close(m.done)
 }
+
+type IRequestHandlerPtr *IRequestHandler

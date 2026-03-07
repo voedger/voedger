@@ -209,6 +209,48 @@ func TestFewBucketsBLOB(t *testing.T) {
 	require.Equal(bigBLOB, buf.Bytes())
 }
 
+func TestReadBLOBStopLimiter(t *testing.T) {
+	var (
+		key = iblobstorage.PersistentBLOBKeyType{
+			ClusterAppID: 2,
+			WSID:         2,
+			BlobID:       3,
+		}
+		desc = iblobstorage.DescrType{
+			Name:        "test",
+			ContentType: "text/plain",
+		}
+	)
+	require := require.New(t)
+	asf := mem.Provide(testingu.MockTime)
+	asp := istorageimpl.Provide(asf)
+	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	blobber := Provide(&storage, timeu.NewITime())
+	ctx := context.TODO()
+	bigBLOB := bytes.Repeat([]byte("a"), int(chunkSize+1))
+	reader := bytes.NewReader(bigBLOB)
+	_, err = blobber.WriteBLOB(ctx, key, desc, reader, NewWLimiter_Size(iblobstorage.BLOBMaxSizeType(len(bigBLOB))))
+	require.NoError(err)
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+	remaining := chunkSize
+	err = blobber.ReadBLOB(ctx, &key, nil, writer, func(wantReadBytes uint64) error {
+		if remaining == 0 {
+			return iblobstorage.ErrReadLimitReached
+		}
+		if wantReadBytes >= remaining {
+			remaining = 0
+		} else {
+			remaining -= wantReadBytes
+		}
+		return nil
+	})
+	require.NoError(err)
+	require.NoError(writer.Flush())
+	require.Equal(bigBLOB[:chunkSize], buf.Bytes())
+}
+
 func TestQuotaExceed(t *testing.T) {
 	var (
 		key = iblobstorage.PersistentBLOBKeyType{
