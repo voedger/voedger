@@ -2,6 +2,7 @@
 registered_at: 2026-02-25T12:59:27Z
 change_id: 2602251259-vsql-read-blobs
 baseline: 903b51ddca63185b348d9d447d7629782681898e
+archived_at: 2026-03-07T16:40:06Z
 ---
 
 # Change request: VSQL BLOB reading via blobinfo() and blobtext()
