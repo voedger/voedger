@@ -2,6 +2,7 @@
 registered_at: 2026-03-07T09:53:02Z
 change_id: 2603070953-blob-read-limiter-arg
 baseline: 2a51ec2ecd4ffaf4e39815c79704b9b80cb48425
+archived_at: 2026-03-07T16:28:44Z
 ---
 
 # Change request: Add read limiter arg to blobprocessor IRequestHandler blob reads
