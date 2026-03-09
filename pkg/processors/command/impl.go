@@ -340,18 +340,17 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		cmd.pLogEvent,
 		cmd.rawEvent.PLogOffset(),
 		cmd.appStructs.AppDef(),
-		1,
+		0,
 		func(cud istructs.ICUDRow) (bool, string, error) {
-			oldFieldsJSON := []byte("{}")
 			if oldRec, ok := oldRecs[cud.ID()]; ok {
-				var err error
-				oldFieldsJSON, err = json.Marshal(coreutils.FieldsToMap(oldRec, cmd.appStructs.AppDef()))
+				oldFields, err := json.Marshal(coreutils.FieldsToMap(oldRec, cmd.appStructs.AppDef()))
 				if err != nil {
 					// notest
 					return false, "", err
 				}
+				return true, fmt.Sprintf("oldfields=%s", oldFields), nil
 			}
-			return true, fmt.Sprintf("oldfields=%s", oldFieldsJSON), nil
+			return true, "oldfields={}", nil
 		},
 	)
 

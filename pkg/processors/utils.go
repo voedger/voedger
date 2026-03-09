@@ -96,7 +96,7 @@ func SetPrincipalsForAnonymousOnlyFunc(appDef appdef.IAppDef, funcQName appdef.Q
 	return false
 }
 
-// returns logCtx enriched with adds `woffset`, `poffset`, `evqname` log attribs
+// returns logCtx enriched by `woffset`, `poffset`, `evqname` log attribs
 // returns initial logCtx if verbose level is off
 func LogEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent, pLogOffset istructs.Offset, appDef appdef.IAppDef,
 	skipStackFrames int, perCUDLogCallback func(istructs.ICUDRow) (bool, string, error)) (enrichedCtx context.Context, err error) {
@@ -116,7 +116,7 @@ func LogEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent, pLogOffs
 			return nil, err
 		}
 	}
-	logger.LogCtx(enrichedCtx, skipStackFrames, logger.LogLevelVerbose, fmt.Sprintf("args=%s", argsJSON))
+	logger.LogCtx(enrichedCtx, skipStackFrames+1, logger.LogLevelVerbose, fmt.Sprintf("args=%s", argsJSON))
 	for cud := range event.CUDs {
 		shouldLog, extraMsg := true, ""
 		if perCUDLogCallback != nil {
@@ -142,7 +142,7 @@ func LogEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent, pLogOffs
 		if len(extraMsg) > 0 {
 			msg += ", " + extraMsg
 		}
-		logger.LogCtx(cudCtx, skipStackFrames+1, logger.LogLevelVerbose, msg)
+		logger.LogCtx(cudCtx, skipStackFrames+4, logger.LogLevelVerbose, msg) // +4 because call stack goes from cudType.enumRecs() here
 	}
 	return enrichedCtx, nil
 }
