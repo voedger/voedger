@@ -236,7 +236,7 @@ func (a *asyncActualizer) finit() {
 }
 
 func (a *asyncActualizer) keepReading() (err error) {
-	err = a.readPlogToTheEnd(a.readCtx.vvmCtx)
+	err = a.readPlogToTheEnd()
 	if err != nil {
 		a.cancelChannel(err)
 		return
@@ -301,11 +301,11 @@ func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPa
 	return a.appParts.WaitForBorrow(ctx, a.conf.AppQName, a.conf.PartitionID, appparts.ProcessorKind_Actualizer)
 }
 
-func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
+func (a *asyncActualizer) readPlogToTheEnd() error {
 	return a.readPlogByBatches(func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
-		ap, err := a.borrowAppPart(ctx)
+		ap, err := a.borrowAppPart(a.readCtx.vvmCtx)
 		if err != nil {
 			return err
 		}
@@ -392,11 +392,10 @@ type asyncProjector struct {
 	borrowedPartition     appparts.IAppPartition
 }
 
-// is executed for every event of a certain partition
-// here we decide:
-//
-//	if the projector is defined in vsql in the workspace of the event
-//	if the project is triggered by the event
+// DoAsync is executed for every event of a given partition.
+// It determines whether:
+//   - the projector is defined in vsql in the workspace of the event, and
+//   - the projector is triggered by the event.
 func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (pipeline.IWorkpiece, error) {
 	defer work.Release()
 	w := work.(*workpiece)
