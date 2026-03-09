@@ -114,15 +114,15 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 
 func (a *asyncActualizer) cancelChannel(e error) {
 	a.readCtx.cancelWithError(e)
-	a.conf.Broker.WatchChannel(a.readCtx.ctx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
+	a.conf.Broker.WatchChannel(a.readCtx.vvmCtx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
 }
 
-func (a *asyncActualizer) init(ctx context.Context) (err error) {
+func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 	a.plogBatch = make(plogBatch, 0, plogReadBatchSize)
 
 	a.readCtx = &asyncActualizerContextState{}
 
-	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
+	a.readCtx.vvmCtx, a.readCtx.cancel = context.WithCancel(vvmCtx)
 
 	appDef, err := a.appParts.AppDef(a.conf.AppQName)
 	if err != nil {
@@ -176,7 +176,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	}
 
 	p.state = stateprovide.ProvideAsyncActualizerStateFactory()(
-		ctx,
+		vvmCtx,
 		p.borrowedAppStructs,
 		state.SimplePartitionIDFunc(a.conf.PartitionID),
 		p.WSIDProvider,
@@ -211,7 +211,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	}
 	errorHandlerOp := pipeline.WireAsyncOperator("ErrorHandler", errHandler)
 
-	a.pipeline = pipeline.NewAsyncPipeline(ctx, a.name, projectorOp, errorHandlerOp)
+	a.pipeline = pipeline.NewAsyncPipeline(vvmCtx, a.name, projectorOp, errorHandlerOp)
 
 	if a.conf.channel, a.channelCleanup, err = a.conf.Broker.NewChannel(istructs.SubjectLogin(a.name), n10nChannelDuration); err != nil {
 		return err
@@ -236,17 +236,17 @@ func (a *asyncActualizer) finit() {
 }
 
 func (a *asyncActualizer) keepReading() (err error) {
-	err = a.readPlogToTheEnd(a.readCtx.ctx)
+	err = a.readPlogToTheEnd()
 	if err != nil {
 		a.cancelChannel(err)
 		return
 	}
-	a.conf.Broker.WatchChannel(a.readCtx.ctx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+	a.conf.Broker.WatchChannel(a.readCtx.vvmCtx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
 		if logger.IsTrace() {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToOffset(a.readCtx.ctx, offset)
+			err = a.readPlogToOffset(a.readCtx.vvmCtx, offset)
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -278,7 +278,7 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 }
 
 func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
-	for a.readCtx.ctx.Err() == nil {
+	for a.readCtx.vvmCtx.Err() == nil {
 		if err := readBatch(&a.plogBatch); err != nil {
 			return err
 		}
@@ -289,7 +289,7 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 			if err := a.handleEvent(e.Offset, e.IPLogEvent); err != nil {
 				return err
 			}
-			if a.readCtx.ctx.Err() != nil {
+			if a.readCtx.vvmCtx.Err() != nil {
 				return nil // canceled
 			}
 		}
@@ -301,18 +301,18 @@ func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPa
 	return a.appParts.WaitForBorrow(ctx, a.conf.AppQName, a.conf.PartitionID, appparts.ProcessorKind_Actualizer)
 }
 
-func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
+func (a *asyncActualizer) readPlogToTheEnd() error {
 	return a.readPlogByBatches(func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
-		ap, err := a.borrowAppPart(ctx)
+		ap, err := a.borrowAppPart(a.readCtx.vvmCtx)
 		if err != nil {
 			return err
 		}
 
 		defer ap.Release()
 
-		err = ap.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.PartitionID, a.offset+1, istructs.ReadToTheEnd,
+		err = ap.AppStructs().Events().ReadPLog(a.readCtx.vvmCtx, a.conf.PartitionID, a.offset+1, istructs.ReadToTheEnd,
 			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 				if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 					return errBatchFull
@@ -340,7 +340,7 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 
 		plog := ap.AppStructs().Events()
 		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-			if err = plog.ReadPLog(a.readCtx.ctx, a.conf.PartitionID, readOffset, 1,
+			if err = plog.ReadPLog(a.readCtx.vvmCtx, a.conf.PartitionID, readOffset, 1,
 				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 					if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 						return errBatchFull
@@ -359,7 +359,7 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 }
 
 func (a *asyncActualizer) readOffset(projectorName appdef.QName) error {
-	ap, err := a.borrowAppPart(a.readCtx.ctx)
+	ap, err := a.borrowAppPart(a.readCtx.vvmCtx)
 	if err != nil {
 		return err
 	}
@@ -392,6 +392,10 @@ type asyncProjector struct {
 	borrowedPartition     appparts.IAppPartition
 }
 
+// DoAsync is executed for every event of a given partition.
+// It determines whether:
+//   - the projector is defined in vsql in the workspace of the event, and
+//   - the projector is triggered by the event.
 func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (pipeline.IWorkpiece, error) {
 	defer work.Release()
 	w := work.(*workpiece)
