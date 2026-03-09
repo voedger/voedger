@@ -329,65 +329,34 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, cmd *cmdWorkpiece) (err error
 }
 
 func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	if !logger.IsVerbose() {
-		return nil
-	}
-	ctx := logger.WithContextAttrs(cmd.cmdMes.RequestCtx(), map[string]any{
-		"woffset": cmd.pLogEvent.WLogOffset(),
-		"poffset": cmd.rawEvent.PLogOffset(),
-		"evqname": cmd.pLogEvent.QName(),
-	})
-	argsJSON := []byte("{}")
-	if cmd.argsObject != nil {
-		argsMap := coreutils.ObjectToMap(cmd.argsObject, cmd.appStructs.AppDef())
-		argsJSON, err = json.Marshal(argsMap)
-		if err != nil {
-			// notest
-			return err
-		}
-	}
-	logger.VerboseCtx(ctx, fmt.Sprintf("args=%s", argsJSON))
 	oldRecs := make(map[istructs.RecordID]istructs.IRecord, len(cmd.parsedCUDs))
 	for _, pc := range cmd.parsedCUDs {
 		if pc.existingRecord != nil {
 			oldRecs[istructs.RecordID(pc.id)] = pc.existingRecord // nolint G115
 		}
 	}
-	for cud := range cmd.pLogEvent.CUDs {
-		newFieldsJSON, err := json.Marshal(coreutils.FieldsToMap(cud, cmd.appStructs.AppDef()))
-		if err != nil {
-			// notest
-			return err
-		}
-		oldFieldsJSON := []byte("{}")
-		if oldRec, ok := oldRecs[cud.ID()]; ok {
-			oldFieldsJSON, err = json.Marshal(coreutils.FieldsToMap(oldRec, cmd.appStructs.AppDef()))
-			if err != nil {
-				// notest
-				return err
+	enrichedLogCtx, err := processors.LogEventAndCUDs(
+		cmd.cmdMes.RequestCtx(),
+		cmd.pLogEvent,
+		cmd.rawEvent.PLogOffset(),
+		cmd.appStructs.AppDef(),
+		0,
+		func(cud istructs.ICUDRow) (bool, string, error) {
+			if oldRec, ok := oldRecs[cud.ID()]; ok {
+				oldFields, err := json.Marshal(coreutils.FieldsToMap(oldRec, cmd.appStructs.AppDef()))
+				if err != nil {
+					// notest
+					return false, "", err
+				}
+				return true, fmt.Sprintf("oldfields=%s", oldFields), nil
 			}
-		}
-		cudCtx := logger.WithContextAttrs(ctx, map[string]any{
-			"rectype": cud.QName(),
-			"recid":   cud.ID(),
-			"op":      cudOp(cud),
-		})
-		logger.VerboseCtx(cudCtx, fmt.Sprintf("newfields=%s, oldfields=%s", newFieldsJSON, oldFieldsJSON))
-	}
-	return nil
-}
+			return true, "oldfields={}", nil
+		},
+	)
 
-func cudOp(cud istructs.ICUDRow) string {
-	if cud.IsNew() {
-		return "create"
-	}
-	if cud.IsDeactivated() {
-		return "deactivate"
-	}
-	if cud.IsActivated() {
-		return "activate"
-	}
-	return "update"
+	// will not use the ctx enriched by woffset, poffset, evqname for now
+	_ = enrichedLogCtx
+	return err
 }
 
 func getWSDesc(_ context.Context, cmd *cmdWorkpiece) (err error) {
