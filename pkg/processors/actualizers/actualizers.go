@@ -36,7 +36,7 @@ func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 // Creates and runs new actualizer for specified partition.
 //
 // # apparts.IActualizerRunner.NewAndRun
-func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part istructs.PartitionID, prj appdef.QName) {
+func (a *actualizers) NewAndRun(vvmCtx context.Context, app appdef.AppQName, part istructs.PartitionID, prj appdef.QName) {
 	act := &asyncActualizer{
 		projectorQName: prj,
 		conf: AsyncActualizerConf{
@@ -49,7 +49,7 @@ func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part i
 	}
 	act.Prepare()
 	a.wait.Add(1)
-	act.Run(ctx)
+	act.Run(vvmCtx)
 	a.wait.Done()
 }
 
