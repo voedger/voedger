@@ -83,6 +83,7 @@ func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
 }
 
 // need for sync projectors which are using wsid.GetNextWSID()
+// need for sync projectors for logging
 func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
 }
@@ -95,6 +96,11 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 // need for update corrupted in c.cluster.VSqlUpdate and for various funcs of sys package
 func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 	return c.appStructs
+}
+
+// need for sync prjectors for logging
+func (c *cmdWorkpiece) PLogOffset() istructs.Offset {
+	return c.appPartition.nextPLogOffset
 }
 
 // https://github.com/voedger/voedger/issues/3163
@@ -293,12 +299,14 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		cmd.workspace = ap.getWorkspace(lastPLogEvent.Workspace())
 		cmd.workspace.NextWLogOffset-- // cmdProc.storeOp will bump it
 		cmd.reapplier = cmd.appStructs.GetEventReapplier(cmd.pLogEvent)
+		cmd.appPartition = ap // need to get PLogOffset in sync projectors on logging
 		if err := cmdProc.storeOp.DoSync(ctx, cmd); err != nil {
 			return nil, err
 		}
 		cmd.pLogEvent = nil
 		cmd.workspace = nil
 		cmd.reapplier = nil
+		cmd.appPartition = nil
 		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 	}
 
