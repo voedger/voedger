@@ -15,7 +15,9 @@ import (
 
 type ClusterBuiltInApp appparts.BuiltInApp
 
-type SettledInterfacePtrs struct {
+// PostWireInterfacePtrs groups placeholders for interfaces that are needed during app wiring,
+// but can be created only after app wiring completes. Bootstrap fills these pointer cells later to break wire cycles.
+type PostWireInterfacePtrs struct {
 	BlobberAppStorage iblobstoragestg.BlobAppStoragePtr
 	RouterAppStorage  dbcertcache.RouterAppStoragePtr
 	BlobHandler       blobprocessor.IRequestHandlerPtr

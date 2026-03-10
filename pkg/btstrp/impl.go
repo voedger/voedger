@@ -25,7 +25,7 @@ import (
 
 func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, appparts appparts.IAppPartitions,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
-	settledInterfacePtrs SettledInterfacePtrs, blobHandler blobprocessor.IRequestHandler,
+	postWiredInterfacePtrs PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler,
 	requestSender bus.IRequestSender) (err error) {
 
 	// initialize cluster app workspace, use app ws amount 0
@@ -34,18 +34,18 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 	}
 
 	// Initialize AppStorageBlobber (* IAppStorage), AppStorageRouter (* IAppStorage)
-	if *settledInterfacePtrs.BlobberAppStorage, err = storageProvider.AppStorage(istructs.AppQName_sys_blobber); err != nil {
+	if *postWiredInterfacePtrs.BlobberAppStorage, err = storageProvider.AppStorage(istructs.AppQName_sys_blobber); err != nil {
 		// notest
 		return err
 	}
-	if *settledInterfacePtrs.RouterAppStorage, err = storageProvider.AppStorage(istructs.AppQName_sys_router); err != nil {
+	if *postWiredInterfacePtrs.RouterAppStorage, err = storageProvider.AppStorage(istructs.AppQName_sys_router); err != nil {
 		// notest
 		return err
 	}
 
-	*settledInterfacePtrs.RequestSender = requestSender
+	*postWiredInterfacePtrs.RequestSender = requestSender
 
-	*settledInterfacePtrs.BlobHandler = blobHandler
+	*postWiredInterfacePtrs.BlobHandler = blobHandler
 
 	// appparts: deploy single clusterApp partition
 	appparts.DeployApp(istructs.AppQName_sys_cluster, nil, clusterApp.Def, clusterapp.ClusterAppNumPartitions,
