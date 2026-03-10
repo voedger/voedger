@@ -72,18 +72,18 @@ func logCtx(ctx context.Context, level TLogLevel, skipStackFrames int, args ...i
 }
 
 func loggerLevelToSLogLevel(level TLogLevel) slog.Level {
-	slogLevel := slog.LevelDebug - slogLevelTrace
 	switch level {
-	case LogLevelVerbose:
-		slogLevel = slog.LevelDebug
-	case LogLevelInfo:
-		slogLevel = slog.LevelInfo
-	case LogLevelWarning:
-		slogLevel = slog.LevelWarn
 	case LogLevelError:
-		slogLevel = slog.LevelError
+		return slog.LevelError
+	case LogLevelWarning:
+		return slog.LevelWarn
+	case LogLevelInfo:
+		return slog.LevelInfo
+	case LogLevelVerbose:
+		return slog.LevelDebug
+	default:
+		return slog.LevelDebug - slogLevelTrace
 	}
-	return slogLevel
 }
 
 func sLogAttrsFromCtx(ctx context.Context) []any {
