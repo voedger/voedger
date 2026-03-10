@@ -40,7 +40,10 @@ func ProjectorEvent(prj appdef.IProjector, event istructs.IPLogEvent) (triggered
 
 	switch event.QName() {
 	case istructs.QNameForError:
-		return istructs.QNameForError
+		if prj.WantErrors() {
+			return istructs.QNameForError
+		}
+		return appdef.NullQName
 	case istructs.QNameForCorruptedData:
 		return appdef.NullQName
 	}

@@ -79,13 +79,6 @@ func Test_ProjectorEvent(t *testing.T) {
 		})
 		return event
 	}
-	wantQName := func(ok bool, qName appdef.QName) appdef.QName {
-		if ok {
-			return qName
-		}
-		return appdef.NullQName
-	}
-
 	type testEvent struct {
 		name string
 		plog istructs.IPLogEvent
@@ -100,7 +93,7 @@ func Test_ProjectorEvent(t *testing.T) {
 			name: "projector ON ALL",
 			prj:  newProjectorOnAll(true),
 			events: []testEvent{
-				{"accept sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), wantQName(true, istructs.QNameForError)},
+				{"accept sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), istructs.QNameForError},
 				{"reject sys.corrupted", newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil), appdef.NullQName},
 			},
 		},
@@ -108,9 +101,9 @@ func Test_ProjectorEvent(t *testing.T) {
 			name: "projector ON ALL except sys.error",
 			prj:  newProjectorOnAll(false),
 			events: []testEvent{
-				{"accept my.cmd", newEvent(cmdName, appdef.NullQName, nil), wantQName(true, cmdName)},
-				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), wantQName(true, istructs.QNameCommandCUD)},
-				{"accept sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), wantQName(true, istructs.QNameForError)},
+				{"accept my.cmd", newEvent(cmdName, appdef.NullQName, nil), cmdName},
+				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), istructs.QNameCommandCUD},
+				{"reject sys.error", newEvent(istructs.QNameForError, appdef.NullQName, nil), appdef.NullQName},
 				{"reject sys.corrupted", newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil), appdef.NullQName},
 			},
 		},
@@ -118,8 +111,8 @@ func Test_ProjectorEvent(t *testing.T) {
 			name: "projector ON EXECUTE ALL COMMANDS",
 			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.Types(appdef.TypeKind_Command), false),
 			events: []testEvent{
-				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), wantQName(true, cmdName)},
-				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), wantQName(true, istructs.QNameCommandCUD)},
+				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), cmdName},
+				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), istructs.QNameCommandCUD},
 				{"reject my.ODoc", newEvent(oDocName, appdef.NullQName, nil), appdef.NullQName}, // not a command
 			},
 		},
@@ -127,7 +120,7 @@ func Test_ProjectorEvent(t *testing.T) {
 			name: "projector ON EXECUTE ALL COMMANDS FROM my.workspace",
 			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.WSTypes(wsName, appdef.TypeKind_Command), false),
 			events: []testEvent{
-				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), wantQName(true, cmdName)},
+				{"accept my.command", newEvent(cmdName, appdef.NullQName, nil), cmdName},
 				{"accept sys.CUD", newEvent(istructs.QNameCommandCUD, appdef.NullQName, nil), appdef.NullQName}, // not from my.workspace
 				{"reject my.ODoc", newEvent(oDocName, appdef.NullQName, nil), appdef.NullQName},                 // not a command
 			},
@@ -143,7 +136,7 @@ func Test_ProjectorEvent(t *testing.T) {
 			name: "projector ON EXECUTE my.ODoc",
 			prj:  newProjector(set.From(appdef.OperationKind_Execute), filter.QNames(oDocName), false),
 			events: []testEvent{
-				{"accept my.ODoc", newEvent(oDocName, appdef.NullQName, nil), wantQName(true, oDocName)},
+				{"accept my.ODoc", newEvent(oDocName, appdef.NullQName, nil), oDocName},
 				{"reject my.command", newEvent(cmdName, appdef.NullQName, nil), appdef.NullQName}, // not my.ODoc
 			},
 		},
@@ -151,8 +144,8 @@ func Test_ProjectorEvent(t *testing.T) {
 			name: "projector ON EXECUTE WITH PARAM my.ODoc OR my.object",
 			prj:  newProjector(set.From(appdef.OperationKind_ExecuteWithParam), filter.QNames(oDocName, objName), false),
 			events: []testEvent{
-				{"accept my.ODoc", newEvent(cmdName, oDocName, nil), wantQName(true, oDocName)},
-				{"accept my.object", newEvent(cmdName, objName, nil), wantQName(true, objName)},
+				{"accept my.ODoc", newEvent(cmdName, oDocName, nil), oDocName},
+				{"accept my.object", newEvent(cmdName, objName, nil), objName},
 				{"reject my.WDoc", newEvent(cmdName, wDocName, nil), appdef.NullQName}, // not my.ODoc or my.object
 			},
 		},
@@ -164,7 +157,7 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: false},
@@ -185,7 +178,7 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject insert my.WDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						wDocName: {isNew: true},
@@ -201,7 +194,7 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: false},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject insert my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
@@ -222,7 +215,7 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: false},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject update my.WDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						wDocName: {isNew: false},
@@ -238,13 +231,13 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"accept update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: false},
 					}),
-					wantQName(true, cDocName)},
-				{"reject insert my.WDoc",
+					cDocName},
+				{"reject insert or update my.WDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						wDocName: {isNew: true},
 					}),
@@ -264,12 +257,12 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"accept update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: false},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject insert or update my.WDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						wDocName: {isNew: true},
@@ -286,7 +279,7 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject insert or update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
@@ -313,7 +306,7 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject insert or update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
@@ -340,12 +333,12 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"accept deactivate my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject insert or update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
@@ -368,22 +361,22 @@ func Test_ProjectorEvent(t *testing.T) {
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: true},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"accept update my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {isNew: false},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"accept activate my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: true}},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"accept deactivate my.CDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						cDocName: {data: map[string]interface{}{appdef.SystemField_IsActive: false}},
 					}),
-					wantQName(true, cDocName)},
+					cDocName},
 				{"reject insert, update, activate or deactivate my.WDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						wDocName: {isNew: true},

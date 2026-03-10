@@ -175,6 +175,8 @@ func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 		p.projInErrAddr = p.metrics.AppMetricAddr(ProjectorsInError, a.conf.VvmName, a.conf.AppQName)
 	}
 
+	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.PartitionID)
+
 	err = a.readOffset(p.name)
 	if err != nil {
 		logger.ErrorCtx(vvmCtx, a.name, err)
@@ -203,8 +205,6 @@ func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 		a.conf.EmailSender,
 		a.conf.HTTPClient,
 	)
-
-	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.PartitionID)
 
 	projectorOp := pipeline.WireAsyncOperator("Projector", p, a.conf.FlushInterval)
 
@@ -473,10 +473,12 @@ func logEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent,
 	if !logger.IsVerbose() {
 		return logCtx, nil
 	}
-	logAllCUDs := appdef.TypeKind_Functions.Contains(appDef.Type(triggeredByQName).Kind())
+	triggeredByKind := appDef.Type(triggeredByQName).Kind()
+	triggeredByFunc := appdef.TypeKind_Functions.Contains(triggeredByKind)
+	triggeredByODoc := triggeredByKind == appdef.TypeKind_ODoc || triggeredByKind == appdef.TypeKind_ORecord
 	return processors.LogEventAndCUDs(logCtx, event, pLogOffset, appDef, 2,
 		func(cud istructs.ICUDRow) (bool, string, error) {
-			return logAllCUDs || cud.QName() == triggeredByQName, "", nil
+			return triggeredByFunc || triggeredByODoc || cud.QName() == triggeredByQName, "", nil
 		},
 	)
 }

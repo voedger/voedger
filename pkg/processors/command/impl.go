@@ -98,9 +98,11 @@ func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 	return c.appStructs
 }
 
-// need for sync prjectors for logging
+// need for sync projectors for logging
+// note: c.appPartition.nextPLogOffset here would be wrong because nextPLogOffset is incremented in putPLog() before sync actualizers run
+// so c.rawEvent.PLogOffset()==c.appPartition.nextPLogOffset-1 here if called after putPLog
 func (c *cmdWorkpiece) PLogOffset() istructs.Offset {
-	return c.appPartition.nextPLogOffset
+	return c.rawEvent.PLogOffset()
 }
 
 // https://github.com/voedger/voedger/issues/3163
