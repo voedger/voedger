@@ -19,7 +19,7 @@ import (
 type asyncActualizerContextState struct {
 	lock   sync.Mutex
 	err    error
-	ctx    context.Context
+	vvmCtx context.Context
 	cancel func()
 }
 
