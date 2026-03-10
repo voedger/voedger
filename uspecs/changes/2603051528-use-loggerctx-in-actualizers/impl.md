@@ -9,12 +9,18 @@
   - update: build the async actualizer base `logCtx` with `vapp` and `extension` when starting projector runtimes
 
 - [x] update: [pkg/processors/utils.go](../../../pkg/processors/utils.go)
-  - add: `CudOpToStringForLog(cud istructs.ICUDRow) string` — shared helper mapping `IsNew/IsActivated/IsDeactivated` to `"create"/"activate"/"deactivate"/"update"`
+  - add: `cudOpToStringForLog(cud istructs.ICUDRow) string` — shared helper mapping `IsNew/IsActivated/IsDeactivated` to `"create"/"activate"/"deactivate"/"update"`
   - add: `processors.LogEventAndCUDs(...)` — shared event/CUD logging skeleton with args JSON logging, event attrs, per-CUD attrs, shared `newfields=%s` logging, `skipStackFrames`, and one callback that decides whether to log a CUD and what extra message to append
 
 - [x] update: [pkg/processors/command/impl.go](../../../pkg/processors/command/impl.go)
   - update: delegate common event/CUD logging to `processors.LogEventAndCUDs(...)` and keep command-specific `oldfields=%s` formatting local
   - update: expose `Context()` and accurate event `PLogOffset()` on `cmdWorkpiece` and keep `appPartition` available during recovery so sync actualizers can use the same logging flow
+
+- [x] update: [pkg/processors/command/provide.go](../../../pkg/processors/command/provide.go)
+  - update: add a `setPLogOffset` pipeline step before raw-event building so command logging and sync actualizers use the same reserved PLog offset
+
+- [x] update: [pkg/processors/command/types.go](../../../pkg/processors/command/types.go)
+  - update: extend `cmdWorkpiece` with `pLogOffset` so the accurate event offset can be carried through command logging and sync actualizer execution
 
 - [x] update: [pkg/processors/command/impl_test.go](../../../pkg/processors/command/impl_test.go)
   - update: assert shared per-CUD logging includes both `newfields=` and command-specific `oldfields=`

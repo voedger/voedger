@@ -8,13 +8,13 @@ baseline: 7bccb40d1948b6a0b0700fbe72d6859aa1229d21
 
 ## Why
 
-Actualizers has lack of logging. Need to add log attribs and use loggerctx
+Actualizers have insufficient logging. Need to add log attribs and use loggerctx
 
 ## What
 
 Replace plain logger calls with context-aware variants in the actualizers package:
 
-- add `vsapp`, `wsid`, `extension` to ctx as soon as that data is available
+- add `vapp`, `wsid`, `extension` to ctx as soon as that data is available
 - eliminate `logger.Trace()`
 - before the event handling is started:
   - log the event:

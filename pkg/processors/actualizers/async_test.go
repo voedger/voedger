@@ -490,12 +490,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	defer cleanup()
 
 	actConf := &BasicAsyncActualizerConfig{
-		Broker: broker,
-
-		// LogError: func(_ context.Context, args ...interface{}) {
-		// 	errorsCh <- fmt.Sprint("error: ", args)
-		// },
-
+		Broker:        broker,
 		BundlesLimit:  10,
 		FlushInterval: 10 * time.Millisecond,
 	}
@@ -549,16 +544,6 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	topOffset := f.fill(1001, idGen)
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-
-	// Wait for the logged error
-	// errStr := <-errorsCh
-
-	// currently it should be error with context
-	// var errCtx errWithCtx
-	// require.ErrorAs(errors.New(errStr), &errCtx)
-
-	// log this error to check if all necesseary attribs are logged
-	// logger.ErrorCtx(errCtx.ctx, errCtx.error)
 
 	// require.Contains(errStr, "test error")
 	require.Eventually(func() bool {

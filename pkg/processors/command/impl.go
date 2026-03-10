@@ -99,10 +99,8 @@ func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 }
 
 // need for sync projectors for logging
-// note: c.appPartition.nextPLogOffset here would be wrong because nextPLogOffset is incremented in putPLog() before sync actualizers run
-// so c.rawEvent.PLogOffset()==c.appPartition.nextPLogOffset-1 here if called after putPLog
 func (c *cmdWorkpiece) PLogOffset() istructs.Offset {
-	return c.rawEvent.PLogOffset()
+	return c.pLogOffset
 }
 
 // https://github.com/voedger/voedger/issues/3163
@@ -270,6 +268,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		nextPLogOffset: istructs.FirstOffset,
 	}
 	var lastPLogEvent istructs.IPLogEvent
+	var lastPLogOffset istructs.Offset
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 
@@ -288,6 +287,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 			lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 		}
 		lastPLogEvent = event
+		lastPLogOffset = plogOffset
 		return nil
 	}
 
@@ -301,14 +301,14 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		cmd.workspace = ap.getWorkspace(lastPLogEvent.Workspace())
 		cmd.workspace.NextWLogOffset-- // cmdProc.storeOp will bump it
 		cmd.reapplier = cmd.appStructs.GetEventReapplier(cmd.pLogEvent)
-		cmd.appPartition = ap // need to get PLogOffset in sync projectors on logging
+		cmd.pLogOffset = lastPLogOffset // need to get PLogOffset in sync projectors on logging
 		if err := cmdProc.storeOp.DoSync(ctx, cmd); err != nil {
 			return nil, err
 		}
 		cmd.pLogEvent = nil
 		cmd.workspace = nil
 		cmd.reapplier = nil
-		cmd.appPartition = nil
+		cmd.pLogOffset = istructs.NullOffset
 		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 	}
 
@@ -478,13 +478,18 @@ func (cmdProc *cmdProc) getWorkspace(_ context.Context, cmd *cmdWorkpiece) (err 
 	return nil
 }
 
+func setPLogOffset(_ context.Context, cmd *cmdWorkpiece) (err error) {
+	cmd.pLogOffset = cmd.appPartition.nextPLogOffset
+	return nil
+}
+
 func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	grebp := istructs.GenericRawEventBuilderParams{
 		HandlingPartition: cmd.cmdMes.PartitionID(),
 		Workspace:         cmd.cmdMes.WSID(),
 		QName:             cmd.cmdQName,
 		RegisteredAt:      istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
-		PLogOffset:        cmd.appPartition.nextPLogOffset,
+		PLogOffset:        cmd.pLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 

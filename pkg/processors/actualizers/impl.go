@@ -22,8 +22,8 @@ type syncActualizerWorkpiece interface {
 	pipeline.IWorkpiece
 	Event() istructs.IPLogEvent
 	AppPartition() appparts.IAppPartition
-	Context() context.Context    // is cmd.cmdMes.RequestCtx() from command processor
-	PLogOffset() istructs.Offset // is c.appPartition.nextPLogOffset from command processor
+	Context() context.Context // is cmd.cmdMes.RequestCtx() from command processor
+	PLogOffset() istructs.Offset
 }
 
 func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator {
