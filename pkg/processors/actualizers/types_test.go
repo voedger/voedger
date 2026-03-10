@@ -244,9 +244,13 @@ func Test_ProjectorEvent(t *testing.T) {
 						cDocName: {isNew: false},
 					}),
 					wantQName(true, cDocName)},
-				{"reject insert or update my.WDoc",
+				{"reject insert my.WDoc",
 					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						wDocName: {isNew: true},
+					}),
+					appdef.NullQName}, // not my.CDoc
+				{"reject update my.WDoc",
+					newEvent(istructs.QNameCommandCUD, appdef.NullQName, map[appdef.QName]cud{
 						wDocName: {isNew: false},
 					}),
 					appdef.NullQName}, // not my.CDoc
