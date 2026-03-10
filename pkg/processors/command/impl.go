@@ -362,6 +362,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 			}
 			return true, "oldfields={}", nil
 		},
+		"",
 	)
 
 	// will not use the ctx enriched by woffset, poffset, evqname for now

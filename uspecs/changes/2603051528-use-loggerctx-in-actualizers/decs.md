@@ -1,78 +1,77 @@
 # Decisions: Use context-aware logging in actualizers
 
-## 2. logCtx placement: DoAsync only vs broader scope (keepReading)
+## 1. Build the async actualizer base log context before event handling
 
-Build the base logCtx (vapp + extension, without wsid) in `init()` on the `asyncActualizer` and store it, then enrich with `wsid` per-event in `DoAsync` (confidence: high).
+Build the base async actualizer `logCtx` with `vapp` and `extension` when the projector runtime starts, then add `wsid` per event in `DoAsync` (confidence: high)
 
-Rationale: `vapp` and `extension` (projector QName) are known at init time, so n10n trace logs in `keepReading` can already carry them. `wsid` is per-event and must be added in `DoAsync`. Storing the base ctx eliminates repetitive `WithContextAttrs` calls and satisfies "as soon as that data is available".
-
-Alternatives:
-
-- Build logCtx only in `DoAsync` as today (confidence: medium)
-  - Simpler; n10n trace logs in `keepReading` remain without attributes
-
-## 3. Triggered CUDs for after-insert/update vs all CUDs for after-execute
-
-Reuse `ProjectorEvent` trigger logic inline: iterate `event.CUDs`, check `prj.Triggers(op, type)` per CUD to emit only triggered ones; emit all CUDs when the projector is after-execute (confidence: high).
-
-Rationale: `ProjectorEvent` in `types.go` already contains per-CUD trigger checks (`Insert`, `Update`, `Activate`, `Deactivate`). Reusing the same checks inside a new `logEventAndCUDs` helper avoids duplicating the trigger predicate. Projector type (execute vs CUD-based) is determined by checking `iProjector.Events()` ops.
+Rationale: `vapp` and projector `extension` are known when async actualizers are started in `pkg/appparts/internal/actualizers/actualizers.go`, so they should be attached there and reused by later logs. `wsid` is only known from the current event, so `DoAsync` enriches the base context right before handling that event
 
 Alternatives:
 
-- Extract a `triggeringCUDs(prj, event)` helper that returns a slice (confidence: medium)
-  - Cleaner API but adds an allocation; log-only path doesn't need the slice outside logging
-- Log all CUDs for all projector types (confidence: low)
-  - Simpler but noisy for CUD-based projectors that only care about one record type
+- Build the whole log context only in `DoAsync` (confidence: medium)
+  - Simpler, but logs emitted before event handling lose `vapp` and `extension`
 
-## 4. Success/failure log location
+## 2. Actualizer CUD logging is driven by the resolved triggering QName
 
-Log `msg=success` and `msg=failure` inside `DoAsync`, before returning (confidence: high).
+Use `ProjectorEvent(...)` once to resolve `triggeredByQName`, then decide which CUDs to log from that QName and its type kind (confidence: high)
 
-Rationale: `logCtx` (carrying `wsid`, `extension`) is only available inside `DoAsync`. Logging there ensures the structured attributes appear on both success and failure entries. The current error propagation path (`wrapErr` → `handleEvent` → `LogError`) logs with `logCtx` already for failures, but adding an explicit `msg=failure` log in `DoAsync` before returning the error gives a symmetric pair and avoids relying on `handleEvent` for the "failure" message.
+Rationale: the final implementation changed `ProjectorEvent(...)` to return the triggering `QName`, not only a boolean. Async and sync actualizers reuse that resolved value. When the triggering kind is a function, `ODoc`, or `ORecord`, logging all event CUDs matches execute-style projector behavior. Otherwise actualizers log only CUDs whose `QName` matches `triggeredByQName`, which keeps after-insert, after-update, after-activate, and after-deactivate logs focused without repeating trigger checks inline
 
 Alternatives:
 
-- Keep failure logging only in `handleEvent` (confidence: low)
-  - The `handleEvent` path already uses `logCtx` via `errWithCtx`, so failure is logged with attributes, but there is no `msg=failure` entry
-- Move all error logging into `DoAsync`, remove `errWithCtx` (confidence: medium)
-  - Cleaner separation but requires changing `handleEvent` and the error-propagation contract
+- Re-run `prj.Triggers(...)` for every CUD inside logging (confidence: medium)
+  - Possible, but duplicates trigger-resolution logic that already lives in `ProjectorEvent(...)`
+- Log all CUDs for every projector type (confidence: low)
+  - Simpler, but too noisy for record-triggered projectors
 
-## 5. args JSON serialization for event log
+## 3. Async success is logged in `DoAsync`, failures are logged through `errWithCtx`
 
-Use `coreutils.ObjectToMap` + `json.Marshal` on `event.ArgumentObject()`, guard with `event.ArgumentObject().QName() != appdef.NullQName` (confidence: high).
+Keep explicit `success` logging in `DoAsync` and propagate failures as `errWithCtx` so the outer async actualizer error path logs them with the enriched context (confidence: high)
 
-Rationale: This mirrors the command processor's `logEventAndCUDs` approach exactly. Guarding on `NullQName` skips serialization for CUD-only commands (`sys.CUD`) where there is no argument object, keeping the log compact.
-
-Alternatives:
-
-- Always serialize, emit `args={}` when argument is null (confidence: medium)
-  - Uniform output but adds a trivial JSON round-trip and an empty field for CUD events
-- Use `event.ArgumentObject().AsString(field)` field by field (confidence: low)
-  - Requires knowing field names; not generic
-
-## 6. Extract event logging to `pkg/processors` vs keep separate implementations
-
-Extract the shared event/CUD logging skeleton into `pkg/processors.LogEventAndCUDs(...)` and keep the caller-specific behavior in one small per-CUD callback in command processor and actualizers (confidence: high).
-
-Rationale: The two callers share most of the workflow:
-
-- verbose guard
-- event context attrs `woffset`, `poffset`, `evqname`
-- args JSON logging
-- CUD iteration
-- per-CUD context attrs `rectype`, `recid`, `op`
-- per-CUD `newfields=%s` logging
-
-The remaining differences fit cleanly into one local callback that returns whether the CUD should be logged and which extra message part should be appended:
-
-- command processor logs all CUDs and appends `oldfields=%s`
-- actualizer decides whether a CUD triggered the projector and appends nothing
-
-This removes meaningful duplication while keeping the shared API small and preserving the local ownership of projector-specific and old-record-specific behavior.
+Rationale: the final implementation wraps errors after `wsid` is attached and keeps the actual error emission in `asyncActualizer.logError`. This preserves one failure-logging path while still carrying the event-specific logger context. Adding a second explicit `failure` message in `DoAsync` would duplicate failure reporting without adding context
 
 Alternatives:
 
-- Extract the whole workflow plus old-record handling and projector decision logic into one parameter-heavy helper (confidence: medium)
-  - Shares more code but forces unrelated caller details into one API and weakens readability
-- Keep only `CudOpToStringForLog` shared (confidence: low)
-  - Simpler but leaves most of the duplicated logging workflow in place
+- Emit an explicit `failure` log in `DoAsync` before every error return (confidence: medium)
+  - Symmetric with `success`, but duplicates the existing error log path
+- Remove `errWithCtx` and log every error at each return site (confidence: low)
+  - More repetitive and easier to drift over time
+
+## 4. Event args logging defaults to `{}` and serializes only real argument objects
+
+Initialize `argsJSON` as `{}` and serialize `event.ArgumentObject()` only when it exists and its `QName` is not `appdef.NullQName` (confidence: high)
+
+Rationale: the shared helper in `pkg/processors/utils.go` follows this exact contract. It keeps the log message shape stable as `args=...` for every event while avoiding unnecessary object-to-map conversion for CUD-only and other null-argument events
+
+Alternatives:
+
+- Skip the `args=` log entirely when there is no argument object (confidence: medium)
+  - Reduces one log line variant, but makes event logs less uniform
+- Always try to serialize the argument object without the null guard (confidence: low)
+  - Adds pointless work and relies on null-object behavior staying benign
+
+## 5. Shared event and CUD logging lives in `pkg/processors` and stays caller-extensible
+
+Extract common verbose event and CUD logging into `processors.LogEventAndCUDs(...)` and keep caller-specific behavior in a per-CUD callback that returns `(shouldLog, extraMsg, err)` (confidence: high)
+
+Rationale: command processor, async actualizers, and sync actualizers now share the same verbose guard, event attrs, args logging, per-CUD attrs, shared `newfields=...` output, and stack-frame handling. The remaining differences stay local: command logging appends `oldfields=...`, actualizers decide whether a CUD should be logged, and sync actualizers reuse the same helper through `cmdWorkpiece.Context()` and `PLogOffset()`
+
+Alternatives:
+
+- Keep separate event/CUD logging implementations in command processor and actualizers (confidence: medium)
+  - Simpler locally, but leaves duplicated logic in multiple call sites
+- Move old-record formatting and projector-specific filtering into one larger shared helper (confidence: low)
+  - Shares more code, but makes the common API heavier and less readable
+
+## 6. Sync actualizers log against the reserved command event offset
+
+Expose `Context()` and `PLogOffset()` on `cmdWorkpiece` and reserve the `pLogOffset` before raw event building so sync actualizers log the same event coordinates as the command processor (confidence: high)
+
+Rationale: the final implementation inserts `setPLogOffset` into the command pipeline before raw event building, stores that value on `cmdWorkpiece`, and keeps it available during recovery. This lets sync actualizers call the shared logging helper with the same request context and reserved event offset as the command path
+
+Alternatives:
+
+- Let sync actualizers log with a recomputed or missing `PLogOffset` (confidence: low)
+  - Would make event logs less trustworthy
+- Keep a separate sync actualizer logging path that does not depend on command workpiece state (confidence: medium)
+  - Avoids the extra workpiece fields, but duplicates the logging flow again

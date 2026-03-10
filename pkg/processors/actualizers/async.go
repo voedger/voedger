@@ -434,11 +434,6 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		return nil, nil
 	}
 
-	if logger.IsVerbose() {
-		// TODO: attribs?
-		logger.VerboseCtx(logCtx, fmt.Sprintf("%v is triggered by %v", p.iProjector, triggeredByQName))
-	}
-
 	if logCtx, err = logEventAndCUDs(logCtx, w.event, w.pLogOffset,
 		p.borrowedPartition.AppStructs().AppDef(), triggeredByQName); err != nil {
 		// notest
@@ -480,6 +475,7 @@ func logEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent,
 		func(cud istructs.ICUDRow) (bool, string, error) {
 			return triggeredByFunc || triggeredByODoc || cud.QName() == triggeredByQName, "", nil
 		},
+		"triggeredby="+triggeredByQName.String(),
 	)
 }
 

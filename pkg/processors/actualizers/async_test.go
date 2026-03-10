@@ -377,6 +377,7 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 		require.Contains(out, fmt.Sprintf("evqname=%s", cmdQName))
 		require.Contains(out, "args={")
 		require.Contains(out, `\"name\":\"hello\"`)
+		require.Contains(out, fmt.Sprintf("triggeredby=%s", cmdQName))
 		require.Contains(out, fmt.Sprintf("rectype=%s", recQName1))
 		require.Contains(out, fmt.Sprintf("rectype=%s", recQName2))
 		require.Equal(2, strings.Count(out, "op=create"))
@@ -454,6 +455,7 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 		}
 
 		out := buf.String()
+		require.Contains(out, fmt.Sprintf("triggeredby=%s", recQNameLogged))
 		require.Contains(out, fmt.Sprintf("rectype=%s", recQNameLogged))
 		require.NotContains(out, fmt.Sprintf("rectype=%s", recQNameSkipped))
 		require.Equal(1, strings.Count(out, "op=create"))
