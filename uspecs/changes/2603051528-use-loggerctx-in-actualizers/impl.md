@@ -14,19 +14,19 @@
 
 - [x] update: [pkg/processors/command/impl.go](../../../pkg/processors/command/impl.go)
   - update: delegate common event/CUD logging to `processors.LogEventAndCUDs(...)` and keep command-specific `oldfields=%s` formatting local
-  - update: expose `Context()` and `PLogOffset()` on `cmdWorkpiece` and keep `appPartition` available during recovery so sync actualizers can use the same logging flow
+  - update: expose `Context()` and accurate event `PLogOffset()` on `cmdWorkpiece` and keep `appPartition` available during recovery so sync actualizers can use the same logging flow
 
 - [x] update: [pkg/processors/command/impl_test.go](../../../pkg/processors/command/impl_test.go)
   - update: assert shared per-CUD logging includes both `newfields=` and command-specific `oldfields=`
 
 - [x] update: [pkg/processors/actualizers/types.go](../../../pkg/processors/actualizers/types.go)
-  - update: make `ProjectorEvent(...)` return the triggering `QName` instead of `bool` so actualizer logging can distinguish function-triggered events from CUD-triggered events
+  - update: make `ProjectorEvent(...)` return the triggering `QName` instead of `bool` so actualizer logging can distinguish execute, execute-with-param, and CUD-triggered events
   - add: `errWithCtx` for propagating failure logs with the enriched log context
 
 - [x] update: [pkg/processors/actualizers/async.go](../../../pkg/processors/actualizers/async.go)
   - update: route failures through context-aware error logging and replace n10n trace logging with verbose loggerctx logging
   - update: `asyncProjector.DoAsync` — enrich the base log context with `wsid`, log the triggering projector, log event/CUDs before `Invoke`, and log `success` on success
-  - update: `logEventAndCUDs(logCtx, event, pLogOffset, appDef, triggeredByQName)` — use the already resolved triggering `QName`, log all CUDs for function-triggered events, and otherwise log only CUDs whose `QName` matches it
+  - update: `logEventAndCUDs(logCtx, event, pLogOffset, appDef, triggeredByQName)` — use the already resolved triggering `QName`, log all CUDs for function-triggered and object-document/object-record-triggered events, and otherwise log only CUDs whose `QName` matches it
 
 - [x] update: [pkg/processors/actualizers/interface.go](../../../pkg/processors/actualizers/interface.go)
   - update: remove configurable async actualizer `LogError` hook so failures always flow through the loggerctx-based error handling in `async.go`
