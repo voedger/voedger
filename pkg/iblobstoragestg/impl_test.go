@@ -299,6 +299,32 @@ func TestReadBLOBStopLimiter(t *testing.T) {
 		require.NoError(writer.Flush())
 		require.Empty(buf.Bytes())
 	})
+
+	t.Run("stops after first bucket", func(t *testing.T) {
+		require := require.New(t)
+		firstBucketSize := chunkSize * bucketSize
+		bigBLOB := bytes.Repeat([]byte("d"), int(firstBucketSize+1))
+		key := writeBLOB(t, 6, bigBLOB)
+		var buf bytes.Buffer
+		writer := bufio.NewWriter(&buf)
+		remaining := firstBucketSize
+
+		err := blobber.ReadBLOB(ctx, &key, nil, writer, func(wantReadBytes uint64) error {
+			if remaining == 0 {
+				return iblobstorage.ErrReadLimitReached
+			}
+			if wantReadBytes >= remaining {
+				remaining = 0
+			} else {
+				remaining -= wantReadBytes
+			}
+			return nil
+		})
+
+		require.NoError(err)
+		require.NoError(writer.Flush())
+		require.Equal(bigBLOB[:int(firstBucketSize)], buf.Bytes())
+	})
 }
 
 func TestQuotaExceed(t *testing.T) {

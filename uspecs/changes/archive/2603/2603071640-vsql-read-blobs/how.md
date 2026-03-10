@@ -13,7 +13,7 @@
 - Emit `Content-Length` from blobber `initResponse` so sqlquery can build `blobinfo()` from headers only
 - Reuse the same `Content-Length` header in federation through `blobSizeFromHeader`, so the BLOB size source stays consistent across readers
 - Thread `blobprocessor.IRequestHandlerPtr` and `bus.IRequestSenderPtr` through `sqlquery.Provide` → `sysprovide.ProvideStateless` → VVM wiring
-- Group bootstrap-settled interface pointers in `btstrp.SettledInterfacePtrs` so sqlquery receives the settled blob handler and request sender through one bootstrap-owned struct
+- Group post-wire interface pointers in `btstrp.PostWireInterfacePtrs` so sqlquery receives the blob handler and request sender through one bootstrap-owned struct whose placeholders are filled during bootstrap
 - Group requested blob functions by field name and execute one `HandleRead_V2` call per field
   - `blobinfo(field)` and `blobtext(field)` for the same field share one blobber read
   - `ownerRecord` is the source document QName

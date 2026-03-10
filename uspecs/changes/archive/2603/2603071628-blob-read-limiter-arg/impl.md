@@ -31,7 +31,7 @@
   - update: treat `ErrReadLimitReached` as a successful limited read
   - update: skip corruption mismatch reporting for intentionally limited reads
 - [x] update: [pkg/iblobstoragestg/impl_test.go](../../../pkg/iblobstoragestg/impl_test.go)
-  - add: verify storage read stops cleanly when the limiter ends the read after the first chunk
+  - add: extend `TestReadBLOBStopLimiter` to cover stopping after the first chunk, stopping immediately with `stateCallback`, propagating non-limit errors, and stopping after the first bucket
 
 ### SQL BLOB read behavior
 

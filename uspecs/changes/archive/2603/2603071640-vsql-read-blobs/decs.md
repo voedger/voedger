@@ -77,11 +77,11 @@ Alternatives:
 - reject in `dml` (confidence: low)
   - would require `dml` to understand sqlquery-only function semantics
 
-## 7. Bootstrap-settled interfaces are grouped in SettledInterfacePtrs
+## 7. Post-wire interfaces are grouped in PostWireInterfacePtrs
 
-Group bootstrap-settled interface pointers in `btstrp.SettledInterfacePtrs` and pass that struct through VVM wiring
+Group post-wire interface pointers in `btstrp.PostWireInterfacePtrs` and pass that struct through VVM wiring
 
-Rationale: the final implementation settles blobber app storage, router app storage, blob handler, and request sender during bootstrap. Grouping them in `SettledInterfacePtrs` keeps that ownership in `btstrp`, reduces loose parameters across bootstrap and VVM provider functions, and lets sqlquery consume the settled handler and sender pointers without another container
+Rationale: the final implementation creates placeholder pointer cells during wiring for blobber app storage, router app storage, blob handler, and request sender, then fills them during bootstrap. Grouping them in `PostWireInterfacePtrs` keeps that ownership in `btstrp`, reduces loose parameters across bootstrap and VVM provider functions, and gives sqlquery one bootstrap-owned container for the handler and sender that become available only after wiring
 
 Alternatives:
 
