@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -471,7 +472,7 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
 
-	var buf bytes.Buffer
+	var buf lockedBuffer
 	logger.SetCtxWriters(&buf, &buf)
 	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
 
@@ -1165,4 +1166,21 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	})
 	require.NoError(t, err)
 	t.Logf("FlushesTotal: %d", actMetrics.total(aaFlushesTotal))
+}
+
+type lockedBuffer struct {
+	buf bytes.Buffer
+	mu  sync.Mutex
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
