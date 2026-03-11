@@ -342,6 +342,7 @@ func TestSqlQuery_records(t *testing.T) {
 			`{"args":{"Query":"select * from app1pkg.payments.2 where id = 2"}}`:                                           "record ID and 'where id ...' clause can not be used in one query",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws.1"}}`:                                                 "conditions are not allowed to query a singleton",
 			`{"args":{"Query":"select sys.QName from app1pkg.test_ws where id = 1"}}`:                                      "conditions are not allowed to query a singleton",
+			fmt.Sprintf(`{"args":{"Query":"select name, name from app1pkg.payments where id = %d"}}`, eftID):               `field "name" is selected more than once`,
 		}
 
 		for query, expectedError := range cases {
@@ -792,6 +793,8 @@ func TestBlobFunctionsErrors(t *testing.T) {
 		{name: "blobtext startFrom must be non-negative", query: "select blobtext(Blob, -1) from app1pkg.DocWithBLOB.123", err: "blobtext: invalid startFrom value"},
 		{name: "blobtext startFrom must be correct positive", query: "select blobtext(Blob, 9999999999999999999999999999) from app1pkg.DocWithBLOB.123", err: "blobtext: invalid startFrom value"},
 		{name: "unknown function", query: "select unknownfunc(Blob) from app1pkg.DocWithBLOB.123", err: "unsupported function: unknownfunc"},
+		{name: "duplicate blobinfo on same field", query: "select blobinfo(Blob), blobinfo(Blob) from app1pkg.DocWithBLOB.123", err: `field "blobinfo(Blob)" is selected more than once`},
+		{name: "duplicate blobtext on same field", query: "select blobtext(Blob), blobtext(Blob) from app1pkg.DocWithBLOB.123", err: `field "blobtext(Blob)" is selected more than once`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

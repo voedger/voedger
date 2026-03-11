@@ -115,6 +115,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 
 		f := &filter{fields: make(map[string]bool)}
 		var blobFuncs []blobFuncDesc
+		seenFields := make(map[string]bool)
 		for _, intf := range s.SelectExprs {
 			switch expr := intf.(type) {
 			case *sqlparser.StarExpr:
@@ -134,13 +135,21 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 							fieldName = recoverFieldName(sourceTableWithFields, fieldName)
 						}
 					}
-
+					if seenFields[fieldName] {
+						return fieldSeenErr(fieldName)
+					}
+					seenFields[fieldName] = true
 					f.fields[fieldName] = true
 				case *sqlparser.FuncExpr:
 					bf, err := parseFuncExpr(colExpr, sourceTableType)
 					if err != nil {
 						return coreutils.NewHTTPError(http.StatusBadRequest, err)
 					}
+					outputKey := fmt.Sprintf("%s(%s)", bf.funcName, bf.fieldName)
+					if seenFields[outputKey] {
+						return fieldSeenErr(outputKey)
+					}
+					seenFields[outputKey] = true
 					blobFuncs = append(blobFuncs, bf)
 				default:
 					return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported select expression:", sqlparser.String(colExpr))
@@ -427,4 +436,8 @@ func renderDBEvent(data map[string]interface{}, f *filter, event istructs.IDbEve
 		errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
 		data["Error"] = errorData
 	}
+}
+
+func fieldSeenErr(fieldName string) error {
+	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("field %q is selected more than once", fieldName))
 }
