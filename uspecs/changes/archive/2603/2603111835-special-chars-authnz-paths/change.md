@@ -2,6 +2,7 @@
 registered_at: 2026-03-11T13:31:14Z
 change_id: 2603111331-special-chars-authnz-paths
 baseline: 0d7582b825ebbb003ffb61ded265d9e8fe12b84d
+archived_at: 2026-03-11T18:35:21Z
 ---
 
 # Change request: Special chars in authnz paths of API v2
