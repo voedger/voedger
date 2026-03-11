@@ -12,13 +12,16 @@ import (
 	"log"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
@@ -532,10 +535,23 @@ func TestAuthnz(t *testing.T) {
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
+	// issues api token as token that has no ability to read our odoc and orecord
+	apiRole := appdef.NewQName("app1pkg", "ApiRole")
+	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(t, err)
+	apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{apiRole},
+		ws.WSID, payloads.PrincipalPayload{
+			Login:       ws.Owner.Name,
+			SubjectKind: istructs.SubjectKind_User,
+			ProfileWSID: ws.Owner.ProfileWSID,
+		})
+	require.NoError(t, err)
+
 	t.Run("foreign app", func(t *testing.T) {
 		loginID := vit.GetCDocLoginID(ws.Owner.Login)
 		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
-		require.NoError(t, err)
+		require := require.New(t)
+		require.NoError(err)
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, ws.Owner.Name, istructs.CurrentClusterID())
 		appWSNumber := coreutils.AppWSNumber(pseudoWSID, registryAppStructs.NumAppWorkspaces())
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
@@ -555,6 +571,25 @@ func TestAuthnz(t *testing.T) {
 		// allowed, just expect 400 not found
 		body = `{"args":{"Query":"select Fld1 from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
 		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("record with ID '123' not found"))
+	})
+
+	// create odoc and orecord
+	body := `{"args":{"sys.ID":1,"odocIntFld":42,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord1IntFld":43}]},"unloggedArgs":{"sys.ID":3}}`
+	resp := vit.Func(fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/commands/app1pkg.CmdODocOne", ws.WSID), body,
+		httpu.WithMethod(http.MethodPost),
+		httpu.WithAuthorizeBy(ws.Owner.Token),
+	)
+	odocID := resp.NewIDs["1"]
+	orecordID := resp.NewIDs["2"]
+
+	t.Run("403 on deny to read odoc", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.odoc1.%d"},"elements":[{"fields":["Result"]}]}`, odocID)
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
+	})
+
+	t.Run("403 on deny to read orecord", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.orecord1.%d"},"elements":[{"fields":["Result"]}]}`, orecordID)
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
 	})
 }
 
