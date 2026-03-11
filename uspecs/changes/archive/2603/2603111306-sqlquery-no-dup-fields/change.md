@@ -2,6 +2,7 @@
 registered_at: 2026-03-11T12:18:41Z
 change_id: 2603111218-sqlquery-no-dup-fields
 baseline: db41f9b5fc01294774f9edc07484dfa4c65ced00
+archived_at: 2026-03-11T13:06:47Z
 ---
 
 # Change request: Sqlquery deny duplicate field selection

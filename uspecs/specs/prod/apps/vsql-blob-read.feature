@@ -49,8 +49,8 @@ Feature: VSQL BLOB reading
 
     Scenario: Duplicate blobinfo call on same field rejected
       When VADeveloper executes "select blobinfo(Img1), blobinfo(Img1) from air.Restaurant.123.air.DocWithBLOBs.456"
-      Then error "field 'blobinfo(Img1)' is selected more than once" is returned
+      Then error "field \"blobinfo(Img1)\" is selected more than once" is returned
 
     Scenario: Duplicate blobtext call on same field rejected
       When VADeveloper executes "select blobtext(Img1), blobtext(Img1) from air.Restaurant.123.air.DocWithBLOBs.456"
-      Then error "field 'blobtext(Img1)' is selected more than once" is returned
+      Then error "field \"blobtext(Img1)\" is selected more than once" is returned
