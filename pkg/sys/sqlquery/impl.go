@@ -168,7 +168,8 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		if _, ok := appStructs.AppDef().Type(sourceTableName).(appdef.IStructure); ok {
 			// is a structure -> check ACL
 			switch kind {
-			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc:
+			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord,
+				appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
 				fields := make([]string, 0, len(f.fields))
 				for f := range f.fields {
 					fields = append(fields, f)
