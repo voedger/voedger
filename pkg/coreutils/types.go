@@ -53,9 +53,9 @@ func (c CUDs) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	out := make([]byte, len(`{"cuds":`), len(`{"cuds":`)+len(b)+1)
-	copy(out, `{"cuds":`)
+	const cuds = `{"cuds":`
+	out := make([]byte, 0, len(cuds)+len(b)+1)
+	out = append(out, cuds...)
 	out = append(out, b...)
 	out = append(out, '}')
 	return out, nil
