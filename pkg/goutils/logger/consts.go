@@ -23,8 +23,7 @@ const (
 )
 
 var (
-	// ctxHandlerOpts disables handler-level filtering (isEnabled() already gates all calls)
-	// and maps internal slog levels to the names used by the logger package.
+	// ctxHandlerOpts disables handler-level filtering (isEnabled() already gates all calls).
 	ctxHandlerOpts = &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}
