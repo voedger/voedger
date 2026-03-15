@@ -6,6 +6,7 @@
 package router
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 	"net/url"
 	"runtime/debug"
 	"strconv"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -75,11 +75,11 @@ type annoyingErrorsFilter struct {
 	w io.Writer
 }
 
-func (fw *annoyingErrorsFilter) Write(p []byte) (n int, err error) {
+func (f *annoyingErrorsFilter) Write(p []byte) (n int, err error) {
 	if bytes.Contains(p, []byte("TLS handshake error")) {
 		return len(p), nil
 	}
-	return fw.w.Write(p)
+	return f.w.Write(p)
 }
 
 func replyServiceUnavailable(rw http.ResponseWriter) {
