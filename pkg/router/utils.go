@@ -76,7 +76,7 @@ type annoyingErrorsFilter struct {
 }
 
 func (fw *annoyingErrorsFilter) Write(p []byte) (n int, err error) {
-	if strings.Contains(string(p), "TLS handshake error") {
+	if bytes.Contains(p, []byte("TLS handshake error")) {
 		return len(p), nil
 	}
 	return fw.w.Write(p)
