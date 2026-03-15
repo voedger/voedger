@@ -71,11 +71,11 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 	return true
 }
 
-type filteringWriter struct {
+type annoyingErrorsFilter struct {
 	w io.Writer
 }
 
-func (fw *filteringWriter) Write(p []byte) (n int, err error) {
+func (fw *annoyingErrorsFilter) Write(p []byte) (n int, err error) {
 	if strings.Contains(string(p), "TLS handshake error") {
 		return len(p), nil
 	}
