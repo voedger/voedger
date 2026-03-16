@@ -23,7 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-var requestNumber int64
+var requestNumber atomic.Uint64
 
 type httpStorage struct {
 	httpClient httpu.IHTTPClient
@@ -171,9 +171,9 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		})
 	}
 
-	var reqNumber int64
+	var reqNumber uint64
 	if logger.IsVerbose() {
-		reqNumber = atomic.AddInt64(&requestNumber, 1)
+		reqNumber = requestNumber.Add(1)
 		logger.Verbose("req ", reqNumber, ": ", method, " ", kb.url, " body: ", string(kb.body))
 	}
 
@@ -182,7 +182,7 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		return errorResult(err)
 	}
 
-	if logger.IsVerbose() {
+	if logger.IsVerbose() && reqNumber > 0 { // avoiding case when Verbose level set after request was sent
 		logger.Verbose("resp ", reqNumber, ": ", resp.HTTPResp.StatusCode, " body: ", resp.Body)
 	}
 
