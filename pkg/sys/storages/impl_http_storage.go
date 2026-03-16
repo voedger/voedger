@@ -12,14 +12,18 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
+
+var requestNumber int64
 
 type httpStorage struct {
 	httpClient httpu.IHTTPClient
@@ -167,9 +171,19 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		})
 	}
 
+	var reqNumber int64
+	if logger.IsVerbose() {
+		reqNumber = atomic.AddInt64(&requestNumber, 1)
+		logger.Verbose("req ", reqNumber, ": ", method, " ", kb.url, " body: ", string(kb.body))
+	}
+
 	resp, err := s.httpClient.ReqReader(ctx, kb.url, body, opts...)
 	if err != nil && !errors.Is(err, httpu.ErrUnexpectedStatusCode) {
 		return errorResult(err)
+	}
+
+	if logger.IsVerbose() {
+		logger.Verbose("resp ", reqNumber, ": ", resp.HTTPResp.StatusCode, " body: ", resp.Body)
 	}
 
 	return callback(nil, &httpValue{
