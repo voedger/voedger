@@ -5,8 +5,6 @@
 package schedulers
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
@@ -19,10 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 )
-
-type TimeAfterFunc func(d time.Duration) <-chan time.Time
-
-type LogErrorFunc func(args ...interface{})
 
 type BasicSchedulerConfig struct {
 	VvmName processors.VVMName
