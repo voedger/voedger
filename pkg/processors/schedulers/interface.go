@@ -37,8 +37,6 @@ type BasicSchedulerConfig struct {
 	stateOpts  state.StateOpts
 	HTTPClient httpu.IHTTPClient
 
-	// Optional. Default value: `core-logger.Error`
-	LogError LogErrorFunc
 	//IntentsLimit top limit per event, optional, default value is 100
 	IntentsLimit int
 	EmailSender  state.IEmailSender
