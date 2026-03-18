@@ -100,9 +100,9 @@ func readBody(validatedData validatedData, req *http.Request) (validatedData, er
 		return validatedData, nil
 	}
 	var err error
-	// notest
 	validatedData.body, err = io.ReadAll(req.Body)
 	if err != nil {
+		// notest
 		return validatedData, fmt.Errorf("failed to read body: %w", err)
 	}
 	return validatedData, nil
