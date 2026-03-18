@@ -6,7 +6,7 @@
   - update: `validatorFunc` signature — remove `rw http.ResponseWriter` parameter, change return type from `(validatedData, bool)` to `(validatedData, error)`
 
 - [x] update: [pkg/router/impl_validation.go](../../../pkg/router/impl_validation.go)
-  - update: `readBody` — remove `rw http.ResponseWriter` parameter, return `error` instead of writing to response; drop logger call (moved to `validate`)
+  - update: `readBody` — remove `rw http.ResponseWriter` parameter, return `error` instead of writing to response; drop logger call (moved to `withValidate`)
   - update: `cookiesTokenToHeaders` — remove `rw http.ResponseWriter` parameter, return `error` instead of calling `WriteTextResponse`
   - update: `validateRequest` — remove `rw http.ResponseWriter` parameter, return `error` instead of calling `ReplyCommonError` directly
   - update: `validate` — remove `rw http.ResponseWriter` parameter, return `error`; no longer logs or replies

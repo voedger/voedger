@@ -51,14 +51,14 @@ func validateRequest(req *http.Request, numsAppsWorkspaces map[appdef.AppQName]i
 	if len(wsidStr) > 0 {
 		wsid, err = coreutils.ClarifyJSONWSID(json.Number(wsidStr))
 		if err != nil {
-			return validatedData{}, err
+			return validatedData{}, fmt.Errorf("invalid wsid: %w", err)
 		}
 	}
 
 	appQNameStr := vars[URLPlaceholder_appOwner] + appdef.AppQNameQualifierChar + vars[URLPlaceholder_appName]
 	appQName, err := appdef.ParseAppQName(appQNameStr)
 	if err != nil {
-		return validatedData{}, err
+		return validatedData{}, fmt.Errorf("invalid app QName: %w", err)
 	}
 
 	if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
