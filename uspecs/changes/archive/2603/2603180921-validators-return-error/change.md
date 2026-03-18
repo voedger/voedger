@@ -3,6 +3,7 @@ registered_at: 2026-03-18T08:22:25Z
 change_id: 2603180822-validators-return-error
 issue_url: https://untill.atlassian.net/browse/AIR-3339
 baseline: aeff999f2fc662c2a5f2679fc90d803ab16c4d95
+archived_at: 2026-03-18T09:21:49Z
 ---
 
 # Change request: Router validators return error instead of reply
