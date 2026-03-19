@@ -86,6 +86,14 @@ func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
 	}
 
 	a.retrierCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, err error) {
+		var errPipeline pipeline.IErrorPipeline
+		if errors.As(opErr, &errPipeline) {
+			if wp, ok := errPipeline.GetWork().(*workpiece); ok && wp != nil {
+				logger.ErrorCtx(wp.logCtx, opErr)
+				return true, nil
+			}
+		}
+		logger.ErrorCtx(a.readCtx.vvmCtx, a.name, opErr)
 		return true, nil
 	}
 }
@@ -171,7 +179,6 @@ func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 
 	err = a.readOffset(p.name)
 	if err != nil {
-		logger.ErrorCtx(vvmCtx, a.name, err)
 		return err
 	}
 
@@ -243,7 +250,6 @@ func (a *asyncActualizer) keepReading(ctx context.Context) (err error) {
 		if a.offset < offset {
 			err = a.readPlogToOffset(a.readCtx.vvmCtx, offset)
 			if err != nil {
-				logger.ErrorCtx(a.readCtx.vvmCtx, a.name, err)
 				a.readCtx.cancelWithError(err)
 			}
 		}
@@ -260,7 +266,6 @@ func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.O
 
 	err = a.pipeline.SendAsync(work)
 	if err != nil {
-		logger.ErrorCtx(work.logCtx, err)
 		return err
 	}
 
@@ -431,7 +436,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 	}
 
 	if err := p.borrowedPartition.Invoke(w.logCtx, p.name, p.state, p.state); err != nil {
-		logger.ErrorCtx(w.logCtx, err)
+		// logger.ErrorCtx(w.logCtx, "ap invoke error: ", err)
 		return nil, err
 	}
 
