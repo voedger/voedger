@@ -436,7 +436,6 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 	}
 
 	if err := p.borrowedPartition.Invoke(w.logCtx, p.name, p.state, p.state); err != nil {
-		// logger.ErrorCtx(w.logCtx, "ap invoke error: ", err)
 		return nil, err
 	}
 
