@@ -112,7 +112,7 @@ func (s *httpServer) preRun(ctx context.Context) {
 func (s *httpServer) Run(ctx context.Context) {
 	s.preRun(ctx)
 	if err := s.server.Serve(s.listener); err != http.ErrServerClosed {
-		logger.ErrorCtx(s.rootLogCtx, "endpoint.unexpectedstop", "Serve() error: ", err.Error())
+		logger.ErrorCtx(s.rootLogCtx, "endpoint.unexpectedstop", err.Error())
 	}
 }
 

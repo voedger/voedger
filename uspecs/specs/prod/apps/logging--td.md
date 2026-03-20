@@ -91,7 +91,7 @@ HTTP root context is derived from VVM context:
 - Start accepting connections failure: level `Error`, stage `endpoint.listen.error`, msg `<error message>`
 - Server stops accepting connections: level `Info`, stage `endpoint.shutdown`, msg (empty)
 - Error on http server shutdown: level `Error`, stage `endpoint.shutdown.error`, msg `<error message>`
-- Server exits unexpectedly: level `Error`, stage `endpoint.unexpectedstop`, msg `Serve() error: <err>` or `ServeTLS() error: <err>`
+- Server exits unexpectedly: level `Error`, stage `endpoint.unexpectedstop`, msg `<err>`
 
 #### Application deployment
 

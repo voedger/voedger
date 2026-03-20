@@ -41,8 +41,7 @@
   - update: `preRun` to add `extension` attrib (from `httpServer.name` field: `sys._HTTPServer`, `sys._AdminHTTPServer`, `sys._HTTPSServer`, or `sys._ACMEServer`) via `logger.WithContextAttrs`; use `sys.VApp_SysVoedger` for `vapp` attrib
   - update: `httpServer.log` removed — replaced with direct `logger.*Ctx` calls with appropriate stage and level
   - update: `preRun` log: level `Info`, stage `endpoint.listen.start`, msg `<addr>:<port>`
-  - update: `Run` on unexpected Serve() error: level `Error`, stage `endpoint.unexpectedstop`, msg `Serve() error: <err>`
-  - update: `httpsService.Run` on unexpected ServeTLS() error: level `Error`, stage `endpoint.unexpectedstop`, msg `ServeTLS() error: <err>`
+  - update: `httpServer.Run` and `httpsService.Run` on unexpected server error: level `Error`, stage `endpoint.unexpectedstop`, msg `<err>`
   - update: `Stop` on Shutdown() failure: level `Error`, stage `endpoint.shutdown.error`, msg `<error message>`
   - add: On successful shutdown: level `Info`, stage `endpoint.shutdown`, msg (empty)
 
