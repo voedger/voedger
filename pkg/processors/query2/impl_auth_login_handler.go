@@ -24,7 +24,7 @@ func authLoginHandler() apiPathHandler {
 	return apiPathHandler{
 		exec: func(ctx context.Context, qw *queryWork) (err error) {
 
-			args := coreutils.MapObject(qw.msg.QueryParams().Argument)
+			args := coreutils.MapObject(qw.queryParams.Argument)
 			login, _, err := args.AsString(fieldLogin)
 			if err != nil {
 				return coreutils.NewHTTPError(http.StatusBadRequest, err)

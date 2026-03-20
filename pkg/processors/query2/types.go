@@ -43,7 +43,7 @@ type IQueryMessage interface {
 	AppQName() appdef.AppQName
 	WSID() istructs.WSID
 	Responder() bus.IResponder
-	QueryParams() QueryParams
+	RawParams() map[string]string
 	DocID() istructs.IDType
 	APIPath() processors.APIPath
 	RequestCtx() context.Context
@@ -91,7 +91,7 @@ type implIQueryMessage struct {
 	appQName       appdef.AppQName
 	wsid           istructs.WSID
 	responder      bus.IResponder
-	queryParams    QueryParams
+	rawParams      map[string]string
 	docID          istructs.IDType
 	apiPath        processors.APIPath
 	requestCtx     context.Context
@@ -117,8 +117,8 @@ func (qm *implIQueryMessage) WSID() istructs.WSID {
 func (qm *implIQueryMessage) Responder() bus.IResponder {
 	return qm.responder
 }
-func (qm *implIQueryMessage) QueryParams() QueryParams {
-	return qm.queryParams
+func (qm *implIQueryMessage) RawParams() map[string]string {
+	return qm.rawParams
 }
 func (qm *implIQueryMessage) DocID() istructs.IDType {
 	return qm.docID
