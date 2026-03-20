@@ -132,8 +132,8 @@ func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 		metrics:            metrics,
 		secretReader:       secretReader,
 		rowsProcessorErrCh: make(chan error, 1),
-		queryParams:        msg.QueryParams(),
-		federation:         federation,
+
+		federation: federation,
 	}
 }
 
@@ -153,13 +153,13 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 }
 
 func NewIQueryMessage(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, responder bus.IResponder,
-	queryParams QueryParams, docID istructs.IDType, apiPath processors.APIPath,
+	rawParams map[string]string, docID istructs.IDType, apiPath processors.APIPath,
 	qName appdef.QName, partition istructs.PartitionID, host string, token string, workspaceQName appdef.QName, headerAccept string) IQueryMessage {
 	return &implIQueryMessage{
 		appQName:       appQName,
 		wsid:           wsid,
 		responder:      responder,
-		queryParams:    queryParams,
+		rawParams:      rawParams,
 		docID:          docID,
 		apiPath:        apiPath,
 		requestCtx:     requestCtx,
