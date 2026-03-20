@@ -81,7 +81,7 @@
   - update: On compareAndSwap error: `logger.ErrorCtx(ctx, "leadership.maintain.stgerror", "compareAndSwap error:", err)`
   - update: On leadership stolen: `logger.ErrorCtx(ctx, "leadership.maintain.stolen", "compareAndSwap !ok => release")`
   - update: On retry deadline reached: `logger.ErrorCtx(ctx, "leadership.maintain.release", "retry deadline reached, releasing. Last error:", err)`
-  - add: On error after processKillThreshold: `logger.ErrorCtx(ctx, "leadership.maintain.terminating", "the process is still alive after the time alloted for graceful shutdown -> terminating...")`
+  - add: On error after processKillThreshold: `logger.ErrorCtx(ctx, "leadership.maintain.terminating", "the process is still alive after the time allotted for graceful shutdown -> terminating...")`
   - update: Drop all other logging not described in TD
   - add: `releaseLeadership(ctx, key)` — add `ctx context.Context` param; when key not found: `logger.WarningCtx(ctx, "leadership.release.notleader", "we're not the leader")`
   - add: `releaseLeadership` — on success before cancel: `logger.InfoCtx(li.ctx, "leadership.released", "")`

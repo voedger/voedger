@@ -8,7 +8,7 @@ The logging subsystem provides structured, context-aware logging with automatic 
 
 ### Testing
 
-Tests that ensures that certain attributes and messages are logged in basic scenarios should be implemented
+Tests that ensure that certain attributes and messages are logged in basic scenarios should be implemented
 
 ### Logging Attribute
 
@@ -124,7 +124,7 @@ Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
 - On transient storage error (retried every second within the interval): level `Error`, stage `leadership.maintain.stgerror`, msg `compareAndSwap error: <err>`
 - On leadership stolen: level `Error`, stage `leadership.maintain.stolen`, msg `compareAndSwap !ok => release`
 - On all retries exhausted within interval: level `Error`, stage `leadership.maintain.release`, msg `retry deadline reached, releasing. Last error: <err>`
-- On error after `processKillThreshold` (TTL/4), before `os.Exit(1)`: level `Error`, stage `leadership.maintain.terminating`, msg `the process is still alive after the time alloted for graceful shutdown -> terminating...`
+- On error after `processKillThreshold` (TTL/4), before `os.Exit(1)`: level `Error`, stage `leadership.maintain.terminating`, msg `the process is still alive after the time allotted for graceful shutdown -> terminating...`
 
 #### Leadership release
 
