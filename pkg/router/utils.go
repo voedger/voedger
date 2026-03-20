@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"runtime/debug"
 	"strconv"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -159,9 +160,15 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 	})
 }
 
+func logLatency(ctx context.Context, sentAt time.Time) {
+	if logger.IsVerbose() {
+		logger.VerboseCtx(ctx, "routing.latency1", fmt.Sprintf("%dms", time.Since(sentAt).Milliseconds()))
+	}
+}
+
 func logServeRequest(ctx context.Context) {
 	if logger.IsVerbose() {
-		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "request accepted")
+		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.accepted", "")
 	}
 }
 
@@ -183,6 +190,8 @@ func apiPathToExtension(apiPath processors.APIPath) string {
 		return "sys._Auth_Refresh"
 	case processors.APIPath_Users:
 		return "sys._Users"
+	case processors.APIPath_N10N_SubscribeAndWatch:
+		return "sys._N10N_SubscribeAndWatch"
 	}
 	return strconv.Itoa(int(apiPath))
 }
