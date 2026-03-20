@@ -159,7 +159,7 @@
 - [x] update: [pkg/processors/query2/impl.go](../../../pkg/processors/query2/impl.go)
   - update: Query execution error: level `Error`, stage `qp.error`, msg `<error message>` (replace current `logger.Error(fmt.Sprintf(...))` with `logger.ErrorCtx`)
   - add: Query execution success: level `Verbose`, stage `qp.success`, msg (empty) — logged right after `exec` handler returns `nil`
-  - drop: `logger.Error(fmt.Sprintf("failed to send the error %s: %s"...))` in error response sending
+  - add: On failed to send error response: level `Error`, stage `qp.error`, msg `"failed to send error: <respondErr>"`
 
 - [x] update: [pkg/processors/query/operator-send-to-bus-impl.go](../../../pkg/processors/query/operator-send-to-bus-impl.go)
   - drop: `logger.Error("failed to send error from rowsProcessor to QP: "...)` in `OnError`

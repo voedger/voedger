@@ -103,7 +103,8 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						respWriter.Close(err)
 					} else if err != nil {
 						respondErr := qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: statusCode}, err)
-						if respondErr != nil { // notest
+						if respondErr != nil {
+							logger.ErrorCtx(qwork.msg.RequestCtx(), "qp.error", "failed to send error: ", respondErr.Error())
 						}
 					}
 				}()

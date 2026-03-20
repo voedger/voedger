@@ -200,6 +200,7 @@ The context with attributes is received from Router
 
 - query execution error: level `Error`, stage `qp.error`, msg `<error message>`
 - Logs success right after `execQuery` returns: level `Verbose`, stage `qp.success`, msg (empty)
+- Failed to send error response: level `Error`, stage `qp.error`, msg `"failed to send error: <respondErr>"`
 
 ### Sync Projectors
 
