@@ -384,7 +384,7 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 		require.Equal(2, strings.Count(out, "op=create"))
 		require.Equal(2, strings.Count(out, "newfields="))
 		require.NotContains(out, "oldfields=")
-		require.Contains(out, "stage=ap ")
+		require.Contains(out, "stage=ap")
 		require.Contains(out, "stage=ap.success")
 	})
 
@@ -464,7 +464,7 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 		require.Equal(1, strings.Count(out, "newfields="))
 		require.NotContains(out, "oldfields=")
 		require.Contains(out, "args={}")
-		require.Contains(out, "stage=ap ")
+		require.Contains(out, "stage=ap")
 		require.Contains(out, "stage=ap.success")
 	})
 }

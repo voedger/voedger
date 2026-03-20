@@ -913,7 +913,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.appStructs.AppDef())
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
-			// notest
+			// notest: impossible
 			panic("failed to marshal response: " + err.Error())
 		}
 		body.WriteString(`,"Result":`)
