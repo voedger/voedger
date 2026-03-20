@@ -17,7 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
-
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -44,14 +43,13 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 		jsonParam, ok := req.URL.Query()["payload"]
 		if !ok || len(jsonParam[0]) < 1 {
 			errMsg := "query parameter with payload (SubjectLogin id and ProjectionKey) is missing"
-			logger.ErrorCtx(logCtx, "n10n.error", errMsg)
+			logger.ErrorCtx(logCtx, "n10n.error", errMsg+",rawkeys=")
 			WriteTextResponse(rw, errMsg, http.StatusBadRequest)
 			return
 		}
 		if err = json.Unmarshal([]byte(jsonParam[0]), &urlParams); err != nil {
-			err = fmt.Errorf("cannot unmarshal input payload %w", err)
-			logger.ErrorCtx(logCtx, "n10n.error", err)
-			WriteTextResponse(rw, err.Error(), http.StatusBadRequest)
+			logger.ErrorCtx(logCtx, "n10n.error", fmt.Sprintf("cannot unmarshal input payload %v,rawkeys=%s", err, jsonParam[0]))
+			WriteTextResponse(rw, "cannot unmarshal input payload "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		flusher, ok = rw.(http.Flusher)
@@ -76,23 +74,26 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 		}
 		for _, projection := range urlParams.ProjectionKey {
 			if err = s.n10n.Subscribe(channel, projection); err != nil {
-				logger.ErrorCtx(logCtx, "n10n.error", err)
+				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), "n10n.subscribe.error", err)
 				WriteTextResponse(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}
-		if len(urlParams.ProjectionKey) > 0 {
-			logCtx = logger.WithContextAttrs(logCtx, map[string]any{
-				logAttrib_ProjectionKey: in10n.ProjectionKeysToJSON(urlParams.ProjectionKey),
-			})
-		}
 		flusher.Flush()
-		serveN10NChannel(logCtx, rw, flusher, channel, s.n10n)
+		serveN10NChannel(logCtx, rw, flusher, channel, s.n10n, urlParams.ProjectionKey)
 	}
 }
 
+func n10nProjectionLogCtx(baseCtx context.Context, pk in10n.ProjectionKey) context.Context {
+	return logger.WithContextAttrs(baseCtx, map[string]any{
+		logger.LogAttr_VApp:  pk.App,
+		logger.LogAttr_WSID:  pk.WS,
+		logAttrib_Projection: pk.Projection.String(),
+	})
+}
+
 // finishes when logCtx is closed or on SSE message sending failure
-func serveN10NChannel(logCtx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker) {
+func serveN10NChannel(logCtx context.Context, rw http.ResponseWriter, flusher http.Flusher, channel in10n.ChannelID, n10n in10n.IN10nBroker, projectionKeys []in10n.ProjectionKey) {
 	ch := make(chan in10nmem.UpdateUnit)
 	watchChannelCtx, watchChannelCtxCancel := context.WithCancel(logCtx)
 	go func() {
@@ -104,7 +105,11 @@ func serveN10NChannel(logCtx context.Context, rw http.ResponseWriter, flusher ht
 			}
 		})
 	}()
-	logger.VerboseCtx(logCtx, "n10n.subscribe&watch.success")
+	if logger.IsVerbose() {
+		for _, pk := range projectionKeys {
+			logger.VerboseCtx(n10nProjectionLogCtx(logCtx, pk), "n10n.subscribe&watch.success")
+		}
+	}
 	for logCtx.Err() == nil {
 		result, ok := <-ch
 		if !ok {
@@ -112,12 +117,14 @@ func serveN10NChannel(logCtx context.Context, rw http.ResponseWriter, flusher ht
 		}
 		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", result.Projection.ToJSON(), strconvu.UintToString(result.Offset))
 		if _, err := fmt.Fprint(rw, sseMessage); err != nil {
-			logger.ErrorCtx(logCtx, "n10n.watch.sse_error", err)
+			projCtx := n10nProjectionLogCtx(logCtx, result.Projection)
+			logger.ErrorCtx(projCtx, "n10n.sse_send.error", err)
 			break
 		}
 		flusher.Flush()
 		if logger.IsVerbose() {
-			logger.VerboseCtx(logCtx, "n10n.sse_sent", strings.ReplaceAll(sseMessage, "\n", " "))
+			projCtx := n10nProjectionLogCtx(logCtx, result.Projection)
+			logger.VerboseCtx(projCtx, "n10n.sse_send.success", strings.ReplaceAll(sseMessage, "\n", " "))
 		}
 	}
 	// graceful client disconnect -> req.Context() closed
@@ -125,7 +132,11 @@ func serveN10NChannel(logCtx context.Context, rw http.ResponseWriter, flusher ht
 	watchChannelCtxCancel()
 	for range ch {
 	}
-	logger.VerboseCtx(logCtx, "n10n.watch.done")
+	if logger.IsVerbose() {
+		for _, pk := range projectionKeys {
+			logger.VerboseCtx(n10nProjectionLogCtx(logCtx, pk), "n10n.watch.done")
+		}
+	}
 }
 
 func n10nErrorToStatusCode(err error) int {
@@ -145,30 +156,29 @@ curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f
 func (s *routerService) subscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
-		err := getJSONPayload(req, &parameters)
+		rawPayload, err := getJSONPayload(req, &parameters)
 		extension := ""
 		if len(parameters.ProjectionKey) > 0 {
 			extension = parameters.ProjectionKey[0].Projection.String()
 		}
 		logCtx := withLogAttribs(req.Context(), validatedData{}, bus.Request{Resource: extension}, req)
 		if err != nil {
-			logger.ErrorCtx(logCtx, "n10n.error", err)
+			logger.ErrorCtx(logCtx, "n10n.error", fmt.Sprintf("%v,rawkeys=%s", err, rawPayload))
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if len(parameters.ProjectionKey) > 0 {
-			logCtx = logger.WithContextAttrs(logCtx, map[string]any{
-				logAttrib_ProjectionKey: in10n.ProjectionKeysToJSON(parameters.ProjectionKey),
-			})
-		}
 		for _, projection := range parameters.ProjectionKey {
 			if err = s.n10n.Subscribe(parameters.Channel, projection); err != nil {
-				logger.ErrorCtx(logCtx, "n10n.error", err)
+				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), "n10n.error", err)
 				http.Error(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}
-		logger.VerboseCtx(logCtx, "n10n.subscribe.success")
+		if logger.IsVerbose() {
+			for _, pk := range parameters.ProjectionKey {
+				logger.VerboseCtx(n10nProjectionLogCtx(logCtx, pk), "n10n.subscribe.success")
+			}
+		}
 	}
 }
 
@@ -178,30 +188,27 @@ curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f
 func (s *routerService) unSubscribeHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var parameters subscriberParamsType
-		err := getJSONPayload(req, &parameters)
+		rawPayload, err := getJSONPayload(req, &parameters)
 		extension := ""
 		if len(parameters.ProjectionKey) > 0 {
 			extension = parameters.ProjectionKey[0].Projection.String()
 		}
 		logCtx := withLogAttribs(req.Context(), validatedData{}, bus.Request{Resource: extension}, req)
 		if err != nil {
-			logger.ErrorCtx(logCtx, "n10n.error", err)
+			logger.ErrorCtx(logCtx, "n10n.error", fmt.Sprintf("%v,rawkeys=%s", err, rawPayload))
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if len(parameters.ProjectionKey) > 0 {
-			logCtx = logger.WithContextAttrs(logCtx, map[string]any{
-				logAttrib_ProjectionKey: in10n.ProjectionKeysToJSON(parameters.ProjectionKey),
-			})
-		}
 		for _, projection := range parameters.ProjectionKey {
 			if err = s.n10n.Unsubscribe(parameters.Channel, projection); err != nil {
-				logger.ErrorCtx(logCtx, "n10n.error", err)
+				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), "n10n.unsubscribe.error", err)
 				http.Error(rw, err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}
-		logger.VerboseCtx(logCtx, "n10n.unsubscribe.success")
+		for _, pk := range parameters.ProjectionKey {
+			logger.VerboseCtx(n10nProjectionLogCtx(logCtx, pk), "n10n.unsubscribe.success")
+		}
 	}
 }
 
@@ -231,13 +238,13 @@ func (s *routerService) updateHandler() http.HandlerFunc {
 	}
 }
 
-func getJSONPayload(req *http.Request, payload *subscriberParamsType) error {
+func getJSONPayload(req *http.Request, payload *subscriberParamsType) (string, error) {
 	jsonParam, ok := req.URL.Query()["payload"]
 	if !ok || len(jsonParam[0]) < 1 {
-		return errors.New("url parameter with payload (channel id and projection key) is missing")
+		return "", errors.New("url parameter with payload (channel id and projection key) is missing")
 	}
 	if err := json.Unmarshal([]byte(jsonParam[0]), payload); err != nil {
-		return fmt.Errorf("cannot unmarshal input payload %w", err)
+		return jsonParam[0], fmt.Errorf("cannot unmarshal input payload %w", err)
 	}
-	return nil
+	return jsonParam[0], nil
 }

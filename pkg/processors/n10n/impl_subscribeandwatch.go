@@ -157,20 +157,20 @@ func (p *implIN10NProc) subscribe(ctx context.Context, n10nWP *n10nWorkpiece) (e
 			WS:         sub.wsid,
 		}
 		if err = p.n10nBroker.Subscribe(n10nWP.channelID, projectionKey); err != nil {
+			logger.ErrorCtx(n10nProjectionLogCtx(n10nWP.logCtx, projectionKey), "n10n.subscribe.error", err)
 			return fmt.Errorf("subscribe failed: %w", err)
 		}
 		n10nWP.subscribedProjectionKeys = append(n10nWP.subscribedProjectionKeys, projectionKey)
-	}
-	if len(n10nWP.subscribedProjectionKeys) > 0 {
-		n10nWP.logCtx = logger.WithContextAttrs(n10nWP.logCtx, map[string]any{
-			logAttr_ProjectionKey: in10n.ProjectionKeysToJSON(n10nWP.subscribedProjectionKeys),
-		})
 	}
 	return nil
 }
 
 func logSubscribeAndWatchSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
-	logger.VerboseCtx(n10nWP.logCtx, "n10n.subscribe&watch.success")
+	if logger.IsVerbose() {
+		for _, pk := range n10nWP.subscribedProjectionKeys {
+			logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.subscribe&watch.success")
+		}
+	}
 	return nil
 }
 
@@ -183,15 +183,20 @@ func (p *implIN10NProc) watchChannel(ctx context.Context, n10nWP *n10nWorkpiece)
 		// unsubscribe and channel cleanup is done within WatchChannel
 		p.n10nBroker.WatchChannel(watchChannelCtx, n10nWP.channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
 			sseMessage := fmt.Sprintf("event: %s\ndata: %d\n\n", projection.ToJSON(), offset)
+			projCtx := n10nProjectionLogCtx(n10nWP.logCtx, projection)
 			if err := n10nWP.responseWriter.Write(sseMessage); err != nil {
-				logger.ErrorCtx(n10nWP.logCtx, "n10n.watch.sse_error", err)
+				logger.ErrorCtx(projCtx, "n10n.sse_send.error", err)
 				cancel()
 			}
 			if logger.IsVerbose() {
-				logger.VerboseCtx(n10nWP.logCtx, "n10n.sse_sent", strings.ReplaceAll(sseMessage, "\n", " "))
+				logger.VerboseCtx(projCtx, "n10n.sse_send.success", strings.ReplaceAll(sseMessage, "\n", " "))
 			}
 		})
-		logger.VerboseCtx(n10nWP.logCtx, "n10n.watch.done")
+		if logger.IsVerbose() {
+			for _, pk := range n10nWP.subscribedProjectionKeys {
+				logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.watch.done")
+			}
+		}
 		n10nWP.channelCleanup()
 		n10nWP.responseWriter.Close(nil)
 	}()

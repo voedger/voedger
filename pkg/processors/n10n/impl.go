@@ -71,4 +71,12 @@ func reportError(n10nWP *n10nWorkpiece, err error) {
 	n10nWP.responseWriter.Close(err)
 }
 
+func n10nProjectionLogCtx(baseCtx context.Context, pk in10n.ProjectionKey) context.Context {
+	return logger.WithContextAttrs(baseCtx, map[string]any{
+		logger.LogAttr_VApp: pk.App,
+		logger.LogAttr_WSID: pk.WS,
+		logAttr_Projection:  pk.Projection.String(),
+	})
+}
+
 func (m *n10nWorkpiece) Release() {}

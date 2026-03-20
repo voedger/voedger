@@ -31,14 +31,20 @@ func (p *implIN10NProc) unsubscribe(ctx context.Context, n10nWP *n10nWorkpiece) 
 		Projection: n10nWP.entityFromURL,
 		WS:         n10nWP.wsidFromURL,
 	}
-	n10nWP.logCtx = logger.WithContextAttrs(n10nWP.logCtx, map[string]any{
-		logAttr_ProjectionKey: in10n.ProjectionKeysToJSON([]in10n.ProjectionKey{projectionKey}),
-	})
-	return p.n10nBroker.Unsubscribe(n10nWP.channelID, projectionKey)
+	if err = p.n10nBroker.Unsubscribe(n10nWP.channelID, projectionKey); err != nil {
+		logger.ErrorCtx(n10nProjectionLogCtx(n10nWP.logCtx, projectionKey), "n10n.unsubscribe.error", err)
+		return err
+	}
+	n10nWP.subscribedProjectionKeys = append(n10nWP.subscribedProjectionKeys, projectionKey)
+	return nil
 }
 
 func logUnsubscribeSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
-	logger.VerboseCtx(n10nWP.logCtx, "n10n.unsubscribe.success")
+	if logger.IsVerbose() {
+		for _, pk := range n10nWP.subscribedProjectionKeys {
+			logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.unsubscribe.success")
+		}
+	}
 	return nil
 }
 

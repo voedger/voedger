@@ -298,7 +298,7 @@ Context may include `blobid`, `ownerqname`, `ownerfield`, `ownerid` attribs.
 
 **Router (both API v1 and API v2):**
 
-API v1 n10n handlers must be updated to call `withLogAttribs()`, matching API v2 behavior. Both paths set `vapp`, `reqid`, `wsid`, `origin`, and `extension`:
+API v1 n10n handlers must be updated to call `withLogAttribs()`, matching API v2 behavior. The base context sets `reqid`, `origin`, and `extension`. The `wsid` and `vapp` attribs are NOT set on the base context — they are set per projection key (see Per-projection logging below):
 
 - Subscribe+Watch (`POST .../notifications`): `extension` = `sys._N10N_SubscribeAndWatch`
   - Requires adding `processors.APIPath_N10N_SubscribeAndWatch` and a new case in `apiPathToExtension()` returning `"sys._N10N_SubscribeAndWatch"`
@@ -308,34 +308,48 @@ API v1 n10n handlers must be updated to call `withLogAttribs()`, matching API v2
 **Component-local attribute keys** (defined as local constants in the n10n processor package, not in `logger/consts.go`):
 
 - `channelid` (string): N10N channel UUID — added to context after channel creation
-- `projectionkey` (string): JSON array of all projection keys serialized via `in10n.ProjectionKeysToJSON()` — always added to context when there is at least one projection key
+- `projection` (string): Projection QName — added per projection to per-projection context
 
-**Errors handling:**
+**Per-projection logging:**
 
-- Logs error: level `Error`, stage `n10n.error`, msg `<error message>`
-  - The context from the processor pipeline is used (may include `projectionkey` and `channelid` attribs)
-  - If the error is `SysError` with 400 Bad Request status code then:
-    - Subscribe+Watch → `,body=<compacted request body>` is appended to the msg
-    - Subscribe-extra → `,projectionkey=<projection key>` is appended to the msg
-    - Unsubscribe → `,projectionkey=<projection key>` is appended to the msg
+Each projection key carries `App`, `Projection`, and `WS`. For success, subscribe error, SSE, and watch-done logging, a **per-projection context** is created from the base context enriched with:
 
-**Subscribe+Watch flow:**
+- `vapp` = projection key's `App`
+- `wsid` = projection key's `WS`
+- `projection` = projection key's `Projection` QName string
 
-- Adds `projectionkey` attrib (JSON array of all keys) after subscribe loop; adds `channelid` attrib after channel creation
-- Logs successful `IN10NBroker.SubscribeAndWatch()` call: level `Verbose`, stage `n10n.subscribe&watch.success`, msg empty
-- Logs each SSE message: level `Verbose`, stage `n10n.sse_sent`, msg `<sse message>`
-- Logs error on fail to send SSE message: level `Error`, stage `n10n.watch.sse_error`, msg `<error>`
-- Logs `WatchChannel` goroutine finish: level `Verbose`, stage `n10n.watch.done`, msg (empty) — logged in both APIv1 (`serveN10NChannel`) and APIv2 (`watchChannel` goroutine)
+**Errors before projection keys are parsed:**
+
+- Logs error: level `Error`, stage `n10n.error`, msg `<error message>,rawkeys=<raw projection keys from request>`
+  - The base context is used (`vapp` and `wsid` are empty)
+  - Applies to: missing/malformed JSON payload, unmarshal errors
+
+**Errors on individual projection subscribe:**
+
+- Logs error: level `Error`, stage `n10n.subscribe.error`, msg `<error message>`
+  - Uses per-projection context with `vapp`, `wsid`, and `projection` attribs specific to the failed projection
+  - `channelid` attrib is present if the channel was already created
+
+**Errors on individual projection unsubscribe:**
+
+- Logs error: level `Error`, stage `n10n.unsubscribe.error`, msg `<error message>`
+  - Uses per-projection context with `vapp`, `wsid`, and `projection` attribs specific to the failed projection
+
+**Subscribe+Watch flow (APIv1 `subscribeAndWatchHandler` and APIv2 `impl_subscribeandwatch.go`):**
+
+- Adds `channelid` attrib to the base context after channel creation
+- After all projections are subscribed successfully, logs **per each projection**: level `Verbose`, stage `n10n.subscribe&watch.success`, msg empty, using per-projection context (with `vapp`, `wsid`, `projection`, `channelid`)
+- Logs each SSE message: level `Verbose`, stage `n10n.sse_send.success`, msg `<sse message>`, using per-projection context created from the SSE event's projection key (`vapp`, `wsid`, `projection`, `channelid`)
+- Logs error on fail to send SSE message: level `Error`, stage `n10n.sse_send.error`, msg `<error>`, using per-projection context from the SSE event's projection key (`vapp`, `wsid`, `projection`, `channelid`)
+- On `WatchChannel` goroutine finish: logs **per each subscribed projection**: level `Verbose`, stage `n10n.watch.done`, msg (empty), using per-projection context (`vapp`, `wsid`, `projection`, `channelid`) — logged in both APIv1 (`serveN10NChannel`) and APIv2 (`watchChannel` goroutine)
 
 **Subscribe-extra flow (APIv1 `subscribeHandler` and APIv2 `impl_subscribeextra.go`):**
 
-- Adds `projectionkey` attrib (JSON array of all keys) to context when at least one projection key is present
-- Logs successful `IN10NBroker.Subscribe()` call: level `Verbose`, stage `n10n.subscribe.success`, msg empty
+- For each projection key, logs: level `Verbose`, stage `n10n.subscribe.success`, msg empty, using per-projection context (`vapp`, `wsid`, `projection`)
 
 **Unsubscribe flow (APIv1 `unSubscribeHandler` and APIv2 `impl_unsubscribe.go`):**
 
-- Adds `projectionkey` attrib (JSON array of all keys) to context
-- Logs successful `IN10NBroker.Unsubscribe()` call: level `Verbose`, stage `n10n.unsubscribe.success`, msg empty
+- For each projection key, logs: level `Verbose`, stage `n10n.unsubscribe.success`, msg empty, using per-projection context (`vapp`, `wsid`, `projection`)
 
 **N10N Broker lifecycle (in10nmem):**
 
@@ -346,7 +360,7 @@ A dedicated log context is created inside `NewN10nBroker` with `vapp="sys/voedge
 - Heartbeat goroutine started: level `Info`, stage `n10n.heartbeat.start`, msg `Heartbeat30Duration: <duration>`
 - Heartbeat goroutine stopped: level `Info`, stage `n10n.heartbeat.stop`, msg (empty)
 - Channel expired during `WatchChannel`: level `Error`, stage `n10n.channel.expired`, msg `<subjectLogin>`
-- Channel cleanup unsubscribe error: level `Error`, stage `n10n.cleanup.error`, attribs `channelid=<id>`, `projectionkey=[<key>]`, msg `<error>`
+- Channel cleanup unsubscribe error: level `Error`, stage `n10n.cleanup.error`, attribs `channelid=<id>`, `projection=<projection QName>`, msg `<error>`
 
 ## Schedulers
 

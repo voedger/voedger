@@ -35,13 +35,14 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 			WS:         istructs.WSID(42),
 		}
 		wp := newN10nWP("chan-1", projKey)
-		wp.subscribedProjectionKeys = []in10n.ProjectionKey{projKey}
 
 		require.NoError(logSubscribeAndWatchSuccess(context.Background(), wp))
 
 		out := buf.String()
 		require.Contains(out, "stage=n10n.subscribe&watch.success")
-		require.Contains(out, "projectionkey=")
+		require.Contains(out, "vapp=test/app")
+		require.Contains(out, "wsid=42")
+		require.Contains(out, "projection=test.View")
 		require.Contains(out, "channelid=chan-1")
 	})
 
@@ -67,65 +68,75 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 			responder:  noopResponder{},
 		}
 		wp.logCtx = logger.WithContextAttrs(wp.logCtx, map[string]any{
-			logAttr_ChannelID:     "chan-2",
-			logAttr_ProjectionKey: in10n.ProjectionKeysToJSON([]in10n.ProjectionKey{projKey1, projKey2}),
+			logAttr_ChannelID: "chan-2",
 		})
 		wp.subscribedProjectionKeys = []in10n.ProjectionKey{projKey1, projKey2}
 
 		require.NoError(logSubscribeAndWatchSuccess(context.Background(), wp))
 
 		out := buf.String()
-		require.Contains(out, "stage=n10n.subscribe&watch.success")
 		require.Contains(out, "channelid=chan-2")
-		require.Contains(out, "projectionkey=")
+		require.Contains(out, "projection=test.View1")
+		require.Contains(out, "wsid=1")
+		require.Contains(out, "projection=test.View2")
+		require.Contains(out, "wsid=2")
 	})
 
-	t.Run("n10n.sse_sent", func(t *testing.T) {
+	t.Run("n10n.sse_send.success", func(t *testing.T) {
 		require := require.New(t)
 		buf.Reset()
 
-		wp := newN10nWP("chan-3", in10n.ProjectionKey{
+		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
 			Projection: appdef.NewQName("test", "View"),
 			WS:         istructs.WSID(42),
-		})
+		}
+		wp := newN10nWP("chan-3", projKey)
+		projCtx := n10nProjectionLogCtx(wp.logCtx, projKey)
 
-		sseMessage := "event: test\ndata: 100\n\n"
-		logger.VerboseCtx(wp.logCtx, "n10n.sse_sent", "event: test data: 100  ")
+		logger.VerboseCtx(projCtx, "n10n.sse_send.success", "event: test data: 100  ")
 
 		out := buf.String()
-		require.Contains(out, "stage=n10n.sse_sent")
+		require.Contains(out, "stage=n10n.sse_send.success")
 		require.Contains(out, "channelid=chan-3")
-		_ = sseMessage
+		require.Contains(out, "vapp=test/app")
+		require.Contains(out, "wsid=42")
+		require.Contains(out, "projection=test.View")
 	})
 
-	t.Run("n10n.watch.sse_error", func(t *testing.T) {
+	t.Run("n10n.sse_send.error", func(t *testing.T) {
 		require := require.New(t)
 		buf.Reset()
 
-		wp := newN10nWP("chan-4", in10n.ProjectionKey{
+		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
 			Projection: appdef.NewQName("test", "View"),
 			WS:         istructs.WSID(42),
-		})
+		}
+		wp := newN10nWP("chan-4", projKey)
+		projCtx := n10nProjectionLogCtx(wp.logCtx, projKey)
 
-		logger.ErrorCtx(wp.logCtx, "n10n.watch.sse_error", errors.New("write failed"))
+		logger.ErrorCtx(projCtx, "n10n.sse_send.error", errors.New("write failed"))
 
 		out := buf.String()
-		require.Contains(out, "stage=n10n.watch.sse_error")
+		require.Contains(out, "stage=n10n.sse_send.error")
 		require.Contains(out, "write failed")
 		require.Contains(out, "channelid=chan-4")
+		require.Contains(out, "vapp=test/app")
+		require.Contains(out, "wsid=42")
+		require.Contains(out, "projection=test.View")
 	})
 
 	t.Run("n10n.watch.done", func(t *testing.T) {
 		require := require.New(t)
 		buf.Reset()
 
-		wp := newN10nWP("chan-5", in10n.ProjectionKey{
+		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
 			Projection: appdef.NewQName("test", "View"),
 			WS:         istructs.WSID(42),
-		})
+		}
+		wp := newN10nWP("chan-5", projKey)
 		wp.channelCleanup = func() {}
 		wp.responseWriter = &noopResponseWriter{}
 
@@ -136,6 +147,9 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 		out := buf.String()
 		require.Contains(out, "stage=n10n.watch.done")
 		require.Contains(out, "channelid=chan-5")
+		require.Contains(out, "vapp=test/app")
+		require.Contains(out, "wsid=42")
+		require.Contains(out, "projection=test.View")
 	})
 }
 

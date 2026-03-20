@@ -12,7 +12,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -41,19 +40,15 @@ func addProjectionKeyFromURL(ctx context.Context, n10nWP *n10nWorkpiece) (err er
 		entity: n10nWP.entityFromURL,
 		wsid:   n10nWP.wsidFromURL,
 	})
-	projKey := in10n.ProjectionKey{
-		App:        n10nWP.appQName,
-		Projection: n10nWP.entityFromURL,
-		WS:         n10nWP.wsidFromURL,
-	}
-	n10nWP.logCtx = logger.WithContextAttrs(n10nWP.logCtx, map[string]any{
-		logAttr_ProjectionKey: in10n.ProjectionKeysToJSON([]in10n.ProjectionKey{projKey}),
-	})
 	return nil
 }
 
 func logSubscribeSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
-	logger.VerboseCtx(n10nWP.logCtx, "n10n.subscribe.success")
+	if logger.IsVerbose() {
+		for _, pk := range n10nWP.subscribedProjectionKeys {
+			logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.subscribe.success")
+		}
+	}
 	return nil
 }
 

@@ -247,74 +247,77 @@
 
 ### N10N processor
 
-- [x] update: [pkg/router/impl_n10n.go](../../../pkg/router/impl_n10n.go)
-  - update: `subscribeAndWatchHandler` — call `withLogAttribs()` with `extension="sys._N10N_SubscribeAndWatch"`
-  - update: `subscribeHandler` — call `withLogAttribs()` with `extension=entity QName`
-  - update: `unSubscribeHandler` — call `withLogAttribs()` with `extension=entity QName`
-  - update: Drop all existing `logger.Info/Error` calls not described in TD
+- [x] add: [pkg/in10n/impl.go](../../../pkg/in10n/impl.go)
+  - add: `ProjectionKeysToJSON(keys []ProjectionKey) string` — serializes a slice of keys as a JSON array
 
-- [x] update: [pkg/processors/n10n/impl.go](../../../pkg/processors/n10n/impl.go)
-  - update: `reportError` — level `Error`, stage `n10n.error`, msg `<error message>` with context; for 400 errors append body or projectionkey
-
-- [x] update: [pkg/in10n/impl.go](../../../pkg/in10n/impl.go)
-  - [x] add: `ProjectionKeysToJSON(keys []ProjectionKey) string` — serializes a slice of keys as a JSON array
-
-- [x] update: [pkg/processors/n10n/impl_subscribeandwatch.go](../../../pkg/processors/n10n/impl_subscribeandwatch.go)
-  - [x] add: `projectionkey` attrib (JSON array via `ProjectionKeysToJSON`) whenever at least one key is subscribed
-  - [x] add: `channelid` attrib after channel creation
-  - [x] add: After successful subscribe+watch: level `Verbose`, stage `n10n.subscribe&watch.success`, msg empty
-  - [x] update: `watchChannel` — log each SSE message: level `Verbose`, stage `n10n.sse_sent`, msg `<sse message>`
-  - [x] update: SSE send error: level `Error`, stage `n10n.watch.sse_error`, msg `<error>`
-  - [x] add: Local constants for `channelid`, `projectionkey` attribute keys
-  - [x] add: `watchChannel` goroutine finish: level `Verbose`, stage `n10n.watch.done`, msg (empty)
-
-- [x] update: [pkg/router/impl_n10n.go](../../../pkg/router/impl_n10n.go)
-  - [x] add: `serveN10NChannel` finish: level `Verbose`, stage `n10n.watch.done`, msg (empty)
-  - [x] add: `subscribeHandler` success: level `Verbose`, stage `n10n.subscribe.success`, msg empty
-  - [x] add: `subscribeHandler` — enrich `logCtx` with `projectionkey` (JSON array) after error check when at least one key
-  - [x] add: `unSubscribeHandler` success: level `Verbose`, stage `n10n.unsubscribe.success`, msg empty
-  - [x] add: `unSubscribeHandler` — enrich `logCtx` with `projectionkey` (JSON array) after error check when at least one key
-  - [x] add: `subscribeAndWatchHandler` — enrich `logCtx` with `channelid` after `NewChannel` succeeds
-  - [x] add: `subscribeAndWatchHandler` — enrich `logCtx` with `projectionkey` (JSON array) after subscribe loop when at least one key
-  - [x] add: `subscribeAndWatchHandler` success: level `Verbose`, stage `n10n.subscribe&watch.success`, msg empty
-  - [x] refactor: remove `projKeys` parameter from `serveN10NChannel` (was only used for success msg conditional)
-
-- [x] update: [pkg/router/consts.go](../../../pkg/router/consts.go)
-  - [x] add: `logAttrib_ProjectionKey = "projectionkey"` constant
-  - [x] add: `logAttrib_ChannelID = "channelid"` constant
-
-- [x] update: [pkg/processors/n10n/impl_subscribeextra.go](../../../pkg/processors/n10n/impl_subscribeextra.go)
-  - [x] add: `projectionkey` attrib (JSON array via `ProjectionKeysToJSON`) to context
-  - [x] add: After successful subscribe: level `Verbose`, stage `n10n.subscribe.success`, msg empty
-  - [x] fix: remove redundant `""` arg from `logSubscribeSuccess`
-
-- [x] update: [pkg/processors/n10n/impl_unsubscribe.go](../../../pkg/processors/n10n/impl_unsubscribe.go)
-  - [x] add: `projectionkey` attrib (JSON array via `ProjectionKeysToJSON`) to context
-  - [x] add: After successful unsubscribe: level `Verbose`, stage `n10n.unsubscribe.success`, msg empty
-  - [x] fix: remove redundant `""` arg from `logUnsubscribeSuccess`
-
-- [x] update: [pkg/processors/consts.go](../../../pkg/processors/consts.go)
+- [x] add: [pkg/processors/consts.go](../../../pkg/processors/consts.go)
   - add: `APIPath_N10N_SubscribeAndWatch` constant
 
 - [x] update: [pkg/router/utils.go](../../../pkg/router/utils.go)
   - update: `apiPathToExtension()` — add case for `APIPath_N10N_SubscribeAndWatch` returning `"sys._N10N_SubscribeAndWatch"`
 
+- [x] update: [pkg/router/consts.go](../../../pkg/router/consts.go)
+  - rename: `logAttrib_ProjectionKey = "projectionkey"` → `logAttrib_Projection = "projection"`
+
+- [x] update: [pkg/router/impl_n10n.go](../../../pkg/router/impl_n10n.go)
+  - add: `n10nProjectionLogCtx()` helper — creates child context with `vapp`, `wsid`, `projection` attribs from a `ProjectionKey`
+  - update: `getJSONPayload()` — returns `(string, error)` to expose raw payload for rawkeys logging
+  - update: `subscribeAndWatchHandler` — pre-parse errors append `,rawkeys=` or `,rawkeys=<raw payload>` to error message
+  - update: `subscribeAndWatchHandler` — subscribe error: stage `n10n.subscribe.error` with per-projection context (was `n10n.error` with base context)
+  - drop: `subscribeAndWatchHandler` — remove `projectionkey` attrib enrichment after subscribe loop
+  - update: `serveN10NChannel` — accepts `projectionKeys []in10n.ProjectionKey` parameter
+  - update: `serveN10NChannel` — `n10n.subscribe&watch.success` logged per each projection with per-projection context (was single log with base context)
+  - update: `serveN10NChannel` — SSE send: stage `n10n.sse_send.success` with per-projection context (was `n10n.sse_sent` with base context)
+  - update: `serveN10NChannel` — SSE error: stage `n10n.sse_send.error` with per-projection context (was `n10n.watch.sse_error` with base context)
+  - update: `serveN10NChannel` — `n10n.watch.done` logged per each projection with per-projection context (was single log with base context)
+  - update: `subscribeHandler` — pre-parse error appends `,rawkeys=<raw payload>` to error message
+  - update: `subscribeHandler` — subscribe error: use per-projection context (was base context)
+  - update: `subscribeHandler` — `n10n.subscribe.success` logged per each projection with per-projection context (was single log)
+  - drop: `subscribeHandler` — remove `projectionkey` attrib enrichment
+  - update: `unSubscribeHandler` — pre-parse error appends `,rawkeys=<raw payload>` to error message
+  - update: `unSubscribeHandler` — unsubscribe error: stage `n10n.unsubscribe.error` with per-projection context (was `n10n.error` with base context)
+  - update: `unSubscribeHandler` — `n10n.unsubscribe.success` logged per each projection with per-projection context (was single log)
+  - drop: `unSubscribeHandler` — remove `projectionkey` attrib enrichment
+
+- [x] update: [pkg/processors/n10n/consts.go](../../../pkg/processors/n10n/consts.go)
+  - rename: `logAttr_ProjectionKey = "projectionkey"` → `logAttr_Projection = "projection"`
+
+- [x] update: [pkg/processors/n10n/impl.go](../../../pkg/processors/n10n/impl.go)
+  - add: `n10nProjectionLogCtx()` helper — creates child context with `vapp`, `wsid`, `projection` attribs from a `ProjectionKey`
+
+- [x] update: [pkg/processors/n10n/impl_subscribeandwatch.go](../../../pkg/processors/n10n/impl_subscribeandwatch.go)
+  - update: `subscribe()` — add per-projection `n10n.subscribe.error` log on subscribe failure
+  - drop: `subscribe()` — remove `projectionkey` attrib enrichment after subscribe loop
+  - update: `logSubscribeAndWatchSuccess()` — log per each projection with per-projection context (was single log with base context)
+  - update: `watchChannel()` — SSE send: stage `n10n.sse_send.success` with per-projection context (was `n10n.sse_sent` with base context)
+  - update: `watchChannel()` — SSE error: stage `n10n.sse_send.error` with per-projection context (was `n10n.watch.sse_error` with base context)
+  - update: `watchChannel()` — `n10n.watch.done` logged per each projection with per-projection context (was single log with base context)
+
+- [x] update: [pkg/processors/n10n/impl_subscribeextra.go](../../../pkg/processors/n10n/impl_subscribeextra.go)
+  - drop: `addProjectionKeyFromURL()` — remove `projectionkey` attrib enrichment
+  - update: `logSubscribeSuccess()` — log per each projection with per-projection context (was single log with base context)
+
+- [x] update: [pkg/processors/n10n/impl_unsubscribe.go](../../../pkg/processors/n10n/impl_unsubscribe.go)
+  - update: `unsubscribe()` — add per-projection `n10n.unsubscribe.error` log on failure; collect `subscribedProjectionKeys`
+  - drop: `unsubscribe()` — remove `projectionkey` attrib enrichment
+  - update: `logUnsubscribeSuccess()` — log per each projection with per-projection context (was single log with base context)
+
 - [x] add tests: [pkg/processors/n10n/impl_test.go](../../../pkg/processors/n10n/impl_test.go)
-  - helper `newN10nWP(channelID, projectionKey)` — creates `n10nWorkpiece` with `logCtx` enriched with `channelid=<channelID>` and `projectionkey=<projectionKey>`
-  - subtest `n10n.error`: call `reportError` with a workpiece whose `logCtx` has `channelid` and `projectionkey`; assert log contains `stage=n10n.error`, error message, `channelid=`, `projectionkey=`
+  - helper `newN10nWP(channelID, projection)` — creates `n10nWorkpiece` with `logCtx` enriched with `channelid` and per-projection attribs (`vapp`, `wsid`, `projection`)
+  - subtest `n10n.error`: assert log contains `stage=n10n.error`, error message, `channelid=`, `projection=`
 
 - [x] add tests: [pkg/processors/n10n/impl_subscribeandwatch_test.go](../../../pkg/processors/n10n/impl_subscribeandwatch_test.go)
-  - subtest `n10n.subscribe&watch.success single key`: call success-log step with a workpiece with 1 subscription; assert log contains `stage=n10n.subscribe&watch.success`, `projectionkey=<key>`, `channelid=<id>`; assert msg is empty
-  - subtest `n10n.subscribe&watch.success multi key`: call success-log step with a workpiece with 2+ subscriptions; assert log contains `stage=n10n.subscribe&watch.success`, `channelid=<id>`, `projectionkey=` (JSON array of both keys)
-  - subtest `n10n.sse_sent`: call the SSE send log path with a workpiece with `channelid`; assert log contains `stage=n10n.sse_sent`, SSE message body, `channelid=`
-  - subtest `n10n.watch.sse_error`: simulate SSE write failure in `watchChannel`; assert log contains `stage=n10n.watch.sse_error`, error message, `channelid=`
-  - [x] subtest `n10n.watch.done` (APIv2): call `watchChannel` with a `immediateWatchBroker` that returns immediately; assert log contains `stage=n10n.watch.done`, `channelid=`
+  - subtest `n10n.subscribe&watch.success single key`: assert per-projection log with `stage=n10n.subscribe&watch.success`, `vapp=`, `wsid=`, `projection=`, `channelid=`
+  - subtest `n10n.subscribe&watch.success multi key`: assert one log per projection, each with its own `vapp`, `wsid`, `projection`, `channelid=`
+  - subtest `n10n.sse_send.success`: assert log with `stage=n10n.sse_send.success`, `vapp=`, `wsid=`, `projection=`, `channelid=`
+  - subtest `n10n.sse_send.error`: assert log with `stage=n10n.sse_send.error`, `vapp=`, `wsid=`, `projection=`, `channelid=`
+  - subtest `n10n.watch.done`: assert one log per projection with `stage=n10n.watch.done`, `vapp=`, `wsid=`, `projection=`, `channelid=`
 
 - [x] add tests: [pkg/processors/n10n/impl_subscribeextra_test.go](../../../pkg/processors/n10n/impl_subscribeextra_test.go)
-  - subtest `n10n.subscribe.success`: call the subscribe-success log step with a workpiece that has `entityFromURL`, `channelID`; assert log contains `stage=n10n.subscribe.success`, `projectionkey=<entity>`, `channelid=<id>`
+  - subtest `n10n.subscribe.success`: assert per-projection log with `stage=n10n.subscribe.success`, `vapp=`, `wsid=`, `projection=`
 
 - [x] add tests: [pkg/processors/n10n/impl_unsubscribe_test.go](../../../pkg/processors/n10n/impl_unsubscribe_test.go)
-  - subtest `n10n.unsubscribe.success`: call the unsubscribe-success log step with a workpiece that has `entityFromURL`, `channelID`; assert log contains `stage=n10n.unsubscribe.success`, `projectionkey=<entity>`, `channelid=<id>`
+  - subtest `n10n.unsubscribe.success`: assert per-projection log with `stage=n10n.unsubscribe.success`, `vapp=`, `wsid=`, `projection=`
 
 - [x] Review
 
@@ -362,4 +365,4 @@
   - add: `logCtx` created with `logger.WithContextAttrs` using `vapp=app`, `extension="job.<job QName>"`, `wsid=wsid`
   - update: `logCtx` passed to `scheduler` struct on creation in `NewAndRun`
 
-- [ ] Review
+- [x] Review

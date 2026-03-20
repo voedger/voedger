@@ -44,7 +44,9 @@ func TestN10NErrorLogging(t *testing.T) {
 		require.Contains(out, "stage=n10n.error")
 		require.Contains(out, "test n10n failure")
 		require.Contains(out, "channelid=chan-1")
-		require.Contains(out, "projectionkey=")
+		require.Contains(out, "projection=test.View")
+		require.Contains(out, "vapp=test/app")
+		require.Contains(out, "wsid=42")
 	})
 }
 
@@ -79,15 +81,16 @@ func (sb *syncBuf) Reset() {
 
 func newN10nWP(channelID string, projKey in10n.ProjectionKey) *n10nWorkpiece {
 	wp := &n10nWorkpiece{
-		channelID:  in10n.ChannelID(channelID),
-		requestCtx: context.Background(),
-		logCtx:     context.Background(),
-		appQName:   appdef.NewAppQName("test", "app"),
-		responder:  noopResponder{},
+		channelID:                in10n.ChannelID(channelID),
+		requestCtx:               context.Background(),
+		logCtx:                   context.Background(),
+		appQName:                 projKey.App,
+		responder:                noopResponder{},
+		subscribedProjectionKeys: []in10n.ProjectionKey{projKey},
 	}
-	wp.logCtx = logger.WithContextAttrs(wp.logCtx, map[string]any{
-		logAttr_ChannelID:     channelID,
-		logAttr_ProjectionKey: in10n.ProjectionKeysToJSON([]in10n.ProjectionKey{projKey}),
+	baseCtx := logger.WithContextAttrs(wp.logCtx, map[string]any{
+		logAttr_ChannelID: channelID,
 	})
+	wp.logCtx = n10nProjectionLogCtx(baseCtx, projKey)
 	return wp
 }

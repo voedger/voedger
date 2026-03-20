@@ -37,6 +37,8 @@ func TestUnsubscribeLogging(t *testing.T) {
 
 	out := buf.String()
 	require.Contains(out, "stage=n10n.unsubscribe.success")
-	require.Contains(out, "projectionkey=")
+	require.Contains(out, "vapp=test/app")
+	require.Contains(out, "wsid=42")
+	require.Contains(out, "projection=test.View")
 	require.Contains(out, "channelid=chan-unsub-1")
 }
