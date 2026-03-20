@@ -69,11 +69,11 @@ func ParseQueryParams(params map[string]string) (*QueryParams, error) {
 
 	// Parse "args"
 	if arg, exists := params["args"]; exists && arg != "" {
+		qp.RawArg = arg
 		var argMap map[string]interface{}
-		if err := coreutils.JSONUnmarshal([]byte(arg), &argMap); err != nil {
-			return nil, errors.New("invalid 'args' parameter")
+		if err := coreutils.JSONUnmarshal([]byte(arg), &argMap); err == nil {
+			qp.Argument = argMap
 		}
-		qp.Argument = argMap
 	}
 
 	// Set Constraints if any constraint exists

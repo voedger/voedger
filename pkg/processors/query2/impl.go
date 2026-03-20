@@ -309,7 +309,11 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 	requestArgs := istructs.NewNullObject()
 	if argsType != nil {
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
-		requestArgsBuilder.FillFromJSON(qw.msg.QueryParams().Argument)
+		if argsType.QName() == istructs.QNameRaw {
+			requestArgsBuilder.PutChars(processors.Field_RawObject_Body, qw.msg.QueryParams().RawArg)
+		} else {
+			requestArgsBuilder.FillFromJSON(qw.msg.QueryParams().Argument)
+		}
 		requestArgs, err = requestArgsBuilder.Build()
 		if err != nil {
 			return execQueryArgs, err

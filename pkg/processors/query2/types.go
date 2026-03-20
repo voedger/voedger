@@ -27,6 +27,7 @@ import (
 type QueryParams struct {
 	Constraints *Constraints
 	Argument    map[string]interface{}
+	RawArg      string
 }
 
 type Constraints struct {

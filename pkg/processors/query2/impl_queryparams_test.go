@@ -65,4 +65,26 @@ func Test_BasicUsage(t *testing.T) {
 		require.Nil(parsedParams.Argument)
 	})
 
+	t.Run("raw args (non-JSON)", func(t *testing.T) {
+		params := map[string]string{
+			"args": "hello raw world",
+		}
+		parsedParams, err := ParseQueryParams(params)
+		require.NoError(err)
+		require.NotNil(parsedParams)
+		require.Nil(parsedParams.Argument)
+		require.Equal("hello raw world", parsedParams.RawArg)
+	})
+
+	t.Run("JSON args populates both RawArgs and Argument", func(t *testing.T) {
+		params := map[string]string{
+			"args": `{"key":"value"}`,
+		}
+		parsedParams, err := ParseQueryParams(params)
+		require.NoError(err)
+		require.NotNil(parsedParams)
+		require.Equal(`{"key":"value"}`, parsedParams.RawArg)
+		require.Equal(map[string]interface{}{"key": "value"}, parsedParams.Argument)
+	})
+
 }

@@ -342,6 +342,13 @@ func TestQueryProcessor2_Queries(t *testing.T) {
 		resp.Println()
 	})
 
+	t.Run("sys.Raw argument", func(t *testing.T) {
+		rawArg := "hello raw world"
+		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.TestQryRawArg?args=%s`, ws.WSID, url.QueryEscape(rawArg)),
+			httpu.WithAuthorizeBy(ws.Owner.Token))
+		require.JSONEq(`{"results":[{"Res":"hello raw world"}]}`, resp.Body)
+	})
+
 }
 func TestQueryProcessor2_Include(t *testing.T) {
 	require := require.New(t)
