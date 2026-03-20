@@ -94,7 +94,7 @@ func Test_BasicUsage(t *testing.T) {
 		parsedParams, err := ParseQueryParams(params, istructs.QNameRaw)
 		require.NoError(err)
 		require.NotNil(parsedParams)
-		require.Equal(`{"key":"value"}`, parsedParams.RawArg)
+		require.JSONEq(`{"key":"value"}`, parsedParams.RawArg)
 		require.Nil(parsedParams.Argument)
 	})
 
