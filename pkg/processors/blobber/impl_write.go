@@ -136,10 +136,15 @@ func registerBLOB(ctx context.Context, bw *blobWorkpiece) (err error) {
 func getBLOBMessageWrite(_ context.Context, bw *blobWorkpiece) error {
 	bw.blobMessageWrite = bw.blobMessage.(*implIBLOBMessage_Write)
 	bw.logCtx = bw.blobMessageWrite.requestCtx
-	if bw.blobMessageWrite.ownerRecord != appdef.NullQName {
+	if bw.blobMessageWrite.isAPIv2 {
 		bw.logCtx = logger.WithContextAttrs(bw.logCtx, map[string]any{
 			attrOwnerQName: bw.blobMessageWrite.ownerRecord.String(),
 			attrOwnerField: bw.blobMessageWrite.ownerRecordField,
+		})
+	} else {
+		bw.logCtx = logger.WithContextAttrs(bw.logCtx, map[string]any{
+			attrOwnerQName: notApplicableInAPIv1,
+			attrOwnerField: notApplicableInAPIv1,
 		})
 	}
 	return nil

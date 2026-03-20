@@ -69,7 +69,7 @@ A key-value pair that provides additional context to log entries. Attributes are
   - Context attributes (vapp, reqid, wsid, extension, etc.) are automatically extracted and added to the log entry
   - `stage` value is appended to the log as `stage` attribute
   - Message args are formatted via `fmt.Sprint()` and used as the log message
-- Affected parts of both APIv1 and APIv2 must have the same logging
+- Affected parts of both APIv1 and APIv2 must have the same logging, except when an attribute is not applicable in one of the API versions — in that case the attribute is set to the constant string `<not applicable in APIv1>`
 - If there is already some logging in the affected source code files that is not described in this document then this logging must be dropped
 
 ---
@@ -269,9 +269,9 @@ API v1 (`blobHTTPRequestHandler_Write`, `blobHTTPRequestHandler_Read`) already c
 
 Attribute key strings are defined as local constants within the blob processor package.
 
-- `ownerqname` (string): QName of the record that owns the BLOB (e.g. `air.Bill`)
-- `ownerfield` (string): field name on the owner record that holds the BLOB reference
-- `ownerid` (string): record ID of the owner record (for read only; for write the owner record does not exist yet at this point)
+- `ownerqname` (string): QName of the record that owns the BLOB (e.g. `air.Bill`); set to `<not applicable in APIv1>` for APIv1 requests
+- `ownerfield` (string): field name on the owner record that holds the BLOB reference; set to `<not applicable in APIv1>` for APIv1 requests
+- `ownerid` (string): record ID of the owner record (read only; write: owner record does not exist yet at this point); set to `<not applicable in APIv1>` for APIv1 requests
 - `blobid` (string): BLOB ID (numeric record ID or SUUID):
   - **Read**: added to context at the start of processing (BLOB ID is known from the request URL)
   - **Write**: added to context right after `blobStorage.WriteBLOB()` completes successfully

@@ -8,96 +8,95 @@ package blobprocessor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type mockReadBlobStorage struct {
-	iblobstorage.IBLOBStorage
-	readErr error
-}
-
-func (m *mockReadBlobStorage) ReadBLOB(_ context.Context, _ iblobstorage.IBLOBKey, _ func(iblobstorage.BLOBState) error, _ io.Writer, _ iblobstorage.RLimiterType) error {
-	return m.readErr
-}
-
-func newReadBW() *blobWorkpiece {
-	ownerQName := appdef.NewQName("test", "Owner")
-	msg := &implIBLOBMessage_Read{
-		implIBLOBMessage_base: implIBLOBMessage_base{
-			appQName:       istructs.AppQName_test1_app1,
-			wsid:           1,
-			requestCtx:     context.Background(),
-			header:         map[string]string{},
-			errorResponder: func(_ coreutils.SysError) {},
-		},
-		ownerRecord:           ownerQName,
-		ownerRecordField:      "BlobField",
-		ownerID:               100,
-		existingBLOBIDOrSUUID: "42",
-	}
-	bw := &blobWorkpiece{
-		blobMessage:     msg,
-		blobMessageRead: msg,
-	}
-	bw.logCtx = logger.WithContextAttrs(msg.requestCtx, map[string]any{
-		attrOwnerQName: ownerQName.String(),
-		attrOwnerField: "BlobField",
-		attrOwnerID:    uint64(100),
-		attrBlobID:     "42",
-	})
-	bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
-		ClusterAppID: istructs.ClusterAppID_sys_blobber,
-		WSID:         1,
-		BlobID:       42,
-	}
-	bw.writer = io.Discard
-	return bw
-}
-
-func TestBlobReadLogging(t *testing.T) {
+func TestBlobReadPipeline(t *testing.T) {
 	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
 	var buf syncBuf
 	logger.SetCtxWriters(&buf, &buf)
 	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
 
-	t.Run("bp.success on read success", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		require := require.New(t)
-		buf = syncBuf{}
-		bw := newReadBW()
+		storage := &mockBlobStorage{
+			queryState: iblobstorage.BLOBState{
+				Status: iblobstorage.BLOBStatus_Completed,
+				Descr:  iblobstorage.DescrType{Name: "test.txt", ContentType: "text/plain"},
+				Size:   100,
+			},
+		}
+		p := providePipeline(context.Background(), storage, nil)
+		defer p.Close()
 
-		readFn := provideReadBLOB(&mockReadBlobStorage{})
-		require.NoError(readFn(context.Background(), bw))
+		msg := &implIBLOBMessage_Read{
+			implIBLOBMessage_base: implIBLOBMessage_base{
+				appQName:         istructs.AppQName_test1_app1,
+				wsid:             1,
+				requestCtx:       context.Background(),
+				header:           map[string]string{},
+				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+				errorResponder:   func(_ coreutils.SysError) {},
+				done:             make(chan interface{}),
+			},
+			existingBLOBIDOrSUUID: "42",
+		}
+		bw := &blobWorkpiece{blobMessage: msg}
+
+		require.NoError(p.SendSync(bw))
 
 		out := buf.String()
-		require.Contains(out, "stage=bp.success")
+		require.Contains(out, "bp.success")
 		require.Contains(out, "blobid=42")
-		require.Contains(out, "ownerqname=test.Owner")
-		require.Contains(out, "ownerfield=BlobField")
-		require.Contains(out, "ownerid=100")
+		require.Contains(out, fmt.Sprintf(`ownerqname="%s"`, notApplicableInAPIv1))
+		require.Contains(out, fmt.Sprintf(`ownerfield="%s"`, notApplicableInAPIv1))
+		require.Contains(out, fmt.Sprintf(`ownerid="%s"`, notApplicableInAPIv1))
 	})
 
-	t.Run("bp.error on read error", func(t *testing.T) {
+	t.Run("error", func(t *testing.T) {
 		require := require.New(t)
-		buf = syncBuf{}
-		bw := newReadBW()
+		buf.Reset()
+		var capturedErr coreutils.SysError
+		storage := &mockBlobStorage{
+			queryState: iblobstorage.BLOBState{
+				Status: iblobstorage.BLOBStatus_Completed,
+				Descr:  iblobstorage.DescrType{Name: "test.txt", ContentType: "text/plain"},
+				Size:   100,
+			},
+			readErr: errors.New("storage read failure"),
+		}
+		p := providePipeline(context.Background(), storage, nil)
+		defer p.Close()
 
-		c := &catchReadError{}
-		_ = c.OnErr(errors.New("test read failure"), bw, nil)
-		_ = c.DoSync(context.Background(), bw)
+		msg := &implIBLOBMessage_Read{
+			implIBLOBMessage_base: implIBLOBMessage_base{
+				appQName:         istructs.AppQName_test1_app1,
+				wsid:             1,
+				requestCtx:       context.Background(),
+				header:           map[string]string{},
+				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+				errorResponder:   func(se coreutils.SysError) { capturedErr = se },
+				done:             make(chan interface{}),
+			},
+			existingBLOBIDOrSUUID: "42",
+		}
+		bw := &blobWorkpiece{blobMessage: msg}
+
+		require.NoError(p.SendSync(bw))
 
 		out := buf.String()
-		require.Contains(out, "stage=bp.error")
-		require.Contains(out, "test read failure")
-		require.Contains(out, "blobid=42")
+		require.Contains(out, "bp.error")
+		require.Contains(out, "storage read failure")
+		require.Equal(http.StatusInternalServerError, capturedErr.HTTPStatus)
 	})
 }
-

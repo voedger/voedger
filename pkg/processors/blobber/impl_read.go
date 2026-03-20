@@ -163,11 +163,20 @@ func getBLOBIDFromOwner(_ context.Context, bw *blobWorkpiece) (err error) {
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBMessageRead~impl]
 func getBLOBMessageRead(_ context.Context, bw *blobWorkpiece) error {
 	bw.blobMessageRead = bw.blobMessage.(*implIBLOBMessage_Read)
-	bw.logCtx = logger.WithContextAttrs(bw.blobMessageRead.requestCtx, map[string]any{
-		attrOwnerQName: bw.blobMessageRead.ownerRecord.String(),
-		attrOwnerField: bw.blobMessageRead.ownerRecordField,
-		attrOwnerID:    uint64(bw.blobMessageRead.ownerID),
-	})
+	bw.logCtx = bw.blobMessageRead.requestCtx
+	if bw.blobMessageRead.isAPIv2 {
+		bw.logCtx = logger.WithContextAttrs(bw.logCtx, map[string]any{
+			attrOwnerQName: bw.blobMessageRead.ownerRecord.String(),
+			attrOwnerField: bw.blobMessageRead.ownerRecordField,
+			attrOwnerID:    uint64(bw.blobMessageRead.ownerID),
+		})
+	} else {
+		bw.logCtx = logger.WithContextAttrs(bw.logCtx, map[string]any{
+			attrOwnerQName: notApplicableInAPIv1,
+			attrOwnerField: notApplicableInAPIv1,
+			attrOwnerID:    notApplicableInAPIv1,
+		})
+	}
 	return nil
 }
 

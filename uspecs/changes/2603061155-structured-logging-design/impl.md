@@ -212,7 +212,7 @@
 
 - [x] update: [pkg/processors/blobber/impl_write.go](../../../pkg/processors/blobber/impl_write.go)
   - add: `logCtx` field to `blobWorkpiece` in `types.go` to carry enriched logging context through the pipeline
-  - add: `getBLOBMessageWrite` initializes `bw.logCtx` from `requestCtx`; if `ownerRecord != NullQName` enriches with `ownerqname` and `ownerfield` attribs
+  - add: `getBLOBMessageWrite` initializes `bw.logCtx` from `requestCtx`; if `isAPIv2` enriches with actual `ownerqname` and `ownerfield` attribs; otherwise sets them to `notApplicableInAPIv1`
   - add: After `validateQueryParams` success: level `Verbose`, stage `bp.meta`, msg `name=<name>,contenttype=<type>`, using `bw.logCtx`
   - add: After `registerBLOB`: enrich `bw.logCtx` with `blobid` attrib, then level `Verbose`, stage `bp.register.success`
   - add: After `blobStorage.WriteBLOB()`: level `Verbose`, stage `bp.write.success`, using `bw.logCtx` (already has `ownerqname`, `ownerfield`, `blobid`)
@@ -223,7 +223,7 @@
   - add: Local constants for `ownerqname`, `ownerfield`, `ownerid`, `blobid` attribute keys
 
 - [x] update: [pkg/processors/blobber/impl_read.go](../../../pkg/processors/blobber/impl_read.go)
-  - add: `getBLOBMessageRead` initializes `bw.logCtx` from `requestCtx`; if `ownerRecord != NullQName` enriches with `ownerqname`, `ownerfield`, `ownerid` attribs
+  - add: `getBLOBMessageRead` initializes `bw.logCtx` from `requestCtx`; if `isAPIv2` enriches with actual `ownerqname`, `ownerfield`, `ownerid` attribs; otherwise sets them to `notApplicableInAPIv1`
   - add: `getBLOBIDFromOwner` enriches `bw.logCtx` with `blobid` as soon as the ID is determined — for non-APIv2/temp (early return): from existing `existingBLOBIDOrSUUID`; for APIv2 persistent: from the resolved `blobID` before returning
   - add: Read success: level `Verbose`, stage `bp.success`, msg (empty), using `bw.logCtx`
   - update: `catchReadError.DoSync` — level `Error`, stage `bp.error`, msg `<error message>` with query and headers for 400 errors, using `bw.logCtx`

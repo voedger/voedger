@@ -18,6 +18,7 @@ const (
 	attrOwnerField             = "ownerfield"
 	attrOwnerID                = "ownerid"
 	attrBlobID                 = "blobid"
+	notApplicableInAPIv1       = "<not applicable in APIv1>"
 )
 
 var (

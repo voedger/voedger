@@ -9,14 +9,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -42,11 +44,31 @@ func (sb *syncBuf) String() string {
 	return sb.buf.String()
 }
 
+func (sb *syncBuf) Reset() {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	sb.buf.Reset()
+}
+
 type mockBlobStorage struct {
 	iblobstorage.IBLOBStorage
+	queryState iblobstorage.BLOBState
+	readErr    error
+	writeErr   error
+}
+
+func (m *mockBlobStorage) QueryBLOBState(_ context.Context, _ iblobstorage.IBLOBKey) (iblobstorage.BLOBState, error) {
+	return m.queryState, nil
+}
+
+func (m *mockBlobStorage) ReadBLOB(_ context.Context, _ iblobstorage.IBLOBKey, _ func(iblobstorage.BLOBState) error, _ io.Writer, _ iblobstorage.RLimiterType) error {
+	return m.readErr
 }
 
 func (m *mockBlobStorage) WriteBLOB(_ context.Context, _ iblobstorage.PersistentBLOBKeyType, _ iblobstorage.DescrType, _ io.Reader, _ iblobstorage.WLimiterType) (uint64, error) {
+	if m.writeErr != nil {
+		return 0, m.writeErr
+	}
 	return 100, nil
 }
 
@@ -56,119 +78,79 @@ func okCmdSender() bus.IRequestSender {
 	})
 }
 
-func newWriteBW(requestSender bus.IRequestSender) *blobWorkpiece {
-	ownerQName := appdef.NewQName("test", "Owner")
-	msg := &implIBLOBMessage_Write{
-		implIBLOBMessage_base: implIBLOBMessage_base{
-			appQName:      istructs.AppQName_test1_app1,
-			wsid:          1,
-			requestCtx:    context.Background(),
-			header:        map[string]string{},
-			requestSender: requestSender,
-		},
-		ownerRecord:      ownerQName,
-		ownerRecordField: "BlobField",
-	}
-	bw := &blobWorkpiece{
-		blobMessage:      msg,
-		blobMessageWrite: msg,
-	}
-	bw.logCtx = logger.WithContextAttrs(msg.requestCtx, map[string]any{
-		attrOwnerQName: ownerQName.String(),
-		attrOwnerField: "BlobField",
-	})
-	return bw
-}
-
-func TestBlobWriteLogging(t *testing.T) {
+func TestBlobWritePipeline(t *testing.T) {
 	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
 	var buf syncBuf
 	logger.SetCtxWriters(&buf, &buf)
 	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
 
-	t.Run("bp.meta on write success", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		require := require.New(t)
-		buf = syncBuf{}
-		bw := newWriteBW(nil)
-		bw.blobName = []string{"testfile.txt"}
-		bw.blobContentType = []string{"text/plain"}
-		bw.descr.Name = "testfile.txt"
-		bw.descr.ContentType = "text/plain"
+		sender := okCmdSender()
+		storage := &mockBlobStorage{}
+		p := providePipeline(context.Background(), storage, func() iblobstorage.WLimiterType { return nil })
+		defer p.Close()
 
-		require.NoError(validateQueryParams(context.Background(), bw))
-
-		out := buf.String()
-		require.Contains(out, "stage=bp.meta")
-		require.Contains(out, "name=")
-		require.Contains(out, "contenttype=")
-		require.Contains(out, "ownerqname=test.Owner")
-		require.Contains(out, "ownerfield=BlobField")
-	})
-
-	t.Run("bp.register.success on write success", func(t *testing.T) {
-		require := require.New(t)
-		buf = syncBuf{}
-		bw := newWriteBW(okCmdSender())
-		bw.registerFuncName = appdef.NewQName("sys", "RegisterPersistentBLOB")
-		bw.registerFuncBody = `{"args":{}}`
-
-		require.NoError(registerBLOB(context.Background(), bw))
-
-		out := buf.String()
-		require.Contains(out, "stage=bp.register.success")
-		require.Contains(out, "blobid=")
-		require.Contains(out, "ownerqname=test.Owner")
-		require.Contains(out, "ownerfield=BlobField")
-	})
-
-	t.Run("bp.write.success on write success", func(t *testing.T) {
-		require := require.New(t)
-		buf = syncBuf{}
-		bw := newWriteBW(nil)
-		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
-			ClusterAppID: istructs.ClusterAppID_sys_blobber,
-			WSID:         1,
-			BlobID:       42,
+		msg := &implIBLOBMessage_Write{
+			implIBLOBMessage_base: implIBLOBMessage_base{
+				appQName:         istructs.AppQName_test1_app1,
+				wsid:             1,
+				requestCtx:       context.Background(),
+				header:           map[string]string{},
+				requestSender:    sender,
+				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+				errorResponder:   func(_ coreutils.SysError) {},
+				done:             make(chan interface{}),
+			},
+			urlQueryValues: url.Values{"name": {"testfile.txt"}, "mimeType": {"text/plain"}},
+			reader:         io.NopCloser(strings.NewReader("test data")),
 		}
-		bw.logCtx = logger.WithContextAttrs(bw.logCtx, map[string]any{attrBlobID: "42"})
+		bw := &blobWorkpiece{blobMessage: msg}
 
-		writeFn := provideWriteBLOB(&mockBlobStorage{}, func() iblobstorage.WLimiterType { return nil })
-		require.NoError(writeFn(context.Background(), bw))
+		require.NoError(p.SendSync(bw))
 
 		out := buf.String()
-		require.Contains(out, "stage=bp.write.success")
-		require.Contains(out, "blobid=42")
-		require.Contains(out, "ownerqname=test.Owner")
-		require.Contains(out, "ownerfield=BlobField")
+		require.Contains(out, "bp.meta")
+		require.Contains(out, "testfile.txt")
+		require.Contains(out, fmt.Sprintf(`ownerqname="%s"`, notApplicableInAPIv1))
+		require.Contains(out, fmt.Sprintf(`ownerfield="%s"`, notApplicableInAPIv1))
+		require.Contains(out, "bp.register.success")
+		require.Contains(out, "blobid=")
+		require.Contains(out, "bp.write.success")
+		require.Contains(out, "bp.setcompleted.success")
 	})
 
-	t.Run("bp.setcompleted.success on write success", func(t *testing.T) {
+	t.Run("error", func(t *testing.T) {
 		require := require.New(t)
-		buf = syncBuf{}
-		bw := newWriteBW(okCmdSender())
-		bw.newBLOBID = 42
-		bw.logCtx = logger.WithContextAttrs(bw.logCtx, map[string]any{attrBlobID: "42"})
+		buf.Reset()
+		var capturedErr coreutils.SysError
+		sender := okCmdSender()
+		storage := &mockBlobStorage{writeErr: errors.New("storage write failure")}
+		p := providePipeline(context.Background(), storage, func() iblobstorage.WLimiterType { return nil })
+		defer p.Close()
 
-		require.NoError(setBLOBStatusCompleted(context.Background(), bw))
+		msg := &implIBLOBMessage_Write{
+			implIBLOBMessage_base: implIBLOBMessage_base{
+				appQName:         istructs.AppQName_test1_app1,
+				wsid:             1,
+				requestCtx:       context.Background(),
+				header:           map[string]string{},
+				requestSender:    sender,
+				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+				errorResponder:   func(se coreutils.SysError) { capturedErr = se },
+				done:             make(chan interface{}),
+			},
+			urlQueryValues: url.Values{"name": {"testfile.txt"}, "mimeType": {"text/plain"}},
+			reader:         io.NopCloser(strings.NewReader("test data")),
+		}
+		bw := &blobWorkpiece{blobMessage: msg}
+
+		require.NoError(p.SendSync(bw))
 
 		out := buf.String()
-		require.Contains(out, "stage=bp.setcompleted.success")
-		require.Contains(out, "blobid=42")
-		require.Contains(out, "ownerqname=test.Owner")
-		require.Contains(out, "ownerfield=BlobField")
-	})
-
-	t.Run("bp.error on write error", func(t *testing.T) {
-		require := require.New(t)
-		buf = syncBuf{}
-		bw := newWriteBW(nil)
-
-		s := &sendWriteResult{}
-		testErr := coreutils.WrapSysError(errors.New("test write failure"), http.StatusInternalServerError)
-		_ = s.OnErr(testErr, bw, nil)
-
-		out := buf.String()
-		require.Contains(out, "stage=bp.error")
-		require.Contains(out, "test write failure")
+		require.Contains(out, "bp.register.success")
+		require.Contains(out, "bp.error")
+		require.Contains(out, "storage write failure")
+		require.Equal(http.StatusInternalServerError, capturedErr.HTTPStatus)
 	})
 }
