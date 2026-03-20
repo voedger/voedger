@@ -784,6 +784,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2) WITH Tags=(WorkspaceOwnerFuncTag);
 
 		COMMAND TestCmdRawArg(sys.Raw) WITH Tags=(WorkspaceOwnerFuncTag);
+		QUERY TestQryRawArg(sys.Raw) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
 		PROJECTOR ProjDummyQName AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(ViewWithQName)); -- does nothing, only to define view.app1pkg.ViewQName
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx), sys.View(CategoryIdxDenied));
@@ -849,6 +850,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT(Year, Month, Day, offs) ON VIEW DailyIdx TO LimitedAccessRole;
 
 	GRANT EXECUTE ON QUERY QryVoid TO sys.WorkspaceOwner;
+	GRANT EXECUTE ON QUERY TestQryRawArg TO sys.WorkspaceOwner;
 
 	GRANT SELECT ON TABLE DocWithBLOB TO sys.WorkspaceOwner;
 	GRANT SELECT ON TABLE Country TO sys.WorkspaceOwner;

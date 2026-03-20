@@ -205,6 +205,18 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return qw.apiPathHandler.setRequestType(ctx, qw)
 		}),
+		operator("parse query params", func(ctx context.Context, qw *queryWork) (err error) {
+			argQName := appdef.NullQName
+			if qw.iQuery != nil && qw.iQuery.Param() != nil {
+				argQName = qw.iQuery.Param().QName()
+			}
+			qp, err := ParseQueryParams(qw.msg.RawParams(), argQName)
+			if err != nil {
+				return coreutils.WrapSysError(err, http.StatusBadRequest)
+			}
+			qw.queryParams = *qp
+			return nil
+		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.apiPathHandler.requestOpKind == appdef.OperationKind_null {
 				return nil
@@ -309,7 +321,11 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 	requestArgs := istructs.NewNullObject()
 	if argsType != nil {
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
-		requestArgsBuilder.FillFromJSON(qw.msg.QueryParams().Argument)
+		if argsType.QName() == istructs.QNameRaw {
+			requestArgsBuilder.PutChars(processors.Field_RawObject_Body, qw.queryParams.RawArg)
+		} else {
+			requestArgsBuilder.FillFromJSON(qw.queryParams.Argument)
+		}
 		requestArgs, err = requestArgsBuilder.Build()
 		if err != nil {
 			return execQueryArgs, err

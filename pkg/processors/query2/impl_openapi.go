@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 )
 
@@ -906,13 +907,17 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 	if strings.Contains(path, "/queries/") {
 		query := typ.(appdef.IQuery)
 		if query.Param() != nil {
+			paramSchema := map[string]interface{}{}
+			if query.Param().QName() == istructs.QNameRaw {
+				paramSchema[schemaKeyType] = schemaTypeString
+			} else {
+				paramSchema[schemaKeyRef] = g.schemaRef(query.Param(), appdef.OperationKind_Execute)
+			}
 			parameters = append(parameters, map[string]interface{}{
-				"name":     paramArgs,
-				"in":       paramInQuery,
-				"required": true,
-				schemaKeySchema: map[string]interface{}{
-					schemaKeyRef: g.schemaRef(query.Param(), appdef.OperationKind_Execute),
-				},
+				"name":               paramArgs,
+				"in":                 paramInQuery,
+				"required":           true,
+				schemaKeySchema:      paramSchema,
 				schemaKeyDescription: descrArgsParam,
 			})
 		}
