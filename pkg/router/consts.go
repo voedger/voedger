@@ -51,6 +51,7 @@ const (
 	logAttrib_Origin              = "origin"
 	logAttrib_Projection          = "projection"
 	logAttrib_ChannelID           = "channelid"
+	n10nErrorStage                = "n10n.error"
 )
 
 var (

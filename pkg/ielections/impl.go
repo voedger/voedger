@@ -104,9 +104,9 @@ func (e *elections[K, V]) renewWithRetry(ctx context.Context, key K, val V, lead
 
 func bumpTickerCounter(tickerCounter int64, ctx context.Context, tickerInterval time.Duration) (tickerCounterPlus1 int64) {
 	tickerCounterPlus1 = tickerCounter + 1
-	if tickerCounter < 10 {
+	if tickerCounter < maintainLogFirstTicks {
 		logger.VerboseCtx(ctx, "leadership.maintain.10", "renewing leadership")
-	} else if tickerCounter%200 == 0 {
+	} else if tickerCounter%maintainLogEveryTicks == 0 {
 		// notest
 		logger.VerboseCtx(ctx, "leadership.maintain.200", "still leader for", tickerInterval*time.Duration(tickerCounter))
 	}

@@ -70,14 +70,18 @@
 
 ### Leadership
 
+- [x] add: [pkg/ielections/consts.go](../../../pkg/ielections/consts.go)
+  - add: `maintainLogFirstTicks = 10` — log every renewal for the first N ticks
+  - add: `maintainLogEveryTicks = 200` — log a heartbeat every N ticks after the initial period
+
 - [x] update: [pkg/ielections/impl.go](../../../pkg/ielections/impl.go)
   - add: `leadershipLogCtx[K any](key K) context.Context` — helper that builds log context with `vapp=sys.VApp_SysVoedger`, `extension="sys._Leadership"`, `key` attribs
   - update: `AcquireLeadership` — use `leadershipLogCtx(key)` instead of inline map literal; on `isFinalized`: `logger.WarningCtx(logCtx, "leadership.acquire.finalized", "elections cleaned up; cannot acquire leadership")`
   - update: Replace `logger.Verbose(fmt.Sprintf("Key=%v: leadership already acquired..."` with `logger.InfoCtx(ctx, "leadership.acquire.other", "leadership already acquired by someone else")`
   - update: Replace `logger.Error(fmt.Sprintf("Key=%v: InsertIfNotExist failed..."` with `logger.ErrorCtx(ctx, "leadership.acquire.error", "InsertIfNotExist failed:", err)`
   - update: Replace `logger.Info(fmt.Sprintf("Key=%v: leadership acquired"` with `logger.InfoCtx(ctx, "leadership.acquire.success", "success")`
-  - update: First 10 renewal ticks: `logger.VerboseCtx(ctx, "leadership.maintain.10", "renewing leadership")`
-  - update: Every 200 ticks: `logger.VerboseCtx(ctx, "leadership.maintain.200", "still leader for", duration)`
+  - update: First `maintainLogFirstTicks` renewal ticks: `logger.VerboseCtx(ctx, "leadership.maintain.10", "renewing leadership")`
+  - update: Every `maintainLogEveryTicks` ticks: `logger.VerboseCtx(ctx, "leadership.maintain.200", "still leader for", duration)`
   - update: On compareAndSwap error: `logger.ErrorCtx(ctx, "leadership.maintain.stgerror", "compareAndSwap error:", err)`
   - update: On leadership stolen: `logger.ErrorCtx(ctx, "leadership.maintain.stolen", "compareAndSwap !ok => release")`
   - update: On retry deadline reached: `logger.ErrorCtx(ctx, "leadership.maintain.release", "retry deadline reached, releasing. Last error:", err)`

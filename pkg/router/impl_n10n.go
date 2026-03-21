@@ -43,12 +43,12 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 		jsonParam, ok := req.URL.Query()["payload"]
 		if !ok || len(jsonParam[0]) < 1 {
 			errMsg := "query parameter with payload (SubjectLogin id and ProjectionKey) is missing"
-			logger.ErrorCtx(logCtx, "n10n.error", errMsg+",rawkeys=")
+			logger.ErrorCtx(logCtx, n10nErrorStage, errMsg+",rawkeys=")
 			WriteTextResponse(rw, errMsg, http.StatusBadRequest)
 			return
 		}
 		if err = json.Unmarshal([]byte(jsonParam[0]), &urlParams); err != nil {
-			logger.ErrorCtx(logCtx, "n10n.error", fmt.Sprintf("cannot unmarshal input payload %v,rawkeys=%s", err, jsonParam[0]))
+			logger.ErrorCtx(logCtx, n10nErrorStage, fmt.Sprintf("cannot unmarshal input payload %v,rawkeys=%s", err, jsonParam[0]))
 			WriteTextResponse(rw, "cannot unmarshal input payload "+err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -60,7 +60,7 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 		}
 		channel, channelCleanup, err = s.n10n.NewChannel(urlParams.SubjectLogin, hours24)
 		if err != nil {
-			logger.ErrorCtx(logCtx, "n10n.error", err)
+			logger.ErrorCtx(logCtx, n10nErrorStage, err)
 			WriteTextResponse(rw, "create new channel failed: "+err.Error(), n10nErrorToStatusCode(err))
 			return
 		}
@@ -69,7 +69,7 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 		})
 		defer channelCleanup()
 		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
-			logger.ErrorCtx(logCtx, "n10n.error", "failed to write created channel id:", err)
+			logger.ErrorCtx(logCtx, n10nErrorStage, "failed to write created channel id:", err)
 			return
 		}
 		for _, projection := range urlParams.ProjectionKey {
@@ -163,13 +163,13 @@ func (s *routerService) subscribeHandler() http.HandlerFunc {
 		}
 		logCtx := withLogAttribs(req.Context(), validatedData{}, bus.Request{Resource: extension}, req)
 		if err != nil {
-			logger.ErrorCtx(logCtx, "n10n.error", fmt.Sprintf("%v,rawkeys=%s", err, rawPayload))
+			logger.ErrorCtx(logCtx, n10nErrorStage, fmt.Sprintf("%v,rawkeys=%s", err, rawPayload))
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 		for _, projection := range parameters.ProjectionKey {
 			if err = s.n10n.Subscribe(parameters.Channel, projection); err != nil {
-				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), "n10n.error", err)
+				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), n10nErrorStage, err)
 				http.Error(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
@@ -195,7 +195,7 @@ func (s *routerService) unSubscribeHandler() http.HandlerFunc {
 		}
 		logCtx := withLogAttribs(req.Context(), validatedData{}, bus.Request{Resource: extension}, req)
 		if err != nil {
-			logger.ErrorCtx(logCtx, "n10n.error", fmt.Sprintf("%v,rawkeys=%s", err, rawPayload))
+			logger.ErrorCtx(logCtx, n10nErrorStage, fmt.Sprintf("%v,rawkeys=%s", err, rawPayload))
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
