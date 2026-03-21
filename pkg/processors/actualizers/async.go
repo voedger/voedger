@@ -244,9 +244,6 @@ func (a *asyncActualizer) keepReading(ctx context.Context) (err error) {
 		return
 	}
 	a.conf.Broker.WatchChannel(a.readCtx.vvmCtx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
-		if logger.IsVerbose() {
-			logger.VerboseCtx(a.readCtx.vvmCtx, "", fmt.Sprintf("received n10n: offset %d, last handled: %d", offset, a.offset))
-		}
 		if a.offset < offset {
 			err = a.readPlogToOffset(a.readCtx.vvmCtx, offset)
 			if err != nil {
