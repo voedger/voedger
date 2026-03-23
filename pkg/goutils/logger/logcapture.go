@@ -31,18 +31,18 @@ func StartCapture(t TB, level TLogLevel) ILogCaptor {
 	return captor
 }
 
-func (c *captor) HasLine(strs ...string) {
+func (c *captor) HasLine(str string, strs ...string) {
 	c.t.Helper()
 	c.mu.Lock()
 	content := bytes.Clone(c.buf.Bytes())
 	c.mu.Unlock()
-	if !anyLineContainsAll(content, strs) {
+	if !anyLineContainsAll(content, str, strs) {
 		c.t.Errorf("no log line contains all of the expected substrings\nlog:\n%s", content)
 		c.t.FailNow()
 	}
 }
 
-func (c *captor) EventuallyHasLine(strs ...string) {
+func (c *captor) EventuallyHasLine(str string, strs ...string) {
 	c.t.Helper()
 	deadline := time.Now().Add(eventuallyHasLineTimeout)
 	var content []byte
@@ -50,7 +50,7 @@ func (c *captor) EventuallyHasLine(strs ...string) {
 		c.mu.Lock()
 		content = bytes.Clone(c.buf.Bytes())
 		c.mu.Unlock()
-		if anyLineContainsAll(content, strs) {
+		if anyLineContainsAll(content, str, strs) {
 			return
 		}
 		if time.Now().After(deadline) {
@@ -58,14 +58,15 @@ func (c *captor) EventuallyHasLine(strs ...string) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	c.t.Errorf("no log line contains all of the expected substrings\nexpected: %v\nlog:\n%s", strs, content)
+	c.t.Errorf("no log line contains all of the expected substrings\nexpected: %v\nlog:\n%s", append([]string{str}, strs...), content)
 	c.t.FailNow()
 }
 
-func anyLineContainsAll(content []byte, strs []string) bool {
+func anyLineContainsAll(content []byte, str string, strs []string) bool {
+	all := append([]string{str}, strs...)
 	for _, line := range bytes.Split(content, []byte("\n")) {
 		found := true
-		for _, s := range strs {
+		for _, s := range all {
 			if !bytes.Contains(line, []byte(s)) {
 				found = false
 				break
@@ -78,12 +79,12 @@ func anyLineContainsAll(content []byte, strs []string) bool {
 	return false
 }
 
-func (c *captor) NotContains(strs ...string) {
+func (c *captor) NotContains(str string, strs ...string) {
 	c.t.Helper()
 	c.mu.Lock()
 	content := bytes.Clone(c.buf.Bytes())
 	c.mu.Unlock()
-	for _, s := range strs {
+	for _, s := range append([]string{str}, strs...) {
 		if bytes.Contains(content, []byte(s)) {
 			c.t.Errorf("log contains unexpected string %q\nlog:\n%s", s, content)
 			c.t.FailNow()

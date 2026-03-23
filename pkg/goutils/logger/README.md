@@ -120,7 +120,7 @@ func processPayment(ctx context.Context) {
   - [ILogCaptor: types.go#L22](types.go#L22)
   - [HasLine: logcapture.go#L34](logcapture.go#L34)
   - [EventuallyHasLine: logcapture.go#L45](logcapture.go#L45)
-  - [NotContains: logcapture.go#L83](logcapture.go#L83)
+  - [NotContains: logcapture.go#L82](logcapture.go#L82)
 
 ## Use
 

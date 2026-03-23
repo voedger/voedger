@@ -21,8 +21,8 @@ type TB interface {
 
 type ILogCaptor interface {
 	String() string
-	HasLine(strs ...string)
-	EventuallyHasLine(strs ...string) // waits for 1 second
-	NotContains(strs ...string)
+	HasLine(str string, strs ...string)           // fails if no single line contains all substrings (any order)
+	EventuallyHasLine(str string, strs ...string) // same, retries up to 1 second
+	NotContains(str string, strs ...string)       // fails if any substring appears in the log
 	Reset()
 }

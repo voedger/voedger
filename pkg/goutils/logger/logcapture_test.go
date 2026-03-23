@@ -15,14 +15,14 @@ import (
 )
 
 func TestLogCapture_BasicUsage(t *testing.T) {
-	logCap := StartCapture(t, LogLevelVerbose)
+	require := require.New(t)
 	t.Run("captures InfoCtx output", func(t *testing.T) {
-		require := require.New(t)
+		logCap := StartCapture(t, LogLevelVerbose)
 		InfoCtx(context.Background(), "captured message")
 		require.Contains(logCap.String(), "captured message")
 	})
 	t.Run("captures context attrs", func(t *testing.T) {
-		require := require.New(t)
+		logCap := StartCapture(t, LogLevelVerbose)
 		ctx := WithContextAttrs(context.Background(), map[string]any{LogAttr_WSID: 42, LogAttr_VApp: "myapp"})
 		InfoCtx(ctx, "with attrs")
 		require.Contains(logCap.String(), "wsid=42")
@@ -35,12 +35,11 @@ func TestLogCapture_BasicUsage(t *testing.T) {
 		logCap.HasLine("wsid=99", "my message")
 	})
 	t.Run("ErrorCtx is captured", func(t *testing.T) {
-		require := require.New(t)
+		logCap := StartCapture(t, LogLevelVerbose)
 		ErrorCtx(context.Background(), "error message")
 		require.Contains(logCap.String(), "error message")
 	})
 	t.Run("does not capture below set level", func(t *testing.T) {
-		require := require.New(t)
 		capInfo := StartCapture(t, LogLevelInfo)
 		VerboseCtx(context.Background(), "verbose msg")
 		require.Empty(capInfo.String())
@@ -116,12 +115,10 @@ func TestCaptor_Failure(t *testing.T) {
 func TestEventuallyHasLine(t *testing.T) {
 	logCap := StartCapture(t, LogLevelVerbose)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		time.Sleep(100 * time.Millisecond)
 		InfoCtx(context.Background(), "async message")
-	}()
+	})
 	logCap.EventuallyHasLine("async message")
 	wg.Wait()
 }
