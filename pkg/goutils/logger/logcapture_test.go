@@ -110,6 +110,12 @@ func TestCaptor_Failure(t *testing.T) {
 	t.Run("EventuallyHasLine", func(t *testing.T) {
 		runFailure(t, func(c *captor) { c.EventuallyHasLine("absent string") })
 	})
+	t.Run("NotContains", func(t *testing.T) {
+		runFailure(t, func(c *captor) {
+			c.buf.WriteString("present string\n")
+			c.NotContains("present string")
+		})
+	})
 }
 
 func TestEventuallyHasLine(t *testing.T) {
