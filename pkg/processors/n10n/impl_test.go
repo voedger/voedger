@@ -6,14 +6,10 @@
 package n10n
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"os"
-	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -22,14 +18,10 @@ import (
 )
 
 func TestN10NErrorLogging(t *testing.T) {
-	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
-	var buf syncBuf
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
-	t.Run("n10n.error", func(t *testing.T) {
-		require := require.New(t)
-		buf.Reset()
+	t.Run("n10n.error", func(_ *testing.T) {
+		logCap.Reset()
 
 		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
@@ -40,13 +32,9 @@ func TestN10NErrorLogging(t *testing.T) {
 
 		reportError(wp, errors.New("test n10n failure"))
 
-		out := buf.String()
-		require.Contains(out, "stage=n10n.error")
-		require.Contains(out, "test n10n failure")
-		require.Contains(out, "channelid=chan-1")
-		require.Contains(out, "projection=test.View")
-		require.Contains(out, "vapp=test/app")
-		require.Contains(out, "wsid=42")
+		logCap.HasLine("stage=n10n.error", "test n10n failure",
+			"channelid=chan-1", "projection=test.View",
+			"vapp=test/app", "wsid=42")
 	})
 }
 
@@ -55,29 +43,6 @@ type noopResponder struct{}
 func (noopResponder) StreamJSON(int) bus.IResponseWriter  { return nil }
 func (noopResponder) StreamEvents() bus.IResponseWriter   { return nil }
 func (noopResponder) Respond(bus.ResponseMeta, any) error { return nil }
-
-type syncBuf struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-}
-
-func (sb *syncBuf) Write(p []byte) (int, error) {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	return sb.buf.Write(p)
-}
-
-func (sb *syncBuf) String() string {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	return sb.buf.String()
-}
-
-func (sb *syncBuf) Reset() {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	sb.buf.Reset()
-}
 
 func newN10nWP(channelID string, projKey in10n.ProjectionKey) *n10nWorkpiece {
 	wp := &n10nWorkpiece{

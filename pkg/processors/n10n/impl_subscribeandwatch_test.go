@@ -8,7 +8,6 @@ package n10n
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -20,14 +19,11 @@ import (
 )
 
 func TestSubscribeAndWatchLogging(t *testing.T) {
-	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
-	var buf syncBuf
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	t.Run("n10n.subscribe&watch.success single key", func(t *testing.T) {
 		require := require.New(t)
-		buf.Reset()
+		logCap.Reset()
 
 		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
@@ -38,17 +34,14 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 
 		require.NoError(logSubscribeAndWatchSuccess(context.Background(), wp))
 
-		out := buf.String()
-		require.Contains(out, "stage=n10n.subscribe&watch.success")
-		require.Contains(out, "vapp=test/app")
-		require.Contains(out, "wsid=42")
-		require.Contains(out, "projection=test.View")
-		require.Contains(out, "channelid=chan-1")
+		logCap.HasLine("stage=n10n.subscribe&watch.success",
+			"vapp=test/app", "wsid=42",
+			"projection=test.View", "channelid=chan-1")
 	})
 
 	t.Run("n10n.subscribe&watch.success multi key", func(t *testing.T) {
 		require := require.New(t)
-		buf.Reset()
+		logCap.Reset()
 
 		projKey1 := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
@@ -74,17 +67,21 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 
 		require.NoError(logSubscribeAndWatchSuccess(context.Background(), wp))
 
-		out := buf.String()
-		require.Contains(out, "channelid=chan-2")
-		require.Contains(out, "projection=test.View1")
-		require.Contains(out, "wsid=1")
-		require.Contains(out, "projection=test.View2")
-		require.Contains(out, "wsid=2")
+		logCap.HasLine(
+			"stage=n10n.subscribe&watch.success",
+			"channelid=chan-2",
+			"projection=test.View1",
+			"wsid=1",
+		)
+		logCap.HasLine("stage=n10n.subscribe&watch.success",
+			"channelid=chan-2",
+			"projection=test.View2",
+			"wsid=2",
+		)
 	})
 
 	t.Run("n10n.sse_send.success", func(t *testing.T) {
-		require := require.New(t)
-		buf.Reset()
+		logCap.Reset()
 
 		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
@@ -96,17 +93,13 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 
 		logger.VerboseCtx(projCtx, "n10n.sse_send.success", "event: test data: 100  ")
 
-		out := buf.String()
-		require.Contains(out, "stage=n10n.sse_send.success")
-		require.Contains(out, "channelid=chan-3")
-		require.Contains(out, "vapp=test/app")
-		require.Contains(out, "wsid=42")
-		require.Contains(out, "projection=test.View")
+		logCap.HasLine("stage=n10n.sse_send.success",
+			"channelid=chan-3", "vapp=test/app",
+			"wsid=42", "projection=test.View")
 	})
 
 	t.Run("n10n.sse_send.error", func(t *testing.T) {
-		require := require.New(t)
-		buf.Reset()
+		logCap.Reset()
 
 		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
@@ -118,18 +111,14 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 
 		logger.ErrorCtx(projCtx, "n10n.sse_send.error", errors.New("write failed"))
 
-		out := buf.String()
-		require.Contains(out, "stage=n10n.sse_send.error")
-		require.Contains(out, "write failed")
-		require.Contains(out, "channelid=chan-4")
-		require.Contains(out, "vapp=test/app")
-		require.Contains(out, "wsid=42")
-		require.Contains(out, "projection=test.View")
+		logCap.HasLine("stage=n10n.sse_send.error", "write failed",
+			"channelid=chan-4", "vapp=test/app",
+			"wsid=42", "projection=test.View")
 	})
 
 	t.Run("n10n.watch.done", func(t *testing.T) {
 		require := require.New(t)
-		buf.Reset()
+		logCap.Reset()
 
 		projKey := in10n.ProjectionKey{
 			App:        appdef.NewAppQName("test", "app"),
@@ -144,12 +133,9 @@ func TestSubscribeAndWatchLogging(t *testing.T) {
 		require.NoError(p.watchChannel(context.Background(), wp))
 		p.goroutinesWG.Wait()
 
-		out := buf.String()
-		require.Contains(out, "stage=n10n.watch.done")
-		require.Contains(out, "channelid=chan-5")
-		require.Contains(out, "vapp=test/app")
-		require.Contains(out, "wsid=42")
-		require.Contains(out, "projection=test.View")
+		logCap.HasLine("stage=n10n.watch.done",
+			"channelid=chan-5", "vapp=test/app",
+			"wsid=42", "projection=test.View")
 	})
 }
 

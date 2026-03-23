@@ -7,7 +7,6 @@ package n10n
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,13 +17,9 @@ import (
 )
 
 func TestSubscribeExtraLogging(t *testing.T) {
-	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
-	var buf syncBuf
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	require := require.New(t)
-	buf.Reset()
 
 	projKey := in10n.ProjectionKey{
 		App:        appdef.NewAppQName("test", "app"),
@@ -35,10 +30,7 @@ func TestSubscribeExtraLogging(t *testing.T) {
 
 	require.NoError(logSubscribeSuccess(context.Background(), wp))
 
-	out := buf.String()
-	require.Contains(out, "stage=n10n.subscribe.success")
-	require.Contains(out, "vapp=test/app")
-	require.Contains(out, "wsid=42")
-	require.Contains(out, "projection=test.View")
-	require.Contains(out, "channelid=chan-sub-1")
+	logCap.HasLine("stage=n10n.subscribe.success",
+		"vapp=test/app", "wsid=42",
+		"projection=test.View", "channelid=chan-sub-1")
 }

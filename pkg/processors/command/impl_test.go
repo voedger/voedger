@@ -5,16 +5,13 @@
 package commandprocessor
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -105,10 +102,7 @@ func TestBasicUsage(t *testing.T) {
 		cfg.Resources.Add(testCmd)
 	}
 
-	var buf syncBuffer
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
-	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	app := setUp(t, prepareWS)
 	defer tearDown(app)
@@ -157,12 +151,11 @@ func TestBasicUsage(t *testing.T) {
 		<-check
 		<-check
 
-		out := buf.String()
-		require.Contains(out, "stage=cp.success")
+		logCap.HasLine("stage=cp.success")
 	})
 
 	t.Run("500 internal server error command exec error", func(t *testing.T) {
-		buf.Reset()
+		logCap.Reset()
 		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"fire error"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp,
@@ -182,9 +175,7 @@ func TestBasicUsage(t *testing.T) {
 		}
 		require.NoError(*respErr)
 
-		out := buf.String()
-		require.Contains(out, "stage=cp.error")
-		require.Contains(out, "fire error")
+		logCap.HasLine("stage=cp.error", "fire error")
 	})
 }
 
@@ -230,9 +221,7 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	require := require.New(t)
 
-	var buf syncBuffer
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	testErr := errors.New("test error")
@@ -274,15 +263,16 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	// 2nd c.sys.CUD -> sync projector failure, expect 500 internal server error
-	buf.Reset()
+	logCap.Reset()
 	respData = sendCUD(t, 1, app, http.StatusInternalServerError)
 	require.Equal(testErr.Error(), respData["sys.Error"].(map[string]interface{})["Message"].(string))
 
-	out := buf.String()
-	require.Contains(out, "stage=cp.partition_recovery")
-	require.Contains(out, "vapp=sys/voedger")
-	require.Contains(out, "extension=sys._Recovery")
-	require.Contains(out, "partition will be restarted")
+	logCap.HasLine(
+		"stage=cp.partition_recovery",
+		"vapp=sys/voedger",
+		"extension=sys._Recovery",
+		"partition will be restarted",
+	)
 
 	// PLog and record is applied but WLog is not written here because sync projector is failed
 	// partition is scheduled to be recovered
@@ -298,9 +288,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 func TestRecovery(t *testing.T) {
 	require := require.New(t)
 
-	var buf syncBuffer
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
@@ -324,7 +312,7 @@ func TestRecovery(t *testing.T) {
 	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
-	buf.Reset()
+	logCap.Reset()
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
 	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
@@ -332,12 +320,17 @@ func TestRecovery(t *testing.T) {
 	require.Equal(istructs.FirstUserRecordID+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.FirstUserRecordID+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
-	out := buf.String()
-	require.Contains(out, "stage=cp.partition_recovery.start")
-	require.Contains(out, "stage=cp.partition_recovery.complete")
-	require.Contains(out, "vapp=sys/voedger")
-	require.Contains(out, "extension=sys._Recovery")
-	require.Contains(out, "partid=")
+	logCap.HasLine(
+		"stage=cp.partition_recovery.start",
+		"vapp=sys/voedger",
+		"extension=sys._Recovery",
+		"partid=1",
+	)
+	logCap.HasLine("stage=cp.partition_recovery.complete",
+		"vapp=sys/voedger",
+		"extension=sys._Recovery",
+		"partid=1",
+	)
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 2, app)
@@ -869,9 +862,7 @@ func TestLogEventAndCUDs(t *testing.T) {
 	testQName := appdef.NewQName("test", "Article")
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 
-	var buf syncBuffer
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName).AddField("Name", appdef.DataKind_string, false)
@@ -885,9 +876,8 @@ func TestLogEventAndCUDs(t *testing.T) {
 
 	t.Run("verbose level emits event and cud log entries", func(t *testing.T) {
 		require := require.New(t)
-		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
 
-		buf.Reset()
+		logCap.Reset()
 
 		// insert
 		req := bus.Request{
@@ -903,34 +893,29 @@ func TestLogEventAndCUDs(t *testing.T) {
 		newID := cmdResp.NewIDs["1"]
 		require.NotZero(newID)
 
-		out := buf.String()
-		require.Contains(out, "stage=cp.plog_saved")
-		require.Contains(out, "evqname=sys.CUD")
-		require.Contains(out, fmt.Sprintf("rectype=%s", testQName))
-		require.Contains(out, fmt.Sprintf("recid=%d", newID))
-		require.Contains(out, "op=create")
+		logCap.HasLine("stage=cp.plog_saved", "evqname=sys.CUD")
+		logCap.HasLine(fmt.Sprintf("rectype=%s", testQName), fmt.Sprintf("recid=%d", newID), "op=create")
 
 		// update: newfields=world, oldfields=hello
-		buf.Reset()
+		logCap.Reset()
 		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.Article","Name":"world"}}]}`, newID))
 		cmdRespMeta, _, sysErr = bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(sysErr)
 		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
 
-		out = buf.String()
-		require.Contains(out, fmt.Sprintf("recid=%d", newID))
-		require.Contains(out, "op=update")
-		require.Contains(out, "newfields=")
-		require.Contains(out, "oldfields=")
-		require.Contains(out, "world")
-		require.Contains(out, "hello")
+		logCap.HasLine(
+			fmt.Sprintf("recid=%d", newID),
+			"op=update",
+			fmt.Sprintf(`newfields={\"Name\":\"world\",\"sys.ID\":%d,\"sys.IsActive\":true,\"sys.QName\":\"test.Article\"}`, newID),
+			fmt.Sprintf(`oldfields={\"Name\":\"hello\",\"sys.ID\":%d,\"sys.IsActive\":true,\"sys.QName\":\"test.Article\"}`, newID),
+		)
 	})
 
 	t.Run("info level emits nothing", func(t *testing.T) {
 		require := require.New(t)
 		defer logger.SetLogLevelWithRestore(logger.LogLevelInfo)()
 
-		buf.Reset()
+		logCap.Reset()
 
 		req := bus.Request{
 			WSID:     1,
@@ -941,7 +926,7 @@ func TestLogEventAndCUDs(t *testing.T) {
 		}
 		_, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(sysErr)
-		require.NotContains(buf.String(), "evqname")
+		logCap.NotContains("evqname")
 	})
 }
 
@@ -950,12 +935,7 @@ func TestSyncProjectorLogging(t *testing.T) {
 	projQName := appdef.NewQName(appdef.SysPackage, "TestProj")
 
 	t.Run("sp.triggeredby and sp.success on success", func(t *testing.T) {
-		require := require.New(t)
-
-		var buf syncBuffer
-		logger.SetCtxWriters(&buf, &buf)
-		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
-		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 			wsb.AddCRecord(testCRecord)
@@ -976,22 +956,15 @@ func TestSyncProjectorLogging(t *testing.T) {
 		})
 		defer tearDown(app)
 
-		buf.Reset()
+		logCap.Reset()
 		sendCUD(t, 1, app)
 
-		out := buf.String()
-		require.Contains(out, "stage=sp.triggeredby")
-		require.Contains(out, "stage=sp.success")
-		require.Contains(out, fmt.Sprintf("extension=%s", projQName))
+		logCap.HasLine("stage=sp.triggeredby", fmt.Sprintf("extension=%s", projQName))
+		logCap.HasLine("stage=sp.success", fmt.Sprintf("extension=%s", projQName))
 	})
 
 	t.Run("sp.error on invoke failure", func(t *testing.T) {
-		require := require.New(t)
-
-		var buf syncBuffer
-		logger.SetCtxWriters(&buf, &buf)
-		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
-		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		projErr := errors.New("projector failed")
 		counter := 0
@@ -1020,38 +993,11 @@ func TestSyncProjectorLogging(t *testing.T) {
 		})
 		defer tearDown(app)
 
-		buf.Reset()
+		logCap.Reset()
 		sendCUD(t, 1, app, http.StatusInternalServerError)
 
-		out := buf.String()
-		require.Contains(out, "stage=sp.triggeredby")
-		require.Contains(out, "stage=sp.error")
-		require.Contains(out, "projector failed")
-		require.Contains(out, fmt.Sprintf("extension=%s", projQName))
-		require.Contains(out, "stage=cp.partition_recovery")
-		require.Contains(out, "partition will be restarted due of an error on writing to Log")
+		logCap.HasLine("stage=sp.triggeredby", fmt.Sprintf("extension=%s", projQName))
+		logCap.HasLine("stage=sp.error", "projector failed", fmt.Sprintf("extension=%s", projQName))
+		logCap.HasLine("stage=cp.partition_recovery", "partition will be restarted due of an error on writing to Log")
 	})
-}
-
-type syncBuffer struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-}
-
-func (sb *syncBuffer) Write(p []byte) (n int, err error) {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	return sb.buf.Write(p)
-}
-
-func (sb *syncBuffer) String() string {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	return sb.buf.String()
-}
-
-func (sb *syncBuffer) Reset() {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	sb.buf.Reset()
 }

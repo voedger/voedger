@@ -7,12 +7,9 @@
 package actualizers
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -299,11 +296,7 @@ func getProjectorsInError(t *testing.T, metrics imetrics.IMetrics, appName appde
 func Test_AsynchronousActualizer_Logs(t *testing.T) {
 	t.Run("execute projector logs args all cuds and success", func(t *testing.T) {
 		require := require.New(t)
-		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
-
-		var buf bytes.Buffer
-		logger.SetCtxWriters(&buf, &buf)
-		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1)
 		cmdQName := appdef.NewQName("test", "logging_execute_cmd")
@@ -369,32 +362,28 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 			time.Sleep(time.Microsecond)
 		}
 
-		out := buf.String()
-		require.Contains(out, fmt.Sprintf("vapp=%s", appName))
-		require.Contains(out, fmt.Sprintf("extension=%s", projectorQName))
-		require.Contains(out, "wsid=1001")
-		require.Contains(out, "woffset=")
-		require.Contains(out, fmt.Sprintf("poffset=%d", topOffset))
-		require.Contains(out, fmt.Sprintf("evqname=%s", cmdQName))
-		require.Contains(out, "args={")
-		require.Contains(out, `\"name\":\"hello\"`)
-		require.Contains(out, fmt.Sprintf("triggeredby=%s", cmdQName))
-		require.Contains(out, fmt.Sprintf("rectype=%s", recQName1))
-		require.Contains(out, fmt.Sprintf("rectype=%s", recQName2))
-		require.Equal(2, strings.Count(out, "op=create"))
-		require.Equal(2, strings.Count(out, "newfields="))
-		require.NotContains(out, "oldfields=")
-		require.Contains(out, "stage=ap")
-		require.Contains(out, "stage=ap.success")
+		logCap.HasLine("stage=ap",
+			fmt.Sprintf("vapp=%s", appName),
+			fmt.Sprintf("extension=%s", projectorQName),
+			"wsid=1001", "woffset=",
+			fmt.Sprintf("poffset=%d", topOffset),
+			fmt.Sprintf("evqname=%s", cmdQName),
+			"args={", `\"name\":\"hello\"`,
+			fmt.Sprintf("triggeredby=%s", cmdQName),
+		)
+		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQName1), "op=create",
+			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQName1))
+		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQName2), "op=create",
+			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQName2))
+		require.Equal(2, strings.Count(logCap.String(), "op=create"))
+		require.Equal(2, strings.Count(logCap.String(), "newfields="))
+		logCap.NotContains("oldfields=")
+		logCap.HasLine("stage=ap.success")
 	})
 
 	t.Run("record projector logs only triggering cuds", func(t *testing.T) {
 		require := require.New(t)
-		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
-
-		var buf bytes.Buffer
-		logger.SetCtxWriters(&buf, &buf)
-		defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1)
 		cmdQName := appdef.NewQName("test", "logging_cud_cmd")
@@ -456,16 +445,14 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 			time.Sleep(time.Microsecond)
 		}
 
-		out := buf.String()
-		require.Contains(out, fmt.Sprintf("triggeredby=%s", recQNameLogged))
-		require.Contains(out, fmt.Sprintf("rectype=%s", recQNameLogged))
-		require.NotContains(out, fmt.Sprintf("rectype=%s", recQNameSkipped))
-		require.Equal(1, strings.Count(out, "op=create"))
-		require.Equal(1, strings.Count(out, "newfields="))
-		require.NotContains(out, "oldfields=")
-		require.Contains(out, "args={}")
-		require.Contains(out, "stage=ap")
-		require.Contains(out, "stage=ap.success")
+		logCap.HasLine("stage=ap", "args={}", fmt.Sprintf("triggeredby=%s", recQNameLogged))
+		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQNameLogged), "op=create",
+			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQNameLogged))
+		logCap.NotContains(fmt.Sprintf("rectype=%s", recQNameSkipped))
+		require.Equal(1, strings.Count(logCap.String(), "op=create"))
+		require.Equal(1, strings.Count(logCap.String(), "newfields="))
+		logCap.NotContains("oldfields=")
+		logCap.HasLine("stage=ap.success")
 	})
 }
 
@@ -473,10 +460,7 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 // Async actualizer should write the error to log, then rebuild and restart itself after retry backoff
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
-
-	var buf lockedBuffer
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 	name := appdef.NewQName("test", "failing_projector")
@@ -550,16 +534,11 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
 
-	// require.Contains(errStr, "test error")
-	require.Eventually(func() bool {
-		return strings.Contains(buf.String(), fmt.Sprintf("vapp=%s", appName))
-	}, time.Second, 100*time.Millisecond)
-
-	require.Contains(buf.String(), fmt.Sprintf("vapp=%s", appName))
-	require.Contains(buf.String(), fmt.Sprintf("extension=%s", name))
-	require.Contains(buf.String(), "wsid=1002")
-	require.Contains(buf.String(), `msg="test error"`)
-	require.Contains(buf.String(), "stage=ap.error")
+	logCap.EventuallyHasLine("stage=ap.error",
+		fmt.Sprintf("vapp=%s", appName),
+		fmt.Sprintf("extension=%s", name),
+		"wsid=1002", `msg="test error"`,
+	)
 
 	// wait until the istructs.Projector version is updated with the 1st record
 	for getActualizerOffset(require, appStructs, partitionNr, name) < istructs.Offset(1) {
@@ -1169,21 +1148,4 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	})
 	require.NoError(t, err)
 	t.Logf("FlushesTotal: %d", actMetrics.total(aaFlushesTotal))
-}
-
-type lockedBuffer struct {
-	buf bytes.Buffer
-	mu  sync.Mutex
-}
-
-func (b *lockedBuffer) Write(p []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.Write(p)
-}
-
-func (b *lockedBuffer) String() string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.String()
 }
