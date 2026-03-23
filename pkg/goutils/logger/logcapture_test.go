@@ -63,7 +63,7 @@ func TestLogCapture_BasicUsage(t *testing.T) {
 		})
 		// inner t.Cleanup has fired by now; slogOut is restored to the pre-inner state
 		InfoCtx(context.Background(), "post-cleanup msg")
-		require.NotContains(t, innerCap.String(), "post-cleanup msg")
+		require.NotContains(innerCap.String(), "post-cleanup msg")
 	})
 }
 
