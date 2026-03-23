@@ -5,13 +5,11 @@
 package queryprocessor
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -1142,10 +1140,7 @@ func Test_nearlyEqual(t *testing.T) {
 func TestRateLimiter(t *testing.T) {
 	require := require.New(t)
 
-	var buf syncBuffer
-	logger.SetCtxWriters(&buf, &buf)
-	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
-	defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	serviceChannel := make(iprocbus.ServiceChannel)
 
@@ -1194,27 +1189,26 @@ func TestRateLimiter(t *testing.T) {
 	})
 
 	// execute query
-	for i := 0; i < 3; i++ {
-		buf.Reset()
+	for i := range 3 {
+		logCap.Reset()
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
 		require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
 
 		for range respCh {
 		}
-		out := buf.String()
 		if i != 2 {
 			// first 2 - ok
 			require.NoError(*respErr)
 			require.Equal(http.StatusOK, respMeta.StatusCode)
-			require.Contains(out, "stage=qp.success")
-			require.NotContains(out, "stage=qp.error")
+			logCap.HasLine("stage=qp.success")
+			logCap.NotContains("stage=qp.error")
 		} else {
 			// 3rd exceeds the limit - not often than twice per minute
 			require.Error(*respErr)
 			require.Equal(http.StatusTooManyRequests, respMeta.StatusCode)
-			require.Contains(out, "stage=qp.error")
-			require.NotContains(out, "stage=qp.success")
+			logCap.HasLine("stage=qp.error")
+			logCap.NotContains("stage=qp.success")
 		}
 	}
 }
@@ -1407,26 +1401,3 @@ type mockRecord struct {
 
 func (r *mockRecord) AsString(name string) string { return r.Called(name).String(0) }
 func (r *mockRecord) QName() appdef.QName         { return r.Called().Get(0).(appdef.QName) }
-
-type syncBuffer struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-}
-
-func (sb *syncBuffer) Write(p []byte) (n int, err error) {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	return sb.buf.Write(p)
-}
-
-func (sb *syncBuffer) String() string {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	return sb.buf.String()
-}
-
-func (sb *syncBuffer) Reset() {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	sb.buf.Reset()
-}
