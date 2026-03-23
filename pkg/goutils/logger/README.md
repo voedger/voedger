@@ -114,6 +114,13 @@ func processPayment(ctx context.Context) {
   `IsTrace()`, etc. prevent computing expensive arguments
 - **slog level mapping** - Both `Verbose` and `Trace` internal levels
   map to `slog.LevelDebug` when emitting structured log records
+- **Log capturing** - in-memory buffer that intercepts log output
+  during tests; auto-restored when the test ends
+  - [StartCapture: logcapture.go#L17](logcapture.go#L17)
+  - [ILogCaptor: types.go#L27](types.go#L27)
+  - [HasLine: logcapture.go#L31](logcapture.go#L31)
+  - [EventuallyHasLine: logcapture.go#L42](logcapture.go#L42)
+  - [HasNoLines: logcapture.go#L75](logcapture.go#L75)
 
 ## Use
 
