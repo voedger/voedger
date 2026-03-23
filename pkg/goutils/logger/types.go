@@ -5,6 +5,11 @@
 
 package logger
 
+import (
+	"bytes"
+	"sync"
+)
+
 type ctxKey struct{}
 
 type logAttrs struct {
@@ -25,4 +30,10 @@ type ILogCaptor interface {
 	EventuallyHasLine(str string, strs ...string) // same, retries up to 1 second
 	NotContains(str string, strs ...string)       // fails if any substring appears in the log
 	Reset()
+}
+
+type captor struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+	t   TB
 }

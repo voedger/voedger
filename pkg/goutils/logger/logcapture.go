@@ -7,15 +7,8 @@ package logger
 
 import (
 	"bytes"
-	"sync"
 	"time"
 )
-
-type captor struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-	t   TB
-}
 
 func StartCapture(t TB, level TLogLevel) ILogCaptor {
 	captor := &captor{
