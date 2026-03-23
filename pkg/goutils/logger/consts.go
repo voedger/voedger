@@ -8,10 +8,12 @@ package logger
 import (
 	"log/slog"
 	"os"
+	"time"
 )
 
 const (
-	logCtxSkipFrames = 3
+	logCtxSkipFrames         = 3
+	eventuallyHasLineTimeout = time.Second
 )
 
 const (
