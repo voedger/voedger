@@ -45,9 +45,10 @@ func (c *captor) HasLine(strs ...string) {
 func (c *captor) EventuallyHasLine(strs ...string) {
 	c.t.Helper()
 	deadline := time.Now().Add(eventuallyHasLineTimeout)
+	var content []byte
 	for {
 		c.mu.Lock()
-		content := bytes.Clone(c.buf.Bytes())
+		content = bytes.Clone(c.buf.Bytes())
 		c.mu.Unlock()
 		if anyLineContainsAll(content, strs) {
 			return
@@ -57,9 +58,6 @@ func (c *captor) EventuallyHasLine(strs ...string) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	c.mu.Lock()
-	content := bytes.Clone(c.buf.Bytes())
-	c.mu.Unlock()
 	c.t.Errorf("no log line contains all of the expected substrings\nexpected: %v\nlog:\n%s", strs, content)
 	c.t.FailNow()
 }

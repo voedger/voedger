@@ -68,7 +68,7 @@ func TestLogCapture_BasicUsage(t *testing.T) {
 	})
 }
 
-func TestHasNoLines(t *testing.T) {
+func TestNotContains(t *testing.T) {
 	t.Run("absent string passes", func(t *testing.T) {
 		logCap := StartCapture(t, LogLevelVerbose)
 		InfoCtx(context.Background(), "hello")

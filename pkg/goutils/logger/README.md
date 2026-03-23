@@ -116,11 +116,11 @@ func processPayment(ctx context.Context) {
   map to `slog.LevelDebug` when emitting structured log records
 - **Log capturing** - in-memory buffer that intercepts log output
   during tests; auto-restored when the test ends
-  - [StartCapture: logcapture.go#L17](logcapture.go#L17)
-  - [ILogCaptor: types.go#L27](types.go#L27)
-  - [HasLine: logcapture.go#L31](logcapture.go#L31)
-  - [EventuallyHasLine: logcapture.go#L42](logcapture.go#L42)
-  - [NotContains: logcapture.go#L75](logcapture.go#L75)
+  - [StartCapture: logcapture.go#L20](logcapture.go#L20)
+  - [ILogCaptor: types.go#L22](types.go#L22)
+  - [HasLine: logcapture.go#L34](logcapture.go#L34)
+  - [EventuallyHasLine: logcapture.go#L45](logcapture.go#L45)
+  - [NotContains: logcapture.go#L83](logcapture.go#L83)
 
 ## Use
 
