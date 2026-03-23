@@ -23,7 +23,6 @@ type TB interface {
 	Cleanup(func())
 	Errorf(format string, args ...interface{})
 	FailNow()
-	Log(args ...interface{})
 }
 
 type ILogCaptor interface {
