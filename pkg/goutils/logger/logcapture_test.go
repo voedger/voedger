@@ -72,11 +72,11 @@ func TestHasNoLines(t *testing.T) {
 	t.Run("absent string passes", func(t *testing.T) {
 		logCap := StartCapture(t, LogLevelVerbose)
 		InfoCtx(context.Background(), "hello")
-		logCap.HasNoLines("notpresent")
+		logCap.NotContains("notpresent")
 	})
 	t.Run("empty buffer passes", func(t *testing.T) {
 		logCap := StartCapture(t, LogLevelVerbose)
-		logCap.HasNoLines("anything")
+		logCap.NotContains("anything")
 	})
 }
 
@@ -88,7 +88,7 @@ func TestReset(t *testing.T) {
 	require.Empty(locCap.String())
 	InfoCtx(context.Background(), "after reset")
 	locCap.HasLine("after reset")
-	locCap.HasNoLines("before reset")
+	locCap.NotContains("before reset")
 }
 
 func TestCaptor_Failure(t *testing.T) {

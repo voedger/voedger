@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -832,6 +833,10 @@ func TestLogEventAndCUDs(t *testing.T) {
 	testQName := appdef.NewQName("test", "Article")
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 
+	var buf syncBuffer
+	logger.SetCtxWriters(&buf, &buf)
+	defer logger.SetCtxWriters(os.Stdout, os.Stderr)
+
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		wsb.AddCDoc(testQName).AddField("Name", appdef.DataKind_string, false)
 		wsb.AddCommand(cudQName)
@@ -844,7 +849,9 @@ func TestLogEventAndCUDs(t *testing.T) {
 
 	t.Run("verbose level emits event and cud log entries", func(t *testing.T) {
 		require := require.New(t)
-		logCaptor := logger.StartCapture(t, logger.LogLevelVerbose)
+		defer logger.SetLogLevelWithRestore(logger.LogLevelVerbose)()
+
+		buf.Reset()
 
 		// insert
 		req := bus.Request{
@@ -860,33 +867,33 @@ func TestLogEventAndCUDs(t *testing.T) {
 		newID := cmdResp.NewIDs["1"]
 		require.NotZero(newID)
 
-		logCaptor.HasLine(
-			"evqname=sys.CUD",
-			fmt.Sprintf("rectype=%s", testQName),
-			fmt.Sprintf("recid=%d", newID),
-			"op=create",
-		)
+		out := buf.String()
+		require.Contains(out, "evqname=sys.CUD")
+		require.Contains(out, fmt.Sprintf("rectype=%s", testQName))
+		require.Contains(out, fmt.Sprintf("recid=%d", newID))
+		require.Contains(out, "op=create")
 
 		// update: newfields=world, oldfields=hello
-		logCaptor.Reset()
+		buf.Reset()
 		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.Article","Name":"world"}}]}`, newID))
 		cmdRespMeta, _, sysErr = bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(sysErr)
 		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
 
-		logCaptor.HasLine(
-			fmt.Sprintf("recid=%d", newID),
-			"op=update",
-			"newfields=",
-			"oldfields=",
-			"world",
-			"hello",
-		)
+		out = buf.String()
+		require.Contains(out, fmt.Sprintf("recid=%d", newID))
+		require.Contains(out, "op=update")
+		require.Contains(out, "newfields=")
+		require.Contains(out, "oldfields=")
+		require.Contains(out, "world")
+		require.Contains(out, "hello")
 	})
 
 	t.Run("info level emits nothing", func(t *testing.T) {
 		require := require.New(t)
 		defer logger.SetLogLevelWithRestore(logger.LogLevelInfo)()
+
+		buf.Reset()
 
 		req := bus.Request{
 			WSID:     1,
@@ -897,7 +904,7 @@ func TestLogEventAndCUDs(t *testing.T) {
 		}
 		_, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(sysErr)
-		// require.NotContains(buf.String(), "evqname")
+		require.NotContains(buf.String(), "evqname")
 	})
 }
 

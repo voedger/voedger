@@ -5,12 +5,6 @@
 
 package logger
 
-import (
-	"bytes"
-	"sync"
-	"testing"
-)
-
 type ctxKey struct{}
 
 type logAttrs struct {
@@ -18,16 +12,17 @@ type logAttrs struct {
 	parent *logAttrs
 }
 
-type captor struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-	t   testing.TB
+type TB interface {
+	Helper()
+	Cleanup(func())
+	Errorf(format string, args ...interface{})
+	FailNow()
 }
 
 type ILogCaptor interface {
 	String() string
 	HasLine(strs ...string)
 	EventuallyHasLine(strs ...string) // waits for 1 second
-	HasNoLines(strs ...string)
+	NotContains(strs ...string)
 	Reset()
 }

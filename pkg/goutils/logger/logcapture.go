@@ -7,14 +7,17 @@ package logger
 
 import (
 	"bytes"
-	"testing"
+	"sync"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func StartCapture(t testing.TB, level TLogLevel) ILogCaptor {
+type captor struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+	t   TB
+}
+
+func StartCapture(t TB, level TLogLevel) ILogCaptor {
 	captor := &captor{
 		t: t,
 	}
@@ -34,26 +37,31 @@ func (c *captor) HasLine(strs ...string) {
 	content := bytes.Clone(c.buf.Bytes())
 	c.mu.Unlock()
 	if !anyLineContainsAll(content, strs) {
-		require.Fail(c.t, "no log line contains all of the expected substrings",
-			"log:\n%s", content)
+		c.t.Errorf("no log line contains all of the expected substrings\nlog:\n%s", content)
+		c.t.FailNow()
 	}
 }
 
 func (c *captor) EventuallyHasLine(strs ...string) {
 	c.t.Helper()
-	ok := assert.Eventually(c.t, func() bool {
+	deadline := time.Now().Add(eventuallyHasLineTimeout)
+	for {
 		c.mu.Lock()
 		content := bytes.Clone(c.buf.Bytes())
 		c.mu.Unlock()
-		return anyLineContainsAll(content, strs)
-	}, eventuallyHasLineTimeout, 10*time.Millisecond)
-	if !ok {
-		c.mu.Lock()
-		content := bytes.Clone(c.buf.Bytes())
-		c.mu.Unlock()
-		require.Fail(c.t, "no log line contains all of the expected substrings",
-			"expected: %v\nlog:\n%s", strs, content)
+		if anyLineContainsAll(content, strs) {
+			return
+		}
+		if time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
+	c.mu.Lock()
+	content := bytes.Clone(c.buf.Bytes())
+	c.mu.Unlock()
+	c.t.Errorf("no log line contains all of the expected substrings\nexpected: %v\nlog:\n%s", strs, content)
+	c.t.FailNow()
 }
 
 func anyLineContainsAll(content []byte, strs []string) bool {
@@ -72,13 +80,16 @@ func anyLineContainsAll(content []byte, strs []string) bool {
 	return false
 }
 
-func (c *captor) HasNoLines(strs ...string) {
+func (c *captor) NotContains(strs ...string) {
 	c.t.Helper()
 	c.mu.Lock()
 	content := bytes.Clone(c.buf.Bytes())
 	c.mu.Unlock()
 	for _, s := range strs {
-		require.NotContains(c.t, content, []byte(s), "log:\n%s", content)
+		if bytes.Contains(content, []byte(s)) {
+			c.t.Errorf("log contains unexpected string %q\nlog:\n%s", s, content)
+			c.t.FailNow()
+		}
 	}
 }
 
