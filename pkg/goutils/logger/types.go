@@ -17,6 +17,7 @@ type logAttrs struct {
 	parent *logAttrs
 }
 
+// copy of testing.TB to avoid importing testing package in production
 type TB interface {
 	Helper()
 	Cleanup(func())
