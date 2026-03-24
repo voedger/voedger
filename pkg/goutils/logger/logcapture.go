@@ -11,17 +11,20 @@ import (
 )
 
 func StartCapture(t TB, level TLogLevel) ILogCaptor {
-	captor := &captor{
+	c := &captor{
 		t: t,
 	}
 	oldSLogOut, oldSLogErr := slogOut, slogErr
-	SetCtxWriters(captor, captor)
+	oldLegacyOut, oldLegacyErr := legacyOut, legacyErr
+	SetCtxWriters(c, c)
+	legacyOut, legacyErr = c, c
 	restoreLevel := SetLogLevelWithRestore(level)
 	t.Cleanup(func() {
 		slogOut, slogErr = oldSLogOut, oldSLogErr
+		legacyOut, legacyErr = oldLegacyOut, oldLegacyErr
 		restoreLevel()
 	})
-	return captor
+	return c
 }
 
 func (c *captor) HasLine(str string, strs ...string) {

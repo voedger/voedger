@@ -1,9 +1,7 @@
 # Logger
 
-Structured logging with hierarchical levels, automatic caller
-information, and context-aware attribute propagation. Provides
-thread-safe logging with customizable output formatting and
-level-based filtering.
+Structured and legacy logging with hierarchical level filtering,
+automatic caller tracking, and context-aware attribute propagation.
 
 ## Problem
 
@@ -95,8 +93,8 @@ func processPayment(ctx context.Context) {
   pairs stored in `context.Context` and append them to each entry
   - [WithContextAttrs: loggerctx.go#L23](loggerctx.go#L23)
   - [Ctx logging functions: loggerctx.go#L31](loggerctx.go#L31)
-  - [sLogAttrsFromCtx: loggerctx.go#L68](loggerctx.go#L68)
-  - **Predefined attribute key constants** ([consts.go](consts.go#L17))
+  - [sLogAttrsFromCtx: loggerctx.go#L87](loggerctx.go#L87)
+  - **Predefined attribute key constants** ([consts.go](consts.go#L19))
 
     | Constant            | Key         | Example value |
     | ------------------- | ----------- | ------------- |
@@ -109,32 +107,34 @@ func processPayment(ctx context.Context) {
 - **Output customization** - Pluggable `PrintLine` with automatic
   stderr/stdout routing per level
   - [PrintLine hook: logger.go#L88](logger.go#L88)
-  - [Default routing: logger.go#L90](logger.go#L90)
+  - [DefaultPrintLine: logger.go#L93](logger.go#L93)
 - **[Performance guards](logger.go#L68)** - `IsVerbose()`,
   `IsTrace()`, etc. prevent computing expensive arguments
 - **slog level mapping** - Both `Verbose` and `Trace` internal levels
   map to `slog.LevelDebug` when emitting structured log records
 - **Log capturing** - in-memory buffer that intercepts log output
   during tests; auto-restored when the test ends
-  - [StartCapture: logcapture.go#L20](logcapture.go#L20)
-  - [ILogCaptor: types.go#L22](types.go#L22)
-  - [HasLine: logcapture.go#L34](logcapture.go#L34)
-  - [EventuallyHasLine: logcapture.go#L45](logcapture.go#L45)
-  - [NotContains: logcapture.go#L82](logcapture.go#L82)
+  - [StartCapture: logcapture.go#L13](logcapture.go#L13)
+  - [ILogCaptor: types.go#L28](types.go#L28)
+  - [HasLine: logcapture.go#L30](logcapture.go#L30)
+  - [EventuallyHasLine: logcapture.go#L41](logcapture.go#L41)
+  - [NotContains: logcapture.go#L78](logcapture.go#L78)
 
 ## Use
 
-See [basic usage test](logger_test.go#L25)
+See [legacy functions basic usage](logger_test.go#L31)
+and [slog functions basic usage](logger_test.go#L43)
 
 ## Example output
 
 ```text
-09/29 13:29:04.355: *****: [core-logger.Test_BasicUsage:22]: Error
-09/29 13:29:04.374: ===: [core-logger.Test_BasicUsage:24]: My info
-time=...T14:05:26.461+03:00 level=INFO msg="started" src=myapp.handleRequest:12 reqid=42 wsid=1001
+09/29 13:29:04.355: *****: [core-logger.TestLegacyFuncs_BasicUsage:22]: Error
+09/29 13:29:04.374: ===: [core-logger.TestSlogFuncs_BasicUsage:24]: My info
+time=2026-03-24T14:05:26.461+03:00 level=INFO msg="started" src=myapp.handleRequest:12 reqid=42 wsid=1001
 ```
 
 ## Links
 
 - [Why does the TRACE level exist, and when should I use it rather than DEBUG?](https://softwareengineering.stackexchange.com/questions/279690/why-does-the-trace-level-exist-and-when-should-i-use-it-rather-than-debug)
   - [Good answer](https://softwareengineering.stackexchange.com/questions/279690/why-does-the-trace-level-exist-and-when-should-i-use-it-rather-than-debug/360810#360810)
+
