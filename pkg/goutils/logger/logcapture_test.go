@@ -128,3 +128,32 @@ func TestEventuallyHasLine(t *testing.T) {
 	logCap.EventuallyHasLine("async message")
 	wg.Wait()
 }
+
+func TestLegacyFunctions(t *testing.T) {
+	testCases := []struct {
+		name         string
+		captureLevel TLogLevel
+		logFn        func(...interface{})
+		wantLine     []string // wantLine[0] is logged; HasLine(wantLine[0], wantLine[1:]...) is asserted
+		notContains  bool     // true → NotContains(wantLine[0]) instead of HasLine
+	}{
+		{name: "Verbose captured", captureLevel: LogLevelVerbose, logFn: Verbose, wantLine: []string{"verbose msg"}},
+		{name: "Info captured", captureLevel: LogLevelInfo, logFn: Info, wantLine: []string{"info msg"}},
+		{name: "Warning captured", captureLevel: LogLevelWarning, logFn: Warning, wantLine: []string{"warning msg"}},
+		{name: "Error captured", captureLevel: LogLevelError, logFn: Error, wantLine: []string{"error msg"}},
+		{name: "Trace captured", captureLevel: LogLevelTrace, logFn: Trace, wantLine: []string{"trace msg"}},
+		{name: "Verbose not captured at Info level", captureLevel: LogLevelInfo, logFn: Verbose, wantLine: []string{"should not appear"}, notContains: true},
+		{name: "Error has error prefix", captureLevel: LogLevelError, logFn: Error, wantLine: []string{"my error", errorPrefix}},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logCap := StartCapture(t, tc.captureLevel)
+			tc.logFn(tc.wantLine[0])
+			if tc.notContains {
+				logCap.NotContains(tc.wantLine[0])
+			} else {
+				logCap.HasLine(tc.wantLine[0], tc.wantLine[1:]...)
+			}
+		})
+	}
+}
