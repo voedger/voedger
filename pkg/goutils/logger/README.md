@@ -128,8 +128,8 @@ and [slog functions basic usage](logger_test.go#L43)
 ## Example output
 
 ```text
-09/29 13:29:04.355: *****: [core-logger.Test_BasicUsage:22]: Error
-09/29 13:29:04.374: ===: [core-logger.Test_BasicUsage:24]: My info
+09/29 13:29:04.355: *****: [core-logger.TestLegacyFuncs_BasicUsage:22]: Error
+09/29 13:29:04.374: ===: [core-logger.TestSlogFuncs_BasicUsage:24]: My info
 time=2026-03-24T14:05:26.461+03:00 level=INFO msg="started" src=myapp.handleRequest:12 reqid=42 wsid=1001
 ```
 
