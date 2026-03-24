@@ -25,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
@@ -1138,6 +1139,9 @@ func Test_nearlyEqual(t *testing.T) {
 
 func TestRateLimiter(t *testing.T) {
 	require := require.New(t)
+
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
 	serviceChannel := make(iprocbus.ServiceChannel)
 
 	qNameMyFuncParams := appdef.NewQName(appdef.SysPackage, "myFuncParams")
@@ -1185,7 +1189,8 @@ func TestRateLimiter(t *testing.T) {
 	})
 
 	// execute query
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
+		logCap.Reset()
 		respCh, respMeta, respErr, err := requestSender.SendRequest(context.Background(), bus.Request{})
 		require.NoError(err)
 		require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
@@ -1196,10 +1201,14 @@ func TestRateLimiter(t *testing.T) {
 			// first 2 - ok
 			require.NoError(*respErr)
 			require.Equal(http.StatusOK, respMeta.StatusCode)
+			logCap.HasLine("stage=qp.success")
+			logCap.NotContains("stage=qp.error")
 		} else {
 			// 3rd exceeds the limit - not often than twice per minute
 			require.Error(*respErr)
 			require.Equal(http.StatusTooManyRequests, respMeta.StatusCode)
+			logCap.HasLine("stage=qp.error")
+			logCap.NotContains("stage=qp.success")
 		}
 	}
 }

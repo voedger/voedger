@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -22,6 +23,7 @@ func subscribeExtraPipeline(requestCtx context.Context, p *implIN10NProc) pipeli
 		pipeline.WireFunc("addProjectionKeyFromURL", addProjectionKeyFromURL),
 		pipeline.WireFunc("authnzEntities", p.authnzEntities),
 		pipeline.WireFunc("subscribe", p.subscribe),
+		pipeline.WireFunc("logSubscribeSuccess", logSubscribeSuccess),
 		pipeline.WireFunc("replyOK", p.replyOK),
 	)
 }
@@ -38,6 +40,15 @@ func addProjectionKeyFromURL(ctx context.Context, n10nWP *n10nWorkpiece) (err er
 		entity: n10nWP.entityFromURL,
 		wsid:   n10nWP.wsidFromURL,
 	})
+	return nil
+}
+
+func logSubscribeSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+	if logger.IsVerbose() {
+		for _, pk := range n10nWP.subscribedProjectionKeys {
+			logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.subscribe.success")
+		}
+	}
 	return nil
 }
 

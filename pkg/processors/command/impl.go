@@ -83,9 +83,13 @@ func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
 }
 
 // need for sync projectors which are using wsid.GetNextWSID()
-// need for sync projectors for logging
 func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
+}
+
+// need for sync projectors for logging
+func (c *cmdWorkpiece) LogCtxForSyncProjector() context.Context {
+	return c.logCtx
 }
 
 // used in projectors.NewSyncActualizerFactoryFactory
@@ -262,8 +266,18 @@ func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idG
 	}
 }
 
-func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
-	ap := &appPartition{
+func newRecoveryCtx(ctx context.Context, partID istructs.PartitionID) context.Context {
+	return logger.WithContextAttrs(ctx, map[string]any{
+		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
+		logger.LogAttr_Extension: "sys._Recovery",
+		"partid":                 partID,
+	})
+}
+
+func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *appPartition, err error) {
+	recoveryCtx := newRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID())
+	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.start", "")
+	ap = &appPartition{
 		workspaces:     map[istructs.WSID]*workspace{},
 		nextPLogOffset: istructs.FirstOffset,
 	}
@@ -292,23 +306,32 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	}
 
 	if err := cmd.appStructs.Events().ReadPLog(ctx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
+		logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.readplog.error", err)
 		return nil, err
 	}
 
 	if lastPLogEvent != nil {
 		// re-apply the last event
+		cmd.logCtx, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
+			"cp.partition_recovery.reapply", nil, "")
+		if err != nil {
+			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.logeventandcuds.error", err)
+			return nil, err
+		}
 		cmd.pLogEvent = lastPLogEvent
 		cmd.workspace = ap.getWorkspace(lastPLogEvent.Workspace())
 		cmd.workspace.NextWLogOffset-- // cmdProc.storeOp will bump it
 		cmd.reapplier = cmd.appStructs.GetEventReapplier(cmd.pLogEvent)
 		cmd.pLogOffset = lastPLogOffset // need to get PLogOffset in sync projectors on logging
 		if err := cmdProc.storeOp.DoSync(ctx, cmd); err != nil {
+			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.storeop.error", err)
 			return nil, err
 		}
-		cmd.pLogEvent = nil
-		cmd.workspace = nil
-		cmd.reapplier = nil
 		cmd.pLogOffset = istructs.NullOffset
+		cmd.reapplier = nil
+		cmd.workspace = nil
+		cmd.pLogEvent = nil
+		cmd.logCtx = nil
 		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 	}
 
@@ -317,7 +340,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		// notest
 		return nil, err
 	}
-	logger.InfoCtx(cmd.cmdMes.RequestCtx(), "partition ", cmd.cmdMes.PartitionID(), " recovered: nextPLogOffset ", ap.nextPLogOffset, ", workspaces ", string(worskapcesJSON))
+	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "completed, nextPLogOffset ", ap.nextPLogOffset, ", workspaces ", string(worskapcesJSON))
 	return ap, nil
 }
 
@@ -351,6 +374,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		cmd.rawEvent.PLogOffset(),
 		cmd.appStructs.AppDef(),
 		0,
+		"cp.plog_saved",
 		func(cud istructs.ICUDRow) (bool, string, error) {
 			if oldRec, ok := oldRecs[cud.ID()]; ok {
 				oldFields, err := json.Marshal(coreutils.FieldsToMap(oldRec, cmd.appStructs.AppDef()))
@@ -365,8 +389,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		"",
 	)
 
-	// will not use the ctx enriched by woffset, poffset, evqname for now
-	_ = enrichedLogCtx
+	cmd.logCtx = enrichedLogCtx
 	return err
 }
 
@@ -458,7 +481,7 @@ func (cmdProc *cmdProc) authorizeRequest(ctx context.Context, cmd *cmdWorkpiece)
 		return coreutils.NewHTTPErrorf(http.StatusForbidden)
 	}
 	if !newACLOk && oldACLOk && logger.IsVerbose() {
-		logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "newACL not ok, but oldACL ok. ", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
+		logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "", "newACL not ok, but oldACL ok. ", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
 	}
 	return nil
 }
@@ -832,7 +855,7 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(ctx context.Context, cmd *cmdWorkpi
 			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
 		if !newACLOk && oldACLOk && logger.IsVerbose() {
-			logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "newACL not ok, but oldACL ok. ", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
+			logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "", "newACL not ok, but oldACL ok. ", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
 		}
 	}
 	return
@@ -864,9 +887,6 @@ func (cmdProc *cmdProc) notifyAsyncActualizers(ctx context.Context, cmd *cmdWork
 		Projection: actualizers.PLogUpdatesQName,
 		WS:         istructs.WSID(cmd.cmdMes.PartitionID()),
 	}, cmd.rawEvent.PLogOffset())
-	if logger.IsVerbose() {
-		logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "async actualizers are notified: offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmd.cmdMes.PartitionID())
-	}
 	return nil
 }
 
@@ -893,9 +913,8 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.appStructs.AppDef())
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
-			// notest
-			logger.ErrorCtx(cmd.cmdMes.RequestCtx(), "failed to marshal response: "+err.Error(), ", response: ", cmdResult)
-			return
+			// notest: impossible
+			panic("failed to marshal response: " + err.Error())
 		}
 		body.WriteString(`,"Result":`)
 		body.Write(cmdResultBytes)
