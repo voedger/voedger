@@ -2,6 +2,7 @@
 registered_at: 2026-03-25T11:41:25Z
 change_id: 2603251141-qp-reject-unexpected-fields
 baseline: 601cd2f9bc5444d30077737c7a48f7c7196d8219
+archived_at: 2026-03-25T13:37:12Z
 ---
 
 # Change request: return 400 bad request on unexpected request fields in QPv1, QPv2, and CP
