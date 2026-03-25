@@ -933,8 +933,16 @@ func TestLogEventAndCUDs(t *testing.T) {
 func TestSyncProjectorLogging(t *testing.T) {
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	projQName := appdef.NewQName(appdef.SysPackage, "TestProj")
+	projExtension := "p." + projQName.String() // extension attr value used by sync actualizer
+
+	addStdRoles := func(wsb appdef.IWorkspaceBuilder) {
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+	}
 
 	t.Run("sp.triggeredby and sp.success on success", func(t *testing.T) {
+		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
@@ -942,9 +950,7 @@ func TestSyncProjectorLogging(t *testing.T) {
 			wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 			wsb.AddWDoc(testWDoc)
 			wsb.AddCommand(cudQName)
-			wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
-			wsb.AddRole(iauthnz.QNameRoleEveryone)
-			wsb.AddRole(iauthnz.QNameRoleSystem)
+			addStdRoles(wsb)
 			cfg.AddSyncProjectors(istructs.Projector{
 				Name: projQName,
 				Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error { return nil },
@@ -956,14 +962,21 @@ func TestSyncProjectorLogging(t *testing.T) {
 		})
 		defer tearDown(app)
 
+		// warm up: trigger partition recovery before the measured portion
+		sendCUD(t, 1, app)
+
 		logCap.Reset()
 		sendCUD(t, 1, app)
 
-		logCap.HasLine("stage=sp.triggeredby", fmt.Sprintf("extension=%s", projQName))
-		logCap.HasLine("stage=sp.success", fmt.Sprintf("extension=%s", projQName))
+		// per-projector logs: extension has "p." prefix; context attrs woffset/poffset/evqname are enriched
+		logCap.HasLine("stage=sp.triggeredby", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		logCap.HasLine("stage=sp.success", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		// command-processor emits its own sp.success (no per-projector extension) — total must be 2
+		require.Equal(2, strings.Count(logCap.String(), "stage=sp.success"))
 	})
 
 	t.Run("sp.error on invoke failure", func(t *testing.T) {
+		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		projErr := errors.New("projector failed")
@@ -973,9 +986,7 @@ func TestSyncProjectorLogging(t *testing.T) {
 			wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 			wsb.AddWDoc(testWDoc)
 			wsb.AddCommand(cudQName)
-			wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
-			wsb.AddRole(iauthnz.QNameRoleEveryone)
-			wsb.AddRole(iauthnz.QNameRoleSystem)
+			addStdRoles(wsb)
 			cfg.AddSyncProjectors(istructs.Projector{
 				Name: projQName,
 				Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
@@ -996,8 +1007,11 @@ func TestSyncProjectorLogging(t *testing.T) {
 		logCap.Reset()
 		sendCUD(t, 1, app, http.StatusInternalServerError)
 
-		logCap.HasLine("stage=sp.triggeredby", fmt.Sprintf("extension=%s", projQName))
-		logCap.HasLine("stage=sp.error", "projector failed", fmt.Sprintf("extension=%s", projQName))
+		// per-projector logs: extension has "p." prefix; context attrs present
+		logCap.HasLine("stage=sp.triggeredby", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		logCap.HasLine("stage=sp.error", projErr.Error(), "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		// command-processor also emits sp.error (no per-projector extension) — total must be 2
+		require.Equal(2, strings.Count(logCap.String(), "stage=sp.error"))
 		logCap.HasLine("stage=cp.partition_recovery", "partition will be restarted due of an error on writing to Log")
 	})
 }

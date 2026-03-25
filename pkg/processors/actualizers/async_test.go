@@ -364,7 +364,7 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 
 		logCap.HasLine("stage=ap",
 			fmt.Sprintf("vapp=%s", appName),
-			fmt.Sprintf("extension=%s", projectorQName),
+			fmt.Sprintf("extension=ap.%s", projectorQName),
 			"wsid=1001", "woffset=",
 			fmt.Sprintf("poffset=%d", topOffset),
 			fmt.Sprintf("evqname=%s", cmdQName),
@@ -536,7 +536,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	logCap.EventuallyHasLine("stage=ap.error",
 		fmt.Sprintf("vapp=%s", appName),
-		fmt.Sprintf("extension=%s", name),
+		fmt.Sprintf("extension=ap.%s", name),
 		"wsid=1002", `msg="test error"`,
 	)
 
