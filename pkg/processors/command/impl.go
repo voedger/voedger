@@ -489,7 +489,7 @@ func (cmdProc *cmdProc) authorizeRequest(ctx context.Context, cmd *cmdWorkpiece)
 
 func unmarshalRequestBody(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.iCommand.Param() != nil && cmd.iCommand.Param().QName() == istructs.QNameRaw {
-		cmd.requestData["args"] = map[string]interface{}{
+		cmd.requestData[args] = map[string]interface{}{
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = coreutils.JSONUnmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
@@ -505,7 +505,7 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 	var unexpected []string
 	for key := range cmd.requestData {
 		switch key {
-		case "args", "unloggedArgs", "cuds":
+		case args, "unloggedArgs", "cuds":
 		default:
 			unexpected = append(unexpected, key)
 		}
@@ -514,7 +514,7 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 		sort.Strings(unexpected)
 		return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
 	}
-	if args, exists, err := cmd.requestData.AsObject("args"); err != nil {
+	if args, exists, err := cmd.requestData.AsObject(args); err != nil {
 		return err
 	} else if exists && len(args) > 0 && cmd.iCommand.Param() == nil {
 		return fmt.Errorf("args are not expected")
@@ -570,7 +570,7 @@ func getArgsObject(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	args, exists, err := cmd.requestData.AsObject("args")
+	args, exists, err := cmd.requestData.AsObject(args)
 	if err != nil {
 		return err
 	}

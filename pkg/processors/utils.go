@@ -36,7 +36,7 @@ func CheckUnexpectedFields(args map[string]any, argsType appdef.IType) error {
 	}
 	var unexpected []string
 	for key := range args {
-		if wf.Field(appdef.FieldName(key)) == nil {
+		if wf.Field(key) == nil {
 			unexpected = append(unexpected, key)
 		}
 	}
