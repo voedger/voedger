@@ -85,7 +85,7 @@ func (pa *PartitionActualizers) startNews(vvmCtx context.Context, appDef appdef.
 			if _, exists := pa.rt.Load(name); !exists {
 				logCtx := logger.WithContextAttrs(vvmCtx, map[string]any{
 					logger.LogAttr_VApp:      pa.app,
-					logger.LogAttr_Extension: name,
+					logger.LogAttr_Extension: "ap." + name.String(),
 				})
 				pa.start(logCtx, name, run) // actualizer will be started in a separated goroutine there
 			}

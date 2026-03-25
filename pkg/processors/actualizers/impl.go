@@ -88,7 +88,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 					return nil
 				}
 				projLogCtx := logger.WithContextAttrs(work.LogCtxForSyncProjector(),
-					map[string]any{logger.LogAttr_Extension: projector.Name})
+					map[string]any{logger.LogAttr_Extension: "p." + projector.Name.String()})
 				logger.VerboseCtx(projLogCtx, "sp.triggeredby", triggeredByQName)
 				if err := appPart.Invoke(projLogCtx, projector.Name, s, s); err != nil {
 					logger.ErrorCtx(projLogCtx, "sp.error", err)
