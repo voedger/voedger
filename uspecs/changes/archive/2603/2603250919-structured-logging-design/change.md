@@ -3,6 +3,7 @@ registered_at: 2026-03-06T11:55:11Z
 change_id: 2603061155-structured-logging-design
 baseline: 6a30e3a65a64454e2159c28cd3465bb0f9ddbe2c
 issue_url: https://untill.atlassian.net/browse/AIR-3236
+archived_at: 2026-03-25T09:19:21Z
 ---
 
 # Change request: Design logging subsystem architecture

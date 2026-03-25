@@ -3,6 +3,7 @@ registered_at: 2026-03-24T09:42:13Z
 change_id: 2603240942-mockable-legacy-logger
 baseline: 0b9c179d97fab367cfab9cffdf91df7791c62103
 issue_url: https://untill.atlassian.net/browse/AIR-3387
+archived_at: 2026-03-25T09:22:35Z
 ---
 
 # Change request: Mockable legacy logger functions

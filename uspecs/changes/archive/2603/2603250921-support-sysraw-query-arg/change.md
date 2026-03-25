@@ -3,6 +3,7 @@ registered_at: 2026-03-20T09:26:40Z
 change_id: 2603200926-support-sysraw-query-arg
 issue_url: https://untill.atlassian.net/browse/AIR-3351
 baseline: 7ea4354ab277b8b7ddc97fc3b2ed35bacc0f9c95
+archived_at: 2026-03-25T09:21:36Z
 ---
 
 # Change request: Support sys.Raw argument in Query Processor V2
