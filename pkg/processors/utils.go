@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -20,6 +22,30 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
+
+// CheckUnexpectedFields validates that all keys in args are known fields of argsType.
+// Returns HTTP 400 SysError if unexpected fields are found.
+// Skips the check if argsType is nil, args is empty, or argsType does not implement IWithFields.
+func CheckUnexpectedFields(args map[string]any, argsType appdef.IType) error {
+	if argsType == nil || len(args) == 0 {
+		return nil
+	}
+	wf, ok := argsType.(appdef.IWithFields)
+	if !ok {
+		return nil
+	}
+	var unexpected []string
+	for key := range args {
+		if wf.Field(key) == nil {
+			unexpected = append(unexpected, key)
+		}
+	}
+	if len(unexpected) > 0 {
+		sort.Strings(unexpected)
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unexpected field(s): "+strings.Join(unexpected, ", "))
+	}
+	return nil
+}
 
 func CheckResponseIntent(st state.IHostState) error {
 	kb, err := st.KeyBuilder(sys.Storage_Response, appdef.NullQName)

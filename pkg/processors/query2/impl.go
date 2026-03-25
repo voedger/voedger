@@ -320,7 +320,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	argsType := qw.iQuery.Param()
 	requestArgs := istructs.NewNullObject()
-	if argsType != nil {
+	if argsType == nil {
+		if len(qw.queryParams.Argument) > 0 {
+			return execQueryArgs, fmt.Errorf("args are not expected")
+		}
+	} else {
+		if argsType.QName() != istructs.QNameRaw {
+			if err = processors.CheckUnexpectedFields(qw.queryParams.Argument, argsType); err != nil {
+				return execQueryArgs, err
+			}
+		}
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
 		if argsType.QName() == istructs.QNameRaw {
 			requestArgsBuilder.PutChars(processors.Field_RawObject_Body, qw.queryParams.RawArg)

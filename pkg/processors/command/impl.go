@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -488,13 +489,42 @@ func (cmdProc *cmdProc) authorizeRequest(ctx context.Context, cmd *cmdWorkpiece)
 
 func unmarshalRequestBody(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.iCommand.Param() != nil && cmd.iCommand.Param().QName() == istructs.QNameRaw {
-		cmd.requestData["args"] = map[string]interface{}{
+		cmd.requestData[args] = map[string]interface{}{
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = coreutils.JSONUnmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
 		err = fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
 	}
 	return
+}
+
+func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) error {
+	if cmd.cmdMes.APIPath() == processors.APIPath_Docs {
+		return nil
+	}
+	var unexpected []string
+	for key := range cmd.requestData {
+		switch key {
+		case args, "unloggedArgs", "cuds":
+		default:
+			unexpected = append(unexpected, key)
+		}
+	}
+	if len(unexpected) > 0 {
+		sort.Strings(unexpected)
+		return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
+	}
+	if args, exists, err := cmd.requestData.AsObject(args); err != nil {
+		return err
+	} else if exists && len(args) > 0 && cmd.iCommand.Param() == nil {
+		return fmt.Errorf("args are not expected")
+	}
+	if unloggedArgs, exists, err := cmd.requestData.AsObject("unloggedArgs"); err != nil {
+		return err
+	} else if exists && len(unloggedArgs) > 0 && cmd.iCommand.UnloggedParam() == nil {
+		return fmt.Errorf("unloggedArgs are not expected")
+	}
+	return nil
 }
 
 func (cmdProc *cmdProc) getWorkspace(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -540,7 +570,7 @@ func getArgsObject(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	args, exists, err := cmd.requestData.AsObject("args")
+	args, exists, err := cmd.requestData.AsObject(args)
 	if err != nil {
 		return err
 	}
