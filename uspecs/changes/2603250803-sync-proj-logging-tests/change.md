@@ -15,8 +15,10 @@ See [AIR-3394](https://untill.atlassian.net/browse/AIR-3394) for details.
 
 ## What
 
+Add `p.` prefix to the `extension` log attribute of sync projectors and `ap.` prefix for async projectors to distinguish projector-emitted log lines from command-processor-emitted ones
+
 Add unit tests for sync projectors that verify all necessary logging is in place:
 
-- Test that expected log entries (level, message, fields) are emitted during normal projector execution
-- Test that error conditions produce the correct log output
-- Cover edge cases where logging behavior may differ (e.g., skipped events, retries)
+- Test that expected log entries (level, message, fields) are emitted during normal projector execution, including `woffset`, `poffset`, `evqname` attributes and the `p.` extension prefix
+- Test that error conditions produce the correct log output at both projector and command-processor level
+- Test that verbose sync projector logs are suppressed at info log level while error-level logs are still emitted

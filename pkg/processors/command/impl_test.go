@@ -971,8 +971,29 @@ func TestSyncProjectorLogging(t *testing.T) {
 		// per-projector logs: extension has "p." prefix; context attrs woffset/poffset/evqname are enriched
 		logCap.HasLine("stage=sp.triggeredby", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
 		logCap.HasLine("stage=sp.success", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
-		// command-processor emits its own sp.success (no per-projector extension) — total must be 2
+		// command-processor emits its own sp.success on sync projectors success — total must be 2
+		// like this:
+		// time=2026-03-25T11:41:09.726+03:00 level=DEBUG msg="" src=actualizers.newSyncBranch.func1:97 stage=sp.success extension=p.sys.TestProj woffset=3 poffset=4 evqname=sys.CUD
+		// time=2026-03-25T11:41:09.726+03:00 level=DEBUG msg="" src=command.setUp.setUp.ProvideServiceFactory.func5.func6.2:82 stage=sp.success woffset=3 poffset=4 evqname=sys.CUD
+		// note: extension attrib missing in the 1st line, actually it is added by router
 		require.Equal(2, strings.Count(logCap.String(), "stage=sp.success"))
+
+		// let's find the sp.success line emitted by the cmd proc, not by sync acrualizer
+		cmdSuccessLine := ""
+		for _, line := range strings.Split(logCap.String(), "\n") {
+			if strings.Contains(line, "stage=sp.success") &&
+				!strings.Contains(line, "extension="+projExtension) {
+				cmdSuccessLine = line
+				break
+			}
+		}
+		// command-processor success line: must have context attrs and a different extension than projector
+		require.NotEmpty(cmdSuccessLine)
+		require.Contains(cmdSuccessLine, "stage=sp.success")
+		require.Contains(cmdSuccessLine, "woffset=")
+		require.Contains(cmdSuccessLine, "poffset=")
+		require.Contains(cmdSuccessLine, "evqname=")
+
 	})
 
 	t.Run("sp.error on invoke failure", func(t *testing.T) {
