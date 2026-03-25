@@ -595,4 +595,21 @@ func TestUnexpectedFields_400BadRequest(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.air_table_plan"}}],"unexpected":"field"}`
 		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unexpected field(s): unexpected")).Println()
 	})
+
+	t.Run("QPv1 args provided for void query", func(t *testing.T) {
+		body := `{"args":{"something":"value"}}`
+		vit.PostWS(ws, "q.app1pkg.QryVoid", body, it.Expect400("args are not expected")).Println()
+	})
+
+	t.Run("QPv2 args provided for void query", func(t *testing.T) {
+		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryVoid?args=%s`,
+			ws.WSID, url.QueryEscape(`{"something":"value"}`)),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			it.Expect400("args are not expected")).Println()
+	})
+
+	t.Run("CP args provided for void command", func(t *testing.T) {
+		body := `{"args":{"something":"value"}}`
+		vit.PostWS(ws, "c.app1pkg.CmdVoid", body, it.Expect400("args are not expected")).Println()
+	})
 }

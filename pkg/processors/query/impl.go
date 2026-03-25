@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -277,12 +278,17 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("check unexpected request body fields", func(_ context.Context, qw *queryWork) error {
+			var unexpected []string
 			for key := range qw.requestData {
 				switch key {
 				case "args", "elements", "filters", "orderBy", "count", "startFrom":
 				default:
-					return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unexpected field(s): %s", key))
+					unexpected = append(unexpected, key)
 				}
+			}
+			if len(unexpected) > 0 {
+				sort.Strings(unexpected)
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", ")))
 			}
 			return nil
 		}),
@@ -605,7 +611,11 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 	}
 	argsType := qw.iQuery.Param()
 	requestArgs := istructs.NewNullObject()
-	if argsType != nil {
+	if argsType == nil {
+		if len(args) > 0 {
+			return execQueryArgs, fmt.Errorf("args are not expected")
+		}
+	} else {
 		if err = processors.CheckUnexpectedFields(args, argsType); err != nil {
 			return execQueryArgs, err
 		}

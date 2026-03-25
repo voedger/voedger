@@ -17,4 +17,5 @@ Return HTTP 400 bad request when a request contains unexpected fields:
 - QPv1: reject unknown fields inside `args` and unknown top-level fields (alongside `args`, `elements`, `filters`, `orderBy`, `count`, `startFrom`)
 - QPv2: reject unknown fields inside `args` URL parameter
 - Command processor: reject unknown top-level fields other than `args`, `unloggedArgs`, `cuds`
+- All processors: if the function/command declares no params (`argsType` is nil) but the client sends non-empty `args` (or `unloggedArgs` for CP), return 400
 - Return a descriptive error message identifying the unexpected field(s)

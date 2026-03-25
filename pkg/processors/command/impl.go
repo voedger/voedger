@@ -514,6 +514,16 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 		sort.Strings(unexpected)
 		return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
 	}
+	if args, exists, err := cmd.requestData.AsObject("args"); err == nil && exists && len(args) > 0 {
+		if cmd.iCommand.Param() == nil {
+			return fmt.Errorf("args are not expected")
+		}
+	}
+	if unloggedArgs, exists, err := cmd.requestData.AsObject("unloggedArgs"); err == nil && exists && len(unloggedArgs) > 0 {
+		if cmd.iCommand.UnloggedParam() == nil {
+			return fmt.Errorf("unloggedArgs are not expected")
+		}
+	}
 	return nil
 }
 
