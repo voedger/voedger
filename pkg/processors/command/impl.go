@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -495,6 +496,25 @@ func unmarshalRequestBody(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		err = fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
 	}
 	return
+}
+
+func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) error {
+	if cmd.cmdMes.APIPath() == processors.APIPath_Docs {
+		return nil
+	}
+	var unexpected []string
+	for key := range cmd.requestData {
+		switch key {
+		case "args", "unloggedArgs", "cuds":
+		default:
+			unexpected = append(unexpected, key)
+		}
+	}
+	if len(unexpected) > 0 {
+		sort.Strings(unexpected)
+		return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
+	}
+	return nil
 }
 
 func (cmdProc *cmdProc) getWorkspace(_ context.Context, cmd *cmdWorkpiece) (err error) {

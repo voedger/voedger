@@ -276,6 +276,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			err = coreutils.JSONUnmarshal(qw.msg.Body(), &qw.requestData)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
+		operator("check unexpected request body fields", func(_ context.Context, qw *queryWork) error {
+			for key := range qw.requestData {
+				switch key {
+				case "args", "elements", "filters", "orderBy", "count", "startFrom":
+				default:
+					return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unexpected field(s): %s", key))
+				}
+			}
+			return nil
+		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
@@ -596,6 +606,9 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 	argsType := qw.iQuery.Param()
 	requestArgs := istructs.NewNullObject()
 	if argsType != nil {
+		if err = processors.CheckUnexpectedFields(args, argsType); err != nil {
+			return execQueryArgs, err
+		}
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
 		requestArgsBuilder.FillFromJSON(args)
 		requestArgs, err = requestArgsBuilder.Build()

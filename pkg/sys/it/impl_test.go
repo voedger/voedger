@@ -566,3 +566,33 @@ func TestQueryCookiesAuth(t *testing.T) {
 			httpu.WithCookies(httpu.Authorization, "Bearer "+ws.Owner.Token))
 	})
 }
+
+func TestUnexpectedFields_400BadRequest(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("QPv1 unexpected field inside args", func(t *testing.T) {
+		body := `{"args":{"Text":"world","unexpected":"field"},"elements":[{"fields":["Res"]}]}`
+		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "q.sys.Echo", body,
+			it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+
+	t.Run("QPv1 unexpected field at root level", func(t *testing.T) {
+		body := `{"args":{"Text":"world"},"elements":[{"fields":["Res"]}],"unexpected":"field"}`
+		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "q.sys.Echo", body,
+			it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+
+	t.Run("QPv2", func(t *testing.T) {
+		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`,
+			ws.WSID, url.QueryEscape(`{"Text":"Hello world","unexpected":"field"}`)),
+			it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+
+	t.Run("command processor", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.air_table_plan"}}],"unexpected":"field"}`
+		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+}

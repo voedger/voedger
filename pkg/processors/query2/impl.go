@@ -321,6 +321,11 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 	argsType := qw.iQuery.Param()
 	requestArgs := istructs.NewNullObject()
 	if argsType != nil {
+		if argsType.QName() != istructs.QNameRaw {
+			if err = processors.CheckUnexpectedFields(qw.queryParams.Argument, argsType); err != nil {
+				return execQueryArgs, err
+			}
+		}
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
 		if argsType.QName() == istructs.QNameRaw {
 			requestArgsBuilder.PutChars(processors.Field_RawObject_Body, qw.queryParams.RawArg)
