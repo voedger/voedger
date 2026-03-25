@@ -3,6 +3,7 @@ registered_at: 2026-03-25T08:03:36Z
 change_id: 2603250803-sync-proj-logging-tests
 baseline: 069c20ac5cf201476b99c576d67e9380cddc7752
 issue_url: https://untill.atlassian.net/browse/AIR-3394
+archived_at: 2026-03-25T09:17:18Z
 ---
 
 # Change request: Add logging coverage tests for sync projectors
