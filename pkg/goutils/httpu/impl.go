@@ -113,6 +113,14 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	reqCtx, cancel := context.WithTimeout(ctx, maxHTTPRequestTimeout)
 	defer cancel()
 
+	// For long-polling (SSE) requests, use the caller's context so the
+	// connection stays alive after req() returns (defer cancel() would
+	// kill reqCtx immediately). reqCtx is still used for the retry loop.
+	httpCtx := reqCtx
+	if opts.responseHandler != nil {
+		httpCtx = ctx
+	}
+
 	retrierCfg := retrier.NewConfig(httpBaseRetryDelay, httpMaxRetryDelay)
 	retrierCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, abortErr error) {
 		for _, matcher := range opts.retryOnErr {
@@ -124,7 +132,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
-		req, err := newRequest(reqCtx, opts.method, opts.urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
+		req, err := newRequest(httpCtx, opts.method, opts.urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
@@ -150,8 +158,8 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 					// Sleep for the custom delay, respecting context cancellation
 					select {
 					case <-time.After(retryAfterDuration):
-					case <-ctx.Done():
-						return nil, ctx.Err()
+					case <-reqCtx.Done():
+						return nil, reqCtx.Err()
 					}
 				}
 			}
