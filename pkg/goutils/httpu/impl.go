@@ -22,7 +22,7 @@ import (
 )
 
 // body and bodyReader are mutual exclusive
-func req(ctx context.Context, method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
+func newRequest(ctx context.Context, method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
 	if bodyReader != nil {
 		req, err = http.NewRequestWithContext(ctx, method, url, bodyReader)
 	} else {
@@ -55,14 +55,15 @@ func (c *implIHTTPClient) Req(ctx context.Context, urlStr string, body string, o
 	return c.req(ctx, urlStr, body, optFuncs...)
 }
 
-func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	opts := &reqOpts{
+func (c *implIHTTPClient) compileOpts(urlStr string, optFuncs ...ReqOptFunc) (opts *reqOpts, err error) {
+	opts = &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
 		validators: []func(IReqOpts) (panicMessage string){
 			optsValidator_responseHandling,
 		},
 		customOpts: map[any]any{},
+		urlStr:     urlStr,
 	}
 	for _, defaultOptFunc := range c.defaultOpts {
 		defaultOptFunc(opts)
@@ -86,7 +87,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 			return nil, err
 		}
 		netURL.Path = opts.urlPath
-		urlStr = netURL.String()
+		opts.urlStr = netURL.String()
 	}
 	if opts.withoutAuth {
 		delete(opts.headers, Authorization)
@@ -98,6 +99,15 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 			panic(panicMessage)
 		}
 	}
+	return opts, nil
+}
+
+func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+	opts, err := c.compileOpts(urlStr, optFuncs...)
+	if err != nil {
+		return nil, err
+	}
+
 	startTime := time.Now()
 
 	reqCtx, cancel := context.WithTimeout(ctx, maxHTTPRequestTimeout)
@@ -114,7 +124,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
-		req, err := req(ctx, opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
+		req, err := newRequest(ctx, opts.method, opts.urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
