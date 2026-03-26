@@ -199,7 +199,7 @@ func TestVerificationLimits(t *testing.T) {
 			InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
 		}
 
-		// 2nd exceeds the limit -> 429 Too many requests
+		// next call exceeds the limit -> 429 Too many requests
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail)
 		vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, httpu.Expect429())
 
@@ -218,6 +218,7 @@ func TestVerificationLimits(t *testing.T) {
 		bodyGoodCode := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
 		for range verifier.IssueVerifiedValueToken_MaxAllowed {
+			// first X calls per period with a wrong code are allowed, just "code wrong" error is returned
 			vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", bodyWrongCode, httpu.Expect400())
 		}
 
@@ -232,6 +233,7 @@ func TestVerificationLimits(t *testing.T) {
 		bodyGoodCode = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
 		for range verifier.IssueVerifiedValueToken_MaxAllowed + 1 {
+			// now check that limits are restored and that limits are reset on successful code verification
 			vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", bodyGoodCode)
 		}
 	})
