@@ -1033,6 +1033,6 @@ func TestSyncProjectorLogging(t *testing.T) {
 		logCap.HasLine("stage=sp.error", projErr.Error(), "extension="+projExtension, "woffset=", "poffset=", "evqname=")
 		// command-processor also emits sp.error (no per-projector extension) — total must be 2
 		require.Equal(2, strings.Count(logCap.String(), "stage=sp.error"))
-		logCap.HasLine("stage=cp.partition_recovery", "partition will be restarted due of an error on writing to Log")
+		logCap.EventuallyHasLine("stage=cp.partition_recovery", "partition will be restarted due of an error on writing to Log")
 	})
 }
