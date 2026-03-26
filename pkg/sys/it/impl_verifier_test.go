@@ -15,9 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -189,13 +187,6 @@ func TestVerificationLimits(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	rateLimitName_InitiateEmailVerification := istructsmem.GetFunctionRateLimitName(verifier.QNameQueryInitiateEmailVerification, istructs.RateLimitKind_byWorkspace)
-
-	vit.MockBuckets(istructs.AppQName_test1_app1, rateLimitName_InitiateEmailVerification, irates.BucketState{
-		Period:             time.Minute,
-		MaxTokensPerPeriod: 1,
-	})
-
 	// funcs should be called in the user profile
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	var token, code string
@@ -204,8 +195,9 @@ func TestVerificationLimits(t *testing.T) {
 
 	t.Run("q.sys.InitiateEmailVerification limits", func(t *testing.T) {
 
-		// first q.sys.InitiateEmailVerifications are ok
-		InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
+		for range verifier.InitiateEmailVerification_MaxAllowed {
+			InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
+		}
 
 		// 2nd exceeds the limit -> 429 Too many requests
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail)
@@ -215,8 +207,7 @@ func TestVerificationLimits(t *testing.T) {
 		otherPrn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
 		InitiateEmailVerification(vit, otherPrn, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail2, testWSID, httpu.WithAuthorizeBy(otherPrn.Token))
 
-		// proceed to the next minute -> limits will be reset
-		vit.TimeAdd(time.Minute)
+		vit.TimeAdd(verifier.InitiateEmailVerification_Period)
 
 		// expect no errors
 		token, code = InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
@@ -226,8 +217,7 @@ func TestVerificationLimits(t *testing.T) {
 		bodyWrongCode := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code+"1")
 		bodyGoodCode := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
-		for i := 0; i < int(verifier.IssueVerifiedValueToken_MaxAllowed); i++ {
-			// first 3 calls per hour with a wrong code are allowed, just "code wrong" error is returned
+		for range verifier.IssueVerifiedValueToken_MaxAllowed {
 			vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", bodyWrongCode, httpu.Expect400())
 		}
 
@@ -241,8 +231,7 @@ func TestVerificationLimits(t *testing.T) {
 		token, code = InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
 		bodyGoodCode = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
-		// now check that limits are restored and that limits are reset on successful code verification
-		for i := 0; i < int(verifier.IssueVerifiedValueToken_MaxAllowed+1); i++ {
+		for range verifier.IssueVerifiedValueToken_MaxAllowed + 1 {
 			vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", bodyGoodCode)
 		}
 	})
