@@ -55,6 +55,7 @@ type reqOpts struct {
 	retryOnErr        []func(err error) (retry bool)
 	retryOnStatus     []retryOnStatus
 	customOpts        map[any]any
+	urlStr            string
 }
 
 type retryOnStatus struct {
