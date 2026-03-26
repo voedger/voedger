@@ -21,7 +21,7 @@ import (
 	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 )
 
-// body and bodyReader are mutual exclusive
+// body and bodyReader are mutually exclusive
 func newRequest(ctx context.Context, method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
 	if bodyReader != nil {
 		req, err = http.NewRequestWithContext(ctx, method, url, bodyReader)
@@ -82,7 +82,7 @@ func (c *implIHTTPClient) compileOpts(urlStr string, optFuncs ...ReqOptFunc) (op
 		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK, http.StatusCreated)
 	}
 	if len(opts.urlPath) > 0 {
-		netURL, err := url.Parse(urlStr)
+		netURL, err := url.Parse(opts.urlStr)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
-		req, err := newRequest(ctx, opts.method, opts.urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
+		req, err := newRequest(reqCtx, opts.method, opts.urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
