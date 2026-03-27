@@ -462,17 +462,14 @@ type implIAppStructs struct {
 	appQName appdef.AppQName
 }
 
-func (as *implIAppStructs) AppDef() appdef.IAppDef                             { panic("") }
-func (as *implIAppStructs) Events() istructs.IEvents                           { panic("") }
-func (as *implIAppStructs) Records() istructs.IRecords                         { return as.records }
-func (as *implIAppStructs) ViewRecords() istructs.IViewRecords                 { return as.views }
-func (as *implIAppStructs) ObjectBuilder(appdef.QName) istructs.IObjectBuilder { panic("") }
-func (as *implIAppStructs) Resources() istructs.IResources                     { panic("") }
-func (as *implIAppStructs) ClusterAppID() istructs.ClusterAppID                { panic("") }
-func (as *implIAppStructs) AppQName() appdef.AppQName                          { return as.appQName }
-func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.WSID) bool {
-	panic("")
-}
+func (as *implIAppStructs) AppDef() appdef.IAppDef                                         { panic("") }
+func (as *implIAppStructs) Events() istructs.IEvents                                       { panic("") }
+func (as *implIAppStructs) Records() istructs.IRecords                                     { return as.records }
+func (as *implIAppStructs) ViewRecords() istructs.IViewRecords                             { return as.views }
+func (as *implIAppStructs) ObjectBuilder(appdef.QName) istructs.IObjectBuilder             { panic("") }
+func (as *implIAppStructs) Resources() istructs.IResources                                 { panic("") }
+func (as *implIAppStructs) ClusterAppID() istructs.ClusterAppID                            { panic("") }
+func (as *implIAppStructs) AppQName() appdef.AppQName                                      { return as.appQName }
 func (as *implIAppStructs) DescribePackageNames() []string                                 { panic("") }
 func (as *implIAppStructs) DescribePackage(string) interface{}                             { panic("") }
 func (as *implIAppStructs) SyncProjectors() istructs.Projectors                            { panic("") }

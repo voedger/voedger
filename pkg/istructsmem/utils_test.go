@@ -10,12 +10,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 )
@@ -203,29 +200,4 @@ func TestObjectFillAndGet(t *testing.T) {
 			require.Error(err)
 		}
 	})
-}
-
-func TestIBucketsFromIAppStructs(t *testing.T) {
-	require := require.New(t)
-
-	cfgs := AppConfigsType{}
-	adb := builder.New()
-	adb.AddPackage("test", "test.com/test")
-	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb)
-	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	funcQName := appdef.NewQName("test", "myFunc")
-
-	rlExpected := istructs.RateLimit{
-		Period:                1,
-		MaxAllowedPerDuration: 2,
-	}
-	cfg.FunctionRateLimits.AddAppLimit(funcQName, rlExpected)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
-	as, err := asp.BuiltIn(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	buckets := IBucketsFromIAppStructs(as)
-	bsActual, err := buckets.GetDefaultBucketsState(GetFunctionRateLimitName(funcQName, istructs.RateLimitKind_byApp))
-	require.NoError(err)
-	require.Equal(rlExpected.Period, bsActual.Period)
-	require.EqualValues(rlExpected.MaxAllowedPerDuration, bsActual.MaxTokensPerPeriod)
 }

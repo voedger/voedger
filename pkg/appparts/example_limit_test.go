@@ -67,7 +67,6 @@ func ExampleIAppPartition_IsLimitExceeded() {
 
 	appStructsProvider := istructsmem.Provide(
 		appConfigs,
-		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
 

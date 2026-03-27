@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -3177,7 +3177,7 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	appQName := appdef.NewAppQName("pkg", "test")
 	cfgs := istructsmem.AppConfigsType{}
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
-	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)
 	statelessResources := istructsmem.NewStatelessResources()
@@ -3189,7 +3189,8 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 			}, "vvmName", imetrics.Provide()),
-		irates.NullBucketsFactory)
+		iratesce.TestBucketsFactory,
+	)
 	require.NoError(err)
 	defer func() {
 		cancel()
@@ -3235,7 +3236,7 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	appQName := appdef.NewAppQName("pkg", "test")
 	cfgs := istructsmem.AppConfigsType{}
 	cfgs.AddAppConfig(appQName, 1, appDef, 1)
-	appStructsProvider := istructsmem.Provide(cfgs, irates.NullBucketsFactory,
+	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)
 	statelessResources := istructsmem.NewStatelessResources()
@@ -3247,7 +3248,8 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 			}, "vvmName", imetrics.Provide()),
-		irates.NullBucketsFactory)
+		iratesce.TestBucketsFactory,
+	)
 	require.NoError(err)
 	defer func() {
 		cancel()

@@ -9,7 +9,6 @@ package istructs
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -180,11 +179,3 @@ type IStateKeyBuilder interface {
 }
 type StateValueCallback func(key IKeyBuilder, value IStateValue, ok bool) (err error)
 type ValueCallback func(key IKey, value IStateValue) (err error)
-
-//go:generate stringer -type=RateLimitKind
-type RateLimitKind uint8
-
-type RateLimit struct {
-	Period                time.Duration
-	MaxAllowedPerDuration uint32
-}

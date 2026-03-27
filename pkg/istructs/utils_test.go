@@ -8,10 +8,8 @@ package istructs_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"math"
-	"strconv"
 	"testing"
 	"time"
 
@@ -177,38 +175,6 @@ func TestNullObject(t *testing.T) {
 	})
 }
 
-func TestRateLimitKind_String(t *testing.T) {
-	tests := []struct {
-		name string
-		i    istructs.RateLimitKind
-		want string
-	}{
-		{name: `0 —> "RateLimitKind_byApp"`,
-			i:    istructs.RateLimitKind_byApp,
-			want: `RateLimitKind_byApp`,
-		},
-		{name: `1 —> "RateLimitKind_byWorkspace"`,
-			i:    istructs.RateLimitKind_byWorkspace,
-			want: `RateLimitKind_byWorkspace`,
-		},
-		{name: `RateLimitKind_FakeLast —> "RateLimitKind_FakeLast"`,
-			i:    istructs.RateLimitKind_FakeLast,
-			want: "RateLimitKind_FakeLast",
-		},
-		{name: `RateLimitKind_FakeLast+1 —> "RateLimitKind(4)"`,
-			i:    istructs.RateLimitKind_FakeLast + 1,
-			want: fmt.Sprintf("RateLimitKind(%d)", istructs.RateLimitKind_FakeLast+1),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.i.String(); got != tt.want {
-				t.Errorf("RateLimitKind.String() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestResourceKindType_MarshalText(t *testing.T) {
 	tests := []struct {
 		name string
@@ -249,20 +215,6 @@ func TestResourceKindType_MarshalText(t *testing.T) {
 			t.Errorf("(ResourceKind_FakeLast + 1).String() = %v, want %v", got, want)
 		}
 	})
-}
-
-func TestRateLimitKind_MarshalText(t *testing.T) {
-	require := require.New(t)
-	for i := 0; i <= int(istructs.RateLimitKind_FakeLast); i++ {
-		rlk := istructs.RateLimitKind(i)
-		b, err := rlk.MarshalText()
-		require.NoError(err)
-		if rlk == istructs.RateLimitKind_FakeLast {
-			require.Equal(strconv.Itoa(i), string(b))
-		} else {
-			require.Equal(rlk.String(), string(b))
-		}
-	}
 }
 
 func TestUnixMilli(t *testing.T) {

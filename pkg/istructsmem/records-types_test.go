@@ -17,7 +17,6 @@ import (
 	gojson "encoding/json"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
 )
@@ -207,7 +206,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(test.AppConfigs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)

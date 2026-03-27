@@ -3,6 +3,7 @@ registered_at: 2026-03-26T13:39:30Z
 change_id: 2603261339-elim-mock-buckets
 baseline: 43fecfd41a6c0244a700f0579fd4370e522e60fa
 issue_url: https://untill.atlassian.net/browse/AIR-3414
+archived_at: 2026-03-27T12:58:55Z
 ---
 
 # Change request: Eliminate vit.MockBuckets and replace with real rate limit testing

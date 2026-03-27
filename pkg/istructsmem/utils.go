@@ -13,7 +13,6 @@ import (
 
 	"github.com/untillpro/dynobuffers"
 
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -100,9 +99,4 @@ func wlogKey(ws istructs.WSID, offset istructs.Offset) (pkey, ccols []byte) {
 	binary.BigEndian.PutUint64(pkey[uint16len+uint64len:], hi)
 
 	return pkey, uint16bytes(lo)
-}
-
-func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
-	// appStructs implementation has method Buckets()
-	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }

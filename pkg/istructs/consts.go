@@ -206,14 +206,6 @@ var ClusterApps = map[appdef.AppQName]ClusterAppID{
 	AppQName_untill_fiscalcloud:    ClusterAppID_untill_fiscalcloud,
 }
 
-const (
-	RateLimitKind_byApp RateLimitKind = iota
-	RateLimitKind_byWorkspace
-	RateLimitKind_byID
-
-	RateLimitKind_FakeLast
-)
-
 const DefaultNumAppWorkspaces = NumAppWorkspaces(10)
 
 const SysGuestLogin = appdef.SysPackage + ".Guest"

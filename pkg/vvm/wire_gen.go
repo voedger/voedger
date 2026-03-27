@@ -85,13 +85,12 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	serviceChannelFactory := provideServiceChannelFactory(vvmConfig, iProcBus)
 	commandChannelFactory := provideCommandChannelFactory(serviceChannelFactory)
 	appConfigsTypeEmpty := provideAppConfigsTypeEmpty()
-	iTime := vvmConfig.Time
-	bucketsFactoryType := provideBucketsFactory(iTime)
 	iSecretReader := vvmConfig.SecretsReader
 	secretKeyType, err := provideSecretKeyJWT(iSecretReader)
 	if err != nil {
 		return nil, nil, err
 	}
+	iTime := vvmConfig.Time
 	iTokens := itokensjwt.ProvideITokens(secretKeyType, iTime)
 	iAppTokensFactory := payloads.ProvideIAppTokensFactory(iTokens)
 	storageCacheSizeType := vvmConfig.StorageCacheSize
@@ -108,7 +107,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	if err != nil {
 		return nil, nil, err
 	}
-	iAppStructsProvider := provideIAppStructsProvider(appConfigsTypeEmpty, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider, sequencesTrustLevel, iSysVvmStorage)
+	iAppStructsProvider := provideIAppStructsProvider(appConfigsTypeEmpty, iAppTokensFactory, iAppStorageProvider, sequencesTrustLevel, iSysVvmStorage)
 	syncActualizerFactory := actualizers.ProvideSyncActualizerFactory()
 	quotas := provideN10NQuotas(vvmConfig)
 	in10nBroker, cleanup := in10nmem.NewN10nBroker(quotas, iTime)
@@ -144,6 +143,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		EmailSender:  iEmailSender,
 	}
 	iSchedulerRunner := provideSchedulerRunner(basicSchedulerConfig)
+	bucketsFactoryType := provideBucketsFactory(iTime)
 	v4, err := provideSidecarApps(vvmConfig)
 	if err != nil {
 		cleanup3()
@@ -394,12 +394,12 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 // provide builtInAppsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
-func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
+func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, appTokensFactory payloads.IAppTokensFactory,
 	storageProvider istorage.IAppStorageProvider, seqTrustLevel isequencer.SequencesTrustLevel, sysVvmStorage storage.ISysVvmStorage) istructs.IAppStructsProvider {
 	appTTLStorageFactory := func(clusterAppID istructs.ClusterAppID) istructs.IAppTTLStorage {
 		return storage.NewAppTTLStorage(sysVvmStorage, clusterAppID)
 	}
-	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider, seqTrustLevel, appTTLStorageFactory)
+	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), appTokensFactory, storageProvider, seqTrustLevel, appTTLStorageFactory)
 }
 
 func provideBasicAsyncActualizerConfig(

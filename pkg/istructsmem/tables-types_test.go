@@ -400,7 +400,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		newConfig := newBuiltInAppConfig(test.AppCfg.Name, adb)
 		newConfig.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		err := newConfig.prepare(nil, test.AppCfg.storage)
+		err := newConfig.prepare(test.AppCfg.storage)
 		require.NoError(err)
 
 		rec2 := newRecord(newConfig)
