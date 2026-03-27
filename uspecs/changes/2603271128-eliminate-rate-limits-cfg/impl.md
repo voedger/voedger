@@ -65,6 +65,7 @@
   - update: `istructsmem.Provide` call — remove buckets factory argument
 - [x] update: [pkg/parser/impl_test.go](../../pkg/parser/impl_test.go)
   - update: `istructsmem.Provide` calls — remove buckets factory argument
+  - update: `appparts.New2` calls — replace `irates.NullBucketsFactory` with `nil`
 - [x] update: [pkg/processors/actualizers/impl_test.go](../../pkg/processors/actualizers/impl_test.go)
   - update: `istructsmem.Provide` call — remove buckets factory argument
 - [x] update: [pkg/processors/command/impl_test.go](../../pkg/processors/command/impl_test.go)
@@ -99,5 +100,18 @@
   - update: `Provide` calls — remove buckets factory argument
 - [x] update: [pkg/istructsmem/viewrecords-types_test.go](../../pkg/istructsmem/viewrecords-types_test.go)
   - update: `Provide` calls — remove buckets factory argument
+
 - [x] Review
 
+### NullBucketsFactory and NullBucket elimination
+
+- [x] delete: [pkg/irates/consts.go](../../pkg/irates/consts.go)
+  - remove: `NullBucketsFactory` variable and `NullBucket` type with all methods
+- [x] update: [pkg/appparts/provide.go](../../pkg/appparts/provide.go)
+  - remove: `New` function (simplified test constructor)
+- [x] update: [pkg/appparts/test_utils.go](../../pkg/appparts/test_utils.go)
+  - update: replace `irates.NullBucketsFactory` with `iratesce.TestBucketsFactory`
+- [x] update: [pkg/parser/impl_test.go](../../pkg/parser/impl_test.go)
+  - update: `appparts.New2` calls — replace `irates.NullBucketsFactory` with `nil`
+  - remove: `irates` import
+- [x] Review
