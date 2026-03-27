@@ -3248,7 +3248,8 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 			}, "vvmName", imetrics.Provide()),
-		nil)
+		iratesce.TestBucketsFactory,
+	)
 	require.NoError(err)
 	defer func() {
 		cancel()
