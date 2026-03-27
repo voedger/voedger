@@ -311,7 +311,6 @@ func deployTestAppEx(
 
 	appStructsProvider := istructsmem.Provide(
 		cfgs,
-		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
 		isequencer.SequencesTrustLevel_0, nil)

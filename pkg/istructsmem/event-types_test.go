@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
@@ -657,7 +656,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		testCount
 	)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(cfgs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	ws := istructs.WSID(1)
 
@@ -831,7 +830,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(cfgs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -968,7 +967,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(cfgs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -1173,7 +1172,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(cfgs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -2007,7 +2006,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 	test := newTest()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(test.AppConfigs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)

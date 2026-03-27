@@ -14,7 +14,6 @@ import (
 	bytespool "github.com/valyala/bytebufferpool"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -36,7 +35,6 @@ type appStructsProviderType struct {
 	locker               sync.RWMutex
 	configs              AppConfigsType
 	structures           map[appdef.AppQName]*appStructsType
-	bucketsFactory       irates.BucketsFactoryType
 	appTokensFactory     payloads.IAppTokensFactory
 	storageProvider      istorage.IAppStorageProvider
 	seqTrustLevel        isequencer.SequencesTrustLevel
@@ -56,20 +54,19 @@ func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (struct
 
 	app, exists := provider.structures[appName]
 	if !exists || !appCfg.Prepared() {
-		buckets := provider.bucketsFactory()
 		appTokens := provider.appTokensFactory.New(appName)
 		appStorage, err := provider.storageProvider.AppStorage(appName)
 		if err != nil {
 			return nil, err
 		}
-		if err = appCfg.prepare(buckets, appStorage); err != nil {
+		if err = appCfg.prepare(appStorage); err != nil {
 			return nil, err
 		}
 		var appTTLStorage istructs.IAppTTLStorage
 		if provider.appTTLStorageFactory != nil {
 			appTTLStorage = provider.appTTLStorageFactory(appCfg.ClusterAppID)
 		}
-		app = newAppStructs(appCfg, buckets, appTokens, provider.seqTrustLevel, appTTLStorage)
+		app = newAppStructs(appCfg, appTokens, provider.seqTrustLevel, appTTLStorage)
 		provider.structures[appName] = app
 	}
 	return app, nil
@@ -81,20 +78,19 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 	defer provider.locker.Unlock()
 
 	cfg := provider.configs.AddAppConfig(name, id, def, wsCount)
-	buckets := provider.bucketsFactory()
 	appTokens := provider.appTokensFactory.New(name)
 	appStorage, err := provider.storageProvider.AppStorage(name)
 	if err != nil {
 		return nil, err
 	}
-	if err = cfg.prepare(buckets, appStorage); err != nil {
+	if err = cfg.prepare(appStorage); err != nil {
 		return nil, err
 	}
 	var appTTLStorage istructs.IAppTTLStorage
 	if provider.appTTLStorageFactory != nil {
 		appTTLStorage = provider.appTTLStorageFactory(id)
 	}
-	app := newAppStructs(cfg, buckets, appTokens, provider.seqTrustLevel, appTTLStorage)
+	app := newAppStructs(cfg, appTokens, provider.seqTrustLevel, appTTLStorage)
 	//provider.structures[name] = app
 	return app, nil
 }
@@ -107,17 +103,15 @@ type appStructsType struct {
 	events        appEventsType
 	records       appRecordsType
 	viewRecords   appViewRecords
-	buckets       irates.IBuckets
 	descr         *descr.Application
 	appTokens     istructs.IAppTokens
 	seqTrustLevel isequencer.SequencesTrustLevel
 	appTTLStorage istructs.IAppTTLStorage
 }
 
-func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens, seqTrustLevel isequencer.SequencesTrustLevel, appTTLStorage istructs.IAppTTLStorage) *appStructsType {
+func newAppStructs(appCfg *AppConfigType, appTokens istructs.IAppTokens, seqTrustLevel isequencer.SequencesTrustLevel, appTTLStorage istructs.IAppTTLStorage) *appStructsType {
 	app := appStructsType{
 		config:        appCfg,
-		buckets:       buckets,
 		appTokens:     appTokens,
 		seqTrustLevel: seqTrustLevel,
 		appTTLStorage: appTTLStorage,
@@ -183,12 +177,6 @@ func (app *appStructsType) AsyncProjectors() istructs.Projectors {
 	return app.config.AsyncProjectors()
 }
 
-// IAppStructs.Buckets() - wrong, import cycle between istructs and irates
-// so let's add simple method to use it at utils.IBucketsFromIAppStructs()
-func (app *appStructsType) Buckets() irates.IBuckets {
-	return app.buckets
-}
-
 func (app *appStructsType) CUDValidators() []istructs.CUDValidator {
 	return app.config.cudValidators
 }
@@ -214,33 +202,6 @@ func (app *appStructsType) SeqTypes() map[istructs.QNameID]map[istructs.QNameID]
 
 func (app *appStructsType) QNameID(qName appdef.QName) (istructs.QNameID, error) {
 	return app.config.QNameID(qName)
-}
-
-func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
-	rateLimits, ok := app.config.FunctionRateLimits.limits[funcQName]
-	if !ok {
-		return false
-	}
-	keys := []irates.BucketKey{}
-	for rlKind := range rateLimits {
-		key := irates.BucketKey{
-			QName:         funcQName,
-			RateLimitName: GetFunctionRateLimitName(funcQName, rlKind),
-		}
-		// already checked for unsupported kind on appStructs.prepare() stage
-		switch rlKind {
-		case istructs.RateLimitKind_byApp:
-			key.App = app.config.Name
-		case istructs.RateLimitKind_byWorkspace:
-			key.Workspace = wsid
-		case istructs.RateLimitKind_byID:
-			// skip
-			continue
-		}
-		keys = append(keys, key)
-	}
-	ok, _ = app.buckets.TakeTokens(keys, 1)
-	return !ok
 }
 
 // istructs.IAppStructs.SyncProjectors

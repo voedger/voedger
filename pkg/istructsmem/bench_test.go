@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -106,7 +105,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 	}
 
-	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(configs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	appStructs, err := provider.BuiltIn(appName)
 	require.NoError(err)

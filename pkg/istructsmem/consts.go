@@ -52,12 +52,5 @@ const (
 	sfm_IsActive  = uint16(1 << 3)
 )
 
-// rate limits function name formats, see GetFunctionRateLimitName
-var funcRateLimitNameFmt = [istructs.RateLimitKind_FakeLast]string{
-	"func_%s_byApp",
-	"func_%s_byWS",
-	"func_%s_byID",
-}
-
 // Set of type kinds that stored directly in wlog
 var recordsInWLog = set.FromRO(appdef.TypeKind_ODoc, appdef.TypeKind_ORecord)

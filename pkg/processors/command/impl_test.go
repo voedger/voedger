@@ -777,7 +777,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	appDef, err := adb.Build()
 	require.NoError(err)
 
-	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
+	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	secretReader := isecretsimpl.ProvideSecretReader()

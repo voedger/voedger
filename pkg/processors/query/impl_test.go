@@ -237,7 +237,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	atf := payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
-	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, atf, storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	asp := istructsmem.Provide(cfgs, atf, storageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{

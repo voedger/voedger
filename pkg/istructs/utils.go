@@ -124,21 +124,6 @@ func (k ResourceKindType) MarshalText() ([]byte, error) {
 	return []byte(s), nil
 }
 
-// *********************************************************************************************************
-//
-//	RateLimitKind
-//
-
-func (k RateLimitKind) MarshalText() ([]byte, error) {
-	var s string
-	if k < RateLimitKind_FakeLast {
-		s = k.String()
-	} else {
-		s = strconvu.UintToString(k)
-	}
-	return []byte(s), nil
-}
-
 func (um UnixMilli) String() string {
 	return time.Unix(0, int64(um)*int64(time.Millisecond)).Format("2006-01-02 15:04:05 MST")
 }

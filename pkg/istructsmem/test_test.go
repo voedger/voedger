@@ -17,7 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/appdef/sys"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -454,7 +453,7 @@ func newTest() *testEnvironment {
 	test.Storage = teststore.NewStorage(test.appName)
 	test.StorageProvider = teststore.NewStorageProvider(test.Storage)
 
-	test.AppStructsProvider = Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), test.StorageProvider, isequencer.SequencesTrustLevel_0, nil)
+	test.AppStructsProvider = Provide(test.AppConfigs, testTokensFactory(), test.StorageProvider, isequencer.SequencesTrustLevel_0, nil)
 	test.AppStructs, err = test.AppStructsProvider.BuiltIn(test.appName)
 	if err != nil {
 		panic(err)

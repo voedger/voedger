@@ -25,7 +25,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
@@ -260,7 +259,6 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,
-		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
 		isequencer.SequencesTrustLevel_0, nil)

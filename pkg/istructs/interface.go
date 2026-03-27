@@ -65,7 +65,6 @@ type IAppStructs interface {
 	ClusterAppID() ClusterAppID
 	AppQName() appdef.AppQName
 
-	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool // FIXME: eliminate, use the one from iappparts?
 	// Describe package names
 	DescribePackageNames() []string
 
