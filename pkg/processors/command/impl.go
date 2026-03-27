@@ -514,7 +514,7 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 	if len(unexpectedAllowed) > 0 {
 		logger.WarningCtx(cmd.cmdMes.RequestCtx(), "cp.validate", fmt.Sprintf("unexpected field(s): %s, allowing for backward compatibility", strings.Join(unexpectedAllowed, ", ")))
 	}
-	// FIXME: deny enexpected fields in https://untill.atlassian.net/browse/AIR-3437 after https://untill.atlassian.net/browse/AIR-3438
+	// FIXME: deny unexpected fields in https://untill.atlassian.net/browse/AIR-3437 after https://untill.atlassian.net/browse/AIR-3438
 	// if len(unexpected) > 0 {
 	// 	sort.Strings(unexpected)
 	// 	return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
