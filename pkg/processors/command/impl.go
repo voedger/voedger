@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -90,7 +89,7 @@ func (c *cmdWorkpiece) Context() context.Context {
 
 // need for sync projectors for logging
 func (c *cmdWorkpiece) LogCtxForSyncProjector() context.Context {
-	return c.logCtx
+	return c.logCtxForSyncProjectors
 }
 
 // used in projectors.NewSyncActualizerFactoryFactory
@@ -313,7 +312,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 
 	if lastPLogEvent != nil {
 		// re-apply the last event
-		cmd.logCtx, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
+		cmd.logCtxForSyncProjectors, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
 			"cp.partition_recovery.reapply", nil, "")
 		if err != nil {
 			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.logeventandcuds.error", err)
@@ -332,7 +331,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 		cmd.reapplier = nil
 		cmd.workspace = nil
 		cmd.pLogEvent = nil
-		cmd.logCtx = nil
+		cmd.logCtxForSyncProjectors = nil
 		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 	}
 
@@ -390,7 +389,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		"",
 	)
 
-	cmd.logCtx = enrichedLogCtx
+	cmd.logCtxForSyncProjectors = enrichedLogCtx
 	return err
 }
 
@@ -502,18 +501,24 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 	if cmd.cmdMes.APIPath() == processors.APIPath_Docs {
 		return nil
 	}
-	var unexpected []string
+	// var unexpected []string
+	var unexpectedAllowed []string
 	for key := range cmd.requestData {
 		switch key {
 		case args, "unloggedArgs", "cuds":
 		default:
-			unexpected = append(unexpected, key)
+			unexpectedAllowed = append(unexpectedAllowed, key)
+			// unexpected = append(unexpected, key)
 		}
 	}
-	if len(unexpected) > 0 {
-		sort.Strings(unexpected)
-		return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
+	if len(unexpectedAllowed) > 0 {
+		logger.WarningCtx(cmd.cmdMes.RequestCtx(), "cp.validate", fmt.Sprintf("unexpected field(s): %s, allowing for backward compatibility", strings.Join(unexpectedAllowed, ", ")))
 	}
+	// FIXME: deny unexpected fields in https://untill.atlassian.net/browse/AIR-3437 after https://untill.atlassian.net/browse/AIR-3438
+	// if len(unexpected) > 0 {
+	// 	sort.Strings(unexpected)
+	// 	return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
+	// }
 	if args, exists, err := cmd.requestData.AsObject(args); err != nil {
 		return err
 	} else if exists && len(args) > 0 && cmd.iCommand.Param() == nil {
