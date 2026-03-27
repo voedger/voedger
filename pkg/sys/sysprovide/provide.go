@@ -52,7 +52,6 @@ func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps 
 }
 
 func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
-	verifier.ProvideLimits(cfg)
 	builtin.ProvideCUDValidators(cfg)
 	builtin.ProvideSysIsActiveValidation(cfg)
 	uniques.ProvideEventValidator(cfg)

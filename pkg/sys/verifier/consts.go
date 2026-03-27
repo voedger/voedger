@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 const (
@@ -36,9 +35,5 @@ var (
 	QNameCommandSendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "SendEmailVerificationCode")
 	QNameQueryInitiateEmailVerification   = appdef.NewQName(appdef.SysPackage, "InitiateEmailVerification")
 	QNameQueryIssueVerifiedValueToken     = appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueToken")
-	RateLimit_IssueVerifiedValueToken     = istructs.RateLimit{
-		Period:                IssueVerifiedValueToken_Period,
-		MaxAllowedPerDuration: IssueVerifiedValueToken_MaxAllowed,
-	}
 	qNameAPApplySendEmailVerificationCode = appdef.NewQName(appdef.SysPackage, "ApplySendEmailVerificationCode")
 )

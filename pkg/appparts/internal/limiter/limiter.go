@@ -55,6 +55,32 @@ func (l *Limiter) Exceeded(resource appdef.QName, operation appdef.OperationKind
 	return false, appdef.NullQName
 }
 
+func (l *Limiter) ResetLimits(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID) {
+	limits, ok := l.limits[resource]
+	if !ok {
+		return
+	}
+	for _, limit := range limits {
+		if !limit.Op(operation) {
+			continue
+		}
+		key := irates.BucketKey{
+			RateLimitName: limit.QName(),
+		}
+		if limit.Rate().Scope(appdef.RateScope_Workspace) {
+			key.Workspace = workspace
+		}
+		if limit.Filter().Option() == appdef.LimitFilterOption_EACH {
+			key.QName = resource
+		}
+		defaultState, err := l.buckets.GetDefaultBucketsState(limit.QName())
+		if err != nil {
+			continue
+		}
+		_ = l.buckets.SetBucketState(key, defaultState)
+	}
+}
+
 func (l *Limiter) init() {
 	// initialize default buckets states
 	for limit := range appdef.Limits(l.app.Types()) {
