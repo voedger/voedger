@@ -92,6 +92,8 @@ var (
 	QNameApp1_WDocCapabilities               = appdef.NewQName(app1PkgName, "Capabilities")
 	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
 	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
+	QNameCmdIPRated                          = appdef.NewQName(app1PkgName, "IPRatedCmd")
+	QNameQryIPRated                          = appdef.NewQName(app1PkgName, "IPRatedQry")
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
 	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
 	TestSMTPCfg                              = smtp.Cfg{
@@ -236,6 +238,16 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
+		istructsmem.NullCommandExec,
+	))
+
+	cfg.Resources.Add(istructsmem.NewQueryFunction(
+		QNameQryIPRated,
+		istructsmem.NullQueryExec,
+	))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		QNameCmdIPRated,
 		istructsmem.NullCommandExec,
 	))
 

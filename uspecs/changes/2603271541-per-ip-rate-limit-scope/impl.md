@@ -61,3 +61,15 @@
   - update: `NewCommandMessage` calls to include `remoteAddr` parameter
 - [x] Review
 
+
+### Integration test for PER IP rate limit
+
+- [x] update: [pkg/vit/schemaTestApp1.vsql](../../../pkg/vit/schemaTestApp1.vsql)
+  - add: `IPRatedCmd` command and `IPRatedQry` query declarations
+  - add: `RATE IPRatedPerMinute 2 PER MINUTE PER IP` and corresponding `LIMIT` declarations
+- [x] update: [pkg/vit/shared_cfgs.go](../../../pkg/vit/shared_cfgs.go)
+  - add: `QNameCmdIPRated` and `QNameQryIPRated` QName vars
+  - add: Builtin function registrations for `IPRatedCmd` and `IPRatedQry`
+- [x] update: [pkg/sys/it/impl_rates_test.go](../../../pkg/sys/it/impl_rates_test.go)
+  - add: `TestRates_PerIP` — verifies PER IP rate limits using `127.0.0.1` (localhost test requests)
+- [x] Review

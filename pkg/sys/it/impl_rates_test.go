@@ -60,3 +60,30 @@ func TestRates_BasicUsage(t *testing.T) {
 		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
 }
+
+func TestRates_PerIP(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	bodyQry := `{"args":{}, "elements":[{"path":"","fields":["Fld"]}]}`
+	bodyCmd := `{"args":{}}`
+
+	for range 2 {
+		vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry)
+		vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd)
+	}
+
+	vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry, httpu.Expect429())
+	vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd, httpu.Expect429())
+
+	vit.TimeAdd(time.Minute)
+
+	for range 2 {
+		vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry)
+		vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd)
+	}
+
+	vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry, httpu.Expect429())
+	vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd, httpu.Expect429())
+}
