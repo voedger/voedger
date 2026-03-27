@@ -112,6 +112,9 @@ type IAppPartition interface {
 	//
 	// If resource usage is exceeded then returns name of first exceeded limit.
 	IsLimitExceeded(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) (exceed bool, limit appdef.QName)
+
+	// Resets rate limit buckets for specified resource, operation and workspace to their default state.
+	ResetRateLimit(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID)
 }
 
 // Async actualizer runner.

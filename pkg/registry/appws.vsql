@@ -12,10 +12,10 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		WSID int64,                                     -- to be written after workspace init
 		WSError varchar(1024),                          -- to be written after workspace init
 		WSKindInitializationData varchar(1024) NOT NULL,
-			
+
 		-- Comma-separated list of global roles
 		-- [~server.authnz.groles/cmp.cdoc.registry.Login.GlobalRoles~impl]
-		GlobalRoles varchar(1024)   
+		GlobalRoles varchar(1024)
 	);
 
 	TYPE CreateLoginParams (
@@ -122,6 +122,9 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(sys.View(LoginIdx));
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
 	);
+
+	RATE ChangePasswordRate 1 PER MINUTE PER APP PARTITION;
+	LIMIT ChangePasswordLimit ON COMMAND ChangePassword WITH RATE ChangePasswordRate;
 
 	GRANT EXECUTE ON COMMAND ChangePassword TO sys.Anonymous;
 	GRANT EXECUTE ON COMMAND ResetPasswordByEmail TO sys.Anonymous;

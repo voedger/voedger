@@ -10,8 +10,11 @@ import (
 	"log"
 	"testing"
 
+	"time"
+
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/isequencer"
@@ -537,14 +540,16 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 		cfg.Resources.Add(NewQueryFunction(queryQName, NullQueryExec))
 
-		cfg.FunctionRateLimits.AddAppLimit(queryQName, istructs.RateLimit{
-			Period:                1,
-			MaxAllowedPerDuration: 2,
-		})
-		cfg.FunctionRateLimits.AddWorkspaceLimit(queryQName, istructs.RateLimit{
-			Period:                3,
-			MaxAllowedPerDuration: 4,
-		})
+		appRateName := appdef.NewQName("functions", "appRate")
+		wsRateName := appdef.NewQName("functions", "wsRate")
+		wsb.AddRate(appRateName, 2, time.Nanosecond, []appdef.RateScope{appdef.RateScope_AppPartition})
+		wsb.AddRate(wsRateName, 4, 3*time.Nanosecond, []appdef.RateScope{appdef.RateScope_Workspace})
+		wsb.AddLimit(appdef.NewQName("functions", "appLimit"),
+			[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH,
+			filter.QNames(queryQName), appRateName)
+		wsb.AddLimit(appdef.NewQName("functions", "wsLimit"),
+			[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH,
+			filter.QNames(queryQName), wsRateName)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 		app, err := provider.BuiltIn(appName)

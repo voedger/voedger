@@ -1154,18 +1154,16 @@ func TestRateLimiter(t *testing.T) {
 				AddField("fld", appdef.DataKind_string, false)
 			qry := wsb.AddQuery(qName)
 			qry.SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
+
+			rateName := appdef.NewQName(appdef.SysPackage, "myFuncRate")
+			wsb.AddRate(rateName, 2, time.Minute, []appdef.RateScope{appdef.RateScope_Workspace})
+			wsb.AddLimit(appdef.NewQName(appdef.SysPackage, "myFuncLimit"),
+				[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH,
+				filter.QNames(qName), rateName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)
-			// declare a test func
-
 			cfg.Resources.Add(myFunc)
-
-			// declare rate limits
-			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
-				Period:                time.Minute,
-				MaxAllowedPerDuration: 2,
-			})
 		})
 
 	defer cleanAppParts()

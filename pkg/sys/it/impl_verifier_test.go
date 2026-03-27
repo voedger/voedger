@@ -200,7 +200,7 @@ func TestVerificationLimits(t *testing.T) {
 		}
 
 		// next call exceeds the limit -> 429 Too many requests
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail)
+		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID)
 		vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, httpu.Expect429())
 
 		// still able to send to call in antoher profile because the limit is per-profile

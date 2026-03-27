@@ -40,15 +40,7 @@ var (
 	//go:embed schemaTestApp2WithJobSendMail.vsql
 	SchemaTestApp2WithJobSendMailFS embed.FS
 
-	DefaultTestAppEnginesPool = appparts.PoolSize(10, 10, 20, 10)
-	maxRateLimit2PerMinute    = istructs.RateLimit{
-		Period:                time.Minute,
-		MaxAllowedPerDuration: 2,
-	}
-	maxRateLimit4PerHour = istructs.RateLimit{
-		Period:                time.Hour,
-		MaxAllowedPerDuration: 4,
-	}
+	DefaultTestAppEnginesPool   = appparts.PoolSize(10, 10, 20, 10)
 	TestAppDeploymentDescriptor = appparts.AppDeploymentDescriptor{
 		NumParts:         testAppPartsNum,
 		EnginePoolSize:   DefaultTestAppEnginesPool,

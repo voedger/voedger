@@ -683,10 +683,11 @@ func TestRateLimit(t *testing.T) {
 			wsb.AddRole(iauthnz.QNameRoleSystem)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
 
-			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
-				Period:                time.Minute,
-				MaxAllowedPerDuration: 2,
-			})
+			rateName := appdef.NewQName(appdef.SysPackage, "MyCmdRate")
+			wsb.AddRate(rateName, 2, time.Minute, []appdef.RateScope{appdef.RateScope_Workspace})
+			wsb.AddLimit(appdef.NewQName(appdef.SysPackage, "MyCmdLimit"),
+				[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH,
+				filter.QNames(qName), rateName)
 		})
 	defer tearDown(app)
 

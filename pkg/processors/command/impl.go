@@ -437,7 +437,7 @@ func checkWSActive(_ context.Context, cmd *cmdWorkpiece) (err error) {
 }
 
 func limitCallRate(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	if cmd.appStructs.IsFunctionRateLimitsExceeded(cmd.cmdQName, cmd.cmdMes.WSID()) {
+	if exceeded, _ := cmd.appPart.IsLimitExceeded(cmd.cmdQName, appdef.OperationKind_Execute, cmd.cmdMes.WSID(), ""); exceeded {
 		return coreutils.NewHTTPErrorf(http.StatusTooManyRequests)
 	}
 	return nil
