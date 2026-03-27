@@ -161,9 +161,9 @@ func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) 
 
 		// code ok -> reset per-profile rate limit
 		limitsResetter := args.Workpiece.(interface {
-			ResetRateLimit(appdef.QName, appdef.OperationKind, istructs.WSID)
+			ResetRateLimit(appdef.QName, appdef.OperationKind, istructs.WSID, string)
 		})
-		limitsResetter.ResetRateLimit(QNameQueryIssueVerifiedValueToken, appdef.OperationKind_Execute, args.WSID)
+		limitsResetter.ResetRateLimit(QNameQueryIssueVerifiedValueToken, appdef.OperationKind_Execute, args.WSID, "")
 
 		return callback(&ivvtResult{verifiedValueToken: verifiedValueToken})
 	}

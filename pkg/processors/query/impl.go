@@ -189,7 +189,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
-			if exceeded, _ := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), ""); exceeded {
+			if exceeded, _ := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host()); exceeded {
 				return coreutils.NewSysError(http.StatusTooManyRequests)
 			}
 			return nil
@@ -463,8 +463,8 @@ func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	}
 }
 
-func (qw *queryWork) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID) {
-	qw.appPart.ResetRateLimit(resource, operation, workspace)
+func (qw *queryWork) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) {
+	qw.appPart.ResetRateLimit(resource, operation, workspace, remoteAddr)
 }
 
 // need for q.sys.EnrichPrincipalToken

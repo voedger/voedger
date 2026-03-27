@@ -142,5 +142,5 @@ func (m *mockAppPartition) IsOperationAllowed(_ appdef.IWorkspace, _ appdef.Oper
 func (m *mockAppPartition) IsLimitExceeded(_ appdef.QName, _ appdef.OperationKind, _ istructs.WSID, _ string) (bool, appdef.QName) {
 	panic("not implemented")
 }
-func (m *mockAppPartition) ResetRateLimit(_ appdef.QName, _ appdef.OperationKind, _ istructs.WSID) {
+func (m *mockAppPartition) ResetRateLimit(_ appdef.QName, _ appdef.OperationKind, _ istructs.WSID, _ string) {
 }

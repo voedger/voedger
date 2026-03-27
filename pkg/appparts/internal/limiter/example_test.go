@@ -130,7 +130,7 @@ func Example_resetLimits() {
 	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``))
 	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``)) // exceeded
 
-	Limiter.ResetLimits(cmdName, appdef.OperationKind_Execute, ws)
+	Limiter.ResetLimits(cmdName, appdef.OperationKind_Execute, ws, ``)
 
 	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``)) // allowed again
 

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -124,6 +125,7 @@ func createBusRequest(data validatedData, req *http.Request) bus.Request {
 		AppQName: data.appQName,
 		Resource: data.vars[URLPlaceholder_resourceName],
 		Body:     data.body,
+		Host:     remoteIP(req.RemoteAddr),
 	}
 
 	if docIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
@@ -157,6 +159,7 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 		logger.LogAttr_VApp:      data.appQName,
 		logger.LogAttr_Extension: extension,
 		logAttrib_Origin:         req.Header.Get(httpu.Origin),
+		"host":                   busRequest.Host, // TODO: eliminate after check what is actually logged in dev cluster
 	})
 }
 
@@ -194,4 +197,12 @@ func apiPathToExtension(apiPath processors.APIPath) string {
 		return "sys._N10N_SubscribeAndWatch"
 	}
 	return strconv.Itoa(int(apiPath))
+}
+
+func remoteIP(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	return host
 }

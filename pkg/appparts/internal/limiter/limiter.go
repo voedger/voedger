@@ -57,7 +57,7 @@ func (l *Limiter) Exceeded(resource appdef.QName, operation appdef.OperationKind
 	return false, appdef.NullQName
 }
 
-func (l *Limiter) ResetLimits(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID) {
+func (l *Limiter) ResetLimits(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) {
 	limits, ok := l.limits[resource]
 	if !ok {
 		return
@@ -71,6 +71,9 @@ func (l *Limiter) ResetLimits(resource appdef.QName, operation appdef.OperationK
 		}
 		if limit.Rate().Scope(appdef.RateScope_Workspace) {
 			key.Workspace = workspace
+		}
+		if limit.Rate().Scope(appdef.RateScope_IP) {
+			key.RemoteAddr = remoteAddr
 		}
 		if limit.Filter().Option() == appdef.LimitFilterOption_EACH {
 			key.QName = resource
