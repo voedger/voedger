@@ -77,9 +77,9 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 							cmd.syncProjectorsStart = tm.Now()
 							if err != nil {
 								cmd.appPartitionRestartScheduled = true
-								logger.ErrorCtx(cmd.logCtx, "sp.error", err)
+								logger.ErrorCtx(cmd.logCtxForSyncProjectors, "sp.error", err)
 							} else {
-								logger.VerboseCtx(cmd.logCtx, "sp.success")
+								logger.VerboseCtx(cmd.logCtxForSyncProjectors, "sp.success")
 							}
 							return err
 						}),

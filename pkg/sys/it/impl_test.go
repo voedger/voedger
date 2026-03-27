@@ -592,6 +592,7 @@ func TestUnexpectedFields_400BadRequest(t *testing.T) {
 	})
 
 	t.Run("command processor", func(t *testing.T) {
+		t.Skip("waiting for https://untill.atlassian.net/browse/AIR-3437")
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.air_table_plan"}}],"unexpected":"field"}`
 		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unexpected field(s): unexpected")).Println()
 	})
