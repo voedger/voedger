@@ -463,8 +463,9 @@ func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	}
 }
 
-func (qw *queryWork) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) {
-	qw.appPart.ResetRateLimit(resource, operation, workspace, remoteAddr)
+// used by e.g. q.sys.IssueVerifiedValueToken
+func (qw *queryWork) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind) {
+	qw.appPart.ResetRateLimit(resource, operation, qw.msg.WSID(), qw.msg.Host())
 }
 
 // need for q.sys.EnrichPrincipalToken
