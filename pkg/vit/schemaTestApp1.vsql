@@ -804,14 +804,20 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND TTLStorageCmd(TTLStorageParams) RETURNS TTLStorageResult WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY TTLGetQry(TTLGetParams) RETURNS TTLGetResult WITH Tags=(WorkspaceOwnerFuncTag);
+
+		COMMAND IPRatedCmd(RatedCmdParams) WITH Tags =(WorkspaceOwnerFuncTag);
+		QUERY IPRatedQry(RatedQryParams) RETURNS RatedQryResult WITH Tags =(WorkspaceOwnerFuncTag);
 	);
 
 	RATE RatedPerMinute 2 PER MINUTE PER APP PARTITION;
 	RATE RatedPerHour 4 PER HOUR PER WORKSPACE;
+	RATE IPRatedPerMinute 2 PER MINUTE PER IP;
 	LIMIT RatedCmdPerMinute ON COMMAND RatedCmd WITH RATE RatedPerMinute;
 	LIMIT RatedQryPerMinute ON QUERY RatedQry WITH RATE RatedPerMinute;
 	LIMIT RatedCmdPerHour ON COMMAND RatedCmd WITH RATE RatedPerHour;
 	LIMIT RatedQryPerHour ON QUERY RatedQry WITH RATE RatedPerHour;
+	LIMIT IPRatedCmdPerMinute ON COMMAND IPRatedCmd WITH RATE IPRatedPerMinute;
+	LIMIT IPRatedQryPerMinute ON QUERY IPRatedQry WITH RATE IPRatedPerMinute;
 
 	ROLE Updated; -- need for invite tests
 	ROLE SpecialAPITokenRole; -- need to test foreign auth using APIToken
