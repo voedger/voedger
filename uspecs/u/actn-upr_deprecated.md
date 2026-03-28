@@ -9,7 +9,7 @@ Create a pull request from the current change branch by squash-merging it into a
 Rules:
 
 - Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
-- Always call `uspecs.sh` for git/PR operations — never call `_lib/pr.sh` directly
+- Always call `softeng.sh` for git/PR operations - never call `_lib/pr.sh` directly
 - Read `change.md` frontmatter to determine `issue_url` and `issue_id`
 
 Parameters:
@@ -24,8 +24,9 @@ Parameters:
 
 Flow:
 
-- Merge default branch into change_branch:
-  - Run `bash uspecs/u/scripts/uspecs.sh pr mergedef`
+- Determine Active Change Folder path (relative to project root)
+- Preflight and merge default branch into change_branch:
+  - Run `bash uspecs/u/scripts/softeng.sh pr preflight --change-folder "{active_change_folder}"`
   - If script exits with error: report the error and stop
   - Parse `change_branch`, `default_branch`, and `change_branch_head` from script output
 - Read Active Change Folder (change.md) to determine `issue_url` (may be absent) and derive `issue_id` from the URL (last path segment)
@@ -34,10 +35,10 @@ Flow:
     2. Cancel
   - On option 2: stop
 - Get specs diff to derive PR title and body:
-  - Run `bash uspecs/u/scripts/uspecs.sh diff specs`
+  - Run `bash uspecs/u/scripts/softeng.sh diff specs`
   - From the diff output identify `draft_title` and `draft_body`; construct `pr_title` and `pr_body` per `{templates_folder}/tmpl-pr.md`
 - Create PR:
-  - Pass `pr_body` via stdin to `bash uspecs/u/scripts/uspecs.sh pr create --title "{pr_title}"`
+  - Pass `pr_body` via stdin to `bash uspecs/u/scripts/softeng.sh pr create --title "{pr_title}"`
   - Note: `pr_title` is passed on the command line; ensure it contains no shell-special characters (`<`, `>`, `$`, backticks)
   - If script exits with error: report the error and stop
   - Parse `pr_url` from script output
