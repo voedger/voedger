@@ -31,15 +31,15 @@
   - update: `limitCallRate` to pass `cmd.cmdMes.Host()` instead of empty string
 - [x] update: [pkg/processors/query/impl.go](../../../pkg/processors/query/impl.go)
   - update: Rate limit check to pass `qw.msg.Host()` instead of empty string
-  - update: `ResetRateLimit` signature to include `remoteAddr string`
+  - update: Simplify `ResetRateLimit` to derive WSID and Host internally from `qw.msg`
 - [x] update: [pkg/processors/query2/util.go](../../../pkg/processors/query2/util.go)
   - update: `queryRateLimitExceeded` to pass `qw.msg.Host()` instead of empty string
-  - update: `ResetRateLimit` signature to include `remoteAddr string`
+  - update: Simplify `ResetRateLimit` to derive WSID and Host internally from `qw.msg`
 
 ### Update `ResetRateLimit` callers
 
 - [x] update: [pkg/sys/verifier/impl.go](../../../pkg/sys/verifier/impl.go)
-  - update: Anonymous `ResetRateLimit` interface cast and call to include `remoteAddr string` parameter
+  - update: Simplify anonymous `ResetRateLimit` interface cast and call to `(appdef.QName, appdef.OperationKind)`
 
 ### Update mocks
 
