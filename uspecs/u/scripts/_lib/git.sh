@@ -1,58 +1,19 @@
 #!/usr/bin/env bash
+
+# Well, we do not neeed it, since it is sourced, just for consistency with other scripts
 set -Eeuo pipefail
 
-# pr.sh -- Git branch and pull request automation
+# git.sh -- Git branch and pull request automation
 #
-# Provides reusable commands for the PR workflow: branch creation from a
+# Provides reusable functions for the PR workflow: branch creation from a
 # remote default branch, and PR submission via GitHub CLI.
+# Intended to be sourced, not executed directly.
 #
 # Concepts:
 #   pr_remote   The remote that owns the target branch for PRs.
 #               "upstream" when a fork setup is detected, otherwise "origin".
 #   change_branch  The current working branch (named {change-name}).
 #   pr_branch      The squashed PR branch (named {change-name}--pr).
-#
-# Usage:
-#   pr.sh info
-#       Output PR configuration in key=value format:
-#         pr_remote=<upstream|origin>
-#         default_branch=<branch-name>
-#
-#   pr.sh prbranch <name>
-#       Fetch pr_remote and create a local branch from its default branch.
-#
-#   pr.sh mergedef
-#       Validate preconditions, fetch pr_remote/default_branch, and merge it into the current branch.
-#       On success outputs:
-#           change_branch=<name>
-#           default_branch=<name>
-#           change_branch_head=<sha>  (HEAD before the merge)
-#
-#   pr.sh diff specs
-#       Output git diff of the specs folder between HEAD and pr_remote/default_branch.
-#
-#   pr.sh changepr --title <title> --body <body>
-#       Create a PR from the current change_branch:
-#         - Fail fast if pr_branch ({change_branch}--pr) already exists.
-#         - Create pr_branch from pr_remote/default_branch.
-#         - Squash-merge change_branch into pr_branch and commit with title.
-#         - Push pr_branch to origin and create a PR via GitHub CLI.
-#         - Delete change_branch (locally, tracking ref, and remote; skip if absent).
-#         - Output pr_url on success.
-#         - On failure after pr_branch creation: roll back pr_branch, preserve change_branch.
-#
-#   pr.sh pr --title <title> --body <body> --next-branch <branch> [--delete-branch]
-#       Stage all changes, commit, push to origin, and open a PR against
-#       pr_remote's default branch. Switch to --next-branch afterwards.
-#       If --delete-branch is set, delete the current branch after switching.
-#       If no changes exist, switch to --next-branch and exit cleanly.
-#
-#   pr.sh ffdefault
-#       Fetch pr_remote/default_branch and fast-forward the local default branch to it.
-#       Switches to the default branch if not already on it, and leaves there after completion.
-#       Fail fast if any of the following conditions are true:
-#           working directory is not clean
-#           branches have diverged (fast-forward not possible)
 
 
 
@@ -70,6 +31,7 @@ get_project_dir() {
     cd "$script_dir/../../../.." && pwd
 }
 
+# // TODO why here?
 read_conf_param() {
     local param_name="$1"
     local conf_file
@@ -80,7 +42,7 @@ read_conf_param() {
     fi
 
     local line raw
-    line=$(_grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
+    line=$(grep -E "^- ${param_name}:" "$conf_file" | head -1 || true)
     raw="${line#*: }"
 
     if [ -z "$raw" ]; then
@@ -92,13 +54,8 @@ read_conf_param() {
     echo "$value"
 }
 
-error() {
-    echo "Error: $1" >&2
-    exit 1
-}
-
 determine_pr_remote() {
-    if git remote | _grep -q '^upstream$'; then
+    if git remote | grep -q '^upstream$'; then
         echo "upstream"
     else
         echo "origin"
@@ -123,6 +80,33 @@ gh_create_pr() {
     fi
 }
 
+# git_validate_working_tree
+# Reflects scenario: "Project inside Git working tree"
+# Validates that the current directory is inside a git working tree.
+git_validate_working_tree() {
+    if ! is_git_repo "$PWD"; then
+        error "No git repository found at $PWD"
+    fi
+}
+
+# git_validate_clean_repo <current_branch> <default_branch>
+# Reflects scenario: "Git working tree is clean"
+# Validates: inside git working tree, no uncommitted changes, not on default branch.
+git_validate_clean_repo() {
+    local current_branch="$1"
+    local default_branch="$2"
+
+    git_validate_working_tree
+
+    if [[ -n $(git status --porcelain) ]]; then
+        error "Working directory has uncommitted changes. Commit or stash changes first"
+    fi
+
+    if [[ "$current_branch" == "$default_branch" ]]; then
+        error "Current branch is the default branch '$default_branch'"
+    fi
+}
+
 check_prerequisites() {
     # Check if git repository exists
     if ! is_git_repo "$PWD"; then
@@ -135,7 +119,7 @@ check_prerequisites() {
     fi
 
     # Check if origin remote exists
-    if ! git remote | _grep -q '^origin$'; then
+    if ! git remote | grep -q '^origin$'; then
         error "'origin' remote does not exist"
     fi
 
@@ -145,7 +129,7 @@ check_prerequisites() {
     fi
 }
 
-default_branch_name() {
+git_default_branch_name() {
     local branch
     branch=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub(/refs\/heads\//, "", $2); print $2}') || {
         error "Cannot determine the default branch from remote"
@@ -157,24 +141,33 @@ default_branch_name() {
 }
 
 # ---------------------------------------------------------------------------
-# Commands
+# Public functions
 # ---------------------------------------------------------------------------
 
-cmd_info() {
+# git_pr_info <map_nameref> [project_dir]
+# Populates an associative array with PR remote info.
+# Keys populated: pr_remote, default_branch
+# project_dir: directory to run git commands from (defaults to $PWD)
+# Returns non-zero if info cannot be determined.
+git_pr_info() {
+    local -n _git_pr_info_map="$1"
+    local project_dir="${2:-$PWD}"
     local pr_remote default_branch
-    pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
-    echo "pr_remote=$pr_remote"
-    echo "default_branch=$default_branch"
+    pr_remote=$(cd "$project_dir" && determine_pr_remote) || return 1
+    default_branch=$(cd "$project_dir" && git_default_branch_name) || return 1
+    _git_pr_info_map["pr_remote"]="$pr_remote"
+    _git_pr_info_map["default_branch"]="$default_branch"
 }
 
-cmd_prbranch() {
+# git_prbranch <name>
+# Fetch pr_remote and create a local branch from its default branch.
+git_prbranch() {
     local name="${1:-}"
-    [[ -z "$name" ]] && error "Usage: pr.sh prbranch <name>"
+    [[ -z "$name" ]] && error "Usage: git_prbranch <name>"
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     echo "Fetching $pr_remote/$default_branch..."
     git fetch "$pr_remote" "$default_branch" 2>&1
@@ -183,12 +176,18 @@ cmd_prbranch() {
     git checkout -b "$name" "$pr_remote/$default_branch"
 }
 
-cmd_ffdefault() {
+# git_ffdefault
+# Fetch pr_remote/default_branch and fast-forward the local default branch to it.
+# Switches to the default branch if not already on it, and leaves there after completion.
+# Fail fast if any of the following conditions are true:
+#     working directory is not clean
+#     branches have diverged (fast-forward not possible)
+git_ffdefault() {
     check_prerequisites
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     local current_branch
     current_branch=$(git symbolic-ref --short HEAD)
@@ -207,7 +206,13 @@ cmd_ffdefault() {
     fi
 }
 
-cmd_pr() {
+# git_pr --title <title> --body <body> --next-branch <branch> [--delete-branch]
+# Literal \n sequences in --body are decoded to actual newlines.
+# Stage all changes, commit, push to origin, and open a PR against
+# pr_remote's default branch. Switch to --next-branch afterwards.
+# If --delete-branch is set, delete the current branch after switching.
+# If no changes exist, switch to --next-branch and exit cleanly.
+git_pr() {
     local title="" body="" next_branch="" delete_branch=false
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -222,8 +227,11 @@ cmd_pr() {
     [[ -z "$body" ]]        && error "--body is required"
     [[ -z "$next_branch" ]] && error "--next-branch is required"
 
+    # Decode literal \n sequences to actual newlines
+    body="${body//\\n/$'\n'}"
+
     local default_branch branch_name
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
     branch_name=$(git symbolic-ref --short HEAD)
 
     if [[ "$delete_branch" == "true" && "$branch_name" == "$next_branch" ]]; then
@@ -271,12 +279,18 @@ cmd_pr() {
     echo "PR_BASE=$default_branch" >&2
 }
 
-cmd_mergedef() {
+# git_mergedef
+# Validate preconditions, fetch pr_remote/default_branch, and merge it into the current branch.
+# On success outputs:
+#     change_branch=<name>
+#     default_branch=<name>
+#     change_branch_head=<sha>  (HEAD before the merge)
+git_mergedef() {
     check_prerequisites
 
     local pr_remote default_branch current_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
     current_branch=$(git symbolic-ref --short HEAD)
 
     if [[ "$current_branch" == "$default_branch" ]]; then
@@ -301,9 +315,12 @@ cmd_mergedef() {
     echo "change_branch_head=$change_branch_head"
 }
 
-cmd_diff() {
+# git_diff <target>
+# Output git diff of the target folder between HEAD and pr_remote/default_branch.
+# Available targets: specs
+git_diff() {
     local target="${1:-}"
-    [[ -z "$target" ]] && error "Usage: pr.sh diff <target>"
+    [[ -z "$target" ]] && error "Usage: git_diff <target>"
 
     local diff_path
     case "$target" in
@@ -317,7 +334,7 @@ cmd_diff() {
 
     local pr_remote default_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
 
     local project_dir
     project_dir=$(get_project_dir)
@@ -326,7 +343,17 @@ cmd_diff() {
     (cd "$project_dir" && git diff "$pr_remote/$default_branch" HEAD -- "$diff_path")
 }
 
-cmd_changepr() {
+# git_changepr --title <title> --body <body>
+# Literal \n sequences in --body are decoded to actual newlines.
+# Create a PR from the current change_branch:
+#   - Fail fast if pr_branch ({change_branch}--pr) already exists.
+#   - Create pr_branch from pr_remote/default_branch.
+#   - Squash-merge change_branch into pr_branch and commit with title.
+#   - Push pr_branch to origin and create a PR via GitHub CLI.
+#   - Delete change_branch (locally, tracking ref, and remote; skip if absent).
+#   - Output pr_url on success.
+#   - On failure after pr_branch creation: roll back pr_branch, preserve change_branch.
+git_changepr() {
     local title="" body=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -344,9 +371,12 @@ cmd_changepr() {
     fi
     [[ -z "$body" ]] && error "--body is required (or pipe body via stdin)"
 
+    # Decode literal \n sequences to actual newlines
+    body="${body//\\n/$'\n'}"
+
     local pr_remote default_branch change_branch pr_branch
     pr_remote=$(determine_pr_remote)
-    default_branch=$(default_branch_name)
+    default_branch=$(git_default_branch_name)
     change_branch=$(git symbolic-ref --short HEAD)
     pr_branch="${change_branch}--pr"
 
@@ -356,7 +386,7 @@ cmd_changepr() {
     fi
 
     # Create pr_branch from pr_remote/default_branch
-    cmd_prbranch "$pr_branch"
+    git_prbranch "$pr_branch"
 
     # Rollback pr_branch on failure; preserve change_branch
     local success=false
@@ -405,23 +435,3 @@ cmd_changepr() {
 
     echo "$pr_url"
 }
-
-# ---------------------------------------------------------------------------
-# Dispatch
-# ---------------------------------------------------------------------------
-
-if [[ $# -lt 1 ]]; then
-    error "Usage: pr.sh <info|prbranch|mergedef|diff|changepr|pr|ffdefault> [args...]"
-fi
-
-command="$1"; shift
-case "$command" in
-    info)      cmd_info "$@" ;;
-    prbranch)  cmd_prbranch "$@" ;;
-    mergedef)  cmd_mergedef "$@" ;;
-    diff)      cmd_diff "$@" ;;
-    changepr)  cmd_changepr "$@" ;;
-    pr)        cmd_pr "$@" ;;
-    ffdefault) cmd_ffdefault "$@" ;;
-    *)         error "Unknown command: $command. Available: info, prbranch, mergedef, diff, changepr, pr, ffdefault" ;;
-esac

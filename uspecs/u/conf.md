@@ -20,15 +20,19 @@ All paths are relative to the project root:
     - Examples: `remove-uspecs-prefix`, `fetch-issue-to-change`, `alpha-code-bp3-endpoints`
   - Can be either Active (in `{changes_folder}`) or Archived (in `{changes_archive}`)
   - Active Change Folder files describe Active Change Request and its implementation
-  - Branch naming for Change Folder (when --branch option used):
-    - Format: `{change-name}` (without timestamp prefix)
-    - Example: For Change Folder `2602141423-branch-option-uchange`, branch name is `branch-option-uchange`
+  - Branch naming for Change Folder:
+    - Format: `{issue-id}-{change-name}` when issue URL provided, otherwise `{change-name}` (without timestamp prefix)
+    - Issue ID extraction:
+      - GitHub: numeric ID from URL (e.g., `42` from `https://github.com/owner/repo/issues/42`)
+      - GitLab: numeric ID from URL (e.g., `7` from `https://gitlab.com/group/project/-/issues/7`)
+      - Jira: project key and issue number (e.g., `PROJ-123` from `https://jira.example.com/browse/PROJ-123`)
+    - Examples:
+      - With issue URL: For Change Folder `2602141423-branch-option-uchange` and GitHub issue #42, branch name is `42-branch-option-uchange`
+      - Without issue URL: For Change Folder `2602141423-branch-option-uchange`, branch name is `branch-option-uchange`
     - Branch is created from current HEAD after Change Folder and Change File are created
     - If branch creation fails, error is reported but change creation continues
-  - PR branch naming (created by upr):
-    - Format: `{change-name}--pr`
-    - Example: For change branch `branch-option-uchange`, PR branch is `branch-option-uchange--pr`
-    - Created from pr_remote/default_branch; contains a single squashed commit
+- Working Change Folder: a Change Folder whose files have been modified since merge-base with pr_remote/default_branch
+  - Can be active or archived
 - Change Folder System Artifacts
   - Change File: `change.md`
   - Issue File: `issue.md`
@@ -44,7 +48,7 @@ All paths are relative to the project root:
     - zero or many `Scenarios File`, `Requirements File`, `Technical Design File`
     - zero or one `Architecture File`
 - Functional Design Specifications
-  - Domain File: `{specs_folder}/{domain}/{domain}--domain.md`
+  - Domain File: `{specs_folder}/{domain}/domain.md`
   - Feature Files
     - Scenarios File: `{context-folder}/{feature}.feature`
     - Requirements File: `{context-folder}/{feature}--reqs.md`
@@ -53,16 +57,16 @@ All paths are relative to the project root:
   - Files like `go.mod`, `go.work`, `package.json`, `requirements.txt`, `pubspec.yaml` etc. that define project dependencies and configuration
 - Technical Design Specifications
   - Domain Technology
-    - Per domain: `{specs_folder}/{domain}/{domain}--tech.md`
+    - Per domain: `{specs_folder}/{domain}/tech.md`
     - Defines tech stack, architecture patterns etc., UI/UX guidelines etc.
   - Domain Architecture
-    - `{specs_folder}/{domain}/{domain}--arch.md`
+    - `{specs_folder}/{domain}/arch.md`
   - Domain Subsystem Architecture
-     or `{specs_folder}/{domain}/{subsystem}--arch.md`
+     or `{specs_folder}/{domain}/arch-{subsystem}.md`
   - Context Architecture
-    - `{context-folder}/{context}--arch.md`
+    - `{context-folder}/arch.md`
   - Context Subsystem Architecture
-     or `{context-folder}/{subsystem}--arch.md`
+     or `{context-folder}/arch-{subsystem}.md`
   - Feature Technical Design
     - Per feature: `{context-folder}/{feature}--td.md`
 

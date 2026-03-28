@@ -10,7 +10,7 @@ Rules:
 
 - Strictly follow the definitions from `uspecs/u/concepts.md` and `uspecs/u/conf.md`
   - Use file name patterns from there, not from the codebase
-- Critical: Only one scenario must be executed per command run. After executing the action, the AI Agent must stop further processing and wait for the next command.
+- Critical: Only one Gherkin scenario branch (from the `Scenarios` section below) must be selected and entered per command run. Within that branch, all steps and to-do items are processed fully. After completing the branch, the AI Agent must stop further processing and wait for the next command.
 - All relative links must be correct paths from the file being edited to the target file. Verify that relative paths resolve to the intended file before writing them.
 
 Parameters:
@@ -38,10 +38,14 @@ Use definitions from sections below and structures from `{templates_folder}/tmpl
 
 ### `Functional design` section does not exist and it is needed
 
-The section is needed if:
+The section is needed if Domain Files exist and define External actors, and the change request impacts or implies new Functional Design Specifications (files inside `{specs_folder}`):
 
-- Domain Files exist and define External actors
-- Change Request description impacts Functional Design Specifications (only files inside `{specs_folder}`)
+- updates to existing Domain Files, Scenarios Files, or Requirements Files
+- introduction of new domains, features, or requirements not yet specified
+
+The section is NOT needed if the change request affects only internal system behavior with no impact on what external actors observe or interact with.
+
+Determine the appropriate domain, context, and feature by searching existing specification files, then decide whether to update an existing file or create a new one.
 
 Impact:
 
@@ -72,10 +76,9 @@ The section is needed if Change Request description implies:
 
 ### `Technical design` section does not exist and it is needed
 
-Follow this decision hierarchy (in order):
+Determine the appropriate domain, context, and technical design files by searching existing specification files, then follow this decision hierarchy (in order):
 
 - First priority: Update existing Technical Design Specifications
-  - Search for existing architecture and technical design files that cover the affected components
   - Update when the change request affects design elements already documented in:
     - Domain Architecture
     - Domain Subsystem Architecture
