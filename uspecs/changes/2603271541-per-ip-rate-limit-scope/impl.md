@@ -16,51 +16,36 @@
 - [x] update: [pkg/appparts/impl_app.go](../../../pkg/appparts/impl_app.go)
   - update: Pass `remoteAddr` from `borrowedPartition.ResetRateLimit` to `limiter.ResetLimits`
 
-### Repurpose `bus.Request.Host` as client IP and propagate from router
+### Populate `bus.Request.Host` with client IP in router
 
 - [x] update: [pkg/bus/types.go](../../../pkg/bus/types.go)
-  - update: Remove `RemoteAddr` field, update `Host` comment to describe it as client IP address
+  - update: `Host` field comment to describe it as client IP address (host only, port stripped)
 - [x] update: [pkg/router/utils.go](../../../pkg/router/utils.go)
-  - update: Set `bus.Request.Host` from `remoteIP(req.RemoteAddr)` in `createBusRequest`, stripping port via `net.SplitHostPort`
-  - add: `remoteIP` helper function
+  - update: Set `bus.Request.Host` from `remoteIP(req.RemoteAddr)` in `createBusRequest`
+  - add: `remoteIP` helper function using `net.SplitHostPort` to strip port
+  - add: Host logging attribute in `withLogAttribs`
 
 ### Use `Host()` for rate limiting in processors
 
-- [x] update: [pkg/processors/command/types.go](../../../pkg/processors/command/types.go)
-  - remove: `RemoteAddr() string` from `ICommandMessage` and `remoteAddr` field from `implICommandMessage`
 - [x] update: [pkg/processors/command/impl.go](../../../pkg/processors/command/impl.go)
-  - update: Remove `remoteAddr` parameter from `NewCommandMessage`
-  - update: `limitCallRate` to pass `cmd.cmdMes.Host()` instead of `cmd.cmdMes.RemoteAddr()`
-- [x] update: [pkg/processors/query/types.go](../../../pkg/processors/query/types.go)
-  - remove: `RemoteAddr() string` from `IQueryMessage` interface
+  - update: `limitCallRate` to pass `cmd.cmdMes.Host()` instead of empty string
 - [x] update: [pkg/processors/query/impl.go](../../../pkg/processors/query/impl.go)
-  - remove: `remoteAddr` field from `queryMessage` struct and `RemoteAddr()` accessor
-  - update: Remove `remoteAddr` parameter from `NewQueryMessage`
-  - update: Rate limit check to pass `qw.msg.Host()` instead of `qw.msg.RemoteAddr()`
-- [x] update: [pkg/processors/query2/types.go](../../../pkg/processors/query2/types.go)
-  - remove: `RemoteAddr() string` from `IQueryMessage` interface and `remoteAddr` field from `implIQueryMessage`
+  - update: Rate limit check to pass `qw.msg.Host()` instead of empty string
+  - update: `ResetRateLimit` signature to include `remoteAddr string`
 - [x] update: [pkg/processors/query2/util.go](../../../pkg/processors/query2/util.go)
-  - update: Remove `remoteAddr` parameter from `NewIQueryMessage`
-  - update: `queryRateLimitExceeded` to pass `qw.msg.Host()` instead of `qw.msg.RemoteAddr()`
-
-### Update callers of processor message constructors
-
-- [x] update: [pkg/vvm/impl_requesthandler.go](../../../pkg/vvm/impl_requesthandler.go)
-  - update: Remove `request.RemoteAddr` from `NewCommandMessage`, `NewQueryMessage`, and `NewIQueryMessage` calls (already use `request.Host`)
+  - update: `queryRateLimitExceeded` to pass `qw.msg.Host()` instead of empty string
+  - update: `ResetRateLimit` signature to include `remoteAddr string`
 
 ### Update `ResetRateLimit` callers
 
 - [x] update: [pkg/sys/verifier/impl.go](../../../pkg/sys/verifier/impl.go)
   - update: Anonymous `ResetRateLimit` interface cast and call to include `remoteAddr string` parameter
 
-### Update mocks and tests
+### Update mocks
 
 - [x] update: [pkg/processors/schedulers/impl_test.go](../../../pkg/processors/schedulers/impl_test.go)
   - update: Mock `ResetRateLimit` signature to include `remoteAddr string`
-- [x] update: [pkg/processors/command/impl_test.go](../../../pkg/processors/command/impl_test.go)
-  - update: `NewCommandMessage` calls to include `remoteAddr` parameter
 - [x] Review
-
 
 ### Integration test for PER IP rate limit
 
