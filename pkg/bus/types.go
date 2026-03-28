@@ -20,7 +20,7 @@ type Request struct {
 	Resource string
 	Body     []byte
 	AppQName appdef.AppQName
-	Host     string // used by authenticator to emit Host principal
+	Host     string // client IP address (host only, port stripped) from http.Request.RemoteAddr
 	IsN10N   bool
 
 	// apiV2
