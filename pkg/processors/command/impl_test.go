@@ -267,7 +267,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	respData = sendCUD(t, 1, app, http.StatusInternalServerError)
 	require.Equal(testErr.Error(), respData["sys.Error"].(map[string]interface{})["Message"].(string))
 
-	logCap.HasLine(
+	logCap.EventuallyHasLine(
 		"stage=cp.partition_recovery",
 		"vapp=sys/voedger",
 		"extension=sys._Recovery",
