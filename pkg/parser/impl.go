@@ -147,7 +147,7 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 		if ws, ok := stmt.(*WorkspaceStmt); ok {
 			if !ws.Abstract {
 				if ws.Descriptor == nil {
-					ws.Descriptor = &WsDescriptorStmt{}
+					ws.Descriptor = &WsDescriptorStmt{Statement: Statement{Pos: ws.Pos}}
 				}
 				if ws.Descriptor.Name == "" {
 					ws.Descriptor.Name = defaultDescriptorName(ws.GetName())

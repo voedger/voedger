@@ -3300,6 +3300,60 @@ func Test_ImplicitWorkspaceDescriptor(t *testing.T) {
 		require.Equal(appdef.NewQName("pkg", "MyDesc"), w1.Descriptor())
 	})
 
+	t.Run("nested workspaces get implicit descriptors", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE Outer(
+			WORKSPACE Inner();
+		);
+		`)
+		outer := app.Workspace(appdef.NewQName("pkg", "Outer"))
+		require.Equal(appdef.NewQName("pkg", "OuterDescriptor"), outer.Descriptor())
+
+		inner := app.Workspace(appdef.NewQName("pkg", "Inner"))
+		require.Equal(appdef.NewQName("pkg", "InnerDescriptor"), inner.Descriptor())
+	})
+
+	t.Run("nested workspace with explicit descriptor", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE Outer(
+			WORKSPACE Inner(
+				DESCRIPTOR InnerDesc();
+			);
+		);
+		`)
+		outer := app.Workspace(appdef.NewQName("pkg", "Outer"))
+		require.Equal(appdef.NewQName("pkg", "OuterDescriptor"), outer.Descriptor())
+
+		inner := app.Workspace(appdef.NewQName("pkg", "Inner"))
+		require.Equal(appdef.NewQName("pkg", "InnerDesc"), inner.Descriptor())
+	})
+
+	t.Run("deeply nested workspaces get implicit descriptors", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE L1(
+			WORKSPACE L2(
+				WORKSPACE L3();
+			);
+		);
+		`)
+		require.Equal(appdef.NewQName("pkg", "L1Descriptor"), app.Workspace(appdef.NewQName("pkg", "L1")).Descriptor())
+		require.Equal(appdef.NewQName("pkg", "L2Descriptor"), app.Workspace(appdef.NewQName("pkg", "L2")).Descriptor())
+		require.Equal(appdef.NewQName("pkg", "L3Descriptor"), app.Workspace(appdef.NewQName("pkg", "L3")).Descriptor())
+	})
+
+	t.Run("nested abstract workspace has no descriptor", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE Outer(
+			ABSTRACT WORKSPACE InnerAbstract();
+		);
+		`)
+		outer := app.Workspace(appdef.NewQName("pkg", "Outer"))
+		require.Equal(appdef.NewQName("pkg", "OuterDescriptor"), outer.Descriptor())
+
+		innerAbstract := app.Workspace(appdef.NewQName("pkg", "InnerAbstract"))
+		require.Equal(appdef.NullQName, innerAbstract.Descriptor())
+	})
+
 	t.Run("implicit descriptor name conflicts with existing type", func(t *testing.T) {
 		fs, err := ParseFile("file.vsql", `APPLICATION test();
 		ROLE W1Descriptor;

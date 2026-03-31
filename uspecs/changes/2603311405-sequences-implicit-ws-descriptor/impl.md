@@ -3,10 +3,19 @@
 ## Construction
 
 - [x] update: [pkg/parser/impl.go](../../../pkg/parser/impl.go)
-  - add: Create implicit `WsDescriptorStmt` with default name `<WorkspaceName>Descriptor` when workspace is non-abstract, non-pool, and has no explicit descriptor statement
+  - add: Create implicit `WsDescriptorStmt` with default name `<WorkspaceName>Descriptor` when workspace is non-abstract and has no explicit descriptor statement
+  - add: Synthesized descriptor inherits workspace's `lexer.Position` for accurate error reporting
 
 - [x] update: [pkg/parser/impl_test.go](../../../pkg/parser/impl_test.go)
-  - add: `Test_ImplicitWorkspaceDescriptor` with subtests for non-abstract, abstract, explicit descriptor, and name conflict scenarios
+  - add: `Test_ImplicitWorkspaceDescriptor` with subtests:
+    - Non-abstract workspaces get implicit descriptor
+    - Abstract workspaces get no descriptor
+    - Explicit descriptor is preserved
+    - Nested workspaces get implicit descriptors
+    - Nested workspace with explicit descriptor
+    - Deeply nested workspaces get implicit descriptors
+    - Nested abstract workspace has no descriptor
+    - Implicit descriptor name conflicts with existing type
 
 - [x] update: [pkg/appdefcompat/testdata/sys.old.vsql](../../../pkg/appdefcompat/testdata/sys.old.vsql)
   - add: `DescTestWs` workspace with explicit `OldDescriptor`
