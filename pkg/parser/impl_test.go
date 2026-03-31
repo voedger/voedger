@@ -3267,6 +3267,104 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	require.True(ok)
 }
 
+func Test_ImplicitWorkspaceDescriptor(t *testing.T) {
+	require := assertions(t)
+
+	t.Run("non-abstract workspace gets implicit descriptor", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE W1();
+		ALTERABLE WORKSPACE W2();
+		`)
+		w1 := app.Workspace(appdef.NewQName("pkg", "W1"))
+		require.Equal(appdef.NewQName("pkg", "W1Descriptor"), w1.Descriptor())
+
+		w2 := app.Workspace(appdef.NewQName("pkg", "W2"))
+		require.Equal(appdef.NewQName("pkg", "W2Descriptor"), w2.Descriptor())
+	})
+
+	t.Run("abstract workspace has no descriptor", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		ABSTRACT WORKSPACE AW();
+		`)
+		aw := app.Workspace(appdef.NewQName("pkg", "AW"))
+		require.Equal(appdef.NullQName, aw.Descriptor())
+	})
+
+	t.Run("explicit descriptor is preserved", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE W1(
+			DESCRIPTOR MyDesc(f1 int32);
+		);
+		`)
+		w1 := app.Workspace(appdef.NewQName("pkg", "W1"))
+		require.Equal(appdef.NewQName("pkg", "MyDesc"), w1.Descriptor())
+	})
+
+	t.Run("nested workspaces get implicit descriptors", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE Outer(
+			WORKSPACE Inner();
+		);
+		`)
+		outer := app.Workspace(appdef.NewQName("pkg", "Outer"))
+		require.Equal(appdef.NewQName("pkg", "OuterDescriptor"), outer.Descriptor())
+
+		inner := app.Workspace(appdef.NewQName("pkg", "Inner"))
+		require.Equal(appdef.NewQName("pkg", "InnerDescriptor"), inner.Descriptor())
+	})
+
+	t.Run("nested workspace with explicit descriptor", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE Outer(
+			WORKSPACE Inner(
+				DESCRIPTOR InnerDesc();
+			);
+		);
+		`)
+		outer := app.Workspace(appdef.NewQName("pkg", "Outer"))
+		require.Equal(appdef.NewQName("pkg", "OuterDescriptor"), outer.Descriptor())
+
+		inner := app.Workspace(appdef.NewQName("pkg", "Inner"))
+		require.Equal(appdef.NewQName("pkg", "InnerDesc"), inner.Descriptor())
+	})
+
+	t.Run("deeply nested workspaces get implicit descriptors", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE L1(
+			WORKSPACE L2(
+				WORKSPACE L3();
+			);
+		);
+		`)
+		require.Equal(appdef.NewQName("pkg", "L1Descriptor"), app.Workspace(appdef.NewQName("pkg", "L1")).Descriptor())
+		require.Equal(appdef.NewQName("pkg", "L2Descriptor"), app.Workspace(appdef.NewQName("pkg", "L2")).Descriptor())
+		require.Equal(appdef.NewQName("pkg", "L3Descriptor"), app.Workspace(appdef.NewQName("pkg", "L3")).Descriptor())
+	})
+
+	t.Run("nested abstract workspace has no descriptor", func(t *testing.T) {
+		app := require.Build(`APPLICATION test();
+		WORKSPACE Outer(
+			ABSTRACT WORKSPACE InnerAbstract();
+		);
+		`)
+		outer := app.Workspace(appdef.NewQName("pkg", "Outer"))
+		require.Equal(appdef.NewQName("pkg", "OuterDescriptor"), outer.Descriptor())
+
+		innerAbstract := app.Workspace(appdef.NewQName("pkg", "InnerAbstract"))
+		require.Equal(appdef.NullQName, innerAbstract.Descriptor())
+	})
+
+	t.Run("implicit descriptor name conflicts with existing type", func(t *testing.T) {
+		fs, err := ParseFile("file.vsql", `APPLICATION test();
+		ROLE W1Descriptor;
+		WORKSPACE W1();
+		`)
+		require.NoError(err)
+		_, err = BuildPackageSchema("test/pkg", []*FileSchemaAST{fs})
+		require.ErrorContains(err, "redefinition of W1Descriptor")
+	})
+}
+
 func Test_NotAllowedTypes(t *testing.T) {
 
 	require := assertions(t)
