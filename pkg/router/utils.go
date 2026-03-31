@@ -153,16 +153,15 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 		}
 	}
 	newReqID := fmt.Sprintf("%s-%d", globalServerStartTime, reqID.Add(1))
-	hostValue := fmt.Sprintf("host:%s,X-Forwarded-For:%s,X-Real-IP:%s",
-		busRequest.Host, busRequest.Header["X-Forwarded-For"], busRequest.Header["X-Real-IP"])
-	return logger.WithContextAttrs(ctx, map[string]any{
+	enrichedCtx := logger.WithContextAttrs(ctx, map[string]any{
 		logger.LogAttr_ReqID:     newReqID,
 		logger.LogAttr_WSID:      data.wsid,
 		logger.LogAttr_VApp:      data.appQName,
 		logger.LogAttr_Extension: extension,
 		logAttrib_Origin:         req.Header.Get(httpu.Origin),
-		"host":                   hostValue, // TODO: eliminate after check what is actually logged in dev cluster
+		"routing.headers":        fmt.Sprintf("%v", req.Header),
 	})
+	return enrichedCtx
 }
 
 func logLatency(ctx context.Context, sentAt time.Time) {
