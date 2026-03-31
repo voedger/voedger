@@ -87,6 +87,13 @@ WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
     )
 );
 
+WORKSPACE DescTestWs(
+    DESCRIPTOR OldDescriptor();
+);
+
+WORKSPACE ImplicitDescWs(
+);
+
 ALTERABLE WORKSPACE Profile(
     TABLE ProfileTable INHERITS CDoc(-- NodeRemoved: removed in new.vsql
         A varchar

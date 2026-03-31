@@ -74,6 +74,8 @@ func Test_Basic(t *testing.T) {
 
 	t.Run("CheckBackwardCompatibility", func(t *testing.T) {
 		expectedErrors := []CompatibilityError{
+			{OldTreePath: []string{"AppDef", "Types", "sys.ImplicitDescWsDescriptor"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.OldDescriptor"}, ErrorType: ErrorTypeNodeRemoved},
 			{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
 			{OldTreePath: []string{"AppDef", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
@@ -89,7 +91,12 @@ func Test_Basic(t *testing.T) {
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandArgs"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandResult"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AbsWorkspace", "Descriptor"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.AbsWorkspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.DescTestWs", "Types", "sys.OldDescriptor"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.DescTestWs", "Descriptor"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.ImplicitDescWs", "Types", "sys.ImplicitDescWsDescriptor"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.ImplicitDescWs", "Descriptor"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
