@@ -2,6 +2,7 @@
 registered_at: 2026-03-31T14:05:43Z
 change_id: 2603311405-sequences-implicit-ws-descriptor
 baseline: b173c6a3e631686370782455c70970dcd9e7d74c
+archived_at: 2026-03-31T15:01:26Z
 ---
 
 # Change request: Sequences: enforce implicit workspace descriptor
