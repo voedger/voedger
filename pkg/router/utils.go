@@ -159,7 +159,6 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 		logger.LogAttr_VApp:      data.appQName,
 		logger.LogAttr_Extension: extension,
 		logAttrib_Origin:         req.Header.Get(httpu.Origin),
-		"routing.headers":        fmt.Sprintf("%v", req.Header),
 	})
 	return enrichedCtx
 }
