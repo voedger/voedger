@@ -958,8 +958,7 @@ cmd_action_upr() {
 
     # Prepare PR body: strip YAML frontmatter --- delimiters (keep field lines as plain text).
     # Fenced code blocks (```yaml / ```) are NOT used because GitHub interprets backtick
-    # sequences in the PR creation URL query string incorrectly, breaking the PR form.
-    # Then truncate to avoid URL-length limits with gh pr create --web
+    # sequences in the PR body incorrectly.
     local pr_body_file
     temp_create_file pr_body_file
     local pr_body_max_lines=40
@@ -990,20 +989,25 @@ cmd_action_upr() {
         printf '\n\n---\n(truncated -- see change.md for full details)\n' >> "$pr_body_file"
     fi
 
-    # Open PR creation in browser
-    echo "Opening PR creation in browser..."
-    local pr_repo
-    pr_repo=$(git remote get-url "$pr_remote" | sed -E 's#.*github.com[:/]##; s#\.git$##')
-    gh pr create --web --repo "$pr_repo" --base "$default_branch" --title "$pr_title" --body-file "$pr_body_file"
+    # Create PR via gh CLI
+    echo "Creating PR..."
+    local pr_url
+    pr_url=$(gh_create_pr "$pr_remote" "$default_branch" "$current_branch" "$pr_title" < "$pr_body_file")
+
+    # Open the created PR in browser
+    echo "Opening PR in browser..."
+    quiet gh pr view --web || true
 
     prompt_start_instructions
 
     # Output success prompt
     if [[ -n "$pre_push_head" ]]; then
-        declare -A vars=([pre_push_head]="$pre_push_head")
+        declare -A vars=([pre_push_head]="$pre_push_head" [pr_url]="$pr_url")
         section_templ "$prompts_file" "upr_success" vars
     else
-        section_templ "$prompts_file" "upr_success_no_squash"
+        # shellcheck disable=SC2034  # vars used via nameref
+        declare -A vars=([pr_url]="$pr_url")
+        section_templ "$prompts_file" "upr_success_no_squash" vars
     fi
 }
 
@@ -1061,6 +1065,8 @@ cmd_action_umergepr() {
     fi
 
     pr_number=$(gh pr view --json number -q ".number")
+    local pr_url
+    pr_url=$(gh pr view --json url -q ".url")
 
     echo "PR #$pr_number state: $pr_state"
 
@@ -1183,6 +1189,7 @@ cmd_action_umergepr() {
     # shellcheck disable=SC2034  # vars used via nameref
     declare -A success_vars=(
         [pr_number]="$pr_number"
+        [pr_url]="$pr_url"
         [branch_name]="$current_branch"
         [branch_head]="$branch_head"
     )

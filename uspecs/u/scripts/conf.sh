@@ -7,7 +7,7 @@ set -Eeuo pipefail
 #   Manages uspecs lifecycle: install, update, upgrade, and invocation method configuration
 #
 # Usage:
-#   conf.sh install --nlia [--alpha] [--pr]
+#   conf.sh install --nlia [--alpha] [--local] [--override] [--pr] [-y]
 #   conf.sh update [--pr]
 #   conf.sh upgrade [--pr]
 #   conf.sh im --add nlia
@@ -353,6 +353,10 @@ replace_uspecs_u() {
     echo "Removing installation metadata file from archive..."
     rm -f "$source_dir/uspecs/u/uspecs.yml"
     echo "Removing old uspecs/u files..."
+    # Delete only regular files, not directories. Removing directories while they
+    # may still be in use causes "directory busy" errors on Windows (and with some
+    # tools on other platforms). Leaving empty directories behind is harmless
+    # because cp -r will overwrite or reuse them.
     find "$project_dir/uspecs/u" -type f -delete
     echo "Installing new uspecs/u..."
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
@@ -554,6 +558,7 @@ cmd_apply() {
 
     local project_dir="" version="" commit="" commit_timestamp="" pr_flag=false
     local current_version=""
+    local override=false
     local invocation_methods=()
 
     local yes_flag=false
@@ -566,6 +571,7 @@ cmd_apply() {
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
             --current-version) current_version="$2"; shift 2 ;;
             --pr) pr_flag=true; shift ;;
+            --override) override=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
             -y) yes_flag=true; shift ;;
@@ -593,7 +599,7 @@ cmd_apply() {
 
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
-    if [[ "$command_name" == "install" && -f "$metadata_file" ]]; then
+    if [[ "$command_name" == "install" && "$override" != "true" && -f "$metadata_file" ]]; then
         error "uspecs is already installed, use update instead"
     fi
 
@@ -602,13 +608,21 @@ cmd_apply() {
     if [[ "$pr_flag" == "true" ]]; then
         prev_branch=$(git -C "$project_dir" symbolic-ref --short HEAD)
         (cd "$project_dir" && git_ffdefault)
-        trap 'git -C "$project_dir" checkout "$prev_branch" 2>/dev/null || true' ERR
+        atexit_push "git -C '$project_dir' checkout '$prev_branch' || true"
     fi
 
     local -A config
     if [[ "$command_name" == "install" ]]; then
-        if [[ -f "$metadata_file" ]]; then
+        if [[ "$override" != "true" && -f "$metadata_file" ]]; then
             error "uspecs is already installed, use update instead"
+        fi
+        if [[ "$override" == "true" && -f "$metadata_file" ]]; then
+            load_config "$project_dir" config
+            if [[ -n "$commit" && "${config[commit]:-}" == "$commit" ]] || \
+               [[ -z "$commit" && "${config[version]:-}" == "$version" ]]; then
+                echo "Version is already installed. Remove uspecs.yml to force reinstall."
+                return 0
+            fi
         fi
     else
         load_config "$project_dir" config
@@ -619,7 +633,6 @@ cmd_apply() {
         if [[ -n "$commit" && "${config[commit]:-}" == "$commit" ]] || \
            [[ -z "$commit" && "${config[version]:-}" == "$version" ]]; then
             echo "Already up to date"
-            [[ -n "$prev_branch" ]] && git -C "$project_dir" checkout "$prev_branch"
             return 0
         fi
     fi
@@ -635,7 +648,6 @@ cmd_apply() {
     # Show operation plan and confirm
     show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_methods_str" "$pr_flag" "$project_dir" "$script_dir"
     if ! confirm_action "$command_name" "$yes_flag"; then
-        [[ -n "$prev_branch" ]] && git -C "$project_dir" checkout "$prev_branch"
         return 0
     fi
 
@@ -656,14 +668,8 @@ cmd_apply() {
         invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
 
-    if [[ "$command_name" == "install" ]]; then
-        rm -f "$source_dir/uspecs/u/uspecs.yml"
-        echo "Installing uspecs/u..."
-        mkdir -p "$project_dir/uspecs"
-        cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
-    else
-        replace_uspecs_u "$source_dir" "$project_dir"
-    fi
+    mkdir -p "$project_dir/uspecs/u"
+    replace_uspecs_u "$source_dir" "$project_dir"
 
     # Write metadata
     echo "Writing installation metadata..."
@@ -688,10 +694,12 @@ cmd_apply() {
         local pr_info_file
         temp_create_file pr_info_file
 
+        # git_pr --next-branch handles its own branch switch; remove our atexit handler
+        atexit_pop
+
         # Capture PR info from stderr while showing normal output
         (cd "$project_dir" && git_pr --title "$pr_title" --body "$pr_body" \
             --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
-        trap - ERR
 
         # Parse PR info from temp file
         pr_url=$(grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
@@ -719,6 +727,7 @@ cmd_install() {
     local local_flag=false
     local pr_flag=false
     local yes_flag=false
+    local override=false
     local invocation_methods=()
 
     while [[ $# -gt 0 ]]; do
@@ -726,6 +735,7 @@ cmd_install() {
             --alpha) alpha=true; shift ;;
             --local) local_flag=true; shift ;;
             --pr) pr_flag=true; shift ;;
+            --override) override=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
             -y) yes_flag=true; shift ;;
@@ -743,7 +753,9 @@ cmd_install() {
     local project_dir
     project_dir=$PWD
 
-    check_not_installed "$project_dir"
+    if [[ "$override" != "true" ]]; then
+        check_not_installed "$project_dir"
+    fi
 
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
@@ -770,6 +782,9 @@ cmd_install() {
     done
     if [[ -n "$commit" ]]; then
         apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
+    fi
+    if [[ "$override" == "true" ]]; then
+        apply_args+=("--override")
     fi
     if [[ "$pr_flag" == "true" ]]; then
         apply_args+=("--pr")
