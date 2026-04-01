@@ -8,7 +8,7 @@ It has been opened in the browser.
 
 ## upr_success: Next steps after PR creation
 
-The PR creation page has been opened in your browser.
+PR has been created: ${pr_url}
 
 To restore branch to its pre-squash state, if needed:
 
@@ -19,23 +19,21 @@ git push --force
 
 Next steps:
 
-- Complete the PR creation form in the browser (review title and body, then submit)
 - Fix any issues raised during review
 - Run `umergepr` once the PR is approved and ready to merge
 
 ## upr_success_no_squash: Next steps after PR creation
 
-The PR creation page has been opened in your browser.
+PR has been created: ${pr_url}
 
 Next steps:
 
-- Complete the PR creation form in the browser (review title and body, then submit)
 - Fix any issues raised during review
 - Run `umergepr` once the PR is approved and ready to merge
 
 ## umergepr_success: PR merged successfully
 
-PR #${pr_number} has been merged successfully.
+PR #${pr_number} has been merged successfully: ${pr_url}
 
 Local branch `${branch_name}` and its remote tracking ref have been deleted.
 
