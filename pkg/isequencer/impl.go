@@ -183,15 +183,13 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 //   - Try s.cache (can be evicted)
 //   - Try s.inproc
 //   - Try s.toBeFlushed (use s.toBeFlushedMu to synchronize)
-//   - Try s.params.SeqStorage.ReadNumber()
-//   - Read all known Numbers for wsKind, wsID
+//   - Try s.SeqStorage.ReadNumbers() for single requested seqID
 //   - If number is 0 then initial value is used
-//   - Write all Numbers to s.cache
 //
 // - Write value+1 to s.cache
 // - Write value+1 to s.inproc
 // - Return value
-// reads single requested seqID per workspace, stores in LRU cache.
+//
 // TODO(AIR-3506): Should read all numbers per workspace and keep in memory without cache.
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Validate sequencing Transaction status

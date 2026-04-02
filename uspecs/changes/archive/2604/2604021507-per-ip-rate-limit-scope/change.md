@@ -3,6 +3,7 @@ registered_at: 2026-03-27T15:41:48Z
 change_id: 2603271541-per-ip-rate-limit-scope
 baseline: ebd38ec250cc672fa7f06591c39c47b859e00d2c
 issue_url: https://untill.atlassian.net/browse/AIR-3420
+archived_at: 2026-04-02T15:07:31Z
 ---
 
 # Change request: Use PER IP rate limit scope
