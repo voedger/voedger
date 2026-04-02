@@ -11,7 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// [~server.design.sequences/cmp.ISeqStorageImplementation~impl]
 type implISeqStorage struct {
 	appID       isequencer.ClusterAppID
 	partitionID istructs.PartitionID

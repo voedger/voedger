@@ -92,7 +92,6 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.MetricsServicePort = 0
 	cfg.AdminPort = 0
 
-	// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
 
 	cfg.Time = testingu.MockTime

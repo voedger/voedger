@@ -385,7 +385,6 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 		err = e.app.config.storage.Put(pKey, cCols, evData)
 	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
 		ok := false
-		// [~server.design.sequences/tuc.SequencesTrustLevelForPLog~impl]
 		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
 			if !ok {
 				return nil, ErrSequencesViolation
@@ -418,7 +417,6 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 		err = e.app.config.storage.Put(pKey, cCols, evData)
 	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
 		ok := false
-		// [~server.design.sequences/tuc.SequencesTrustLevelForWLog~impl]
 		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
 			if !ok {
 				return ErrSequencesViolation

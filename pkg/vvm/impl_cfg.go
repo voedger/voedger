@@ -59,7 +59,6 @@ func NewVVMDefaultConfig() VVMConfig {
 		SchemasCache:                     &NullSchemasCache{},
 		PolicyOptsForFederationWithRetry: httpu.DefaultRetryPolicyOpts,
 
-		// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 		SequencesTrustLevel: isequencer.SequencesTrustLevel_0,
 	}
 	return res
