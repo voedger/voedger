@@ -191,8 +191,8 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 // - Write value+1 to s.cache
 // - Write value+1 to s.inproc
 // - Return value
-// FIXME: reads single requested seqID per workspace, stores in LRU cache.
-// Should read all numbers per workspace and keep in memory without cache.
+// reads single requested seqID per workspace, stores in LRU cache.
+// TODO(AIR-3506): Should read all numbers per workspace and keep in memory without cache.
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Validate sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
