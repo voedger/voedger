@@ -325,12 +325,14 @@ New()
 - **cleanupCtx / cleanupCtxCancel**: top-level context; cancelled by cleanup() to terminate everything; also used by flusher retries (not flusherCtx) to avoid data loss during actualization
 - **actualizerCtx / actualizerCtxCancel**: derived from cleanupCtx; one per Actualize() call; cancelled by cleanup() or next Actualize()
 - **flusherCtx / flusherCtxCancel**: independent context; one per actualizer run; cancelled by actualizer on re-actualization or cleanup; controls flusher loop lifecycle but NOT retry scope
-- **actualizerWG**: WaitGroup (value type); tracks actualizer goroutine lifecycle
+- **actualizerWG**: \*sync.WaitGroup (pointer type); tracks actualizer goroutine lifecycle
 - **flusherWG**: WaitGroup (value type); tracks flusher goroutine lifecycle
 - **flusherSig**: buffered channel [1]; non-blocking signal from Flush()/batcher to wake flusher
 - **toBeFlushedMu**: RWMutex; protects toBeFlushed map and toBeFlushedOffset shared between command processor thread, flusher goroutine, and batcher (inside actualizer)
 - **actualizerInProgress**: atomic.Bool; Start() returns false when actualization is in progress
 - **transactionIsInProgress**: bool; set by Start(), cleared by Flush()/Actualize() via finishSequencingTransaction(); bootstrap: set to true in New() to allow initial Actualize()
+- **iTime**: `timeu.ITime` abstraction over time; used by `batcher()` to create delay timers when `toBeFlushed` is full; injected via `New()` for testability
+- **retrierCfg**: `retrier.Config`; exponential backoff (500ms base/max, `ResetDelayAfterMaxDelay`) for all storage operations (`ReadNumbers`, `WriteValuesAndNextPLogOffset`, `ReadNextPLogOffset`, `ActualizeSequencesFromPLog`)
 
 ## Current sequences
 

@@ -183,7 +183,7 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 //   - Try s.cache (can be evicted)
 //   - Try s.inproc
 //   - Try s.toBeFlushed (use s.toBeFlushedMu to synchronize)
-//   - Try s.params.SeqStorage.ReadNumbers() for single requested seqID
+//   - Try s.SeqStorage.ReadNumbers() for single requested seqID
 //   - If number is 0 then initial value is used
 //
 // - Write value+1 to s.cache

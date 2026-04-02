@@ -3,6 +3,7 @@ registered_at: 2026-04-02T14:34:04Z
 change_id: 2604021434-sequences-actualize-arch
 baseline: e46d994a8401c8264180ceda69e8992a276c5ccb
 issue_url: https://untill.atlassian.net/browse/AIR-3507
+archived_at: 2026-04-02T15:06:19Z
 ---
 
 # Change request: Sequences: actualize architecture
