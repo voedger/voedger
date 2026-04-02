@@ -43,7 +43,7 @@ These sequences ensure consistent ordering of operations, proper transaction man
 
 - [#688: record ID leads to different tables](https://github.com/voedger/voedger/issues/688)
 - [VIEW RecordsRegistry](https://github.com/voedger/voedger/blob/ec85a5fed968e455eb98983cd12a0163effdc096/pkg/sys/sys.vsql#L260)
-- [Singleton IDs]https://github.com/voedger/voedger/blob/ec85a5fed968e455eb98983cd12a0163effdc096/pkg/istructs/consts.go#L101
+- [Singleton IDs](https://github.com/voedger/voedger/blob/ec85a5fed968e455eb98983cd12a0163effdc096/pkg/istructs/consts.go#L101)
 
 Existing design
 
@@ -72,7 +72,7 @@ Existing design
       - CUD.ID is set as the current RecordID
         - `IIDGenerator.UpdateOnSync` [is called](https://github.com/voedger/voedger/blob/9d400d394607ef24012dead0d59d5b02e2766f7d/pkg/processors/command/impl.go#L253)
 - save the event after cmd exec:
-  - `istructs.IIDGenerator` [instance is provided to `IEvents.PutPlog()`] (https://github.com/voedger/voedger/blob/9d400d394607ef24012dead0d59d5b02e2766f7d/pkg/processors/command/impl.go#L307)
+  - `istructs.IIDGenerator` [instance is provided to `IEvents.PutPlog()`](https://github.com/voedger/voedger/blob/9d400d394607ef24012dead0d59d5b02e2766f7d/pkg/processors/command/impl.go#L307)
   - `istructs.IIDGenerator.Next()` is called to convert rawID->realID for ODoc in arguments and [each resulting CUD](https://github.com/voedger/voedger/blob/9d400d394607ef24012dead0d59d5b02e2766f7d/pkg/istructsmem/event-types.go#L189)
 
 #### Actual Sequences design as of 26-01-09
@@ -83,7 +83,7 @@ Existing design
 
 ## Definitions
 
-**APs**: Applcation Partitions
+**APs**: Application Partitions
 
 **SequencesTrustLevel**:
 
@@ -131,7 +131,7 @@ Solutions:
   - Latency is increased from 40 ms to 120 ms with spikes up to 160 ms
   - Testbench throughput reduced from 4000 command per seconds to 1400 cps
   - CPU usage is decreased from 75% to 42%
-  - So we can make an educated guess that maximum thoughtput would be reduced by 4000 / 1400 \* 42 / 75 = 1.6 times
+  - So we can make an educated guess that maximum throughput would be reduced by 4000 / 1400 \* 42 / 75 = 1.6 times
 
 ## Solution overview
 
@@ -139,7 +139,7 @@ The proposed approach implements a more efficient and scalable sequence manageme
 
 - **Projection-Based Storage**: Each application partition will maintain sequence data in a dedicated projection ???(`SeqData`). SeqData is a map that eliminates the need to load all sequence data into memory at once
 - **Offset Tracking**: `SeqData` will include a `SeqDataOffset` attribute that indicates the PLog partition offset for which the stored sequence data is valid, enabling precise recovery and synchronization
-- **LRU Cache Implementation**: Sequence data will be accessed through a Most Recently Used (LRU) cache that prioritizes frequently accessed sequences while allowing less active ones to be evicted from memory
+- **LRU Cache Implementation**: Sequence data will be accessed through a Least Recently Used (LRU) cache that keeps frequently accessed sequences in memory while evicting the least recently accessed ones
 - **Background Updates**: As new events are written to the PLog, sequence data will be updated in the background, ensuring that the system maintains current sequence values without blocking operations
 - **Batched Writes**: Sequence updates will be collected and written in batches to reduce I/O operations and improve throughput
 - **Optimized Actualization**: The actualization process will use the stored `SeqDataOffset` to process only events since the last known valid state, dramatically reducing startup times
@@ -451,7 +451,7 @@ func (s *sequencer) Flush() {
 // It ensures thread-safe access to sequence values and handles various caching layers.
 //
 // Flow:
-// - Validate equencing Transaction status
+// - Validate sequencing Transaction status
 // - Get initialValue from s.params.SeqTypes and ensure that SeqID is known
 // - Try to obtain the next value using:
 //   - Try s.lru (can be evicted)
@@ -607,7 +607,7 @@ Tests:
 
 ### Integration tests for built-in sequences
 
-- BuiltInSequences: Test for initial values: WLogOffsetSequence, WLogOffsetSequence, CRecordIDSequence, OWRecordIDSequence
+- BuiltInSequences: Test for initial values: PLogOffsetSequence, WLogOffsetSequence, CRecordIDSequence, OWRecordIDSequence
 
 ---
 

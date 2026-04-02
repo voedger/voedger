@@ -20,4 +20,7 @@ Migrate and actualize sequences architecture documentation:
 
 - Move actual design to `specs/prod/apps/sequences--arch.md`
 - Move proposed (complicated) design to `specs/prod/apps/sequences--arch2.md`
-- Replace doc contents with migration notes and examples
+- Separate active command processor behavior from ISequencer package (implemented, not yet integrated)
+- Add deep code links, data structures, flows, diagrams, and synchronization primitives
+- Remove `reqmd` tags from 13 Go source files
+- Fix LRU terminology error in sequences--arch2.md

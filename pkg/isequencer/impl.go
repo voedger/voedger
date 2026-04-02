@@ -177,7 +177,7 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 // It ensures thread-safe access to sequence values and handles various caching layers.
 //
 // Flow:
-// - Validate equencing Transaction status
+// - Validate sequencing Transaction status
 // - Get initialValue from s.params.SeqTypes and ensure that SeqID is known
 // - Try to obtain the next value using:
 //   - Try s.cache (can be evicted)
@@ -191,6 +191,8 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 // - Write value+1 to s.cache
 // - Write value+1 to s.inproc
 // - Return value
+// FIXME: reads single requested seqID per workspace, stores in LRU cache.
+// Should read all numbers per workspace and keep in memory without cache.
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Validate sequencing Transaction status
 	s.checkSequencingTransactionInProgress()

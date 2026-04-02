@@ -21,5 +21,5 @@ Migrate existing documentation into the specs structure:
 
 - Actual design → `specs/prod/apps/sequences--arch.md`
 - Proposed (complicated) design → `specs/prod/apps/sequences--arch2.md`
-- Draw a diagram that will show how goroutines acts between each others, how wait groups, channels and contexts works.
-- Mark the place where single requested seqID is read for the workspace and stored in LRU cache as a technical dept: should always read numbres per workspace and keep in memeory without cache. Note: use industry idiomatic way to mark that as a technical dept
+- Draw a diagram that shows how goroutines interact with each other, and how wait groups, channels, and contexts work.
+- Mark the place where a single requested `seqID` is read for a workspace and stored in an LRU cache as technical debt: the implementation should always read numbers per workspace and keep them in memory without using a cache. Note: use a standard, industry-idiomatic way to mark this as technical debt.

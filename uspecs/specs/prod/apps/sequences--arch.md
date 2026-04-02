@@ -1,8 +1,14 @@
-# Context subsystem architecture: Sequences (actual design)
+# Context subsystem architecture: Sequences
 
 ## Key components
 
-Feature components:
+Command processor components (active):
+
+- [appPartition](../../../../pkg/processors/command/provide.go#L41): struct — per-partition state (workspace map, next PLog offset)
+- [workspace](../../../../pkg/processors/command/provide.go#L28): struct — per-workspace state (WLog offset, ID generator)
+- [implIIDGenerator](../../../../pkg/istructsmem/idgenerator.go#L12): struct — incrementing ID generator per workspace
+
+ISequencer package (implemented, **not yet integrated** into command processor):
 
 - [ISequencer](../../../../pkg/isequencer/interface.go#L47): interface — sequencing transaction API
   - [Start](../../../../pkg/isequencer/impl.go#L25), [Next](../../../../pkg/isequencer/impl.go#L194), [Flush](../../../../pkg/isequencer/impl.go#L270), [Actualize](../../../../pkg/isequencer/impl.go#L426)
@@ -15,13 +21,7 @@ Feature components:
 - [IVVMSeqStorageAdapter](../../../../pkg/isequencer/interface.go#L31): interface — low-level VVM storage access
 - [Params](../../../../pkg/isequencer/types.go#L38): struct — sequencer configuration (cache size, flush limits, seq types)
 
-📦 System components:
-
-- [appPartition](../../../../pkg/processors/command/provide.go#L41): struct — per-partition state (workspace map, next PLog offset)
-- [workspace](../../../../pkg/processors/command/provide.go#L28): struct — per-workspace state (WLog offset, ID generator)
-- [implIIDGenerator](../../../../pkg/istructsmem/idgenerator.go#L12): struct — incrementing ID generator per workspace
-
-📁 Storage implementations:
+ISequencer storage implementations (implemented, **not yet integrated**):
 
 - [implISeqStorage](../../../../pkg/appparts/internal/seqstorage/type.go#L14): struct — implements ISeqStorage
   - [New](../../../../pkg/appparts/internal/seqstorage/provide.go#L14): constructor (per app, per partition)
@@ -129,44 +129,7 @@ func (g *implIIDGenerator) UpdateOnSync(syncID istructs.RecordID) {
 }
 ```
 
-### Command processing: sequencing transaction
-
-```mermaid
-sequenceDiagram
-    participant CP as 📦Command Processor
-    participant Seq as 🎯sequencer
-    participant LRU as 🎯LRU Cache
-    participant Flusher as 🎯flusher goroutine
-    participant Storage as 📁ISeqStorage
-
-    CP->>Seq: Start(wsKind, wsID)
-    Seq-->>CP: plogOffset, ok
-
-    CP->>Seq: Next(seqID)
-    Seq->>LRU: Get(key)
-    alt cache hit
-        LRU-->>Seq: nextNumber
-    else cache miss
-        Seq->>Storage: ReadNumbers(wsID, seqIDs)
-        Note right of Seq: FIXME: reads single requested seqID<br/>per workspace, stores in LRU cache.<br/>Should read all numbers per workspace<br/>and keep in memory without cache
-        Storage-->>Seq: numbers
-        Seq->>LRU: Add(key, value)
-    end
-    Seq-->>CP: number
-
-    alt success
-        CP->>Seq: Flush()
-        Seq->>Seq: copy inproc → toBeFlushed
-        Seq->>Flusher: signal (flusherSig channel)
-        Flusher->>Storage: WriteValuesAndNextPLogOffset()
-    else PLog write failed
-        CP->>Seq: Actualize()
-        Seq->>Seq: purge cache, clear state
-        Seq->>Seq: start actualizer goroutine
-    end
-```
-
-#### Command processing steps in detail
+### Command processing steps (active)
 
 **1. Get workspace:**
 
@@ -240,6 +203,48 @@ if err != nil {
 } else {
 	cmd.workspace.NextWLogOffset++
 }
+```
+
+## ISequencer package internals (implemented, not yet integrated)
+
+> `pkg/isequencer` is fully implemented and tested but not yet wired into the command processor pipeline.
+> `IAppPartition` does not expose a `Sequencer()` method. The command processor uses `appPartition`/`workspace`/`implIIDGenerator` directly.
+
+### Sequencing transaction (target flow)
+
+```mermaid
+sequenceDiagram
+    participant CP as 📦Command Processor
+    participant Seq as 🎯sequencer
+    participant LRU as 🎯LRU Cache
+    participant Flusher as 🎯flusher goroutine
+    participant Storage as 📁ISeqStorage
+
+    CP->>Seq: Start(wsKind, wsID)
+    Seq-->>CP: plogOffset, ok
+
+    CP->>Seq: Next(seqID)
+    Seq->>LRU: Get(key)
+    alt cache hit
+        LRU-->>Seq: nextNumber
+    else cache miss
+        Seq->>Storage: ReadNumbers(wsID, seqIDs)
+        Note right of Seq: FIXME: reads single requested seqID<br/>per workspace, stores in LRU cache.<br/>Should read all numbers per workspace<br/>and keep in memory without cache
+        Storage-->>Seq: numbers
+        Seq->>LRU: Add(key, value)
+    end
+    Seq-->>CP: number
+
+    alt success
+        CP->>Seq: Flush()
+        Seq->>Seq: copy inproc → toBeFlushed
+        Seq->>Flusher: signal (flusherSig channel)
+        Flusher->>Storage: WriteValuesAndNextPLogOffset()
+    else PLog write failed
+        CP->>Seq: Actualize()
+        Seq->>Seq: purge cache, clear state
+        Seq->>Seq: start actualizer goroutine
+    end
 ```
 
 ### Goroutine lifecycle and interaction
@@ -329,14 +334,24 @@ PLog offset is managed per partition in `appPartition.nextPLogOffset`, not as a 
 
 ## Summary
 
+Active command processor behavior:
+
 - **Single sequence for all records** (since April 2025) — starts from 200001, no collision risk
 - **All workspace state is in memory** (map of workspaces per partition)
-- **Simple increment** for ID generation (no complex sequencer logic)
+- **Simple increment** for ID generation via `implIIDGenerator`
 - **Full PLog scan on recovery** to rebuild all workspace states
 - **No persistent sequence storage** — everything derived from PLog
 - **No batching or caching** — direct increment per request
 - **Memory grows** with number of active workspaces per partition
 - **Recovery time grows** with PLog size
+
+ISequencer package (implemented, not yet integrated):
+
+- **LRU cache** for sequence numbers to reduce storage reads
+- **Batched writes** via flusher goroutine for persistence optimization
+- **Persistent ISeqStorage** — stores sequence numbers and PLog offsets
+- **Incremental recovery** via actualizer goroutine (reads PLog from last saved offset, not from beginning)
+- **Pending integration** — `IAppPartition` does not yet expose `Sequencer()`, command processor does not call `ISequencer`
 
 ## Historical context
 
