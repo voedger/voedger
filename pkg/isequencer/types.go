@@ -59,11 +59,12 @@ type sequencer struct {
 
 	cache *lruPkg.Cache[NumberKey, Number]
 
-	// Initialized by Start()
+	// Initialized by actualizer() from storage via ReadNextPLogOffset()
 	// Example:
-	// - 4 is the last processed event
+	// - 4 is the offset of the last processed event
 	// - nextOffset keeps 5
-	// - Start() returns 5 and increments nextOffset to 6
+	// - Start() returns 5 (does NOT increment)
+	// - Flush() increments nextOffset to 6
 	nextOffset PLogOffset
 
 	// If Sequencing Transaction is in progress then currentWSID has non-zero value.

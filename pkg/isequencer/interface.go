@@ -70,10 +70,8 @@ type ISequencer interface {
 	// Panics if Actualization is already in progress.
 	// Panics if Sequencing Transaction is not in progress.
 	// Flow:
+	// - Clear inproc, purge LRU Cache
 	// - Mark Sequencing Transaction as not in progress
-	// - Cancel and wait Flushing
-	// - Empty LRU Cache
-	// - Do Actualization process
-	// - Write next PLogOffset
+	// - Start actualizer goroutine (which stops/restarts flusher, clears toBeFlushed, reads PLog offset from storage, actualizes)
 	Actualize()
 }

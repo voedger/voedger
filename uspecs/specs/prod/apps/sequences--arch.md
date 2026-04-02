@@ -221,6 +221,7 @@ sequenceDiagram
     participant Storage as 📁ISeqStorage
 
     CP->>Seq: Start(wsKind, wsID)
+    Note right of Seq: panics if: transaction already started,<br/>cleanup in progress, unknown wsKind.<br/>Returns 0,false if: actualization in progress,<br/>unflushed values exceed threshold (signals flusher).<br/>Returns s.nextOffset (does NOT increment it)
     Seq-->>CP: plogOffset, ok
 
     CP->>Seq: Next(seqID)
@@ -228,8 +229,8 @@ sequenceDiagram
     alt cache hit
         LRU-->>Seq: nextNumber
     else cache miss
-        Seq->>Storage: ReadNumbers(wsID, seqIDs)
-        Note right of Seq: FIXME: reads single requested seqID<br/>per workspace, stores in LRU cache.<br/>Should read all numbers per workspace<br/>and keep in memory without cache
+        Seq->>Storage: ReadNumbers(wsID, []SeqID{seqID})
+        Note right of Seq: TODO(AIR-3506): reads single requested seqID<br/>per workspace, stores in LRU cache.<br/>Should read all numbers per workspace<br/>and keep in memory without cache
         Storage-->>Seq: numbers
         Seq->>LRU: Add(key, value)
     end
@@ -237,12 +238,15 @@ sequenceDiagram
 
     alt success
         CP->>Seq: Flush()
-        Seq->>Seq: copy inproc → toBeFlushed
+        Seq->>Seq: copy inproc → toBeFlushed,<br/>nextOffset → toBeFlushedOffset
+        Seq->>Seq: clear inproc, increment nextOffset
         Seq->>Flusher: signal (flusherSig channel)
         Flusher->>Storage: WriteValuesAndNextPLogOffset()
     else PLog write failed
         CP->>Seq: Actualize()
-        Seq->>Seq: purge cache, clear state
+        Note right of Seq: panics if: transaction NOT in progress,<br/>actualization already in progress
+        Seq->>Seq: clear inproc, purge LRU cache,<br/>finish transaction (clear wsID/wsKind)
+        Note right of Seq: intentionally does NOT clear toBeFlushed<br/>(flusher may not have written it yet)
         Seq->>Seq: start actualizer goroutine
     end
 ```
@@ -258,8 +262,9 @@ sequenceDiagram
     participant CP as 📦Command Processor
 
     Note over New: cleanupCtx = context.Background()
+    Note over New: transactionIsInProgress = true (bootstrap trick)
     New->>New: Actualize()
-    Note over New: actualizerInProgress = true
+    Note over New: clears inproc, purges LRU cache,<br/>finishes transaction, sets actualizerInProgress = true
 
     New->>Act: go actualizer(actualizerCtx)
     Note over New,Act: actualizerCtx derived from cleanupCtx
@@ -273,7 +278,7 @@ sequenceDiagram
     Act->>Stor: ReadNextPLogOffset()
     Stor-->>Act: nextOffset
     Act->>Stor: ActualizeSequencesFromPLog(offset, batcher)
-    Note over Act: batcher writes to toBeFlushed
+    Note over Act: batcher writes to toBeFlushed,<br/>advances nextOffset
     Note over Act: actualizerInProgress = false
 
     loop Command Processing
@@ -281,15 +286,18 @@ sequenceDiagram
         CP->>CP: Next() reads cache/inproc/toBeFlushed/storage
         alt success
             CP->>CP: Flush()
-            Note over CP,Flu: copies inproc→toBeFlushed<br/>signals flusherSig channel
+            Note over CP,Flu: copies inproc→toBeFlushed,<br/>clears inproc, increments nextOffset,<br/>signals flusherSig channel
             Flu->>Flu: wakes on flusherSig
             Flu->>Stor: WriteValuesAndNextPLogOffset()
+            Note over Flu: retries use cleanupCtx (not flusherCtx)<br/>to avoid data loss during actualization
             Flu->>Flu: remove flushed keys from toBeFlushed
         else failure
-            CP->>Act: Actualize()
-            Note over CP,Act: purges LRU, clears state<br/>starts new actualizer goroutine
+            CP->>CP: Actualize()
+            Note over CP: clears inproc, purges LRU cache,<br/>finishes transaction (clear wsID/wsKind),<br/>does NOT clear toBeFlushed
+            CP->>Act: start new actualizer goroutine
             Act->>Flu: stopFlusher() via flusherCtxCancel
             Flu-->>Act: flusherWG.Done()
+            Act->>Act: clear toBeFlushed, toBeFlushedOffset
             Act->>Flu: start new flusher
             Act->>Stor: re-read PLog offset + actualize
         end
@@ -314,14 +322,15 @@ New()
 
 ### Synchronization primitives
 
-- **cleanupCtx / cleanupCtxCancel**: top-level context; cancelled by cleanup() to terminate everything
+- **cleanupCtx / cleanupCtxCancel**: top-level context; cancelled by cleanup() to terminate everything; also used by flusher retries (not flusherCtx) to avoid data loss during actualization
 - **actualizerCtx / actualizerCtxCancel**: derived from cleanupCtx; one per Actualize() call; cancelled by cleanup() or next Actualize()
-- **flusherCtx / flusherCtxCancel**: independent context; one per actualizer run; cancelled by actualizer on re-actualization or cleanup
-- **actualizerWG**: WaitGroup; tracks actualizer goroutine lifecycle
-- **flusherWG**: WaitGroup; tracks flusher goroutine lifecycle
+- **flusherCtx / flusherCtxCancel**: independent context; one per actualizer run; cancelled by actualizer on re-actualization or cleanup; controls flusher loop lifecycle but NOT retry scope
+- **actualizerWG**: WaitGroup (value type); tracks actualizer goroutine lifecycle
+- **flusherWG**: WaitGroup (value type); tracks flusher goroutine lifecycle
 - **flusherSig**: buffered channel [1]; non-blocking signal from Flush()/batcher to wake flusher
 - **toBeFlushedMu**: RWMutex; protects toBeFlushed map and toBeFlushedOffset shared between command processor thread, flusher goroutine, and batcher (inside actualizer)
 - **actualizerInProgress**: atomic.Bool; Start() returns false when actualization is in progress
+- **transactionIsInProgress**: bool; set by Start(), cleared by Flush()/Actualize() via finishSequencingTransaction(); bootstrap: set to true in New() to allow initial Actualize()
 
 ## Current sequences
 
