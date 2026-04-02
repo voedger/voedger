@@ -44,7 +44,6 @@ type IVVMSeqStorageAdapter interface {
 // - Actualization: Making the persistent state of the sequences consistent with the PLog.
 // - Flushing: Writing the accumulated sequence values to the storage.
 // - LRU Cache: Least Recently Used cache that keep the most recent next sequence values in memory.
-// [~server.design.sequences/cmp.ISequencer~impl]
 type ISequencer interface {
 
 	// Start starts Sequencing Transaction for the given WSID.
@@ -55,7 +54,6 @@ type ISequencer interface {
 	// - Actualization is in progress
 	// - The number of unflushed values exceeds the maximum threshold
 	// If ok is true, the caller must call Flush() or Actualize() to complete the Sequencing Transaction.
-	// [~server.design.sequences/cmp.ISequencer.Start~impl]
 	Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool)
 
 	// Next returns the next sequence number for the given SeqID.

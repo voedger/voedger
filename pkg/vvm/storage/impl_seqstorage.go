@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-// [~server.design.sequences/cmp.VVMSeqStorageAdapter~impl]
 type implVVMSeqStorageAdapter struct {
 	sysVVMStorage ISysVvmStorage
 }

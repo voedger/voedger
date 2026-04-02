@@ -184,7 +184,6 @@ type VVMConfig struct {
 	NumVVM NumVVM // amount of VVMs in the cluster. Default 1
 	IP     net.IP // current IP of the VVM. Used as the value for leaderhsip elections
 
-	// [~server.design.sequences/cmp.VVMConfig.SequencesTrustLevel~impl]
 	SequencesTrustLevel isequencer.SequencesTrustLevel
 }
 

@@ -839,7 +839,6 @@ func TestISequencer_Actualize(t *testing.T) {
 
 }
 
-// [~server.design.sequences/test.isequencer.MultipleActualizes~impl]
 func TestISequencer_MultipleActualizes(t *testing.T) {
 	require := require.New(t)
 	iTime := timeu.NewITime()
@@ -909,7 +908,6 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 	require.Equal(initialNumber+isequencer.Number(countOfFlushes)+1, lastNum, "next number after cycles should be equal to initial number + count of flushes + 1")
 }
 
-// [~server.design.sequences/test.isequencer.FlushPermanentlyFails~impl]
 func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 	require := require.New(t)
 	iTime := timeu.NewITime()
@@ -979,7 +977,6 @@ func TestISequencer_FlushPermanentlyFails(t *testing.T) {
 	}
 }
 
-// [~server.design.sequences/test.isequencer.LongRecovery~impl]
 func TestISequencer_LongRecovery(t *testing.T) {
 	const (
 		maxNumEvents = 50

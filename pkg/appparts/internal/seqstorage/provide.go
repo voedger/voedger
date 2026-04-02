@@ -11,7 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// [~server.design.sequences/cmp.ISeqStorageImplementation.New~impl]
 func New(appID isequencer.ClusterAppID, partitionID istructs.PartitionID, events istructs.IEvents, appDef appdef.IAppDef,
 	seqStorageAdapter isequencer.IVVMSeqStorageAdapter) isequencer.ISeqStorage {
 	return &implISeqStorage{

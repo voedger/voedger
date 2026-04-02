@@ -48,7 +48,6 @@ type Params struct {
 }
 
 // sequencer implements ISequencer
-// [~server.design.sequences/cmp.sequencer~impl]
 type sequencer struct {
 	params     Params
 	seqStorage ISeqStorage
@@ -103,7 +102,6 @@ type sequencer struct {
 	retrierCfg              retrier.Config
 }
 
-// [~server.design.sequences/test.isequencer.mockISeqStorage~impl]
 // MockStorage implements ISeqStorage for testing purposes
 type MockStorage struct {
 	Numbers                   map[WSID]map[SeqID]Number

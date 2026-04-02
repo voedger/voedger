@@ -22,7 +22,6 @@ import (
 // - Actualization is in progress
 // - The number of unflushed values exceeds the maximum threshold
 // If ok is true, the caller must call Flush() or Actualize() to complete the Sequencing Transaction.
-// [~server.design.sequences/cmp.sequencer.Start~impl]
 func (s *sequencer) Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool) {
 	// Check if cleanup is in progress
 	if s.cleanupCtx.Err() != nil {
@@ -192,7 +191,6 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 // - Write value+1 to s.cache
 // - Write value+1 to s.inproc
 // - Return value
-// [~server.design.sequences/cmp.sequencer.Next~impl]
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Validate sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
@@ -269,8 +267,6 @@ func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
 //	Clear s.inproc
 //	Increase s.nextOffset
 //	Non-blocking write to s.flusherSig
-//
-// [~server.design.sequences/cmp.sequencer.Flush~impl]
 func (s *sequencer) Flush() {
 	// Verify processing is started
 	s.checkSequencingTransactionInProgress()
@@ -427,7 +423,6 @@ func (s *sequencer) checkSequencingTransactionInProgress() {
 // - Set s.actualizerInProgress to true
 // - Clean s.cache, s.nextOffset, s.currentWSID, s.currentWSKind, s.toBeFlushed, s.inproc, s.toBeFlushedOffset
 // - Start the actualizer() goroutine
-// [~server.design.sequences/cmp.sequencer.Actualize~impl]
 func (s *sequencer) Actualize() {
 	// Validate Sequencing Transaction status
 	s.checkSequencingTransactionInProgress()
