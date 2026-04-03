@@ -11,22 +11,13 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 )
-
-type syncActualizerWorkpiece interface {
-	pipeline.IWorkpiece
-	Event() istructs.IPLogEvent
-	AppPartition() appparts.IAppPartition
-	Context() context.Context                // is cmd.cmdMes.RequestCtx() from command processor
-	LogCtxForSyncProjector() context.Context // is cmd.cmdMes.RequestCtx() from cmd proc enriched with woffset, poffset, evqname attribs
-	PLogOffset() istructs.Offset
-}
 
 func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator {
 	if conf.IntentsLimit == 0 {
@@ -42,11 +33,11 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 	}
 	h := &syncErrorHandler{ss: ss}
 	return pipeline.NewSyncPipeline(conf.Ctx, "PartitionSyncActualizer",
-		pipeline.WireFunc("Update event", func(_ context.Context, work syncActualizerWorkpiece) (err error) {
+		pipeline.WireFunc("Update event", func(_ context.Context, work processors.IProjectorWorkpiece) (err error) {
 			service.event = work.Event()
 			return nil
 		}),
-		pipeline.WireFunc("Update IAppStructs", func(_ context.Context, work syncActualizerWorkpiece) (err error) {
+		pipeline.WireFunc("Update IAppStructs", func(_ context.Context, work processors.IProjectorWorkpiece) (err error) {
 			service.appStructs = work.AppPartition().AppStructs()
 			return nil
 		}),
@@ -78,7 +69,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 	)
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector",
-			func(ctx context.Context, work syncActualizerWorkpiece) error {
+			func(ctx context.Context, work processors.IProjectorWorkpiece) error {
 				appPart := work.AppPartition()
 				appDef := appPart.AppStructs().AppDef()
 				prj := appdef.Projector(appDef.Type, projector.Name)
@@ -87,7 +78,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 				if triggeredByQName == appdef.NullQName {
 					return nil
 				}
-				projLogCtx := logger.WithContextAttrs(work.LogCtxForSyncProjector(),
+				projLogCtx := logger.WithContextAttrs(work.LogCtx(),
 					map[string]any{logger.LogAttr_Extension: "p." + projector.Name.String()})
 				logger.VerboseCtx(projLogCtx, "sp.triggeredby", triggeredByQName)
 				if err := appPart.Invoke(projLogCtx, projector.Name, s, s); err != nil {

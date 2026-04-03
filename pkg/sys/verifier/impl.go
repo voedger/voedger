@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -160,10 +161,7 @@ func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) 
 		}
 
 		// code ok -> reset per-profile rate limit
-		limitsResetter := args.Workpiece.(interface {
-			ResetRateLimit(appdef.QName, appdef.OperationKind)
-		})
-		limitsResetter.ResetRateLimit(QNameQueryIssueVerifiedValueToken, appdef.OperationKind_Execute)
+		args.Workpiece.(processors.IProcessorWorkpiece).ResetRateLimit(QNameQueryIssueVerifiedValueToken, appdef.OperationKind_Execute)
 
 		return callback(&ivvtResult{verifiedValueToken: verifiedValueToken})
 	}

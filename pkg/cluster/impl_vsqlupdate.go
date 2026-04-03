@@ -14,7 +14,6 @@ import (
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/dml"
@@ -22,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/processors"
 )
 
 func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime,
@@ -57,9 +57,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		return update, errors.New("'update' or 'insert' clause expected")
 	}
 
-	update.appParts = args.Workpiece.(interface {
-		AppPartitions() appparts.IAppPartitions
-	}).AppPartitions()
+	update.appParts = args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
 
 	if update.appStructs, err = asp.BuiltIn(update.AppQName); err != nil {
 		// notest

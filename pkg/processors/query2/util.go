@@ -202,3 +202,7 @@ func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
 func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
 	qw.principals = prns
 }
+
+func (qw *queryWork) LogCtx() context.Context {
+	return qw.msg.RequestCtx()
+}

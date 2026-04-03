@@ -520,6 +520,10 @@ func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
 	qw.principals = prns
 }
 
+func (qw *queryWork) LogCtx() context.Context {
+	return qw.msg.RequestCtx()
+}
+
 func borrowAppPart(_ context.Context, qw *queryWork) error {
 	switch err := qw.borrow(); {
 	case err == nil:
