@@ -31,6 +31,7 @@ type HTTPServerParams struct {
 	WriteTimeout     int
 	ReadTimeout      int
 	ConnectionsLimit int
+	UseProxyProtocol bool
 }
 
 type RouterParams struct {

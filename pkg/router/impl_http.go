@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	proxyproto "github.com/pires/go-proxyproto"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
@@ -82,6 +83,10 @@ func (s *httpServer) prepareBasicServer(handler http.Handler) (err error) {
 	}
 
 	s.listeningPort.Store(uint32(s.listener.Addr().(*net.TCPAddr).Port)) // nolint G115
+
+	if s.UseProxyProtocol {
+		s.listener = &proxyproto.Listener{Listener: s.listener}
+	}
 
 	if s.ConnectionsLimit > 0 {
 		s.listener = netutil.LimitListener(s.listener, s.ConnectionsLimit)
