@@ -635,6 +635,7 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType) router.RouterParams {
 			WriteTimeout:     cfg.RouterWriteTimeout,
 			ReadTimeout:      cfg.RouterReadTimeout,
 			ConnectionsLimit: cfg.RouterConnectionsLimit,
+			UseProxyProtocol: cfg.RouterUseProxyProtocol,
 		},
 		HTTP01ChallengeHosts: cfg.RouterHTTP01ChallengeHosts,
 		RouteDefault:         cfg.RouteDefault,
