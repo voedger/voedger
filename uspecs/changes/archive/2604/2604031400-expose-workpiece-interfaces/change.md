@@ -30,3 +30,15 @@ Replace anonymous casts with named interface casts at all affected call sites:
 - `pkg/sys/authnz/impl_enrichprincipaltoken.go` — `GetPrincipals()`
 - `pkg/sys/workspace/impl.go` — replace `Workpiece` cast with `args.State.Context()` (already available on `IState`)
 - `pkg/processors/actualizers/impl.go` — replace `syncActualizerWorkpiece` with `IProjectorWorkpiece`
+
+Add compile-time assertions and missing interface methods:
+
+- `pkg/processors/command/types.go` — compile-time assertion `var _ processors.IProcessorWorkpiece = (*cmdWorkpiece)(nil)`
+- `pkg/processors/command/impl.go` — rename `logCtxForSyncProjectors`/`LogCtxForSyncProjector()` to `logCtx`/`LogCtx()`, add `GetPrincipals()`, `ResetRateLimit()`, `Roles()` methods
+- `pkg/processors/query/impl.go` — compile-time assertion, add `LogCtx()` method
+- `pkg/processors/query2/util.go` — compile-time assertion upgraded from `pipeline.IWorkpiece` to `processors.IProcessorWorkpiece`, add `AppPartitions()`, `AppPartition()`, `GetPrincipals()`, `Roles()`, `LogCtx()` methods
+
+Move `qNameCDocWorkspaceDescriptor` to break import cycle:
+
+- `pkg/processors/consts.go` — add `qNameCDocWorkspaceDescriptor`
+- `pkg/processors/utils.go` — replace `authnz.QNameCDocWorkspaceDescriptor` with local `qNameCDocWorkspaceDescriptor`

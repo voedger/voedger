@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 // CheckUnexpectedFields validates that all keys in args are known fields of argsType.
@@ -67,7 +66,7 @@ func CheckResponseIntent(st state.IHostState) error {
 
 // returns ErrWSNotInited
 func GetWSDesc(wsid istructs.WSID, appStructs istructs.IAppStructs) (wsDesc istructs.IRecord, err error) {
-	wsDesc, err = appStructs.Records().GetSingleton(wsid, authnz.QNameCDocWorkspaceDescriptor)
+	wsDesc, err = appStructs.Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
 	if err == nil && wsDesc.QName() == appdef.NullQName {
 		err = ErrWSNotInited
 	}
