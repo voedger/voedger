@@ -16,9 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime/debug"
-	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -161,27 +159,9 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 		logger.LogAttr_VApp:      data.appQName,
 		logger.LogAttr_Extension: extension,
 		logAttrib_Origin:         req.Header.Get(httpu.Origin),
-		logAttrib_Headers:        formatHeaders(req.Header),
+		logAttrib_RemoteAddr:     req.RemoteAddr,
 	})
 	return enrichedCtx
-}
-
-func formatHeaders(h http.Header) string {
-	keys := make([]string, 0, len(h))
-	for k := range h {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var b strings.Builder
-	for i, k := range keys {
-		if i > 0 {
-			b.WriteByte(';')
-		}
-		b.WriteString(k)
-		b.WriteByte('=')
-		b.WriteString(strings.Join(h[k], ","))
-	}
-	return b.String()
 }
 
 func logLatency(ctx context.Context, sentAt time.Time) {
