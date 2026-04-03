@@ -450,6 +450,8 @@ type queryWork struct {
 	responseWriterGetter func() bus.IResponseWriter
 }
 
+var _ processors.IProcessorWorkpiece = (*queryWork)(nil)
+
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
 	return &queryWork{

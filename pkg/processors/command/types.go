@@ -96,6 +96,8 @@ type cmdWorkpiece struct {
 	logCtx                       context.Context // enriched log ctx from logEventAndCUDs (woffset, poffset, evqname)
 }
 
+var _ processors.IProcessorWorkpiece = (*cmdWorkpiece)(nil)
+
 type implIDGeneratorReporter struct {
 	istructs.IIDGenerator
 	generatedIDs map[istructs.RecordID]istructs.RecordID
