@@ -49,7 +49,7 @@ const (
 	hours24                       = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503 = 1
 	logAttrib_Origin              = "origin"
-	logAttrib_Headers             = "headers"
+	logAttrib_RemoteAddr          = "remoteaddr"
 	logAttrib_Projection          = "projection"
 	logAttrib_ChannelID           = "channelid"
 	n10nErrorStage                = "n10n.error"
