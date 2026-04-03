@@ -87,9 +87,8 @@ func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
 }
 
-// need for sync projectors for logging
-func (c *cmdWorkpiece) LogCtxForSyncProjector() context.Context {
-	return c.logCtxForSyncProjectors
+func (c *cmdWorkpiece) LogCtx() context.Context {
+	return c.logCtx
 }
 
 // used in projectors.NewSyncActualizerFactoryFactory
@@ -105,6 +104,18 @@ func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 // need for sync projectors for logging
 func (c *cmdWorkpiece) PLogOffset() istructs.Offset {
 	return c.pLogOffset
+}
+
+func (c *cmdWorkpiece) GetPrincipals() []iauthnz.Principal {
+	return c.principals
+}
+
+func (c *cmdWorkpiece) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind) {
+	c.appPart.ResetRateLimit(resource, operation, c.cmdMes.WSID(), c.cmdMes.Host())
+}
+
+func (c *cmdWorkpiece) Roles() []appdef.QName {
+	return c.roles
 }
 
 // https://github.com/voedger/voedger/issues/3163
@@ -312,7 +323,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 
 	if lastPLogEvent != nil {
 		// re-apply the last event
-		cmd.logCtxForSyncProjectors, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
+		cmd.logCtx, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
 			"cp.partition_recovery.reapply", nil, "")
 		if err != nil {
 			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.logeventandcuds.error", err)
@@ -331,7 +342,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 		cmd.reapplier = nil
 		cmd.workspace = nil
 		cmd.pLogEvent = nil
-		cmd.logCtxForSyncProjectors = nil
+		cmd.logCtx = nil
 		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 	}
 
@@ -389,7 +400,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		"",
 	)
 
-	cmd.logCtxForSyncProjectors = enrichedLogCtx
+	cmd.logCtx = enrichedLogCtx
 	return err
 }
 

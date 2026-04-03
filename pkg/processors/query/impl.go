@@ -450,6 +450,8 @@ type queryWork struct {
 	responseWriterGetter func() bus.IResponseWriter
 }
 
+var _ processors.IProcessorWorkpiece = (*queryWork)(nil)
+
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
 	return &queryWork{
@@ -518,6 +520,10 @@ func (qw *queryWork) Roles() []appdef.QName {
 
 func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
 	qw.principals = prns
+}
+
+func (qw *queryWork) LogCtx() context.Context {
+	return qw.msg.RequestCtx()
 }
 
 func borrowAppPart(_ context.Context, qw *queryWork) error {

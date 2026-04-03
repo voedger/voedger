@@ -15,7 +15,6 @@ import (
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -26,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/processors"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -183,8 +183,9 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				for f := range f.fields {
 					fields = append(fields, f)
 				}
-				apppart := args.Workpiece.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
-				roles := args.Workpiece.(interface{ Roles() []appdef.QName }).Roles()
+				wp := args.Workpiece.(processors.IProcessorWorkpiece)
+				apppart := wp.AppPartition()
+				roles := wp.Roles()
 				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, sourceTableName, fields, roles)
 				if err != nil {
 					// notest
@@ -223,9 +224,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			if e != nil {
 				return e
 			}
-			appParts := args.Workpiece.(interface {
-				AppPartitions() appparts.IAppPartitions
-			}).AppPartitions()
+			appParts := args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
 			if sourceTableName == plog {
 				return coreutils.WrapSysError(readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts),
 					http.StatusBadRequest)

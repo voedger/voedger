@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
@@ -45,9 +46,7 @@ func createLogin(args istructs.ExecCommandArgs, login string) (err error) {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 	}
 
-	appParts := args.Workpiece.(interface {
-		AppPartitions() appparts.IAppPartitions
-	}).AppPartitions()
+	appParts := args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
 	if _, err = appParts.AppDef(appQName); err != nil {
 		if errors.Is(err, appparts.ErrNotFound) {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("target app %s is not found", appQName))

@@ -146,9 +146,9 @@ func (w *testCmdWorkpiece) Release() {
 	}
 }
 
-func (w *testCmdWorkpiece) Context() context.Context { return context.Background() }
+func (w *testCmdWorkpiece) Context() context.Context    { return context.Background() }
 func (w *testCmdWorkpiece) PLogOffset() istructs.Offset { return 0 }
-func (w *testCmdWorkpiece) LogCtxForSyncProjector() context.Context { return context.Background() }
+func (w *testCmdWorkpiece) LogCtx() context.Context     { return context.Background() }
 
 type testCmdProc struct {
 	pipeline.ISyncPipeline

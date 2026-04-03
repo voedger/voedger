@@ -83,9 +83,16 @@ type queryWork struct {
 	profileWSID          istructs.WSID
 }
 
-var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece
+var _ processors.IProcessorWorkpiece = (*queryWork)(nil)
 
-// used by e.g. q.sys.IssueVerifiedValueToken
+func (qw *queryWork) AppPartitions() appparts.IAppPartitions { return qw.appParts }
+
+func (qw *queryWork) AppPartition() appparts.IAppPartition { return qw.appPart }
+
+func (qw *queryWork) GetPrincipals() []iauthnz.Principal { return qw.principals }
+
+func (qw *queryWork) Roles() []appdef.QName { return qw.roles }
+
 func (qw *queryWork) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind) {
 	qw.appPart.ResetRateLimit(resource, operation, qw.msg.WSID(), qw.msg.Host())
 }
@@ -201,4 +208,8 @@ func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
 
 func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
 	qw.principals = prns
+}
+
+func (qw *queryWork) LogCtx() context.Context {
+	return qw.msg.RequestCtx()
 }

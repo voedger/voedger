@@ -5,7 +5,6 @@
 package workspace
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -122,7 +121,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 
 	// Get new WSID from View<NextBaseWSID>
 	as := args.State.AppStructs()
-	newWSID, err := GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.WSID.ClusterID())
+	newWSID, err := GetNextWSID(args.State.Context(), as, args.WSID.ClusterID())
 	if err != nil {
 		return err
 	}

@@ -213,16 +213,16 @@ The enriched context returned by `processors.LogEventAndCUDs()` (with attribs `w
 - `logEventAndCUDs` (called after PLog write) saves the enriched context to `cmdWorkpiece.logCtx`
 - During partition recovery, `LogEventAndCUDs()` is called for the re-applied event and its result is also stored in `cmdWorkpiece.logCtx`
 - Command processor sync projector handler reads `cmd.logCtx` for `sp.success` and `sp.error` logs
-- Each projector branch receives `cmd.logCtx` (via `syncActualizerWorkpiece.LogCtxForSyncProjector()`) for its per-projector logs
+- Each projector branch receives `cmd.logCtx` (via `processors.IProjectorWorkpiece.LogCtx()`) for its per-projector logs
 
 **Command processor logs** (using `cmd.logCtx`):
 
 - After all sync projectors succeed: level `Verbose`, stage `sp.success`, msg (empty)
 - Sync projector error: level `Error`, stage `sp.error`, msg `<error message>`
 
-**Each triggered sync projector** (using `LogCtxForSyncProjector()`):
+**Each triggered sync projector** (using `LogCtx()`):
 
-The event is already logged by the command processor (`cp.plog_saved`), so there is no separate `logEventAndCUDs` call per projector. The projector uses `LogCtxForSyncProjector()` directly to obtain the enriched context and extends it with `extension`=`<projector QName>`:
+The event is already logged by the command processor (`cp.plog_saved`), so there is no separate `logEventAndCUDs` call per projector. The projector uses `processors.IProjectorWorkpiece.LogCtx()` to obtain the enriched context and extends it with `extension`=`<projector QName>`:
 
 - Right before `IAppParts.Invoke()`: level `Verbose`, stage `sp.triggeredby`, msg `<triggered by qname>`, `extension`=`<projector QName>`
 - After successful `Invoke()`: level `Verbose`, stage `sp.success`, `extension`=`<projector QName>`, msg (empty)
