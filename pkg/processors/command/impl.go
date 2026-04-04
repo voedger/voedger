@@ -158,6 +158,7 @@ func (c *cmdWorkpiece) Release() {
 		c.appPart = nil
 		ap.Release()
 	}
+	c.hostState.wp = nil
 }
 
 func borrowAppPart(_ context.Context, cmd *cmdWorkpiece) error {
@@ -255,12 +256,10 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, cmd *cmdWorkpiece) (
 }
 
 func (cmdProc *cmdProc) getHostState(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset,
-		cmd.argsObject, cmd.unloggedArgsObject, cmd.cmdMes.PartitionID(), cmd.cmdMes.Origin())
-	hs.ClearIntents()
-	cmd.eca.State = hs
-	cmd.eca.Intents = hs
+	cmd.hostState.bind(cmd)
+	cmd.hostState.state.ClearIntents()
+	cmd.eca.State = cmd.hostState.state
+	cmd.eca.Intents = cmd.hostState.state
 	return nil
 }
 
@@ -673,7 +672,7 @@ func appendBLOBOwnershipUpdaters(ctx context.Context, cmd *cmdWorkpiece) (err er
 }
 
 func checkResponseIntent(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	return processors.CheckResponseIntent(cmd.hostStateProvider.state)
+	return processors.CheckResponseIntent(cmd.hostState.state)
 }
 
 func buildRawEvent(_ context.Context, cmd *cmdWorkpiece) (err error) {
