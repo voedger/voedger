@@ -41,4 +41,4 @@ Add compile-time assertions and missing interface methods:
 Move `qNameCDocWorkspaceDescriptor` to break import cycle:
 
 - `pkg/processors/consts.go` — add `qNameCDocWorkspaceDescriptor`
-- `pkg/processors/utils.go` — replace `authnz.QNameCDocWorkspaceDescriptor` with local `qNameCDocWorkspaceDescriptor`
+- `pkg/processors/utils.go` — replace `appdef.QNameCDocWorkspaceDescriptor` with local `qNameCDocWorkspaceDescriptor`

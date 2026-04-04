@@ -5,8 +5,6 @@
 
 package processors
 
-import "github.com/voedger/voedger/pkg/appdef"
-
 const Field_RawObject_Body = "Body"
 
 const (
@@ -23,8 +21,4 @@ const (
 	APIPath_Auth_Refresh
 	APIPath_Users
 	APIPath_N10N_SubscribeAndWatch
-)
-
-var (
-	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
 )

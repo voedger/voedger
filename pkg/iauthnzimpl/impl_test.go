@@ -53,7 +53,7 @@ func TestBasicUsage(t *testing.T) {
 
 		// workspace owned by the user
 		istructs.WSID(2): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=1
 				1: {
 					"OwnerWSID": int64(1), // the same as ProfileWSID
@@ -63,7 +63,7 @@ func TestBasicUsage(t *testing.T) {
 
 		// child workspace. Parent is WSID 2
 		istructs.WSID(3): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=2
 				1: {
 					"OwnerWSID": int64(2),
@@ -226,7 +226,7 @@ func TestAuthenticate(t *testing.T) {
 
 		// workspace owned by the user
 		istructs.WSID(2): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=1
 				1: {
 					"OwnerWSID": int64(1), // the same as ProfileWSID
@@ -236,7 +236,7 @@ func TestAuthenticate(t *testing.T) {
 
 		// child workspace. Parent is WSID 2
 		istructs.WSID(3): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=2
 				1: {
 					"OwnerWSID": int64(2),

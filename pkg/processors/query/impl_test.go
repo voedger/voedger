@@ -330,7 +330,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 			SyncedAt:                     istructs.UnixMilli(now.UnixMilli()),
 		},
 	)
-	cdocWSDesc := reb.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cdocWSDesc := reb.CUDBuilder().Create(appdef.QNameCDocWorkspaceDescriptor)
 	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
 	cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
 	cdocWSDesc.PutQName(authnz.Field_WSKind, qNameTestWSDescriptor)

@@ -66,11 +66,11 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 			return nil
 		}
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
-		skbCDocWorkspaceDescriptor.PutQName(sys.Storage_Record_Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(sys.Storage_Record_Field_Singleton, appdef.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return

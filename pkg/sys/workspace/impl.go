@@ -257,7 +257,7 @@ func execCmdCreateWorkspace(time timeu.ITime) istructsmem.ExecCommandClosure {
 		}()
 
 		// create CDoc<sys.WorkspaceDescriptor> (singleton)
-		kb, err := args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+		kb, err := args.State.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
@@ -304,7 +304,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
 		for rec := range event.CUDs {
-			if rec.QName() != authnz.QNameCDocWorkspaceDescriptor {
+			if rec.QName() != appdef.QNameCDocWorkspaceDescriptor {
 				continue
 			}
 			if rec.AsQName(authnz.Field_WSKind) == authnz.QNameCDoc_WorkspaceKind_AppWorkspace {
@@ -368,7 +368,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				info("initStartedAtMs = 0. WS init was not started")
 				// WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
 				body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.QName": "%s","%s": %d}}]}`,
-					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitStartedAtMs, time.Now().UnixMilli())
+					wsDescr.ID(), appdef.QNameCDocWorkspaceDescriptor, Field_InitStartedAtMs, time.Now().UnixMilli())
 				info("updating initStartedAtMs:", updateWSDescrURL)
 
 				if _, err := federation.Func(updateWSDescrURL, body, httpu.WithAuthorizeBy(systemPrincipalToken_TargetApp), httpu.WithDiscardResponse()); err != nil {
@@ -388,7 +388,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 					wsErrStr = wsError.Error()
 				}
 				body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
-					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, time.Now().UnixMilli())
+					wsDescr.ID(), appdef.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, httpu.WithAuthorizeBy(systemPrincipalToken_TargetApp), httpu.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					continue
@@ -397,7 +397,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				info("initCompletedAtMs = 0. WS data init was interrupted")
 				wsError = errors.New("workspace data initialization was interrupted")
 				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
-					authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, time.Now().UnixMilli())
+					appdef.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, httpu.WithAuthorizeBy(systemPrincipalToken_TargetApp), httpu.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					continue

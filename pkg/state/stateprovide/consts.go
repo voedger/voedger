@@ -5,7 +5,6 @@
 package stateprovide
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -23,7 +22,3 @@ const (
 )
 
 var emptyApplyBatchItem = state.ApplyBatchItem{}
-
-var (
-	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
-)
