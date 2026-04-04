@@ -80,7 +80,7 @@ type cmdWorkpiece struct {
 	roles                        []appdef.QName
 	parsedCUDs                   []parsedCUD
 	wsDesc                       istructs.IRecord
-	hostStateProvider            *hostStateProvider
+	hostState                    *reusableHostState
 	wsInitialized                bool
 	cmdResultBuilder             istructs.IObjectBuilder
 	cmdResult                    istructs.IObject
@@ -132,58 +132,33 @@ type wrongArgsCatcher struct {
 	pipeline.NOOP
 }
 
-type hostStateProvider struct {
-	as               istructs.IAppStructs
-	cud              istructs.ICUD
-	wsid             istructs.WSID
-	principals       []iauthnz.Principal
-	state            state.IHostState
-	token            string
-	cmdResultBuilder istructs.IObjectBuilder
-	cmdPrepareArgs   istructs.CommandPrepareArgs
-	wlogOffset       istructs.Offset
-	origin           string
-	args             istructs.IObject
-	unloggedArgs     istructs.IObject
-	partitionID      istructs.PartitionID
+type reusableHostState struct {
+	wp    *cmdWorkpiece
+	state state.IHostState
 }
 
-func newHostStateProvider(ctx context.Context, secretReader isecrets.ISecretReader) *hostStateProvider {
-	p := &hostStateProvider{}
-	p.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, p.getPartititonID,
-		p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, actualizers.DefaultIntentsLimit,
-		p.getCmdResultBuilder, p.getCmdPrepareArgs, p.getArgs, p.getUnloggedArgs, p.getWLogOffset, state.NullOpts, p.getOrigin)
-	return p
+func newReusableHostState(ctx context.Context, secretReader isecrets.ISecretReader) *reusableHostState {
+	b := &reusableHostState{}
+	b.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx,
+		func() istructs.IAppStructs { return b.wp.appStructs },
+		func() istructs.PartitionID { return b.wp.cmdMes.PartitionID() },
+		func() istructs.WSID { return b.wp.cmdMes.WSID() },
+		secretReader,
+		func() istructs.ICUD { return b.wp.reb.CUDBuilder() },
+		func() []iauthnz.Principal { return b.wp.principals },
+		func() string { return b.wp.cmdMes.Token() },
+		actualizers.DefaultIntentsLimit,
+		func() istructs.IObjectBuilder { return b.wp.cmdResultBuilder },
+		func() istructs.CommandPrepareArgs { return b.wp.eca.CommandPrepareArgs },
+		func() istructs.IObject { return b.wp.argsObject },
+		func() istructs.IObject { return b.wp.unloggedArgsObject },
+		func() istructs.Offset { return b.wp.workspace.NextWLogOffset },
+		state.NullOpts,
+		func() string { return b.wp.cmdMes.Origin() },
+	)
+	return b
 }
 
-func (p *hostStateProvider) getAppStructs() istructs.IAppStructs { return p.as }
-func (p *hostStateProvider) getWSID() istructs.WSID              { return p.wsid }
-func (p *hostStateProvider) getCUD() istructs.ICUD               { return p.cud }
-func (p *hostStateProvider) getPrincipals() []iauthnz.Principal {
-	return p.principals
-}
-func (p *hostStateProvider) getToken() string                               { return p.token }
-func (p *hostStateProvider) getCmdResultBuilder() istructs.IObjectBuilder   { return p.cmdResultBuilder }
-func (p *hostStateProvider) getCmdPrepareArgs() istructs.CommandPrepareArgs { return p.cmdPrepareArgs }
-func (p *hostStateProvider) getWLogOffset() istructs.Offset                 { return p.wlogOffset }
-func (p *hostStateProvider) getOrigin() string                              { return p.origin }
-func (p *hostStateProvider) getArgs() istructs.IObject                      { return p.args }
-func (p *hostStateProvider) getUnloggedArgs() istructs.IObject              { return p.unloggedArgs }
-func (p *hostStateProvider) getPartititonID() istructs.PartitionID          { return p.partitionID }
-func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string,
-	cmdResultBuilder istructs.IObjectBuilder, cmdPrepareArgs istructs.CommandPrepareArgs, wlogOffset istructs.Offset, args istructs.IObject,
-	unloggedArgs istructs.IObject, partitionID istructs.PartitionID, origin string) state.IHostState {
-	p.as = appStructs
-	p.wsid = wsid
-	p.cud = cud
-	p.principals = principals
-	p.token = token
-	p.cmdResultBuilder = cmdResultBuilder
-	p.cmdPrepareArgs = cmdPrepareArgs
-	p.wlogOffset = wlogOffset
-	p.args = args
-	p.unloggedArgs = unloggedArgs
-	p.partitionID = partitionID
-	p.origin = origin
-	return p.state
+func (b *reusableHostState) bind(wp *cmdWorkpiece) {
+	b.wp = wp
 }
