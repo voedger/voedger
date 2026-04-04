@@ -32,7 +32,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state/safestate"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -943,7 +942,7 @@ func appStructsFromSQL(packagePath string, appdefSQL string, prepareAppCfg appCf
 			WLogOffset:        wlogOffset,
 		},
 	})
-	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cud := rebWs.CUDBuilder().Create(appdef.QNameCDocWorkspaceDescriptor)
 	cud.PutRecordID(appdef.SystemField_ID, 1)
 	cud.PutQName("WSKind", testWorkspaceDescriptor)
 	rawWsEvent, err := rebWs.BuildRawEvent()

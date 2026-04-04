@@ -65,7 +65,7 @@
   - add: `qNameCDocWorkspaceDescriptor` variable
 
 - [x] update: [pkg/processors/utils.go](../../../../pkg/processors/utils.go)
-  - replace: `authnz.QNameCDocWorkspaceDescriptor` with local `qNameCDocWorkspaceDescriptor`
+  - replace: `appdef.QNameCDocWorkspaceDescriptor` with local `qNameCDocWorkspaceDescriptor`
   - remove: `authnz` import
 
 ### Test updates

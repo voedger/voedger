@@ -64,12 +64,12 @@ func provideDeactivateWorkspace(sr istructsmem.IStatelessResources, tokensAPI it
 }
 
 func cmdInitiateDeactivateWorkspaceExec(args istructs.ExecCommandArgs) (err error) {
-	kb, err := args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+	kb, err := args.State.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
 		return err
 	}
-	kb.PutQName(sys.Storage_Record_Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+	kb.PutQName(sys.Storage_Record_Field_Singleton, appdef.QNameCDocWorkspaceDescriptor)
 	wsDesc, err := args.State.MustExist(kb)
 	if err != nil {
 		// notest
@@ -183,12 +183,12 @@ func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err erro
 // target app, target WSID
 func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		kb, err := s.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+		kb, err := s.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			// notest
 			return err
 		}
-		kb.PutQName(sys.Storage_Record_Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+		kb.PutQName(sys.Storage_Record_Field_Singleton, appdef.QNameCDocWorkspaceDescriptor)
 		wsDesc, err := s.MustExist(kb)
 		if err != nil {
 			// notest

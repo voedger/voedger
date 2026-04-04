@@ -374,7 +374,7 @@ func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsKind, wsDescr
 			QName:             newWorkspaceCmd,
 		},
 	})
-	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cud := rebWs.CUDBuilder().Create(appdef.QNameCDocWorkspaceDescriptor)
 	cud.PutRecordID(appdef.SystemField_ID, 1)
 	cud.PutQName(authnz.Field_WSKind, wsDescriptorKind)
 	cud.PutInt32("Status", int32(authnz.WorkspaceStatus_Active))

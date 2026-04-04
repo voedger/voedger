@@ -405,7 +405,7 @@ func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 }
 
 func getWSDesc(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
+	cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), appdef.QNameCDocWorkspaceDescriptor)
 	return err
 }
 

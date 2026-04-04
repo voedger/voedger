@@ -48,11 +48,11 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 		verificationCode := coreutils.EmailVerificationCode()
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return
 		}
-		skbCDocWorkspaceDescriptor.PutQName(sys.Storage_Record_Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(sys.Storage_Record_Field_Singleton, appdef.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return

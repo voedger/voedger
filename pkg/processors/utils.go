@@ -66,7 +66,7 @@ func CheckResponseIntent(st state.IHostState) error {
 
 // returns ErrWSNotInited
 func GetWSDesc(wsid istructs.WSID, appStructs istructs.IAppStructs) (wsDesc istructs.IRecord, err error) {
-	wsDesc, err = appStructs.Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
+	wsDesc, err = appStructs.Records().GetSingleton(wsid, appdef.QNameCDocWorkspaceDescriptor)
 	if err == nil && wsDesc.QName() == appdef.NullQName {
 		err = ErrWSNotInited
 	}

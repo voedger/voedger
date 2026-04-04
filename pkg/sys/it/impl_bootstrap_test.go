@@ -11,6 +11,7 @@ import (
 	"testing/fstest"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/bus"
@@ -27,7 +28,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/parser"
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -230,9 +230,9 @@ func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Asse
 		require.NoError(err)
 		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
 			appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
+			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, appdef.QNameCDocWorkspaceDescriptor)
 			require.NoError(err)
-			require.Equal(authnz.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
+			require.Equal(appdef.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
 		}
 	}
 }

@@ -6,8 +6,6 @@ package storages
 
 import (
 	"time"
-
-	"github.com/voedger/voedger/pkg/appdef"
 )
 
 const (
@@ -15,8 +13,4 @@ const (
 	httpStorageKeyBuilderStringerSliceCap = 3
 	field_WSKind                          = "WSKind"
 	wsidTypeValidatorCacheSize            = 100
-)
-
-var (
-	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
 )

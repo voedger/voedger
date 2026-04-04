@@ -164,7 +164,7 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 }
 
 func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, appWSID istructs.WSID, plogOffset, wlogOffset istructs.Offset, currentMillis istructs.UnixMilli) (inited bool, err error) {
-	existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
+	existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, appdef.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
 		return false, err
@@ -188,7 +188,7 @@ func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, appWSI
 			SyncedAt:                     currentMillis,
 		},
 	)
-	cdocWSDesc := reb.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cdocWSDesc := reb.CUDBuilder().Create(appdef.QNameCDocWorkspaceDescriptor)
 	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
 	cdocWSDesc.PutString(authnz.Field_WSName, "appWS0")
 	cdocWSDesc.PutQName(authnz.Field_WSKind, authnz.QNameCDoc_WorkspaceKind_AppWorkspace)

@@ -472,12 +472,12 @@ func logEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent,
 }
 
 func (p *asyncProjector) isProjectorDefined() (bool, error) {
-	skbCDocWorkspaceDescriptor, err := p.state.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+	skbCDocWorkspaceDescriptor, err := p.state.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
 		return false, err
 	}
-	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, appdef.QNameCDocWorkspaceDescriptor)
 	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace())) // nolint G115
 	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
 	if err != nil {
