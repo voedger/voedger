@@ -13,7 +13,7 @@ The hostState reuse mechanism in the command processor is overcomplicated, relyi
 
 ## What
 
-Simplify IState reuse by using the current workpiece directly instead of closures that read from the workpiece:
+Simplify IState reuse by removing the intermediate mirror/provider struct and redundant copying, while reading state directly from the current workpiece where needed:
 
-- Remove excessive closure-based state passing in command processor
+- Remove the intermediate state mirror/provider layer in the command processor
 - Use workpiece fields directly since the workpiece already contains all necessary data for state reuse

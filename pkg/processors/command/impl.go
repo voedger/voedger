@@ -158,6 +158,7 @@ func (c *cmdWorkpiece) Release() {
 		c.appPart = nil
 		ap.Release()
 	}
+	c.hostState.wp = nil
 }
 
 func borrowAppPart(_ context.Context, cmd *cmdWorkpiece) error {

@@ -7,7 +7,7 @@
 
 ## Why
 
-hostState in command processor reuse looks overcomplicated: huge amount of closures is provided etc
+hostState reuse in the command processor looks overcomplicated: a huge number of closures are provided
 
 ## What
 
