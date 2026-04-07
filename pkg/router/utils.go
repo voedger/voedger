@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"runtime/debug"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -154,10 +153,6 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 		}
 	}
 	newReqID := fmt.Sprintf("%s-%d", globalServerStartTime, reqID.Add(1))
-	headers := make([]string, 0, len(req.Header))
-	for name, values := range req.Header {
-		headers = append(headers, name+"="+strings.Join(values, ","))
-	}
 	enrichedCtx := logger.WithContextAttrs(ctx, map[string]any{
 		logger.LogAttr_ReqID:     newReqID,
 		logger.LogAttr_WSID:      data.wsid,
@@ -165,7 +160,6 @@ func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Requ
 		logger.LogAttr_Extension: extension,
 		logAttrib_Origin:         req.Header.Get(httpu.Origin),
 		logAttrib_RemoteAddr:     req.RemoteAddr,
-		"headers":                strings.Join(headers, "; "),
 	})
 	return enrichedCtx
 }
