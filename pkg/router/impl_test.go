@@ -367,28 +367,16 @@ func TestAdminService(t *testing.T) {
 	})
 
 	t.Run("unable to work from non-127.0.0.1", func(t *testing.T) {
-		addrs, err := net.InterfaceAddrs()
-		require.NoError(err)
-		for _, address := range addrs {
-			ipnet, ok := address.(*net.IPNet)
-			if !ok || ipnet.IP.IsLoopback() || ipnet.IP.To4() == nil {
-				continue
-			}
-			nonLocalhostIP := ipnet.IP.To4().String()
-			conn, dialErr := net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
-			if dialErr == nil {
-				conn.Close()
-				t.Logf("skipping %s: routes to localhost (virtual adapter)", nonLocalhostIP)
-				continue
-			}
-			if !errors.Is(dialErr, context.DeadlineExceeded) && !strings.Contains(dialErr.Error(), "connection refused") &&
-				!strings.Contains(dialErr.Error(), "i/o timeout") {
-				t.Fatal(dialErr)
-			}
-			log.Println(dialErr)
-			return
+		nonLocalhostIP := findNonLoopbackIP(t)
+		_, dialErr := net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
+		if dialErr == nil {
+			t.Fatalf("admin service is reachable from non-loopback IP %s", nonLocalhostIP)
 		}
-		t.Skip("all non-loopback IPs route to localhost")
+		if !errors.Is(dialErr, context.DeadlineExceeded) && !strings.Contains(dialErr.Error(), "connection refused") &&
+			!strings.Contains(dialErr.Error(), "i/o timeout") {
+			t.Fatal(dialErr)
+		}
+		log.Println(dialErr)
 	})
 }
 
@@ -472,6 +460,39 @@ func waitForServer(t *testing.T, port int) {
 		}
 		return resp.StatusCode == http.StatusOK
 	}, 1*time.Second, 10*time.Millisecond)
+}
+
+// findNonLoopbackIP returns a non-loopback IPv4 address that does not route to localhost.
+// Virtual adapters (e.g. VirtualBox Host-Only) may silently forward traffic to 127.0.0.1,
+// so a canary listener on 127.0.0.1 is used to detect and skip such IPs.
+func findNonLoopbackIP(t *testing.T) string {
+	t.Helper()
+	canary, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer canary.Close()
+	canaryAddr := canary.Addr().(*net.TCPAddr)
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, address := range addrs {
+		ipnet, ok := address.(*net.IPNet)
+		if !ok || ipnet.IP.IsLoopback() || ipnet.IP.To4() == nil {
+			continue
+		}
+		ip := ipnet.IP.To4().String()
+		conn, dialErr := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, canaryAddr.Port), 500*time.Millisecond)
+		if dialErr == nil {
+			conn.Close()
+			t.Logf("skipping %s: virtual adapter routes to localhost", ip)
+			continue
+		}
+		return ip
+	}
+	t.Skip("no non-loopback IP that does not route to localhost")
+	return ""
 }
 
 func (t testRouter) port() int {
