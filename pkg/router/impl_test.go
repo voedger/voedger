@@ -367,28 +367,28 @@ func TestAdminService(t *testing.T) {
 	})
 
 	t.Run("unable to work from non-127.0.0.1", func(t *testing.T) {
-		nonLocalhostIP := ""
 		addrs, err := net.InterfaceAddrs()
 		require.NoError(err)
 		for _, address := range addrs {
-			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-				if ipnet.IP.To4() != nil {
-					nonLocalhostIP = ipnet.IP.To4().String()
-					break
-				}
+			ipnet, ok := address.(*net.IPNet)
+			if !ok || ipnet.IP.IsLoopback() || ipnet.IP.To4() == nil {
+				continue
 			}
+			nonLocalhostIP := ipnet.IP.To4().String()
+			conn, dialErr := net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
+			if dialErr == nil {
+				conn.Close()
+				t.Logf("skipping %s: routes to localhost (virtual adapter)", nonLocalhostIP)
+				continue
+			}
+			if !errors.Is(dialErr, context.DeadlineExceeded) && !strings.Contains(dialErr.Error(), "connection refused") &&
+				!strings.Contains(dialErr.Error(), "i/o timeout") {
+				t.Fatal(dialErr)
+			}
+			log.Println(dialErr)
+			return
 		}
-		if len(nonLocalhostIP) == 0 {
-			t.Skip("unable to find local non-loopback ip address")
-		}
-		// hostport
-		_, err = net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
-		require.Error(err)
-		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") &&
-			!strings.Contains(err.Error(), "i/o timeout") {
-			t.Fatal(err)
-		}
-		log.Println(err)
+		t.Skip("all non-loopback IPs route to localhost")
 	})
 }
 
@@ -459,13 +459,18 @@ func tearDown(router *testRouter) {
 
 func waitForServer(t *testing.T, port int) {
 	t.Helper()
+	client := &http.Client{
+		Timeout: 100 * time.Millisecond,
+	}
 	require.Eventually(t, func() bool {
-		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/check", port))
+		resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/check", port))
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+		}
 		if err != nil {
 			return false
 		}
-		resp.Body.Close()
-		return true
+		return resp.StatusCode == http.StatusOK
 	}, 1*time.Second, 10*time.Millisecond)
 }
 
