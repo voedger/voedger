@@ -18,7 +18,7 @@ ISequencer package (implemented, **not yet integrated** into command processor):
   - [flusher](../../../../pkg/isequencer/impl.go#L119): goroutine — writes batched values to storage
   - [cleanup](../../../../pkg/isequencer/impl.go#L455): stops goroutines via context cancellation
 - [ISeqStorage](../../../../pkg/isequencer/interface.go#L12): interface — storage abstraction for sequence numbers and PLog offsets
-- [IVVMSeqStorageAdapter](../../../../pkg/isequencer/interface.go#L31): interface — low-level VVM storage access
+- [IVVMSeqStorageAdapter](../../../../pkg/isequencer/interface.go#L31): interface — low-level VVM storage access; all methods accept `appID` to scope data per application
 - [Params](../../../../pkg/isequencer/types.go#L38): struct — sequencer configuration (cache size, flush limits, seq types)
 
 ISequencer storage implementations (implemented, **not yet integrated**):
@@ -342,6 +342,24 @@ Only **2 sequences** remain:
 - **QNameWLogOffsetSequence** — WLog offsets (starts from 1)
 
 PLog offset is managed per partition in `appPartition.nextPLogOffset`, not as a separate sequence.
+
+## VVM storage key structure
+
+All sequence data in `IVVMSeqStorageAdapter` is scoped per application to ensure apps do not interfere with each other.
+
+Sequence numbers:
+
+- PKey: `(pKeyPrefix_SeqStorage_WS[4], AppID[4], WSID[8])` — 16 bytes
+- CCols: `SeqID[2]` — 2 bytes
+- Value: `Number[8]` — 8 bytes
+
+PLog offset:
+
+- PKey: `(pKeyPrefix_SeqStorage_Part[4], AppID[4], PartitionID[2])` — 10 bytes
+- CCols: `[4]` — 4 zero bytes
+- Value: `PLogOffset[8]` — 8 bytes
+
+Both key structures include `AppID` so that different applications sharing the same VVM storage get independent numbering.
 
 ## Summary
 
