@@ -423,6 +423,8 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandl
 	onRequestCtxClosed = func() {
 		router.clientDisconnections <- struct{}{}
 	}
+	waitForServer(t, router.port())
+	waitForServer(t, router.adminPort())
 }
 
 func setUp(t *testing.T, requestHandler bus.RequestHandler) *testRouter {
@@ -453,6 +455,18 @@ func tearDown(router *testRouter) {
 	router.httpService.Stop()
 	router.adminService.Stop()
 	router.wg.Wait()
+}
+
+func waitForServer(t *testing.T, port int) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/check", port))
+		if err != nil {
+			return false
+		}
+		resp.Body.Close()
+		return true
+	}, 1*time.Second, 10*time.Millisecond)
 }
 
 func (t testRouter) port() int {
