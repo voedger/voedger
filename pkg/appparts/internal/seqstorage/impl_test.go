@@ -232,7 +232,7 @@ func TestSequenceActualization(t *testing.T) {
 			name: "singleton CUD must be skipped",
 			plog: []testPLogEvent{
 				{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{
-					{qName: testSingletonCDocQName, exactID: istructs.RecordID(istructs.FirstSingletonID)},
+					{qName: testSingletonCDocQName, exactID: istructs.FirstSingletonID},
 					{qName: testCDocQName, id: 200001},
 				}, expectedBatch: []expectedSeqValue{
 					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 200001},
