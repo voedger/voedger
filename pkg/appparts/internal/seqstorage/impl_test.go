@@ -156,9 +156,9 @@ func TestSequenceActualization(t *testing.T) {
 		},
 		{
 			name: "one event with one cud",
-			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{{qName: testCDocQName, id: 1}},
+			plog: []testPLogEvent{{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{{qName: testCDocQName, exactID: istructs.FirstUserRecordID}},
 				expectedBatch: []expectedSeqValue{
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 1},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID)},
 					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
 				}}},
 		},
@@ -166,24 +166,24 @@ func TestSequenceActualization(t *testing.T) {
 			name: "3 events, 2nd has 2 cuds, other - 1 cud",
 			plog: []testPLogEvent{
 				// 1st event
-				{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{{qName: testCDocQName, id: 1}},
+				{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{{qName: testCDocQName, exactID: istructs.FirstUserRecordID}},
 					expectedBatch: []expectedSeqValue{
-						{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 1},
+						{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID)},
 						{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
 					}},
 				// 2nd event
 				{qName: testCmdQName, wsid: 2, pLogOffset: 2, wLogOffset: 3, cuds: []cud{
-					{qName: testCDocQName, id: 2},
-					{qName: testWDocQName, id: 3},
+					{qName: testCDocQName, exactID: istructs.FirstUserRecordID + 1},
+					{qName: testWDocQName, exactID: istructs.FirstUserRecordID + 2},
 				}, expectedBatch: []expectedSeqValue{
-					{wsid: 2, seqID: istructs.QNameIDRecordIDSequence, number: 2},
-					{wsid: 2, seqID: istructs.QNameIDRecordIDSequence, number: 3},
+					{wsid: 2, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 1)},
+					{wsid: 2, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 2)},
 					{wsid: 2, seqID: istructs.QNameIDWLogOffsetSequence, number: 3},
 				}},
 				// 3rd event
-				{qName: testCmdQName, wsid: 3, pLogOffset: 3, wLogOffset: 4, cuds: []cud{{qName: testCDocQName, id: 3}},
+				{qName: testCmdQName, wsid: 3, pLogOffset: 3, wLogOffset: 4, cuds: []cud{{qName: testCDocQName, exactID: istructs.FirstUserRecordID + 3}},
 					expectedBatch: []expectedSeqValue{
-						{wsid: 3, seqID: istructs.QNameIDRecordIDSequence, number: 3},
+						{wsid: 3, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 3)},
 						{wsid: 3, seqID: istructs.QNameIDWLogOffsetSequence, number: 4},
 					}},
 			},
@@ -192,17 +192,17 @@ func TestSequenceActualization(t *testing.T) {
 			name: "1 event with few cdocs, wdocs and records",
 			plog: []testPLogEvent{
 				{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{
-					{qName: testCDocQName, id: 1},
-					{qName: testCRecordQName, id: 2},
-					{qName: testCRecordQName, id: 3},
-					{qName: testWDocQName, id: 4},
-					{qName: testWRecordQName, id: 5},
+					{qName: testCDocQName, exactID: istructs.FirstUserRecordID},
+					{qName: testCRecordQName, exactID: istructs.FirstUserRecordID + 1},
+					{qName: testCRecordQName, exactID: istructs.FirstUserRecordID + 2},
+					{qName: testWDocQName, exactID: istructs.FirstUserRecordID + 3},
+					{qName: testWRecordQName, exactID: istructs.FirstUserRecordID + 4},
 				}, expectedBatch: []expectedSeqValue{
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 1},
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 2},
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 3},
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 4},
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 5},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID)},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 1)},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 2)},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 3)},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 4)},
 					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
 				}},
 			},
@@ -211,19 +211,19 @@ func TestSequenceActualization(t *testing.T) {
 			name: "arg: odoc with 2 orecords + 2 new cuds + 1 update cud (should be skipped)",
 			plog: []testPLogEvent{
 				{qName: testODocQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, arg: obj{
-					cud: cud{qName: testODocQName, id: 1},
+					cud: cud{qName: testODocQName, exactID: istructs.FirstUserRecordID},
 					containers: []obj{
-						{cud: cud{qName: testORecordQName, id: 2}},
-						{cud: cud{qName: testORecordQName, id: 3}},
+						{cud: cud{qName: testORecordQName, exactID: istructs.FirstUserRecordID + 1}},
+						{cud: cud{qName: testORecordQName, exactID: istructs.FirstUserRecordID + 2}},
 					},
 				}, cuds: []cud{
-					{qName: testCDocQName, id: 4},
-					{qName: testCDocQName, id: 123456789, isOld: true},
+					{qName: testCDocQName, exactID: istructs.FirstUserRecordID + 3},
+					{qName: testCDocQName, exactID: istructs.FirstUserRecordID + 4, isOld: true},
 				}, expectedBatch: []expectedSeqValue{
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 1},
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 2},
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 3},
-					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 4},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID)},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 1)},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 2)},
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: uint64(istructs.FirstUserRecordID + 3)},
 					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
 				}},
 			},
