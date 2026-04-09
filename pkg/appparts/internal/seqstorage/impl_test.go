@@ -23,14 +23,15 @@ import (
 )
 
 var (
-	testWSQName      = appdef.NewQName("test", "ws")
-	testCDocQName    = appdef.NewQName("test", "cdoc")
-	testCRecordQName = appdef.NewQName("test", "crecord")
-	testORecordQName = appdef.NewQName("test", "orecord")
-	testWRecordQName = appdef.NewQName("test", "wrecord")
-	testWDocQName    = appdef.NewQName("test", "wdoc")
-	testODocQName    = appdef.NewQName("test", "odoc")
-	testCmdQName     = appdef.NewQName("test", "cmd")
+	testWSQName            = appdef.NewQName("test", "ws")
+	testCDocQName          = appdef.NewQName("test", "cdoc")
+	testSingletonCDocQName = appdef.NewQName("test", "singletoncdoc")
+	testCRecordQName       = appdef.NewQName("test", "crecord")
+	testORecordQName       = appdef.NewQName("test", "orecord")
+	testWRecordQName       = appdef.NewQName("test", "wrecord")
+	testWDocQName          = appdef.NewQName("test", "wdoc")
+	testODocQName          = appdef.NewQName("test", "odoc")
+	testCmdQName           = appdef.NewQName("test", "cmd")
 )
 
 func TestReadWrite(t *testing.T) {
@@ -227,6 +228,18 @@ func TestSequenceActualization(t *testing.T) {
 				}},
 			},
 		},
+		{
+			name: "singleton CUD must be skipped",
+			plog: []testPLogEvent{
+				{qName: testCmdQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, cuds: []cud{
+					{qName: testSingletonCDocQName, exactID: istructs.RecordID(istructs.FirstSingletonID)},
+					{qName: testCDocQName, id: 200001},
+				}, expectedBatch: []expectedSeqValue{
+					{wsid: 1, seqID: istructs.QNameIDRecordIDSequence, number: 200001},
+					{wsid: 1, seqID: istructs.QNameIDWLogOffsetSequence, number: 2},
+				}},
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -336,6 +349,7 @@ func setupTestAppDef(t *testing.T) appdef.IAppDef {
 	ws.AddORecord(testORecordQName)
 	ws.AddWRecord(testWRecordQName)
 	ws.AddCDoc(testCDocQName).AddContainer("crecord", testCRecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
+	ws.AddCDoc(testSingletonCDocQName).SetSingleton()
 	ws.AddODoc(testODocQName).AddContainer("orecord", testORecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
 	ws.AddWDoc(testWDocQName).AddContainer("wrecord", testWRecordQName, appdef.Occurs_Unbounded, appdef.Occurs_Unbounded)
 	ws.AddCommand(testCmdQName)

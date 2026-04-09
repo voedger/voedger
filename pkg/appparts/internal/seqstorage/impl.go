@@ -28,6 +28,9 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				if !cud.IsNew() {
 					continue
 				}
+				if singleton, ok := ss.appDef.Type(cud.QName()).(appdef.ISingleton); ok && singleton.Singleton() {
+					continue
+				}
 				seqQName := istructs.QNameRecordIDSequence
 				addToBatch(event.Workspace(), ss.seqIDs[seqQName], cud.ID(), &batch)
 			}

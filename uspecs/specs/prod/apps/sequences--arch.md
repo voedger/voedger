@@ -343,6 +343,12 @@ Only **2 sequences** remain:
 
 PLog offset is managed per partition in `appPartition.nextPLogOffset`, not as a separate sequence.
 
+### Singleton handling in ActualizeSequencesFromPLog
+
+Singleton CUDs must be skipped when building the `RecordIDSequence` batch during actualization. Singletons have predefined IDs from the reserved range (65536–66047), which is below `FirstUserRecordID` (200001). Including them would corrupt the sequence state because the batcher stores max values per key — a singleton ID would lower the stored value, causing subsequent `Next()` calls to return IDs in the reserved range.
+
+This mirrors the active command processing path where `regenerateIDsPlan` bypasses `generator.NextID()` for singletons and uses `cud.appCfg.singletons.ID()` instead.
+
 ## VVM storage key structure
 
 All sequence data in `IVVMSeqStorageAdapter` is scoped per application to ensure apps do not interfere with each other.
