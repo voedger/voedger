@@ -28,7 +28,8 @@ func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offse
 				if !cud.IsNew() {
 					continue
 				}
-				if singleton, ok := ss.appDef.Type(cud.QName()).(appdef.ISingleton); ok && singleton.Singleton() {
+				if cud.ID() < istructs.FirstUserRecordID {
+					// skipping e.g. singletons
 					continue
 				}
 				seqQName := istructs.QNameRecordIDSequence

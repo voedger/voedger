@@ -345,7 +345,7 @@ PLog offset is managed per partition in `appPartition.nextPLogOffset`, not as a 
 
 ### Singleton handling in ActualizeSequencesFromPLog
 
-Singleton CUDs must be skipped when building the `RecordIDSequence` batch during actualization. Singletons have predefined IDs from the reserved range (65536–66047), which is below `FirstUserRecordID` (200001). Including them would corrupt the sequence state because the batcher stores max values per key — a singleton ID would lower the stored value, causing subsequent `Next()` calls to return IDs in the reserved range.
+Singleton CUDs must be skipped when building the `RecordIDSequence` batch during actualization. Singletons have predefined IDs from the reserved range (65536–66047), which is below `FirstUserRecordID` (200001). Including them would corrupt the sequence state because the batcher computes the max value per key only within the current batch, then overwrites any previously buffered `toBeFlushed` entry for that key. As a result, a singleton-only batch can replace a larger buffered `RecordIDSequence` value with a reserved-range singleton ID, causing subsequent `Next()` calls to return IDs in the reserved range.
 
 This mirrors the active command processing path where `regenerateIDsPlan` bypasses `generator.NextID()` for singletons and uses `cud.appCfg.singletons.ID()` instead.
 
