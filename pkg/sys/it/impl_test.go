@@ -16,6 +16,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/collection"
@@ -142,6 +143,7 @@ func Test400BadRequests(t *testing.T) {
 }
 
 func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelError)
 	funcStarted := make(chan interface{})
 	okToFinish := make(chan interface{})
 	it.MockQryExec = func(input string, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
@@ -167,6 +169,8 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 
 	// one more request to any WSID -> 503 service unavailable
 	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
+
+	logCap.HasLine("stage=vvm.submit", "no query processors available")
 
 	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
 		okToFinish <- nil
