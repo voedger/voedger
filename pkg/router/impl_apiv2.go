@@ -491,11 +491,11 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter, data validatedData,
 	limiter *wsQueryLimiter) {
 	if isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
-		if !limiter.acquire(istructs.WSID(busRequest.WSID)) {
+		if !limiter.acquire(busRequest.WSID) {
 			replyServiceUnavailable(rw)
 			return
 		}
-		defer limiter.release(istructs.WSID(busRequest.WSID))
+		defer limiter.release(busRequest.WSID)
 	}
 
 	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
