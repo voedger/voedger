@@ -48,6 +48,7 @@ const (
 	URLPlaceholder_field          = "field"
 	hours24                       = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503 = 1
+	DefaultMaxQueriesPerWSLimit   = 10
 	logAttrib_Origin              = "origin"
 	logAttrib_RemoteAddr          = "remoteaddr"
 	logAttrib_Projection          = "projection"

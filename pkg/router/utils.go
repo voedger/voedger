@@ -85,8 +85,8 @@ func (f *annoyingErrorsFilter) Write(p []byte) (n int, err error) {
 }
 
 func replyServiceUnavailable(rw http.ResponseWriter) {
+	rw.Header().Set("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 	rw.WriteHeader(http.StatusServiceUnavailable)
-	rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 }
 
 func replyErr(rw http.ResponseWriter, err error) {
