@@ -490,7 +490,7 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 
 func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter, data validatedData,
 	limiter *wsQueryLimiter) {
-	if isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
+	if busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
 		if !limiter.acquire(busRequest.WSID) {
 			replyServiceUnavailable(rw)
 			return
@@ -512,7 +512,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 	defer cancel() // to avoid context leak
 
-	logServeRequest(requestCtx)
+	logServeRequest(requestCtx, limiter)
 
 	sentAt := time.Now()
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)

@@ -6,17 +6,11 @@
 package router
 
 import (
-	"sync"
 	"sync/atomic"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 )
-
-type wsQueryLimiter struct {
-	counters  sync.Map // istructs.WSID -> *atomic.Int32
-	maxQPerWS int
-}
 
 func (l *wsQueryLimiter) acquire(wsid istructs.WSID) bool {
 	if l.maxQPerWS <= 0 {
@@ -41,6 +35,15 @@ func (l *wsQueryLimiter) release(wsid istructs.WSID) {
 		return
 	}
 	val.(*atomic.Int32).Add(-1)
+}
+
+func (l *wsQueryLimiter) size() int {
+	n := 0
+	l.counters.Range(func(_, _ any) bool {
+		n++
+		return true
+	})
+	return n
 }
 
 func isQPBoundAPIPath(apiPath processors.APIPath) bool {

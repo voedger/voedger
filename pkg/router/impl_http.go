@@ -204,7 +204,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 
-		if limiter != nil && len(busRequest.Resource) > 0 && busRequest.Resource[:1] == "q" {
+		if limiter != nil && strings.HasPrefix(busRequest.Resource, "q.") {
 			if !limiter.acquire(busRequest.WSID) {
 				replyServiceUnavailable(rw)
 				return
@@ -221,7 +221,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 		defer cancel() // to avoid context leak
 
-		logServeRequest(requestCtx)
+		logServeRequest(requestCtx, limiter)
 
 		sentAt := time.Now()
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)

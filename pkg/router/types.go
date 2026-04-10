@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"sync/atomic"
 
 	"github.com/gorilla/mux"
@@ -114,3 +115,8 @@ type validatedData struct {
 }
 
 type validatorFunc func(validateData validatedData, req *http.Request) (validatedData, error)
+
+type wsQueryLimiter struct {
+	counters  sync.Map // istructs.WSID -> *atomic.Int32
+	maxQPerWS int
+}
