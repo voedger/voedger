@@ -107,6 +107,8 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 		leadershipAcquisitionTimerArmed: make(chan struct{}, 1),
 	}
 	vvmCfg.addProcessorChannel(
+		// command processors
+		// each restaurant must go to the same cmd proc -> one single cmd processor behind the each command service channel
 		iprocbusmem.ChannelGroup{
 			NumChannels:       uint(vvmCfg.NumCommandProcessors),
 			ChannelBufferSize: vvmCfg.CommandProcessorChannelBufferSize,
