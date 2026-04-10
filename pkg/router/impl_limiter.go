@@ -16,7 +16,10 @@ func (l *wsQueryLimiter) acquire(wsid istructs.WSID) bool {
 	if l.maxQPerWS <= 0 {
 		return true
 	}
-	val, _ := l.counters.LoadOrStore(wsid, &atomic.Int32{})
+	val, ok := l.counters.Load(wsid)
+	if !ok {
+		val, _ = l.counters.LoadOrStore(wsid, &atomic.Int32{})
+	}
 	counter := val.(*atomic.Int32)
 	for {
 		current := counter.Load()

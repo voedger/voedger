@@ -3,7 +3,7 @@
 ## Approach
 
 - Add a `wsQueryLimiter` type in `pkg/router` with a `sync.Map` keyed by `istructs.WSID`, values are `*atomic.Int32` counters, and `maxQPerWS int` field encapsulating the limit
-- Expose two methods: `acquire(wsid) bool` (increment-if-below-limit, return false if at limit or if `maxQPerWS <= 0`) and `release(wsid)` (decrement)
+- Expose two methods: `acquire(wsid) bool` (increment-if-below-limit, return false if at limit; if `maxQPerWS <= 0`, treat it as unlimited and return true) and `release(wsid)` (decrement)
 - Add `MaxQueriesPerWS int` field to `RouterParams` in `pkg/router/types.go`, defaulting to 10 via `DefaultMaxQueriesPerWSLimit` constant in `pkg/router/consts.go`
   - use it in http\https service only, not in admin or ACME services
 - Store the limiter instance as a `*wsQueryLimiter` pointer field on `routerService` in `pkg/router/types.go`
