@@ -142,6 +142,37 @@ func Test400BadRequests(t *testing.T) {
 	}
 }
 
+func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelError)
+	funcStarted := make(chan interface{})
+	okToFinish := make(chan interface{})
+	it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
+		funcStarted <- nil
+		<-okToFinish
+		return nil
+	}
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"args":{"Input":"Str"}}`
+	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
+	postDone := sync.WaitGroup{}
+	postDone.Add(1)
+	go func() {
+		defer postDone.Done()
+		vit.PostWS(ws, "c.app1pkg.MockCmd", body, httpu.WithAuthorizeBy(sys.Token))
+	}()
+	<-funcStarted
+
+	vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.app1pkg.MockCmd", body,
+		httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
+
+	logCap.HasLine("stage=vvm.submit", "no command processors available")
+
+	okToFinish <- nil
+	postDone.Wait()
+}
+
 func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	logCap := logger.StartCapture(t, logger.LogLevelError)
 	funcStarted := make(chan interface{})
