@@ -30,24 +30,25 @@ func NewVVMDefaultConfig() VVMConfig {
 		panic(err)
 	}
 	res := VVMConfig{
-		Routes:                 map[string]string{},
-		RoutesRewrite:          map[string]string{},
-		RouteDomains:           map[string]string{},
-		RouterWriteTimeout:     router.DefaultRouterWriteTimeout, // same
-		RouterReadTimeout:      router.DefaultRouterWriteTimeout, // same
-		RouterConnectionsLimit: router.DefaultConnectionsLimit,
-		RouterMaxQueriesPerWS:  router.DefaultMaxQueriesPerWSLimit,
-		BLOBMaxSize:            DefaultBLOBMaxSize,
-		Time:                   timeu.NewITime(),
-		Name:                   processors.VVMName(hostname),
-		VVMAppsBuilder:         VVMAppsBuilder{},
-		NumCommandProcessors:   DefaultNumCommandProcessors,
-		NumQueryProcessors:     DefaultNumQueryProcessors,
-		NumBLOBProcessors:      DefaultNumBLOBProcessors,
-		StorageCacheSize:       DefaultCacheSize,
-		MaxPrepareQueries:      DefaultMaxPrepareQueries,
-		VVMPort:                DefaultVVMPort,
-		MetricsServicePort:     DefaultMetricsServicePort,
+		Routes:                            map[string]string{},
+		RoutesRewrite:                     map[string]string{},
+		RouteDomains:                      map[string]string{},
+		RouterWriteTimeout:                router.DefaultRouterWriteTimeout, // same
+		RouterReadTimeout:                 router.DefaultRouterWriteTimeout, // same
+		RouterConnectionsLimit:            router.DefaultConnectionsLimit,
+		RouterMaxQueriesPerWS:             router.DefaultMaxQueriesPerWSLimit,
+		BLOBMaxSize:                       DefaultBLOBMaxSize,
+		Time:                              timeu.NewITime(),
+		Name:                              processors.VVMName(hostname),
+		VVMAppsBuilder:                    VVMAppsBuilder{},
+		NumCommandProcessors:              DefaultNumCommandProcessors,
+		NumQueryProcessors:                DefaultNumQueryProcessors,
+		NumBLOBProcessors:                 DefaultNumBLOBProcessors,
+		CommandProcessorChannelBufferSize: DefaultCommandProcessorChannelBufferSize,
+		StorageCacheSize:                  DefaultCacheSize,
+		MaxPrepareQueries:                 DefaultMaxPrepareQueries,
+		VVMPort:                           DefaultVVMPort,
+		MetricsServicePort:                DefaultMetricsServicePort,
 		StorageFactory: func(time timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
 			return mem.Provide(time), nil

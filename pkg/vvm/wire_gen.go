@@ -297,7 +297,7 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 	}
 	vvmCfg.addProcessorChannel(iprocbusmem.ChannelGroup{
 		NumChannels:       uint(vvmCfg.NumCommandProcessors),
-		ChannelBufferSize: uint(DefaultNumCommandProcessors),
+		ChannelBufferSize: vvmCfg.CommandProcessorChannelBufferSize,
 	}, ProcessorChannel_Command,
 	)
 
