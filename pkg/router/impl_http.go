@@ -204,6 +204,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 
+		// limiter is nil for Admin and ACME services
 		if limiter != nil && strings.HasPrefix(busRequest.Resource, "q.") {
 			if !limiter.acquire(busRequest.WSID) {
 				replyServiceUnavailable(rw)
