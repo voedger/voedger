@@ -190,7 +190,7 @@ func (s *routerService) registerHandlersV1() {
 			Name("blob read")
 	}
 	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", URLPlaceholder_appOwner, URLPlaceholder_appName,
-		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler_V1(s.requestSender, s.numsAppsWorkspaces))).
+		URLPlaceholder_wsid, URLPlaceholder_resourceName), corsHandler(RequestHandler_V1(s.requestSender, s.numsAppsWorkspaces, s.queryLimiter))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 
 	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
@@ -199,9 +199,19 @@ func (s *routerService) registerHandlersV1() {
 	s.router.Handle("/n10n/update/{offset:[0-9]{1,10}}", corsHandler(s.updateHandler()))
 }
 
-func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
+
+		// limiter is nil for Admin and ACME services
+		if limiter != nil && strings.HasPrefix(busRequest.Resource, "q.") {
+			if !limiter.acquire(busRequest.WSID) {
+				replyServiceUnavailable(rw)
+				return
+			}
+			defer limiter.release(busRequest.WSID)
+		}
 
 		reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
@@ -212,7 +222,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 		defer cancel() // to avoid context leak
 
-		logServeRequest(requestCtx)
+		logServeRequest(requestCtx, limiter)
 
 		sentAt := time.Now()
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)

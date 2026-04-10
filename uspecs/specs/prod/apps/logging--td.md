@@ -151,6 +151,7 @@ Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
   - `origin`: HTTP Origin header value
   - `headers`: all request headers formatted as a single string for production debugging of real IP propagation
 - Request received: level `Verbose`, stage `routing.accepted`, msg (empty)
+- Every `limiterSizeLogIntervalInRequests` requests: level `Verbose`, stage `routing.qpLimiterSize`, msg `<number of workspaces tracked by the per-WS query limiter>`
 - First response from bus (immediately after `SendRequest` returns): level `Verbose`, stage `routing.latency1`, msg `<latency_ms>`
 - Error sending request to VVM: level `Error`, stage `routing.send2vvm.error`, msg `<error message>`
 - Error sending response to client: level `Error`, stage `routing.response.error`, msg `<error message>`

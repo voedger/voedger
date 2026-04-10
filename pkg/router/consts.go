@@ -30,29 +30,31 @@ const (
 	// goroutines and connections from being held open indefinitely.
 	DefaultRouterWriteTimeout = 0
 
-	URLPlaceholder_wsid           = "wsid"
-	URLPlaceholder_appOwner       = "appOwner"
-	URLPlaceholder_appName        = "appName"
-	URLPlaceholder_blobIDOrSUUID  = "blobIDOrSUUID"
-	URLPlaceholder_resourceName   = "resourceName"
-	URLPlaceholder_pkg            = "pkg"
-	URLPlaceholder_table          = "table"
-	URLPlaceholder_id             = "id"
-	URLPlaceholder_command        = "command"
-	URLPlaceholder_query          = "query"
-	URLPlaceholder_view           = "view"
-	URLPlaceholder_workspaceName  = "workspace"
-	URLPlaceholder_rolePkg        = "rolePkg"
-	URLPlaceholder_role           = "role"
-	URLPlaceholder_channelID      = "channelID"
-	URLPlaceholder_field          = "field"
-	hours24                       = 24 * time.Hour
-	DefaultRetryAfterSecondsOn503 = 1
-	logAttrib_Origin              = "origin"
-	logAttrib_RemoteAddr          = "remoteaddr"
-	logAttrib_Projection          = "projection"
-	logAttrib_ChannelID           = "channelid"
-	n10nErrorStage                = "n10n.error"
+	URLPlaceholder_wsid              = "wsid"
+	URLPlaceholder_appOwner          = "appOwner"
+	URLPlaceholder_appName           = "appName"
+	URLPlaceholder_blobIDOrSUUID     = "blobIDOrSUUID"
+	URLPlaceholder_resourceName      = "resourceName"
+	URLPlaceholder_pkg               = "pkg"
+	URLPlaceholder_table             = "table"
+	URLPlaceholder_id                = "id"
+	URLPlaceholder_command           = "command"
+	URLPlaceholder_query             = "query"
+	URLPlaceholder_view              = "view"
+	URLPlaceholder_workspaceName     = "workspace"
+	URLPlaceholder_rolePkg           = "rolePkg"
+	URLPlaceholder_role              = "role"
+	URLPlaceholder_channelID         = "channelID"
+	URLPlaceholder_field             = "field"
+	hours24                          = 24 * time.Hour
+	DefaultRetryAfterSecondsOn503    = 1
+	DefaultMaxQueriesPerWSLimit      = 10
+	limiterSizeLogIntervalInRequests = 1000
+	logAttrib_Origin                 = "origin"
+	logAttrib_RemoteAddr             = "remoteaddr"
+	logAttrib_Projection             = "projection"
+	logAttrib_ChannelID              = "channelid"
+	n10nErrorStage                   = "n10n.error"
 )
 
 var (

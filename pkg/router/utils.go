@@ -85,8 +85,8 @@ func (f *annoyingErrorsFilter) Write(p []byte) (n int, err error) {
 }
 
 func replyServiceUnavailable(rw http.ResponseWriter) {
+	rw.Header().Set("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 	rw.WriteHeader(http.StatusServiceUnavailable)
-	rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 }
 
 func replyErr(rw http.ResponseWriter, err error) {
@@ -170,9 +170,12 @@ func logLatency(ctx context.Context, sentAt time.Time) {
 	}
 }
 
-func logServeRequest(ctx context.Context) {
+func logServeRequest(ctx context.Context, limiter *wsQueryLimiter) {
 	if logger.IsVerbose() {
 		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.accepted", "")
+		if limiter != nil && reqID.Load()%limiterSizeLogIntervalInRequests == 0 {
+			logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.qpLimiterSize", limiter.size())
+		}
 	}
 }
 
