@@ -490,7 +490,8 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 
 func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter, data validatedData,
 	limiter *wsQueryLimiter) {
-	if busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
+	// limiter is nil for Admin and ACME services
+	if limiter != nil && busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
 		if !limiter.acquire(busRequest.WSID) {
 			replyServiceUnavailable(rw)
 			return

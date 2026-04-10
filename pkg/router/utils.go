@@ -173,7 +173,7 @@ func logLatency(ctx context.Context, sentAt time.Time) {
 func logServeRequest(ctx context.Context, limiter *wsQueryLimiter) {
 	if logger.IsVerbose() {
 		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.accepted", "")
-		if reqID.Load()%limiterSizeLogIntervalInRequests == 0 {
+		if limiter != nil && reqID.Load()%limiterSizeLogIntervalInRequests == 0 {
 			logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.qpLimiterSize", limiter.size())
 		}
 	}
