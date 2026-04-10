@@ -36,6 +36,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		RouterWriteTimeout:     router.DefaultRouterWriteTimeout, // same
 		RouterReadTimeout:      router.DefaultRouterWriteTimeout, // same
 		RouterConnectionsLimit: router.DefaultConnectionsLimit,
+		RouterMaxQueriesPerWS:  router.DefaultMaxQueriesPerWSLimit,
 		BLOBMaxSize:            DefaultBLOBMaxSize,
 		Time:                   timeu.NewITime(),
 		Name:                   processors.VVMName(hostname),

@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"sync/atomic"
 
 	"github.com/gorilla/mux"
@@ -43,6 +44,7 @@ type RouterParams struct {
 	Routes               map[string]string // /grafana=http://10.0.0.3:3000 : https://alpha.dev.untill.ru/grafana/foo -> http://10.0.0.3:3000/grafana/foo
 	RoutesRewrite        map[string]string // /grafana-rewrite=http://10.0.0.3:3000/rewritten : https://alpha.dev.untill.ru/grafana-rewrite/foo -> http://10.0.0.3:3000/rewritten/foo
 	RouteDomains         map[string]string // resellerportal.dev.untill.ru=http://resellerportal : https://resellerportal.dev.untill.ru/foo -> http://resellerportal/foo
+	MaxQueriesPerWS      int
 }
 
 type httpServer struct {
@@ -69,6 +71,7 @@ type routerService struct {
 	iTokens            itokens.ITokens
 	federation         federation.IFederation
 	appTokensFactory   payloads.IAppTokensFactory
+	queryLimiter       *wsQueryLimiter
 }
 
 type httpsService struct {
@@ -112,3 +115,8 @@ type validatedData struct {
 }
 
 type validatorFunc func(validateData validatedData, req *http.Request) (validatedData, error)
+
+type wsQueryLimiter struct {
+	counters  sync.Map // istructs.WSID -> *atomic.Int32
+	maxQPerWS int
+}

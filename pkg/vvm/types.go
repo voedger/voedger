@@ -141,6 +141,7 @@ type VVMConfig struct {
 	RouterWriteTimeout               int
 	RouterReadTimeout                int
 	RouterConnectionsLimit           int
+	RouterMaxQueriesPerWS            int
 	RouterUseProxyProtocol           bool
 	RouterHTTP01ChallengeHosts       []string
 	RouteDefault                     string

@@ -91,6 +91,7 @@ func getRouterService(name string, listenAddress string, rp RouterParams, broker
 		iTokens:            iTokens,
 		federation:         federation,
 		appTokensFactory:   appTokensFactory,
+		queryLimiter:       &wsQueryLimiter{maxQPerWS: rp.MaxQueriesPerWS},
 	}
 }
 
