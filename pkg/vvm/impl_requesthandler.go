@@ -77,7 +77,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				iqm := query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, request.Query, request.DocID, processors.APIPath(request.APIPath), request.QName,
 					partitionID, request.Host, token, request.WorkspaceQName, request.Header[httpu.Accept])
 				if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
-					replyQueryBusy(requestCtx, responder)
+					replyQueryBusy(requestCtx, request.IsAPIV2, responder)
 				}
 			} else {
 				// CP
@@ -105,7 +105,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 			case "q":
 				iqm := queryprocessor.NewQueryMessage(requestCtx, request.AppQName, partitionID, request.WSID, responder, request.Body, funcQName, request.Host, token)
 				if !procbus.Submit(uint(qpcgIdx_v1), 0, iqm) {
-					replyQueryBusy(requestCtx, responder)
+					replyQueryBusy(requestCtx, request.IsAPIV2, responder)
 				}
 			case "c":
 				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
@@ -122,12 +122,18 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 	}
 }
 
-func replyQueryBusy(ctx context.Context, responder bus.IResponder) {
-	logger.ErrorCtx(ctx, "vvm.submit", "no query processors available")
-	bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query processors available")
+func replyQueryBusy(ctx context.Context, isAPIv2 bool, responder bus.IResponder) {
+	str := "v1"
+	if isAPIv2 {
+		str = "v2"
+	}
+	msg := fmt.Sprintf("no query processors %s available", str)
+	logger.ErrorCtx(ctx, "vvm.submit", msg)
+	bus.ReplyErrf(responder, http.StatusServiceUnavailable, msg)
 }
 
 func replyCommandBusy(ctx context.Context, responder bus.IResponder, partitionID istructs.PartitionID) {
-	logger.ErrorCtx(ctx, "vvm.submit", "no command processors available, partition ", partitionID)
-	bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
+	msg := fmt.Sprintf("no command processors available, partition %d", partitionID)
+	logger.ErrorCtx(ctx, "vvm.submit", msg)
+	bus.ReplyErrf(responder, http.StatusServiceUnavailable, msg)
 }

@@ -161,7 +161,7 @@ Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
 
 Receives requests from the Router and submits them to processors via procbus. The context with attributes is received from Router.
 
-- Failed to submit to query processors: level `Error`, stage `vvm.submit`, msg `no query processors available`
+- Failed to submit to query processors: level `Error`, stage `vvm.submit`, msg `no query processors <v1|v2> available`
 - Failed to submit to command processors: level `Error`, stage `vvm.submit`, msg `no command processors available, partition <partitionID>`
 
 ---
