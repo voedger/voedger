@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
@@ -76,7 +77,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				iqm := query2.NewIQueryMessage(requestCtx, request.AppQName, request.WSID, responder, request.Query, request.DocID, processors.APIPath(request.APIPath), request.QName,
 					partitionID, request.Host, token, request.WorkspaceQName, request.Header[httpu.Accept])
 				if !procbus.Submit(uint(qpcgIdx_v2), 0, iqm) {
-					bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v2 processors available")
+					replyQueryBusy(requestCtx, request.IsAPIV2, responder)
 				}
 			} else {
 				// CP
@@ -86,7 +87,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, request.QName, token,
 					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method, request.Header[httpu.Origin])
 				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
-					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
+					replyCommandBusy(requestCtx, responder, partitionID)
 				}
 			}
 		} else {
@@ -104,7 +105,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 			case "q":
 				iqm := queryprocessor.NewQueryMessage(requestCtx, request.AppQName, partitionID, request.WSID, responder, request.Body, funcQName, request.Host, token)
 				if !procbus.Submit(uint(qpcgIdx_v1), 0, iqm) {
-					bus.ReplyErrf(responder, http.StatusServiceUnavailable, "no query_v1 processors available")
+					replyQueryBusy(requestCtx, request.IsAPIV2, responder)
 				}
 			case "c":
 				// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
@@ -112,11 +113,27 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 				icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, partitionID, funcQName, token,
 					request.Host, processors.APIPath(request.APIPath), istructs.RecordID(request.DocID), request.Method, request.Header[httpu.Origin])
 				if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
-					bus.ReplyErrf(responder, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
+					replyCommandBusy(requestCtx, responder, partitionID)
 				}
 			default:
 				bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 			}
 		}
 	}
+}
+
+func replyQueryBusy(ctx context.Context, isAPIv2 bool, responder bus.IResponder) {
+	str := "v1"
+	if isAPIv2 {
+		str = "v2"
+	}
+	msg := fmt.Sprintf("no query processors %s available", str)
+	logger.ErrorCtx(ctx, "vvm.submit", msg)
+	bus.ReplyErrf(responder, http.StatusServiceUnavailable, msg)
+}
+
+func replyCommandBusy(ctx context.Context, responder bus.IResponder, partitionID istructs.PartitionID) {
+	msg := fmt.Sprintf("no command processors available, partition %d", partitionID)
+	logger.ErrorCtx(ctx, "vvm.submit", msg)
+	bus.ReplyErrf(responder, http.StatusServiceUnavailable, msg)
 }
