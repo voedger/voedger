@@ -166,7 +166,8 @@ type VVMConfig struct {
 	MetricsServicePort                metrics.MetricsServicePort
 	AdminPort                         int
 	SchemasCache                      ISchemasCache // normally NullSchemasCache in production, vit.SysAppsSchemasCache in VIT tests
-	PolicyOptsForFederationWithRetry  federation.PolicyOptsForWithRetry
+	BusyProcessorLogMode              BusyProcessorLogMode
+	PolicyOptsForFederationWithRetry  federation.PolicyOptsForWithRetry // here because it is updated in VIT
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used

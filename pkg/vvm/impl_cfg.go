@@ -59,6 +59,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		AdminPort:                        DefaultAdminPort,
 		EmailSender:                      storages.NewIEmailSenderSMTP(),
 		SchemasCache:                     &NullSchemasCache{},
+		BusyProcessorLogMode:             BusyProcessorLogMode_Error,
 		PolicyOptsForFederationWithRetry: httpu.DefaultRetryPolicyOpts,
 		SequencesTrustLevel:              isequencer.SequencesTrustLevel_0,
 		RouterUseProxyProtocol:           true,

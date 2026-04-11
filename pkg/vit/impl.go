@@ -96,6 +96,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 	cfg.Time = testingu.MockTime
 	cfg.SchemasCache = nonTestAppsSchemasCache
+	cfg.BusyProcessorLogMode = vvmpkg.BusyProcessorLogMode_Silent
 
 	emailCaptor := &implIEmailSender_captor{
 		emailCaptorCh: make(chan state.EmailMessage, 1), // must be buffered

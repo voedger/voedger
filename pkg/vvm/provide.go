@@ -250,6 +250,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"SecretsReader",
 			"SequencesTrustLevel",
 			"SchemasCache",
+			"BusyProcessorLogMode",
 			"PolicyOptsForFederationWithRetry",
 		),
 	))
