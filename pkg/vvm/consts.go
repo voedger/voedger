@@ -41,6 +41,13 @@ const (
 	ProcessorChannel_Query_V2
 )
 
+type BusyProcessorLogMode int
+
+const (
+	BusyProcessorLogMode_Error BusyProcessorLogMode = iota
+	BusyProcessorLogMode_Silent
+)
+
 var (
 	LocalHost = "http://127.0.0.1"
 )

@@ -21,6 +21,8 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	it "github.com/voedger/voedger/pkg/vit"
+	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
+	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func TestAuthorization(t *testing.T) {
@@ -143,6 +145,9 @@ func Test400BadRequests(t *testing.T) {
 }
 
 func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	logCap := logger.StartCapture(t, logger.LogLevelError)
 	funcStarted := make(chan interface{})
 	okToFinish := make(chan interface{})
@@ -151,7 +156,17 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 		<-okToFinish
 		return nil
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	ownCfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "pwd"),
+			it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.BusyProcessorLogMode = vvm.BusyProcessorLogMode_Error
+		}),
+	)
+	vit := it.NewVIT(t, &ownCfg)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := `{"args":{"Input":"Str"}}`
@@ -174,6 +189,9 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 }
 
 func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	logCap := logger.StartCapture(t, logger.LogLevelError)
 	funcStarted := make(chan interface{})
 	okToFinish := make(chan interface{})
@@ -182,7 +200,17 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		<-okToFinish
 		return nil
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	ownCfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "pwd"),
+			it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.BusyProcessorLogMode = vvm.BusyProcessorLogMode_Error
+		}),
+	)
+	vit := it.NewVIT(t, &ownCfg)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
@@ -198,7 +226,6 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		<-funcStarted
 	}
 
-	// one more request to any WSID -> 503 service unavailable
 	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
 
 	logCap.HasLine("stage=vvm.submit", "no query processors v1 available")
