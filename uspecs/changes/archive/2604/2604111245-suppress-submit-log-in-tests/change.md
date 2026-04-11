@@ -3,6 +3,7 @@ registered_at: 2026-04-11T12:08:16Z
 change_id: 2604111208-suppress-submit-log-in-tests
 baseline: 8d476f5157b295460b555fd5068ba5ffd4aaf1c6
 issue_url: https://untill.atlassian.net/browse/AIR-3551
+archived_at: 2026-04-11T12:45:28Z
 ---
 
 # Change request: Suppress processor submit failure logging in tests
