@@ -57,6 +57,8 @@ type sequencer struct {
 	actualizerCtxCancel context.CancelFunc
 	actualizerWG        *sync.WaitGroup
 
+	// TODO: LRU eviction requires re-reading from storage
+	// see https://untill.atlassian.net/browse/AIR-3506
 	cache *lruPkg.Cache[NumberKey, Number]
 
 	// Initialized by actualizer() from storage via ReadNextPLogOffset()

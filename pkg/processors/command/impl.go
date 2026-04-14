@@ -297,6 +297,8 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 		ws := ap.getWorkspace(event.Workspace())
 
 		for rec := range event.CUDs {
+			// note: not needed to check for Singleton here
+			// because within UpdateOnSync: syncID<nextRecordID -> skip
 			if rec.IsNew() {
 				ws.idGenerator.UpdateOnSync(rec.ID())
 			}
