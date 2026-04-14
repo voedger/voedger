@@ -11,12 +11,12 @@ Command processor components (active):
 ISequencer package (implemented, **not yet integrated** into command processor):
 
 - [ISequencer](../../../../pkg/isequencer/interface.go#L47): interface — sequencing transaction API
-  - [Start](../../../../pkg/isequencer/impl.go#L25), [Next](../../../../pkg/isequencer/impl.go#L194), [Flush](../../../../pkg/isequencer/impl.go#L270), [Actualize](../../../../pkg/isequencer/impl.go#L426)
+  - [Start](../../../../pkg/isequencer/impl.go#L25), [Next](../../../../pkg/isequencer/impl.go#L193), [Flush](../../../../pkg/isequencer/impl.go#L260), [Actualize](../../../../pkg/isequencer/impl.go#L416)
 - [sequencer](../../../../pkg/isequencer/types.go#L51): struct — implements ISequencer
   - [New](../../../../pkg/isequencer/provide.go#L18): constructor, starts actualizer goroutine
-  - [actualizer](../../../../pkg/isequencer/impl.go#L368): goroutine — reads PLog, rebuilds state
+  - [actualizer](../../../../pkg/isequencer/impl.go#L358): goroutine — reads PLog, rebuilds state
   - [flusher](../../../../pkg/isequencer/impl.go#L119): goroutine — writes batched values to storage
-  - [cleanup](../../../../pkg/isequencer/impl.go#L455): stops goroutines via context cancellation
+  - [cleanup](../../../../pkg/isequencer/impl.go#L445): stops goroutines via context cancellation
 - [ISeqStorage](../../../../pkg/isequencer/interface.go#L12): interface — storage abstraction for sequence numbers and PLog offsets
 - [IVVMSeqStorageAdapter](../../../../pkg/isequencer/interface.go#L31): interface — low-level VVM storage access; all methods accept `appID` to scope data per application
 - [Params](../../../../pkg/isequencer/types.go#L38): struct — sequencer configuration (cache size, flush limits, seq types)
@@ -227,13 +227,14 @@ sequenceDiagram
     CP->>Seq: Next(seqID)
     Seq->>LRU: Get(key)
     alt cache hit
-        LRU-->>Seq: nextNumber
+        LRU-->>Seq: number
     else cache miss
         Seq->>Storage: ReadNumbers(wsID, []SeqID{seqID})
         Note right of Seq: TODO(AIR-3506): reads single requested seqID<br/>per workspace, stores in LRU cache.<br/>Should read all numbers per workspace<br/>and keep in memory without cache
         Storage-->>Seq: numbers
         Seq->>LRU: Add(key, value)
     end
+    Seq->>Seq: incrementNumber(key, number, initialValue)<br/>returns max(number+1, initialValue)
     Seq-->>CP: number
 
     alt success
