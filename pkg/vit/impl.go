@@ -417,7 +417,7 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	o := []httpu.ReqOptFunc{createVITOpts()}
+	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...)}
 	o = append(o, opts...)
 	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, o...)
 	require.NoError(vit.T, err)
@@ -453,7 +453,7 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	o := []httpu.ReqOptFunc{createVITOpts()}
+	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...)}
 	o = append(o, opts...)
 	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, o...)
 	require.NoError(vit.T, err)

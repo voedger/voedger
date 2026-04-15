@@ -99,7 +99,7 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 		coreutils.BlobName, blobReader.Name,
 		httpu.ContentType, blobReader.ContentType,
 	))
-	resp, err := f.postReader(uploadBLOBURL, blobReader, optFuncs...)
+	resp, err := f.postReader(uploadBLOBURL, blobReader.ReadCloser, optFuncs...)
 	if err != nil {
 		return istructs.NullRecordID, err
 	}
