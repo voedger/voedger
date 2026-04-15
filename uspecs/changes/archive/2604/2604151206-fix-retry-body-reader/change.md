@@ -3,7 +3,7 @@ registered_at: 2026-04-15T11:31:57Z
 change_id: 2604151131-fix-retry-body-reader
 baseline: acfb394b2f2c941f0bd173b354b4e83cda8b894d
 issue_url: https://untill.atlassian.net/browse/AIR-3578
-archived_at: 2026-04-15T11:44:25Z
+archived_at: 2026-04-15T12:06:56Z
 ---
 
 # Change request: Fix body loss on retry in HTTPClient
