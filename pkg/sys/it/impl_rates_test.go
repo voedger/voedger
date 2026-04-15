@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/router"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -101,16 +102,21 @@ func TestQueryLimiter_BasicUsage(t *testing.T) {
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 	limit := vit.VVMConfig.RouterMaxQueriesPerWS
 
+	logCap := logger.StartCapture(t, logger.LogLevelWarning)
+
 	t.Run("queries rejected with 503 when per-workspace limit reached", func(t *testing.T) {
 		t.Run("qpv1", func(t *testing.T) {
+			logCap.Reset()
 			wg, okToFinish := fillQuerySlots(t, vit, ws, limit)
 			defer releaseQuerySlots(wg, okToFinish, limit)
 
 			body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 			vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
+			logCap.HasLine("stage=routing.qp.limit")
 		})
 
 		t.Run("qpv2", func(t *testing.T) {
+			logCap.Reset()
 			wg, okToFinish := fillQuerySlots(t, vit, ws, limit)
 			defer releaseQuerySlots(wg, okToFinish, limit)
 
@@ -118,6 +124,7 @@ func TestQueryLimiter_BasicUsage(t *testing.T) {
 				httpu.WithAuthorizeBy(sys.Token), httpu.Expect503(), httpu.WithNoRetryPolicy())
 			require.Equal(t, http.StatusServiceUnavailable, resp.HTTPResp.StatusCode)
 			require.Equal(t, fmt.Sprintf("%d", router.DefaultRetryAfterSecondsOn503), resp.HTTPResp.Header.Get("Retry-After"))
+			logCap.HasLine("stage=routing.qp.limit")
 		})
 	})
 
