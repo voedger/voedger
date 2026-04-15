@@ -110,6 +110,17 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 
 	startTime := time.Now()
 
+	var bodyReaderBytes []byte
+	if opts.bodyReader != nil {
+		bodyReaderBytes, err = io.ReadAll(opts.bodyReader)
+		if closer, ok := opts.bodyReader.(io.Closer); ok {
+			closer.Close()
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read request body: %w", err)
+		}
+	}
+
 	reqCtx, cancel := context.WithTimeout(ctx, maxHTTPRequestTimeout)
 	defer cancel()
 
@@ -144,13 +155,11 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
-		if opts.bodyReader != nil {
-			seeker := opts.bodyReader.(io.Seeker)
-			if _, err := seeker.Seek(0, io.SeekStart); err != nil {
-				return nil, fmt.Errorf("failed to reset body reader: %w", err)
-			}
+		var bodyReader io.Reader
+		if bodyReaderBytes != nil {
+			bodyReader = bytes.NewReader(bodyReaderBytes)
 		}
-		req, err := newRequest(httpCtx, opts.method, opts.urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
+		req, err := newRequest(httpCtx, opts.method, opts.urlStr, body, bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
