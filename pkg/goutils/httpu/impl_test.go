@@ -403,7 +403,8 @@ func TestReqReaderBodyPreservedOnRetry(t *testing.T) {
 	ts := http.Server{
 		Addr: localhostDynamic,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			b, _ := io.ReadAll(r.Body)
+			b, err := io.ReadAll(r.Body)
+			require.NoError(err)
 			mu.Lock()
 			bodies = append(bodies, string(b))
 			attemptCount++

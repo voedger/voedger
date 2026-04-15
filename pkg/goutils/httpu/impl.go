@@ -113,6 +113,9 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	var bodyReaderBytes []byte
 	if opts.bodyReader != nil {
 		bodyReaderBytes, err = io.ReadAll(opts.bodyReader)
+		if closer, ok := opts.bodyReader.(io.Closer); ok {
+			closer.Close()
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to read request body: %w", err)
 		}
