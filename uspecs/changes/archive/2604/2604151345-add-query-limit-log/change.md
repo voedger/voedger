@@ -3,6 +3,7 @@ registered_at: 2026-04-15T13:22:42Z
 change_id: 2604151322-add-query-limit-log
 baseline: 7469ac179a631a24474dafd5a5077121787d9b47
 issue_url: https://untill.atlassian.net/browse/AIR-3575
+archived_at: 2026-04-15T13:45:56Z
 ---
 
 # Change request: Add log when query execs per workspace limit is reached
