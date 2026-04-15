@@ -180,10 +180,9 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
-					cmdProc.appsPartitions = map[appdef.AppQName]map[istructs.PartitionID]*appPartition{} // clear appPartitions to test recovery
-					return
 				}
 			}
+			cmdProc.appsPartitions = map[appdef.AppQName]map[istructs.PartitionID]*appPartition{}
 		})
 	}
 }
