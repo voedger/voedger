@@ -3,7 +3,7 @@ registered_at: 2026-04-15T12:35:45Z
 change_id: 2604151235-fix-test-recovery
 baseline: 74a37e0151cf28397a5fd202018745bc661b486d
 issue_url: https://untill.atlassian.net/browse/AIR-3572
-archived_at: 2026-04-15T13:10:07Z
+archived_at: 2026-04-15T13:14:42Z
 ---
 
 # Change request: Fix TestRecovery
