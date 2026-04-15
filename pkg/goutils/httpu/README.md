@@ -76,10 +76,11 @@ resp, err := httpClient.Req(
 
 ## Features
 
-- **[Automatic retry handling](impl.go#L111)** - Built-in
+- **[Automatic retry handling](impl.go#L142)** - Built-in
   retry logic for connection errors and configurable
   HTTP status codes with exponential backoff
-  - [{Retry-After header support: impl.go#L139}](impl.go#L139)
+  - [{Body buffering for retries: impl.go#L113}](impl.go#L113)
+  - [{Retry-After header support: impl.go#L166}](impl.go#L166)
   - [{Error matchers: impl_opts.go#L149}](impl_opts.go#L149)
 
 - **[Flexible request options](impl_opts.go)** - Chainable
@@ -92,7 +93,7 @@ resp, err := httpClient.Req(
 - **[Status code expectations](impl_opts.go#L74)** - Specify
   expected HTTP status codes with convenience helpers
   (Expect204, Expect404, etc.)
-  - [{Expected codes validation: impl.go#L161}](impl.go#L161)
+  - [{Expected codes validation: impl.go#L186}](impl.go#L186)
 
 - **[Response handling modes](impl_opts.go#L17)** - Support
   for custom response handlers, long polling, and
@@ -112,4 +113,3 @@ WSAECONNREFUSED errors to improve retry behavior on Windows systems.
 ## Use
 
 See [example](example_test.go)
-
