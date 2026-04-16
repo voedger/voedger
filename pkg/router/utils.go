@@ -143,21 +143,23 @@ func createBusRequest(data validatedData, req *http.Request) bus.Request {
 	return res
 }
 
-func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Request, req *http.Request) context.Context {
-	extension := busRequest.Resource
+func resolveExtension(busRequest bus.Request) string {
 	if busRequest.IsAPIV2 {
 		if busRequest.QName == appdef.NullQName {
-			extension = apiPathToExtension(processors.APIPath(busRequest.APIPath))
-		} else {
-			extension = busRequest.QName.String()
+			return apiPathToExtension(processors.APIPath(busRequest.APIPath))
 		}
+		return busRequest.QName.String()
 	}
+	return busRequest.Resource
+}
+
+func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Request, req *http.Request) context.Context {
 	newReqID := fmt.Sprintf("%s-%d", globalServerStartTime, reqID.Add(1))
 	enrichedCtx := logger.WithContextAttrs(ctx, map[string]any{
 		logger.LogAttr_ReqID:     newReqID,
 		logger.LogAttr_WSID:      data.wsid,
 		logger.LogAttr_VApp:      data.appQName,
-		logger.LogAttr_Extension: extension,
+		logger.LogAttr_Extension: resolveExtension(busRequest),
 		logAttrib_Origin:         req.Header.Get(httpu.Origin),
 		logAttrib_RemoteAddr:     req.RemoteAddr,
 	})
@@ -170,12 +172,9 @@ func logLatency(ctx context.Context, sentAt time.Time) {
 	}
 }
 
-func logServeRequest(ctx context.Context, limiter *wsQueryLimiter) {
+func logServeRequest(ctx context.Context) {
 	if logger.IsVerbose() {
 		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.accepted", "")
-		if limiter != nil && reqID.Load()%limiterSizeLogIntervalInRequests == 0 {
-			logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.qpLimiterSize", limiter.size())
-		}
 	}
 }
 

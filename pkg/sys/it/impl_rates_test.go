@@ -112,7 +112,7 @@ func TestQueryLimiter_BasicUsage(t *testing.T) {
 
 			body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 			vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
-			logCap.HasLine("stage=routing.qp.limit")
+			logCap.EventuallyHasLine("stage=routing.qp.limit", "maxQPerWS=", "rejectedInLastSecond=")
 		})
 
 		t.Run("qpv2", func(t *testing.T) {
@@ -124,7 +124,7 @@ func TestQueryLimiter_BasicUsage(t *testing.T) {
 				httpu.WithAuthorizeBy(sys.Token), httpu.Expect503(), httpu.WithNoRetryPolicy())
 			require.Equal(t, http.StatusServiceUnavailable, resp.HTTPResp.StatusCode)
 			require.Equal(t, fmt.Sprintf("%d", router.DefaultRetryAfterSecondsOn503), resp.HTTPResp.Header.Get("Retry-After"))
-			logCap.HasLine("stage=routing.qp.limit")
+			logCap.EventuallyHasLine("stage=routing.qp.limit", "maxQPerWS=", "rejectedInLastSecond=")
 		})
 	})
 

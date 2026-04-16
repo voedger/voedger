@@ -495,7 +495,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	// limiter is nil for Admin and ACME services
 	if limiter != nil && busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
 		if !limiter.acquire(busRequest.WSID) {
-			logger.WarningCtx(reqCtxWithExtensionAttrib, "routing.qp.limit")
+			limiter.deferLogRejection(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 			replyServiceUnavailable(rw)
 			return
 		}
@@ -514,7 +514,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 	defer cancel() // to avoid context leak
 
-	logServeRequest(requestCtx, limiter)
+	logServeRequest(requestCtx)
 
 	sentAt := time.Now()
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)

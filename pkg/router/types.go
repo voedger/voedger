@@ -117,6 +117,18 @@ type validatedData struct {
 type validatorFunc func(validateData validatedData, req *http.Request) (validatedData, error)
 
 type wsQueryLimiter struct {
-	counters  sync.Map // istructs.WSID -> *atomic.Int32
-	maxQPerWS int
+	counters   sync.Map // istructs.WSID -> *atomic.Int32
+	maxQPerWS  int
+	rejections sync.Map // rejectionKey -> *rejectionCounter
+}
+
+type rejectionKey struct {
+	wsid      istructs.WSID
+	extension string
+}
+
+type rejectionCounter struct {
+	count       atomic.Int64
+	timerActive atomic.Bool
+	ctx         atomic.Value // context.Context, stored on first rejection
 }

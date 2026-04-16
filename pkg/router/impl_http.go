@@ -69,6 +69,9 @@ func (s *routerService) Prepare(work interface{}) error {
 
 // pipeline.IService
 func (s *routerService) Stop() {
+	if s.queryLimiter != nil {
+		s.queryLimiter.flushAll()
+	}
 	s.httpServer.Stop()
 	if s.n10n != nil {
 		for s.n10n.MetricNumSubscriptions() > 0 {
@@ -209,7 +212,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		// limiter is nil for Admin and ACME services
 		if limiter != nil && strings.HasPrefix(busRequest.Resource, "q.") {
 			if !limiter.acquire(busRequest.WSID) {
-				logger.WarningCtx(reqCtxWithExtensionAttrib, "routing.qp.limit")
+				limiter.deferLogRejection(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 				replyServiceUnavailable(rw)
 				return
 			}
@@ -223,7 +226,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 		defer cancel() // to avoid context leak
 
-		logServeRequest(requestCtx, limiter)
+		logServeRequest(requestCtx)
 
 		sentAt := time.Now()
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)
