@@ -563,10 +563,12 @@ func TestSubscribeAndWatch_NoSuperfluousWriteHeader(t *testing.T) {
 	resp, err := http.Get(srv.URL + "/n10n/channel?payload=" + url.QueryEscape(payload))
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-
-	t.Log("status:", resp.StatusCode)
-	t.Log("body:", string(body))
+	
+	// verify that the error was sent as an SSE event
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(body), "event: error")
+	require.Contains(t, string(body), "data: subscribe failed")
 
 	// no "superfluous response.WriteHeader call" in the log (written by internals of http server)
 	// -> consider an another status code header is not set again on error
