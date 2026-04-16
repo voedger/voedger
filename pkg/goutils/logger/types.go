@@ -7,6 +7,7 @@ package logger
 
 import (
 	"bytes"
+	"io"
 	"sync"
 )
 
@@ -26,6 +27,7 @@ type TB interface {
 }
 
 type ILogCaptor interface {
+	io.Writer
 	String() string
 	HasLine(str string, strs ...string)           // fails if no single line contains all substrings (any order)
 	EventuallyHasLine(str string, strs ...string) // same, retries up to 1 second

@@ -14,6 +14,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -25,7 +27,10 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -528,4 +533,46 @@ func expectResp(t *testing.T, resp *http.Response, contentType string, statusCod
 	require.Contains(t, resp.Header["Content-Type"][0], contentType, resp.Header)
 	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])
 	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Blob-Name"}, resp.Header["Access-Control-Allow-Headers"])
+}
+
+// https://untill.atlassian.net/browse/AIR-3528
+func TestSubscribeAndWatch_NoSuperfluousWriteHeader(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
+	broker, brokerCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels:           1,
+		ChannelsPerSubject: 1,
+
+		// force max subscriptions 0 to make failure on the first subscription
+		Subscriptions:           0,
+		SubscriptionsPerSubject: 0,
+	}, testingu.MockTime)
+	defer brokerCleanup()
+
+	svc := &routerService{n10n: broker}
+	srv := httptest.NewUnstartedServer(svc.subscribeAndWatchHandler())
+
+	// redirect internal http error logging into logCap
+	srv.Config.ErrorLog = log.New(logCap, "", log.Flags())
+
+	srv.Start()
+	defer srv.Close()
+
+	// Trigger the "subscriptions quota exceeded" error to force the following flow:
+	// - handler commits HTTP 200 OK when starting SSE communication
+	// - subscription error occurs and is sent to the client as an SSE event
+	// The test asserts that no second WriteHeader attempt is made on error
+	payload := `{"SubjectLogin":"test","ProjectionKey":[{"App":"test/app","Projection":"test.proj","WS":1}]}`
+	resp, err := http.Get(srv.URL + "/n10n/channel?payload=" + url.QueryEscape(payload))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Verify that the error was sent as an SSE event
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(body), "event: error")
+	require.Contains(t, string(body), "data: subscribe failed")
+
+	// Verify that no duplicate WriteHeader call was logged by the HTTP server internals
+	logCap.NotContains("http: superfluous response.WriteHeader call")
 }
