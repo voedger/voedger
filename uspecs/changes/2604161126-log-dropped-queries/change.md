@@ -15,7 +15,7 @@ See [issue.md](issue.md) for details.
 
 ## What
 
-Log the amount of queries dropped during the last 10 seconds per [app, wsid, extension] key:
+Log the amount of queries dropped during the last 10 seconds per [wsid, extension] key:
 
 - Log level: `Warning`, stage: `routing.qp.limit`, msg: `droppedInLast10Seconds=X`
 - LogCtx: taken from the last dropped query for each key
@@ -23,7 +23,7 @@ Log the amount of queries dropped during the last 10 seconds per [app, wsid, ext
 
 Accumulate dropped query counts with deferred logging:
 
-- On each query rejection: bump counter for key [app, wsid, extension], store the LogCtx from the last query
+- On each query rejection: bump counter for key [wsid, extension], store the LogCtx from the last query
 - 10 seconds after the first unlogged drop: log one message per key, then purge
 - On server shutdown: log all pending entries as if 10 seconds had elapsed
 

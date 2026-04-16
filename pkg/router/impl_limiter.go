@@ -45,7 +45,6 @@ func (l *wsQueryLimiter) release(wsid istructs.WSID) {
 
 func (l *wsQueryLimiter) onQueryDrop(requestCtx context.Context, wsid istructs.WSID, extension string) {
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	key := rejectionKey{wsid: wsid, extension: extension}
 	rc := l.rejections[key]
 	if rc == nil {
@@ -54,20 +53,31 @@ func (l *wsQueryLimiter) onQueryDrop(requestCtx context.Context, wsid istructs.W
 	}
 	rc.count++
 	rc.logCtxFromLastQuery = requestCtx
-	if l.lastLoggedAt == 0 {
-		l.lastLoggedAt = l.iTime.Now().UnixNano()
+	if atomic.LoadInt64(&l.lastLoggedAt) == 0 {
+		atomic.StoreInt64(&l.lastLoggedAt, l.iTime.Now().UnixNano())
 	}
+	l.mu.Unlock()
+	l.tryFlush()
 }
 
 func (l *wsQueryLimiter) tryFlush() {
+	lastLoggedAt := atomic.LoadInt64(&l.lastLoggedAt)
+	if lastLoggedAt == 0 || l.iTime.Now().UnixNano()-lastLoggedAt < int64(rejectionLogInterval) {
+		return
+	}
 	l.mu.Lock()
 	if l.lastLoggedAt == 0 || l.iTime.Now().UnixNano()-l.lastLoggedAt < int64(rejectionLogInterval) {
 		l.mu.Unlock()
 		return
 	}
 	entries := l.rejections
+	if len(entries) == 0 {
+		atomic.StoreInt64(&l.lastLoggedAt, 0)
+		l.mu.Unlock()
+		return
+	}
 	l.rejections = make(map[rejectionKey]*rejectionCounter)
-	l.lastLoggedAt = l.iTime.Now().UnixNano()
+	atomic.StoreInt64(&l.lastLoggedAt, l.iTime.Now().UnixNano())
 	l.mu.Unlock()
 	logRejections(entries)
 }
@@ -76,7 +86,7 @@ func (l *wsQueryLimiter) flushAll() {
 	l.mu.Lock()
 	entries := l.rejections
 	l.rejections = make(map[rejectionKey]*rejectionCounter)
-	l.lastLoggedAt = 0
+	atomic.StoreInt64(&l.lastLoggedAt, 0)
 	l.mu.Unlock()
 	logRejections(entries)
 }

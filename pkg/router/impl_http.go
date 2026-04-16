@@ -69,10 +69,10 @@ func (s *routerService) Prepare(work interface{}) error {
 
 // pipeline.IService
 func (s *routerService) Stop() {
+	s.httpServer.Stop()
 	if s.queryLimiter != nil {
 		s.queryLimiter.flushAll()
 	}
-	s.httpServer.Stop()
 	if s.n10n != nil {
 		for s.n10n.MetricNumSubscriptions() > 0 {
 			time.Sleep(subscriptionsCloseCheckInterval)

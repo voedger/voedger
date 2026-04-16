@@ -23,10 +23,10 @@ Log amount of queries dropped during the last 10 seconds per pair app+wsid:
 Accumulate amounts of dropped queries:
 
 - On each query, if limit is reached:
-  - Bump counter of dropped queries for key [app, wsid, extension]
+  - Bump counter of dropped queries for key [wsid, extension]
   - Store the LogCtx in the key
 - 10 seconds passed from the first dropped unlogged query:
-  - Log one message for each key [app, wsid, extension]
+  - Log one message for each key [wsid, extension]
   - LogCtx is ctx from the key (the ctx of the last query)
   - Purge
 - Log the entire contents of dropped queries on server shutdown like after 10 seconds since the first drop
