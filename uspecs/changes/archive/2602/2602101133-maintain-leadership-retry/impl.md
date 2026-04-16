@@ -2,7 +2,7 @@
 
 ## Technical design
 
-- [x] update: [apps/arch-vvm-orch.md](../../specs/prod/apps/arch-vvm-orch.md)
+- [x] update: [apps/arch-vvm-orch.md](../../../../specs/prod/apps/arch-vvm-orch.md)
   - update: Leadership renewal interval from TTL/2 to TTL/4 with retry logic
   - update: maintainLeadership description to reflect retry-on-error behavior within each interval
   - update: Timing relationships diagram
