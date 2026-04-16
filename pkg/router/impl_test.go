@@ -542,7 +542,10 @@ func TestSubscribeAndWatch_NoSuperfluousWriteHeader(t *testing.T) {
 	broker, brokerCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels:           1,
 		ChannelsPerSubject: 1,
+
 		// force max subscriptions 0 to make failure on the first subscription
+		Subscriptions:           0,
+		SubscriptionsPerSubject: 0,
 	}, testingu.MockTime)
 	defer brokerCleanup()
 
@@ -555,22 +558,21 @@ func TestSubscribeAndWatch_NoSuperfluousWriteHeader(t *testing.T) {
 	srv.Start()
 	defer srv.Close()
 
-	// now trigger the "subscriptions quota exceeded" error to force the flow:
-	// - send 200ok on communication start
-	// - send the error to the http client
-	// expect that another status code is not sent again on error
+	// Trigger the "subscriptions quota exceeded" error to force the following flow:
+	// - handler commits HTTP 200 OK when starting SSE communication
+	// - subscription error occurs and is sent to the client as an SSE event
+	// The test asserts that no second WriteHeader attempt is made on error
 	payload := `{"SubjectLogin":"test","ProjectionKey":[{"App":"test/app","Projection":"test.proj","WS":1}]}`
 	resp, err := http.Get(srv.URL + "/n10n/channel?payload=" + url.QueryEscape(payload))
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	
-	// verify that the error was sent as an SSE event
+
+	// Verify that the error was sent as an SSE event
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Contains(t, string(body), "event: error")
 	require.Contains(t, string(body), "data: subscribe failed")
 
-	// no "superfluous response.WriteHeader call" in the log (written by internals of http server)
-	// -> consider an another status code header is not set again on error
+	// Verify that no duplicate WriteHeader call was logged by the HTTP server internals
 	logCap.NotContains("http: superfluous response.WriteHeader call")
 }
