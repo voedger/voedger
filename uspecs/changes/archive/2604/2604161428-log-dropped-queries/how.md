@@ -16,10 +16,10 @@
 
 References:
 
-- [pkg/router/types.go](../../../../pkg/router/types.go)
-- [pkg/router/impl_limiter.go](../../../../pkg/router/impl_limiter.go)
-- [pkg/router/impl_apiv2.go](../../../../pkg/router/impl_apiv2.go)
-- [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
-- [pkg/router/utils.go](../../../../pkg/router/utils.go)
-- [pkg/router/consts.go](../../../../pkg/router/consts.go)
-- [pkg/sys/it/impl_rates_test.go](../../../../pkg/sys/it/impl_rates_test.go)
+- [pkg/router/types.go](../../../../../../pkg/router/types.go)
+- [pkg/router/impl_limiter.go](../../../../../../pkg/router/impl_limiter.go)
+- [pkg/router/impl_apiv2.go](../../../../../../pkg/router/impl_apiv2.go)
+- [pkg/router/impl_http.go](../../../../../../pkg/router/impl_http.go)
+- [pkg/router/utils.go](../../../../../../pkg/router/utils.go)
+- [pkg/router/consts.go](../../../../../../pkg/router/consts.go)
+- [pkg/sys/it/impl_rates_test.go](../../../../../../pkg/sys/it/impl_rates_test.go)

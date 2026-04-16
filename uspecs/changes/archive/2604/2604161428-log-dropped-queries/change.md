@@ -3,6 +3,7 @@ registered_at: 2026-04-16T11:26:19Z
 change_id: 2604161126-log-dropped-queries
 baseline: 03a20266199ecd140225eba0de2d3321521c20d3
 issue_url: https://untill.atlassian.net/browse/AIR-3575
+archived_at: 2026-04-16T14:28:39Z
 ---
 
 # Change request: Log dropped queries per workspace limit
