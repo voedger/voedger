@@ -16,7 +16,7 @@ See [issue.md](issue.md) for details.
 
 ## What
 
-Actualize `specs/prod/apps/sequences--arch.md` to match the actual `pkg/isequencer` implementation:
+Actualize `specs/prod/apps/arch-sequences.md` to match the actual `pkg/isequencer` implementation:
 
 - Document `IVVMSeqStorageAdapter` (currently missing from design)
 - Document extra fields not in design: `cleanupCtx`/`cleanupCtxCancel`, `iTime`, `transactionIsInProgress`, `retrierCfg`

@@ -2,7 +2,7 @@
 
 ## Technical design
 
-- [x] update: [apps/sequences--arch.md](../../../../specs/prod/apps/sequences--arch.md)
+- [x] update: [apps/arch-sequences.md](../../../../specs/prod/apps/arch-sequences.md)
   - add: VVM storage key structure section documenting per-app scoping of PLog offset and sequence number keys
   - update: `IVVMSeqStorageAdapter` description to note that `GetPLogOffset`/`PutPLogOffset` accept `appID` parameter
 
