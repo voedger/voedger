@@ -69,6 +69,9 @@ func (s *routerService) Prepare(work interface{}) error {
 
 // pipeline.IService
 func (s *routerService) Stop() {
+	if s.queryLimiter != nil {
+		s.queryLimiter.flushAll()
+	}
 	s.httpServer.Stop()
 	if s.n10n != nil {
 		for s.n10n.MetricNumSubscriptions() > 0 {
@@ -204,16 +207,17 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 
+		reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
+
 		// limiter is nil for Admin and ACME services
 		if limiter != nil && strings.HasPrefix(busRequest.Resource, "q.") {
 			if !limiter.acquire(busRequest.WSID) {
+				limiter.onQueryDrop(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 				replyServiceUnavailable(rw)
 				return
 			}
 			defer limiter.release(busRequest.WSID)
 		}
-
-		reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done

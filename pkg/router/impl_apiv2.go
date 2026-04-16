@@ -490,16 +490,17 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 
 func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter, data validatedData,
 	limiter *wsQueryLimiter) {
+	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
+
 	// limiter is nil for Admin and ACME services
 	if limiter != nil && busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
 		if !limiter.acquire(busRequest.WSID) {
+			limiter.onQueryDrop(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 			replyServiceUnavailable(rw)
 			return
 		}
 		defer limiter.release(busRequest.WSID)
 	}
-
-	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
 	// req's BaseContext is router service's context. See service.Start()
 	// router app closing or client disconnected -> req.Context() is done

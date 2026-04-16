@@ -6,8 +6,11 @@
 package router
 
 import (
+	"context"
+	"fmt"
 	"sync/atomic"
 
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 )
@@ -40,13 +43,51 @@ func (l *wsQueryLimiter) release(wsid istructs.WSID) {
 	val.(*atomic.Int32).Add(-1)
 }
 
-func (l *wsQueryLimiter) size() int {
-	n := 0
-	l.counters.Range(func(_, _ any) bool {
-		n++
-		return true
-	})
-	return n
+func (l *wsQueryLimiter) onQueryDrop(requestCtx context.Context, wsid istructs.WSID, extension string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	key := rejectionKey{wsid: wsid, extension: extension}
+	rc := l.rejections[key]
+	if rc == nil {
+		rc = &rejectionCounter{}
+		l.rejections[key] = rc
+	}
+	rc.count++
+	rc.logCtxFromLastQuery = requestCtx
+	if l.lastLoggedAt == 0 {
+		l.lastLoggedAt = l.iTime.Now().UnixNano()
+	}
+}
+
+func (l *wsQueryLimiter) tryFlush() {
+	l.mu.Lock()
+	if l.lastLoggedAt == 0 || l.iTime.Now().UnixNano()-l.lastLoggedAt < int64(rejectionLogInterval) {
+		l.mu.Unlock()
+		return
+	}
+	entries := l.rejections
+	l.rejections = make(map[rejectionKey]*rejectionCounter)
+	l.lastLoggedAt = l.iTime.Now().UnixNano()
+	l.mu.Unlock()
+	logRejections(entries)
+}
+
+func (l *wsQueryLimiter) flushAll() {
+	l.mu.Lock()
+	entries := l.rejections
+	l.rejections = make(map[rejectionKey]*rejectionCounter)
+	l.lastLoggedAt = 0
+	l.mu.Unlock()
+	logRejections(entries)
+}
+
+func logRejections(entries map[rejectionKey]*rejectionCounter) {
+	for _, rc := range entries {
+		if rc.count > 0 {
+			logger.WarningCtx(rc.logCtxFromLastQuery, "routing.qp.limit",
+				fmt.Sprintf("droppedInLast10Seconds=%d", rc.count))
+		}
+	}
 }
 
 func isQPBoundAPIPath(apiPath processors.APIPath) bool {
