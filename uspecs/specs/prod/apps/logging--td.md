@@ -151,7 +151,11 @@ Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
   - `origin`: HTTP Origin header value
   - `headers`: all request headers formatted as a single string for production debugging of real IP propagation
 - Request received: level `Verbose`, stage `routing.accepted`, msg (empty)
-- Every `limiterSizeLogIntervalInRequests` requests: level `Verbose`, stage `routing.qpLimiterSize`, msg `<number of workspaces tracked by the per-WS query limiter>`
+- Per-workspace query limit reached: level `Warning`, stage `routing.qp.limit`, msg `droppedInLast10Seconds=<count>`
+  - Dropped queries are aggregated per [wsid, extension] key
+  - On each rejection: bump counter for the key, store request context from the last dropped query
+  - On every query request: check `lastLoggedAt` timestamp under mutex; if 10 seconds have elapsed, swap the rejections map, log one warning per key with non-zero count, update `lastLoggedAt`
+  - On server shutdown: `flushAll()` logs and purges all pending entries regardless of elapsed time
 - First response from bus (immediately after `SendRequest` returns): level `Verbose`, stage `routing.latency1`, msg `<latency_ms>`
 - Error sending request to VVM: level `Error`, stage `routing.send2vvm.error`, msg `<error message>`
 - Error sending response to client: level `Error`, stage `routing.response.error`, msg `<error message>`

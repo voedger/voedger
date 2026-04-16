@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -45,6 +46,7 @@ type RouterParams struct {
 	RoutesRewrite        map[string]string // /grafana-rewrite=http://10.0.0.3:3000/rewritten : https://alpha.dev.untill.ru/grafana-rewrite/foo -> http://10.0.0.3:3000/rewritten/foo
 	RouteDomains         map[string]string // resellerportal.dev.untill.ru=http://resellerportal : https://resellerportal.dev.untill.ru/foo -> http://resellerportal/foo
 	MaxQueriesPerWS      int
+	ITime                timeu.ITime
 }
 
 type httpServer struct {
@@ -117,6 +119,20 @@ type validatedData struct {
 type validatorFunc func(validateData validatedData, req *http.Request) (validatedData, error)
 
 type wsQueryLimiter struct {
-	counters  sync.Map // istructs.WSID -> *atomic.Int32
-	maxQPerWS int
+	counters     sync.Map // istructs.WSID -> *atomic.Int32
+	maxQPerWS    int
+	mu           sync.Mutex
+	rejections   map[rejectionKey]*rejectionCounter
+	lastLoggedAt int64
+	iTime        timeu.ITime
+}
+
+type rejectionKey struct {
+	wsid      istructs.WSID
+	extension string
+}
+
+type rejectionCounter struct {
+	count               int64
+	logCtxFromLastQuery context.Context
 }

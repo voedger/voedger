@@ -575,6 +575,7 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType) router.RouterParams {
 		RoutesRewrite:        cfg.RoutesRewrite,
 		RouteDomains:         cfg.RouteDomains,
 		MaxQueriesPerWS:      cfg.RouterMaxQueriesPerWS,
+		ITime:                cfg.Time,
 	}
 	return res
 }
