@@ -68,6 +68,8 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 			logAttrib_ChannelID: string(channel),
 		})
 		defer channelCleanup()
+
+		// 200ok header is sent here, in rw.Write()
 		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
 			logger.ErrorCtx(logCtx, n10nErrorStage, "failed to write created channel id:", err)
 			return
@@ -75,7 +77,7 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 		for _, projection := range urlParams.ProjectionKey {
 			if err = s.n10n.Subscribe(channel, projection); err != nil {
 				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), "n10n.subscribe.error", err)
-				WriteTextResponse(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
+				writeResponse(rw, fmt.Sprintf("event: error\ndata: subscribe failed: %s\n\n", err.Error()))
 				return
 			}
 		}
