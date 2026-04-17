@@ -166,6 +166,26 @@ type testObject struct {
 	StrField string
 }
 
+func TestSysErrorHeaders(t *testing.T) {
+	require := require.New(t)
+	sysErr := coreutils.SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate limit exceeded"}.
+		AddHeader("Retry-After", "10")
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		go func() {
+			err := responder.Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: sysErr.HTTPStatus}, sysErr)
+			require.NoError(err)
+		}()
+	})
+	defer tearDown(router)
+
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+	require.NoError(err)
+	defer resp.Body.Close()
+
+	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal("10", resp.Header.Get("Retry-After"))
+}
+
 func TestHandlerPanic(t *testing.T) {
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		panic("test panic HandlerPanic")

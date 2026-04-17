@@ -21,7 +21,7 @@ import (
 )
 
 func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-chan any, responseErr *error,
-	contentType string, onSendFailed func(), busRequest bus.Request, mode bus.RespondMode) {
+	onSendFailed func(), busRequest bus.Request, responseMeta bus.ResponseMeta) {
 	sendSuccess := true
 	defer func() {
 		if requestCtx.Err() != nil {
@@ -39,7 +39,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		}
 	}()
 
-	if mode == bus.RespondMode_Single {
+	if responseMeta.Mode() == bus.RespondMode_Single {
 		select {
 		case data := <-responseCh:
 			if requestCtx.Err() != nil {
@@ -49,10 +49,14 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			}
 			switch typed := data.(type) {
 			case string:
+				w.WriteHeader(responseMeta.StatusCode)
 				sendSuccess = writeResponse(w, typed)
 			case []byte:
+				w.WriteHeader(responseMeta.StatusCode)
 				sendSuccess = writeResponse(w, string(typed))
 			case coreutils.SysError:
+				applySysErrorHeaders(w, typed)
+				w.WriteHeader(responseMeta.StatusCode)
 				if busRequest.IsAPIV2 {
 					sendSuccess = writeResponse(w, typed.ToJSON_APIV2())
 				} else {
@@ -64,6 +68,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 					// notest
 					panic(err)
 				}
+				w.WriteHeader(responseMeta.StatusCode)
 				sendSuccess = writeResponse(w, string(elemBytes))
 			}
 		case <-requestCtx.Done():
@@ -74,6 +79,13 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 	sectionsCloser := ""
 	responseCloser := "{}"
 	isCmd := strings.HasPrefix(busRequest.Resource, "c.")
+	headerWritten := false
+	writeHeaderOnce := func() {
+		if !headerWritten {
+			w.WriteHeader(responseMeta.StatusCode)
+			headerWritten = true
+		}
+	}
 	for elem := range responseCh {
 		// http client disconnected -> ErrNoConsumer on IMultiResponseSender.SendElement() -> QP will call Close()
 		if requestCtx.Err() != nil {
@@ -82,6 +94,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			return
 		}
 		if !isCmd && elemsCount == 0 {
+			writeHeaderOnce()
 			if sendSuccess = writeResponse(w, `{"sections":[{"type":"","elements":[`); !sendSuccess {
 				return
 			}
@@ -95,7 +108,8 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 
 		elemsCount++
 
-		if isCmd || contentType == httpu.ContentType_TextPlain {
+		if isCmd || responseMeta.ContentType == httpu.ContentType_TextPlain {
+			writeHeaderOnce()
 			sendSuccess = writeResponse(w, elem.(string))
 			continue
 		}
@@ -126,6 +140,10 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		}
 		var sysError coreutils.SysError
 		if errors.As(*responseErr, &sysError) {
+			if !headerWritten {
+				applySysErrorHeaders(w, sysError)
+			}
+			writeHeaderOnce()
 			jsonErr := sysError.ToJSON_APIV1()
 			if elemsCount > 0 {
 				jsonErr = strings.TrimPrefix(jsonErr, "{") // need to make "sys.Error" a top-level field within {}
@@ -133,9 +151,11 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			}
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
+			writeHeaderOnce()
 			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, *responseErr))
 		}
 	}
+	writeHeaderOnce()
 	if sendSuccess && len(responseCloser) > 0 {
 		sendSuccess = writeResponse(w, responseCloser)
 	}

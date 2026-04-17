@@ -87,6 +87,49 @@ func TestBasicUsage_SysError(t *testing.T) {
 	})
 }
 
+func TestSysError_Headers(t *testing.T) {
+	require := require.New(t)
+
+	t.Run("no headers by default", func(t *testing.T) {
+		require.Nil(SysError{}.Headers())
+	})
+
+	t.Run("AddHeader returns enriched value", func(t *testing.T) {
+		e := SysError{HTTPStatus: http.StatusTooManyRequests}.AddHeader("Retry-After", "3")
+		require.Equal(map[string]string{"Retry-After": "3"}, e.Headers())
+	})
+
+	t.Run("multiple headers", func(t *testing.T) {
+		e := SysError{}.AddHeader("A", "1").AddHeader("B", "2")
+		require.Equal(map[string]string{"A": "1", "B": "2"}, e.Headers())
+	})
+
+	t.Run("panic if key already set", func(t *testing.T) {
+		e := SysError{}.AddHeader("A", "1")
+		require.PanicsWithValue(`header "A" is already set`, func() {
+			_ = e.AddHeader("A", "2")
+		})
+	})
+
+	t.Run("errors.As preserves headers", func(t *testing.T) {
+		var err error = SysError{HTTPStatus: http.StatusTooManyRequests}.AddHeader("Retry-After", "5")
+		var se SysError
+		require.ErrorAs(err, &se)
+		require.Equal("5", se.Headers()["Retry-After"])
+	})
+
+	t.Run("ToJSON ignores headers", func(t *testing.T) {
+		e := SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate exceeded"}.AddHeader("Retry-After", "3")
+		require.JSONEq(`{"sys.Error":{"HTTPStatus":429,"Message":"rate exceeded"}}`, e.ToJSON_APIV1())
+		require.JSONEq(`{"status":429,"message":"rate exceeded"}`, e.ToJSON_APIV2())
+	})
+
+	t.Run("IsNil ignores headers", func(t *testing.T) {
+		e := SysError{}.AddHeader("A", "1")
+		require.True(e.IsNil())
+	})
+}
+
 func TestNewHTTPError(t *testing.T) {
 	require := require.New(t)
 	t.Run("simple", func(t *testing.T) {

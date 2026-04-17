@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -21,6 +22,15 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
+
+func RetryAfterSecondsOnLimitExceeded(appDef appdef.IAppDef, limit appdef.QName) int {
+	rate := appdef.Limit(appDef.Type, limit).Rate()
+	seconds := int(math.Ceil(rate.Period().Seconds() / float64(rate.Count())))
+	if seconds < 1 {
+		return 1
+	}
+	return seconds
+}
 
 // CheckUnexpectedFields validates that all keys in args are known fields of argsType.
 // Returns HTTP 400 SysError if unexpected fields are found.

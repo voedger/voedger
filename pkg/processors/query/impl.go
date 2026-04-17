@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -189,10 +190,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
-			if exceeded, _ := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host()); exceeded {
-				return coreutils.NewSysError(http.StatusTooManyRequests)
+			exceeded, limit := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host())
+			if !exceeded {
+				return nil
 			}
-			return nil
+			retryAfter := processors.RetryAfterSecondsOnLimitExceeded(qw.appStructs.AppDef(), limit)
+			return coreutils.NewHTTPErrorf(http.StatusTooManyRequests).AddHeader(httpu.RetryAfter, strconv.Itoa(retryAfter))
 		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
 			if processors.SetPrincipalsForAnonymousOnlyFunc(qw.appStructs.AppDef(), qw.msg.QName(), qw.msg.WSID(), qw) {
