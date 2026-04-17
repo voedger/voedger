@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/sys/verifier"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -100,6 +100,9 @@ func TestResetPasswordLimits(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+
+	verifierRateMaxAllowed, verifierRatePeriod := vit.RatePerPeriod(istructs.AppQName_test1_app1, appdef.NewQName(appdef.SysPackage, "VerifierRate"))
+
 	var (
 		profileWSID istructs.WSID
 		token       string
@@ -107,8 +110,8 @@ func TestResetPasswordLimits(t *testing.T) {
 	)
 
 	t.Run("InitiateResetPasswordByEmail", func(t *testing.T) {
-		// deplete the real bucket (3/hour)
-		for range verifier.InitiateEmailVerification_MaxAllowed {
+		// deplete the real bucket
+		for range verifierRateMaxAllowed {
 			_, _ = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 				body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 				return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
@@ -120,7 +123,7 @@ func TestResetPasswordLimits(t *testing.T) {
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect429())
 
 		// proceed to the next period to restore rates
-		vit.TimeAdd(verifier.InitiateEmailVerification_Period)
+		vit.TimeAdd(verifierRatePeriod)
 
 		// call again to get actual token and code
 		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
@@ -139,8 +142,8 @@ func TestResetPasswordLimits(t *testing.T) {
 		wrongCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, wrongCode, profileWSID,
 			istructs.AppQName_test1_app1)
 
-		// deplete the real bucket (3/hour) with wrong code calls
-		for range verifier.IssueVerifiedValueToken_MaxAllowed {
+		// deplete the real bucket with wrong code calls
+		for range verifierRateMaxAllowed {
 			vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, httpu.Expect400())
 		}
 
@@ -150,9 +153,9 @@ func TestResetPasswordLimits(t *testing.T) {
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", goodCodeBody, httpu.Expect429())
 
 		// proceed to the next period to restore rates
-		vit.TimeAdd(verifier.IssueVerifiedValueToken_Period)
+		vit.TimeAdd(verifierRatePeriod)
 
-		// regenerate token and code because previous ones are expired already (VerificationTokenDuration = 10 min < IssueVerifiedValueToken_Period = 1 hour)
+		// regenerate token and code because previous ones are expired already
 		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
 			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 			return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
