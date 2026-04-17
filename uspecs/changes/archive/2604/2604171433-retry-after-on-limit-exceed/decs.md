@@ -15,9 +15,9 @@ Alternatives:
 
 ## Propagation of Retry-After from processor to HTTP response
 
-Extend `coreutils.SysError` with an optional `Headers map[string]string` field and an `AddHeaders(...)` method; the processor attaches `Retry-After` to the 429 `SysError`, and the router copies these headers onto the HTTP response when rendering the error (confidence: high).
+Extend `coreutils.SysError` with an optional `Headers map[string]string` field and an `AddHeader(...)` method; the processor attaches `Retry-After` to the 429 `SysError`, and the router copies these headers onto the HTTP response when rendering the error (confidence: high).
 
-Rationale: The `SysError` is already the single value that flows from processor to router as the error payload (see `bus.ReplyErrDef` → `responder.Respond` → `reply_v1`/`reply_v2`). Attaching transport-level hints to it avoids adding new fields to `bus.ResponseMeta` or special casing by status code in the router. `AddHeaders` keeps the call sites concise and the field optional, so existing `SysError` usages are unaffected.
+Rationale: The `SysError` is already the single value that flows from processor to router as the error payload (see `bus.ReplyErrDef` → `responder.Respond` → `reply_v1`/`reply_v2`). Attaching transport-level hints to it avoids adding new fields to `bus.ResponseMeta` or special casing by status code in the router. `AddHeader` keeps the call sites concise and the field optional, so existing `SysError` usages are unaffected.
 
 Alternatives:
 
