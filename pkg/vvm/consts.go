@@ -30,7 +30,7 @@ const (
 	actualizerFlushInterval                                                = time.Millisecond * 500
 	DefaultLeadershipDurationSeconds                                       = ielections.LeadershipDurationSeconds(20)
 	DefaultLeadershipAcquisitionDuration                                   = LeadershipAcquisitionDuration(120 * time.Second)
-	DefaultCommandProcessorChannelBufferSize uint                          = 0
+	DefaultCommandProcessorChannelBufferSize uint                          = uint(DefaultNumCommandProcessors)
 	DefaultAdminPort                                                       = 55555
 )
 
