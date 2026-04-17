@@ -21,6 +21,7 @@ import (
 )
 
 func TestRates_BasicUsage(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -34,9 +35,11 @@ func TestRates_BasicUsage(t *testing.T) {
 		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
 
-	// 3rd is failed because per-minute rate is exceeded
-	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
-	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	// 3rd is failed because per-minute rate is exceeded (RatedPerMinute: 2 PER MINUTE -> 30s)
+	respQry := vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
+	require.Equal("30", respQry.HTTPResp.Header.Get(httpu.RetryAfter))
+	respCmd := vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	require.Equal("30", respCmd.HTTPResp.Header.Get(httpu.RetryAfter))
 
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
@@ -54,9 +57,11 @@ func TestRates_BasicUsage(t *testing.T) {
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
 
-	// next are failed again because per-hour rate is exceeded
-	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
-	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	// next are failed again because per-hour rate is exceeded (RatedPerHour: 4 PER HOUR -> 900s)
+	respQry = vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
+	require.Equal("900", respQry.HTTPResp.Header.Get(httpu.RetryAfter))
+	respCmd = vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	require.Equal("900", respCmd.HTTPResp.Header.Get(httpu.RetryAfter))
 
 	// proceed to the next hour to restore per-hour rates
 	vit.TimeAdd(time.Hour)
@@ -81,8 +86,12 @@ func TestRates_PerIP(t *testing.T) {
 		vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd)
 	}
 
-	vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry, httpu.Expect429())
-	vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd, httpu.Expect429())
+	// IPRatedPerMinute: 2 PER MINUTE -> 30s
+	require := require.New(t)
+	respQry := vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry, httpu.Expect429())
+	require.Equal("30", respQry.HTTPResp.Header.Get(httpu.RetryAfter))
+	respCmd := vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd, httpu.Expect429())
+	require.Equal("30", respCmd.HTTPResp.Header.Get(httpu.RetryAfter))
 
 	vit.TimeAdd(time.Minute)
 

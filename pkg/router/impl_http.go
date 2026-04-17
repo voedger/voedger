@@ -20,6 +20,7 @@ import (
 	proxyproto "github.com/pires/go-proxyproto"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/sys"
@@ -238,7 +239,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		logLatency(requestCtx, sentAt)
 
 		initResponse(rw, responseMeta)
-		reply_v1(requestCtx, rw, responseCh, responseErr, responseMeta.ContentType, cancel, busRequest, responseMeta.Mode())
+		reply_v1(requestCtx, rw, responseCh, responseErr, cancel, busRequest, responseMeta)
 	})
 }
 
@@ -270,5 +271,10 @@ func initResponse(w http.ResponseWriter, responseMeta bus.ResponseMeta) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 	}
 	w.Header().Set(httpu.ContentType, responseMeta.ContentType)
-	w.WriteHeader(responseMeta.StatusCode)
+}
+
+func applySysErrorHeaders(w http.ResponseWriter, sysErr coreutils.SysError) {
+	for k, v := range sysErr.Headers() {
+		w.Header().Set(k, v)
+	}
 }

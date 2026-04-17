@@ -37,7 +37,15 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 
 	// ApiArray and no elems -> {"results":[]}
 
+	headerWritten := false
+	writeHeaderOnce := func() {
+		if !headerWritten {
+			w.WriteHeader(respMeta.StatusCode)
+			headerWritten = true
+		}
+	}
 	if respMeta.Mode() == bus.RespondMode_StreamJSON {
+		writeHeaderOnce()
 		if sendSuccess = writeResponse(w, `{"results":[`); !sendSuccess {
 			return
 		}
@@ -76,6 +84,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			case []byte:
 				toSend = string(typed)
 			case coreutils.SysError:
+				applySysErrorHeaders(w, typed)
 				toSend = typed.ToJSON_APIV2()
 			default:
 				elemBytes, err := json.Marshal(elem)
@@ -85,6 +94,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 				}
 				toSend = string(elemBytes)
 			}
+			writeHeaderOnce()
 		}
 
 		if sendSuccess = writeResponse(w, toSend); !sendSuccess {
@@ -116,6 +126,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		}
 	}
 
+	writeHeaderOnce()
 	if sendSuccess && respMeta.Mode() == bus.RespondMode_StreamJSON {
 		sendSuccess = writeResponse(w, "}")
 	}
