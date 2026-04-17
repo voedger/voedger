@@ -428,11 +428,12 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	return istructs.RecordID(data["DocID"].(float64))
 }
 
-func (vit *VIT) RatePerPeriod(appQName appdef.AppQName, funcQName appdef.QName) (count appdef.RateCount, perPeriod time.Duration) {
+func (vit *VIT) RatePerPeriod(appQName appdef.AppQName, rateQName appdef.QName) (count appdef.RateCount, perPeriod time.Duration) {
 	vit.T.Helper()
 	appDef, err := vit.AppDef(appQName)
 	require.NoError(vit.T, err)
-	rate := appdef.Rate(appDef.Type, funcQName)
+	rate := appdef.Rate(appDef.Type, rateQName)
+	require.NotNil(vit.T, rate, "rate %s not found", rateQName)
 	return rate.Count(), rate.Period()
 }
 
