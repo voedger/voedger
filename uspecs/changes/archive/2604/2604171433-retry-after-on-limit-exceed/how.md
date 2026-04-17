@@ -9,7 +9,7 @@
   - `IAppDef` is already reachable in each processor via `appPart.AppStructs().AppDef()`
 - Carry the computed duration from processor to router via `coreutils.SysError`:
   - Extend `coreutils.SysError` in `pkg/coreutils/syserror.go` with an optional `headers map[string]string` field and a method `AddHeader(key, value string) SysError` that returns the enriched `SysError`
-  - Rate-limit check functions build a 429 `SysError` and call `.AddHeaders("Retry-After", strconv.Itoa(ceilSeconds))` before returning it; the existing `bus.ReplyErr` → `responder.Respond` → router path already carries the `SysError` through to the router
+  - Rate-limit check functions build a 429 `SysError` and call `.AddHeader("Retry-After", strconv.Itoa(ceilSeconds))` before returning it; the existing `bus.ReplyErr` → `responder.Respond` → router path already carries the `SysError` through to the router
   - In `pkg/router/impl_http.go` `initResponse` (and any other writer that materializes a `SysError` response), after matching/unwrapping the `SysError`, iterate its `Headers` and `w.Header().Set(k, v)` before `WriteHeader`
 - Update the three 429-producing processors to compute and propagate the value:
   - `pkg/processors/command/impl.go` `limitCallRate`
