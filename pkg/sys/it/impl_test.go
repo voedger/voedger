@@ -183,7 +183,7 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 	}()
 	<-funcStarted
 
-	got503 := atomic.Bool{}
+	got503 := atomic.Int32{}
 	extras := int(vit.VVMConfig.CommandProcessorChannelBufferSize) + 1
 	for range extras {
 		postDone.Add(1)
@@ -195,17 +195,18 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 				httpu.WithExpectedCode(http.StatusOK),
 				httpu.WithExpectedCode(http.StatusServiceUnavailable))
 			if resp.HTTPResp.StatusCode == http.StatusServiceUnavailable {
-				got503.Store(true)
+				got503.Add(1)
 			}
 		}()
 	}
 
-	require.Eventually(got503.Load, 10*time.Second, 10*time.Millisecond)
+	require.Eventually(func() bool { return got503.Load() == 1 }, 10*time.Second, 10*time.Millisecond)
 
 	logCap.HasLine("stage=vvm.submit", "no command processors available")
 
 	close(okToFinish)
 	postDone.Wait()
+	require.EqualValues(1, got503.Load())
 }
 
 func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
