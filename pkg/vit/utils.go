@@ -428,6 +428,15 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	return istructs.RecordID(data["DocID"].(float64))
 }
 
+func (vit *VIT) RatePerPeriod(appQName appdef.AppQName, rateQName appdef.QName) (count appdef.RateCount, perPeriod time.Duration) {
+	vit.T.Helper()
+	appDef, err := vit.AppDef(appQName)
+	require.NoError(vit.T, err)
+	rate := appdef.Rate(appDef.Type, rateQName)
+	require.NotNil(vit.T, rate, "rate %s not found", rateQName)
+	return rate.Count(), rate.Period()
+}
+
 func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.CurrentClusterID())
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}, []subject{}}
