@@ -113,7 +113,8 @@ func (s *httpServer) preRun(ctx context.Context) {
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return s.rootLogCtx // need to track both client disconnect and app finalize
 	}
-	s.server.ErrorLog = log.New(logger.NewErrorCtxWriter(s.rootLogCtx, "endpoint.http.error"), "", 0)
+	s.server.ErrorLog = logger.NewStdlibLogBridge(s.rootLogCtx, "endpoint.http.error",
+		annoyingHTTPErrorsFilter)
 	logger.InfoCtx(s.rootLogCtx, "endpoint.listen.start", s.listener.Addr().(*net.TCPAddr).String())
 }
 

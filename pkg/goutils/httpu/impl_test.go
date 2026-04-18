@@ -368,7 +368,7 @@ func TestHTTPReqWithOptions(t *testing.T) {
 
 	t.Run("WithRetryPolicy replaces default policies - custom status is retried", func(t *testing.T) {
 		var retryNum int
-		handler = func(w http.ResponseWriter, r *http.Request) {
+		handler = func(w http.ResponseWriter, _ *http.Request) {
 			retryNum++
 			// Return 429 (TooManyRequests) which is in our custom policy
 			if retryNum == 1 {

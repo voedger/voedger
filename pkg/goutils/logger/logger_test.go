@@ -250,27 +250,20 @@ func Test_CtxFuncs_StageAttr(t *testing.T) {
 	})
 }
 
-func Test_NewCtxErrorWriter(t *testing.T) {
+func Test_NewStdlibLogBridge(t *testing.T) {
 	t.Run("single line forwarded to ErrorCtx with stage and ctx attrs", func(t *testing.T) {
-		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelError)
 		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
 			logger.LogAttr_VApp:      "myapp",
 			logger.LogAttr_Extension: "sys._HTTPServer",
 		})
-		w := logger.NewErrorCtxWriter(ctx, "endpoint.http.error")
-		n, err := w.Write([]byte("boom\n"))
-		require.NoError(err)
-		require.Equal(len("boom\n"), n)
+		logger.NewStdlibLogBridge(ctx, "endpoint.http.error").Println("boom")
 		logCap.HasLine("boom", "stage=endpoint.http.error", "vapp=myapp", "extension=sys._HTTPServer")
 	})
 
 	t.Run("multi-line input produces one entry per non-empty line; CRLF trimmed", func(t *testing.T) {
-		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelError)
-		w := logger.NewErrorCtxWriter(context.Background(), "s")
-		_, err := w.Write([]byte("first\nsecond\r\nthird"))
-		require.NoError(err)
+		logger.NewStdlibLogBridge(context.Background(), "s").Println("first\nsecond\r\nthird")
 		logCap.HasLine("first")
 		logCap.HasLine("second")
 		logCap.NotContains("second\\r")
@@ -280,9 +273,7 @@ func Test_NewCtxErrorWriter(t *testing.T) {
 	t.Run("empty and blank lines are not emitted", func(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelError)
-		w := logger.NewErrorCtxWriter(context.Background(), "s")
-		_, err := w.Write([]byte("only\n\n\n"))
-		require.NoError(err)
+		logger.NewStdlibLogBridge(context.Background(), "s").Print("only\n\n\n")
 		nonEmpty := 0
 		for line := range strings.SplitSeq(strings.TrimRight(logCap.String(), "\n"), "\n") {
 			if line != "" {
@@ -292,15 +283,20 @@ func Test_NewCtxErrorWriter(t *testing.T) {
 		require.Equal(1, nonEmpty)
 	})
 
-	t.Run("Error level disabled suppresses writes but keeps reported byte count", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("Error level disabled suppresses writes", func(t *testing.T) {
 		logCap := logger.StartCapture(t, logger.LogLevelNone)
-		w := logger.NewErrorCtxWriter(context.Background(), "s")
-		payload := []byte("shouldnotappear\n")
-		n, err := w.Write(payload)
-		require.NoError(err)
-		require.Equal(len(payload), n)
+		logger.NewStdlibLogBridge(context.Background(), "s").Println("shouldnotappear")
 		logCap.NotContains("shouldnotappear")
+	})
+
+	t.Run("WithFilter drops matching lines and keeps others", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		l := logger.NewStdlibLogBridge(context.Background(), "s", logger.WithFilter([]string{"drop", "noise"}))
+		l.Println("keep this\nplease drop me\nnoise here\nalso keep")
+		logCap.HasLine("keep this")
+		logCap.HasLine("also keep")
+		logCap.NotContains("please drop me")
+		logCap.NotContains("noise here")
 	})
 }
 

@@ -77,6 +77,113 @@ func processPayment(ctx context.Context) {
 
 </details>
 
+<details>
+<summary>Without logger (stdlib bridge)</summary>
+
+```go
+// Route http.Server.ErrorLog into a structured logger - DIY adapter
+type ctxWriter struct{ ctx context.Context }
+
+func (w *ctxWriter) Write(p []byte) (int, error) {
+    rest := p
+    for len(rest) > 0 {
+        var line []byte
+        if i := bytes.IndexByte(rest, '\n'); i >= 0 {
+            line, rest = rest[:i], rest[i+1:]
+        } else {
+            line, rest = rest, nil
+        }
+        if len(line) > 0 && line[len(line)-1] == '\r' {
+            line = line[:len(line)-1] // boilerplate: trim CRLF
+        }
+        // boilerplate: filter noisy lines manually
+        if bytes.Contains(line, []byte("TLS handshake error")) {
+            continue
+        }
+        if len(line) == 0 {
+            continue
+        }
+        slog.ErrorContext(w.ctx, string(line)) // no stage, no src
+    }
+    return len(p), nil
+}
+
+// boilerplate: tune prefix/flags so slog doesn't duplicate timestamps
+srv.ErrorLog = log.New(&ctxWriter{ctx: ctx}, "", 0)
+```
+
+</details>
+
+<details>
+<summary>With logger (stdlib bridge)</summary>
+
+```go
+import "github.com/voedger/voedger/pkg/goutils/logger"
+
+srv.ErrorLog = logger.NewStdlibLogBridge(ctx, "endpoint.http.error",
+    logger.WithFilter([]string{"TLS handshake error"}))
+```
+
+</details>
+
+<details>
+<summary>Without logger (log capturing in tests)</summary>
+
+```go
+// Intercept log output - manual snapshot AND restore of every hook
+r, w, _ := os.Pipe()
+oldStderr := os.Stderr
+os.Stderr = w
+oldLevel := logger.SetLogLevel(logger.LogLevelInfo)
+
+var buf bytes.Buffer
+done := make(chan struct{})
+go func() {
+    _, _ = io.Copy(&buf, r)
+    close(done)
+}()
+
+// CRITICAL cleanup: miss a step and state leaks into the next test
+t.Cleanup(func() {
+    w.Close()                    // unblock the drainer
+    <-done                       // drain pipe before swap
+    os.Stderr = oldStderr        // restore stderr
+    logger.SetLogLevel(oldLevel) // restore log level
+})
+
+// ... code that logs ...
+
+// boilerplate: manual line-by-line substring scan
+found := false
+for _, line := range strings.Split(buf.String(), "\n") {
+    if strings.Contains(line, "started") &&
+        strings.Contains(line, "reqid=42") {
+        found = true
+        break
+    }
+}
+if !found {
+    t.Fatalf("expected log line not found:\n%s", buf.String())
+}
+```
+
+</details>
+
+<details>
+<summary>With logger (log capturing in tests)</summary>
+
+```go
+import "github.com/voedger/voedger/pkg/goutils/logger"
+
+// writers and log level are auto-restored when t ends - no Cleanup needed
+cap := logger.StartCapture(t, logger.LogLevelInfo)
+
+// ... code that logs ...
+cap.HasLine("started", "reqid=42")
+```
+
+</details>
+
 ## Features
 
 - **Level filtering** - Hierarchical levels (`Error`→`Trace`) with
@@ -91,19 +198,24 @@ func processPayment(ctx context.Context) {
   - [Skip frame control: logger.go#L64](logger.go#L64)
 - **Context-aware logging** - `*Ctx` functions read logging key/value
   pairs stored in `context.Context` and append them to each entry
-  - [WithContextAttrs: loggerctx.go#L23](loggerctx.go#L23)
-  - [Ctx logging functions: loggerctx.go#L31](loggerctx.go#L31)
-  - [sLogAttrsFromCtx: loggerctx.go#L87](loggerctx.go#L87)
+  - [WithContextAttrs: loggerctx.go#L25](loggerctx.go#L25)
+  - [Ctx logging functions: loggerctx.go#L33](loggerctx.go#L33)
+  - [sLogAttrsFromCtx: loggerctx.go#L153](loggerctx.go#L153)
   - **Predefined attribute key constants** ([consts.go](consts.go#L19))
 
     | Constant            | Key         | Example value |
-    | ------------------- | ----------- | ------------- |
+    |---------------------|-------------|---------------|
     | `LogAttr_VApp`      | `vapp`      | `my.app`      |
     | `LogAttr_Feat`      | `feat`      | `magicmenu`   |
     | `LogAttr_ReqID`     | `reqid`     | `42`          |
     | `LogAttr_WSID`      | `wsid`      | `1001`        |
     | `LogAttr_Extension` | `extension` | `myFunc`      |
 
+- **Stdlib log bridge** - Adapts byte-oriented stdlib `*log.Logger`
+  (e.g. `http.Server.ErrorLog`) to context-aware `ErrorCtx` with
+  optional line filtering
+  - [NewStdlibLogBridge: loggerctx.go#L100](loggerctx.go#L100)
+  - [WithFilter option: loggerctx.go#L112](loggerctx.go#L112)
 - **Output customization** - Pluggable `PrintLine` with automatic
   stderr/stdout routing per level
   - [PrintLine hook: logger.go#L88](logger.go#L88)
@@ -115,7 +227,7 @@ func processPayment(ctx context.Context) {
 - **Log capturing** - in-memory buffer that intercepts log output
   during tests; auto-restored when the test ends
   - [StartCapture: logcapture.go#L13](logcapture.go#L13)
-  - [ILogCaptor: types.go#L28](types.go#L28)
+  - [ILogCaptor: types.go#L29](types.go#L29)
   - [HasLine: logcapture.go#L30](logcapture.go#L30)
   - [EventuallyHasLine: logcapture.go#L41](logcapture.go#L41)
   - [NotContains: logcapture.go#L78](logcapture.go#L78)

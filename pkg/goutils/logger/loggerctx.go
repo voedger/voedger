@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 )
 
@@ -88,18 +89,35 @@ func loggerLevelToSLogLevel(level TLogLevel) slog.Level {
 	}
 }
 
-// NewErrorCtxWriter returns an io.Writer that forwards each non-empty line of
-// its input to ErrorCtx(ctx, stage, line). Intended for wiring stdlib loggers
-// (e.g. http.Server.ErrorLog) into the voedger logger while preserving ctx
-// attributes (vapp, extension, ...). Construct the stdlib logger with
-// log.New(w, "", 0) so slog provides the timestamp.
-func NewErrorCtxWriter(ctx context.Context, stage string) io.Writer {
-	return &errorCtxWriter{ctx: ctx, stage: stage}
+// NewStdlibLogBridge returns a stdlib *log.Logger whose output is forwarded
+// as an Error-level ctx log entry (stage, line) with ctx attrs preserved from
+// WithContextAttrs. Intended for wiring stdlib *log.Logger instances
+// (e.g. http.Server.ErrorLog) into the voedger logger.
+//
+// Assumption: one Write call contains one complete log message, which holds
+// for stdlib log.Logger. Partial lines spanning multiple Write calls are not
+// buffered.
+func NewStdlibLogBridge(ctx context.Context, stage string, opts ...StdlibLogBridgeOption) *log.Logger {
+	w := &errorCtxWriter{ctx: ctx, stage: stage, skipStackFrames: stdlibLogBridgeSkipStackFrames}
+	for _, opt := range opts {
+		opt(w)
+	}
+	return log.New(w, "", 0)
+}
+
+// StdlibLogBridgeOption configures a logger returned by NewStdlibLogBridge.
+type StdlibLogBridgeOption func(*errorCtxWriter)
+
+// WithFilter drops any line that contains at least one of the given substrings.
+func WithFilter(substrings []string) StdlibLogBridgeOption {
+	return func(w *errorCtxWriter) { w.filter = substrings }
 }
 
 type errorCtxWriter struct {
-	ctx   context.Context
-	stage string
+	ctx             context.Context
+	stage           string
+	filter          []string
+	skipStackFrames int
 }
 
 func (w *errorCtxWriter) Write(p []byte) (int, error) {
@@ -115,16 +133,16 @@ func (w *errorCtxWriter) Write(p []byte) (int, error) {
 		if len(line) > 0 && line[len(line)-1] == '\r' {
 			line = line[:len(line)-1]
 		}
-		if len(line) == 0 || skip(line) {
+		if len(line) == 0 || w.skip(line) {
 			continue
 		}
-		LogCtx(w.ctx, 1, LogLevelError, w.stage, string(line))
+		LogCtx(w.ctx, w.skipStackFrames, LogLevelError, w.stage, string(line))
 	}
 	return n, nil
 }
 
-func skip(line []byte) bool {
-	for _, pattern := range httpErrorsToSkip {
+func (w *errorCtxWriter) skip(line []byte) bool {
+	for _, pattern := range w.filter {
 		if bytes.Contains(line, []byte(pattern)) {
 			return true
 		}

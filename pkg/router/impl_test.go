@@ -572,7 +572,6 @@ func Test_HTTPErrorLog_ForwardedToLogger(t *testing.T) {
 	t.Run("forwarded with stage and extension", func(t *testing.T) {
 		srv.server.ErrorLog.Println("boom on connection X")
 		logCap.HasLine("boom on connection X", "stage=endpoint.http.error", "extension=sys._HTTPServer")
-		log.Println(logCap.String())
 	})
 
 	t.Run("TLS handshake errors are filtered out", func(t *testing.T) {

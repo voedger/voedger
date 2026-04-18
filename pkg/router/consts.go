@@ -8,6 +8,8 @@ package router
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 const (
@@ -58,9 +60,10 @@ const (
 )
 
 var (
-	onRequestCtxClosed    func() = nil // used in tests
-	reqID                        = atomic.Uint64{}
-	globalServerStartTime        = time.Now().Format("01021504")
+	onRequestCtxClosed       func() = nil // used in tests
+	reqID                           = atomic.Uint64{}
+	globalServerStartTime           = time.Now().Format("01021504")
+	annoyingHTTPErrorsFilter        = logger.WithFilter([]string{"TLS handshake error"})
 )
 
 const (

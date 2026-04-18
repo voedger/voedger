@@ -2,12 +2,11 @@
 
 ## Approach
 
-- Add a small adapter in `pkg/goutils/logger` that returns an `io.Writer` whose writes are forwarded to the voedger logger
-  - New exported helper `NewErrorCtxWriter(ctx context.Context, stage string) io.Writer`
-  - Internally an `io.Writer` type splits the payload by `\n`, trims a trailing `\r`, drops lines matching any substring from the package-private `httpErrorsToSkip` list, and calls `logger.LogCtx(ctx, ..., LogLevelError, stage, line)` so context attributes (`vapp`, `extension`, `reqid`, `wsid`, ...) are preserved
-  - Callers wrap it with `log.New(writer, "", 0)` to disable stdlib prefix/flags and avoid duplicated timestamps (slog adds its own timestamp)
+- Add a small adapter in `pkg/goutils/logger` that forwards stdlib logger output to the voedger logger
+  - Single exported entry point `NewStdlibLogBridge(ctx context.Context, stage string, opts ...StdlibLogBridgeOption) *log.Logger` builds an unexported writer that splits the payload by `\n`, trims a trailing `\r`, drops filtered lines, and calls `logger.LogCtx(ctx, ..., LogLevelError, stage, line)` so context attributes (`vapp`, `extension`, `reqid`, `wsid`, ...) are preserved; the returned `*log.Logger` is the exact type `http.Server.ErrorLog` expects, and the underlying writer is not exported so it cannot be misused as a generic streaming sink (the writer assumes one `Write` call per complete message)
+  - Functional option `WithFilter(substrings []string)` lets callers drop noisy lines (e.g. TLS handshake errors) without introducing a package-level list
 - Wire the adapter into production `http.Server` instantiations
-  - `pkg/router/impl_http.go`: in `httpServer.prepareBasicServer`/`preRun`, replace `log.New(&annoyingErrorsFilter{log.Default().Writer()}, ...)` with `log.New(loggerWriter, "", 0)`, where `loggerWriter` is produced by the new helper bound to `s.rootLogCtx`; TLS handshake noise is dropped inside the writer via `httpErrorsToSkip`, so `annoyingErrorsFilter` is removed
+  - `pkg/router/impl_http.go`: in `httpServer.prepareBasicServer`/`preRun`, replace `log.New(&annoyingErrorsFilter{log.Default().Writer()}, ...)` with `logger.NewStdlibLogBridge(s.rootLogCtx, "endpoint.http.error", annoyingHTTPErrorsFilter)`; the filter option is declared once in `pkg/router/consts.go` as `annoyingHTTPErrorsFilter = logger.WithFilter([]string{"TLS handshake error"})` and reused across all server variants; the obsolete `annoyingErrorsFilter` type in `pkg/router/utils.go` is removed
   - Because `rootLogCtx` is built in `preRun`, assign `s.server.ErrorLog` there (just before `Serve`/`ServeTLS`) instead of in `prepareBasicServer`
   - `pkg/ihttpimpl/impl.go` (`acmeServer`) and `pkg/ihttpimpl/provide.go` (processor `server`): set `ErrorLog` to the same adapter with an appropriate base context built via `logger.WithContextAttrs` (e.g. `vapp=sys`, `extension=sys._ACMEServer` / `sys._HTTPProcessor`)
   - `pkg/vvm/metrics/provide.go`: same treatment with `extension=sys._MetricsServer`

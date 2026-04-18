@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	logCtxSkipFrames         = 3
-	eventuallyHasLineTimeout = time.Second
+	logCtxSkipFrames               = 3
+	stdlibLogBridgeSkipStackFrames = 3
+	eventuallyHasLineTimeout       = time.Second
 )
 
 const (
@@ -33,9 +34,3 @@ var (
 	slogOut = slog.New(slog.NewTextHandler(os.Stdout, ctxHandlerOpts))
 	slogErr = slog.New(slog.NewTextHandler(os.Stderr, ctxHandlerOpts))
 )
-
-// httpErrorsToSkip holds substrings that cause a line written to a writer returned
-// by NewCtxErrorWriter to be silently dropped. Callers may add/remove entries.
-var httpErrorsToSkip = []string{
-	"TLS handshake error",
-}
