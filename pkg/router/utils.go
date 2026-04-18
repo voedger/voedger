@@ -6,11 +6,9 @@
 package router
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -71,17 +69,6 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 	}
 	w.(http.Flusher).Flush()
 	return true
-}
-
-type annoyingErrorsFilter struct {
-	w io.Writer
-}
-
-func (f *annoyingErrorsFilter) Write(p []byte) (n int, err error) {
-	if bytes.Contains(p, []byte("TLS handshake error")) {
-		return len(p), nil
-	}
-	return f.w.Write(p)
 }
 
 func replyServiceUnavailable(rw http.ResponseWriter) {

@@ -250,6 +250,60 @@ func Test_CtxFuncs_StageAttr(t *testing.T) {
 	})
 }
 
+func Test_NewCtxErrorWriter(t *testing.T) {
+	t.Run("single line forwarded to ErrorCtx with stage and ctx attrs", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+			logger.LogAttr_VApp:      "myapp",
+			logger.LogAttr_Extension: "sys._HTTPServer",
+		})
+		w := logger.NewErrorCtxWriter(ctx, "endpoint.http.error")
+		n, err := w.Write([]byte("boom\n"))
+		require.NoError(err)
+		require.Equal(len("boom\n"), n)
+		logCap.HasLine("boom", "stage=endpoint.http.error", "vapp=myapp", "extension=sys._HTTPServer")
+	})
+
+	t.Run("multi-line input produces one entry per non-empty line; CRLF trimmed", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		w := logger.NewErrorCtxWriter(context.Background(), "s")
+		_, err := w.Write([]byte("first\nsecond\r\nthird"))
+		require.NoError(err)
+		logCap.HasLine("first")
+		logCap.HasLine("second")
+		logCap.NotContains("second\\r")
+		logCap.HasLine("third")
+	})
+
+	t.Run("empty and blank lines are not emitted", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		w := logger.NewErrorCtxWriter(context.Background(), "s")
+		_, err := w.Write([]byte("only\n\n\n"))
+		require.NoError(err)
+		nonEmpty := 0
+		for line := range strings.SplitSeq(strings.TrimRight(logCap.String(), "\n"), "\n") {
+			if line != "" {
+				nonEmpty++
+			}
+		}
+		require.Equal(1, nonEmpty)
+	})
+
+	t.Run("Error level disabled suppresses writes but keeps reported byte count", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelNone)
+		w := logger.NewErrorCtxWriter(context.Background(), "s")
+		payload := []byte("shouldnotappear\n")
+		n, err := w.Write(payload)
+		require.NoError(err)
+		require.Equal(len(payload), n)
+		logCap.NotContains("shouldnotappear")
+	})
+}
+
 func TestMultithread(t *testing.T) {
 	toLog := []string{}
 	for i := 0; i < 100; i++ {

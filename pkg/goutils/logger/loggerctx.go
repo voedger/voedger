@@ -6,6 +6,7 @@
 package logger
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -85,6 +86,50 @@ func loggerLevelToSLogLevel(level TLogLevel) slog.Level {
 	default:
 		return slog.LevelDebug
 	}
+}
+
+// NewErrorCtxWriter returns an io.Writer that forwards each non-empty line of
+// its input to ErrorCtx(ctx, stage, line). Intended for wiring stdlib loggers
+// (e.g. http.Server.ErrorLog) into the voedger logger while preserving ctx
+// attributes (vapp, extension, ...). Construct the stdlib logger with
+// log.New(w, "", 0) so slog provides the timestamp.
+func NewErrorCtxWriter(ctx context.Context, stage string) io.Writer {
+	return &errorCtxWriter{ctx: ctx, stage: stage}
+}
+
+type errorCtxWriter struct {
+	ctx   context.Context
+	stage string
+}
+
+func (w *errorCtxWriter) Write(p []byte) (int, error) {
+	n := len(p)
+	rest := p
+	for len(rest) > 0 {
+		var line []byte
+		if i := bytes.IndexByte(rest, '\n'); i >= 0 {
+			line, rest = rest[:i], rest[i+1:]
+		} else {
+			line, rest = rest, nil
+		}
+		if len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+		if len(line) == 0 || skip(line) {
+			continue
+		}
+		LogCtx(w.ctx, 1, LogLevelError, w.stage, string(line))
+	}
+	return n, nil
+}
+
+func skip(line []byte) bool {
+	for _, pattern := range httpErrorsToSkip {
+		if bytes.Contains(line, []byte(pattern)) {
+			return true
+		}
+	}
+	return false
 }
 
 func sLogAttrsFromCtx(ctx context.Context) []any {

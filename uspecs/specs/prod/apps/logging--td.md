@@ -92,6 +92,9 @@ HTTP root context is derived from VVM context:
 - Server stops accepting connections: level `Info`, stage `endpoint.shutdown`, msg (empty)
 - Error on http server shutdown: level `Error`, stage `endpoint.shutdown.error`, msg `<error message>`
 - Server exits unexpectedly: level `Error`, stage `endpoint.unexpectedstop`, msg `<err>`
+- Internal error log forwarded from `http.Server.ErrorLog`: level `Error`, stage `endpoint.http.error`, msg `<line from net/http internal error log>`
+  - only per-server root context attributes are attached (`vapp`, `extension`); no `reqid` — stdlib invokes `ErrorLog` without an active request context (accept/TLS-handshake/HTTP-framing errors span or precede requests, so any synthesized `reqid` would misattribute)
+  - TLS handshake errors are filtered out before forwarding
 
 #### Application deployment
 
