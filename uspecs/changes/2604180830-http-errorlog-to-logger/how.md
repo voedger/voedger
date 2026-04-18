@@ -3,10 +3,10 @@
 ## Approach
 
 - Add a small adapter in `pkg/goutils/logger` that forwards stdlib logger output to the voedger logger
-  - Single exported entry point `NewStdlibLogBridge(ctx context.Context, stage string, opts ...StdlibLogBridgeOption) *log.Logger` builds an unexported writer that splits the payload by `\n`, trims a trailing `\r`, drops filtered lines, and calls `logger.LogCtx(ctx, ..., LogLevelError, stage, line)` so context attributes (`vapp`, `extension`, `reqid`, `wsid`, ...) are preserved; the returned `*log.Logger` is the exact type `http.Server.ErrorLog` expects, and the underlying writer is not exported so it cannot be misused as a generic streaming sink (the writer assumes one `Write` call per complete message)
-  - Functional option `WithFilter(substrings []string)` lets callers drop noisy lines (e.g. TLS handshake errors) without introducing a package-level list
+  - Single exported entry point `NewStdLogBridge(ctx context.Context, stage string, opts ...StdLogBridgeOption) *log.Logger` builds an unexported writer that trims a trailing `\r`/`\n`, drops payloads matching the filter, and calls `logger.LogCtx(ctx, ..., LogLevelError, stage, payload)` once per `Write` so context attributes (`vapp`, `extension`, `reqid`, `wsid`, ...) are preserved and multi-line payloads (e.g. `net/http` panic stack traces) stay a single correlatable log event; the returned `*log.Logger` is the exact type `http.Server.ErrorLog` expects, and the underlying writer is not exported so it cannot be misused as a generic streaming sink (the writer assumes one `Write` call per complete message)
+  - Functional option `WithFilter(substrings []string)` lets callers drop noisy payloads (e.g. TLS handshake errors) without introducing a package-level list
 - Wire the adapter into production `http.Server` instantiations
-  - `pkg/router/impl_http.go`: in `httpServer.prepareBasicServer`/`preRun`, replace `log.New(&annoyingErrorsFilter{log.Default().Writer()}, ...)` with `logger.NewStdlibLogBridge(s.rootLogCtx, "endpoint.http.error", annoyingHTTPErrorsFilter)`; the filter option is declared once in `pkg/router/consts.go` as `annoyingHTTPErrorsFilter = logger.WithFilter([]string{"TLS handshake error"})` and reused across all server variants; the obsolete `annoyingErrorsFilter` type in `pkg/router/utils.go` is removed
+  - `pkg/router/impl_http.go`: in `httpServer.prepareBasicServer`/`preRun`, replace `log.New(&annoyingErrorsFilter{log.Default().Writer()}, ...)` with `logger.NewStdLogBridge(s.rootLogCtx, "endpoint.http.error", annoyingHTTPErrorsFilter)`; the filter option is declared once in `pkg/router/consts.go` as `annoyingHTTPErrorsFilter = logger.WithFilter([]string{"TLS handshake error"})` and reused across all server variants; the obsolete `annoyingErrorsFilter` type in `pkg/router/utils.go` is removed
   - Because `rootLogCtx` is built in `preRun`, assign `s.server.ErrorLog` there (just before `Serve`/`ServeTLS`) instead of in `prepareBasicServer`
   - `pkg/ihttpimpl/impl.go` (`acmeServer`) and `pkg/ihttpimpl/provide.go` (processor `server`): set `ErrorLog` to the same adapter with an appropriate base context built via `logger.WithContextAttrs` (e.g. `vapp=sys`, `extension=sys._ACMEServer` / `sys._HTTPProcessor`)
   - `pkg/vvm/metrics/provide.go`: same treatment with `extension=sys._MetricsServer`
@@ -15,7 +15,7 @@
   - Level: `Error` (these messages originate from `net/http` internal error log)
   - Attributes: inherited from the per-server root context (`vapp`, `extension`); no request-scoped attributes, since stdlib `ErrorLog` is invoked by `net/http` without request context
 - Tests
-  - Unit test in `pkg/goutils/logger` using `StartCapture` to verify that writes to the returned `*log.Logger` produce a single `ErrorCtx` line with the configured stage and ctx attributes, and that multi-line payloads are split into one log entry per non-empty line
+  - Unit test in `pkg/goutils/logger` using `StartCapture` to verify that writes to the returned `*log.Logger` produce a single `ErrorCtx` record with the configured stage and ctx attributes, that multi-line payloads stay a single record with embedded `\n` preserved in `msg`, that payloads empty after CRLF trimming are suppressed, and that `WithFilter` drops Writes whose payload contains any configured substring
   - Extend `pkg/router/impl_test.go` (which already injects a capturing `ErrorLog`) to assert that the server's internal error output now goes through the voedger logger with stage and `extension` attributes
 
 References:

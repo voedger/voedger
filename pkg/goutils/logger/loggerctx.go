@@ -89,61 +89,50 @@ func loggerLevelToSLogLevel(level TLogLevel) slog.Level {
 	}
 }
 
-// NewStdlibLogBridge returns a stdlib *log.Logger whose output is forwarded
-// as an Error-level ctx log entry (stage, line) with ctx attrs preserved from
+// NewStdLogBridge returns a stdlib *log.Logger whose output is forwarded
+// as a single Error-level ctx log entry per Write, preserving ctx attrs from
 // WithContextAttrs. Intended for wiring stdlib *log.Logger instances
 // (e.g. http.Server.ErrorLog) into the voedger logger.
 //
-// Assumption: one Write call contains one complete log message, which holds
-// for stdlib log.Logger. Partial lines spanning multiple Write calls are not
-// buffered.
-func NewStdlibLogBridge(ctx context.Context, stage string, opts ...StdlibLogBridgeOption) *log.Logger {
-	w := &errorCtxWriter{ctx: ctx, stage: stage, skipStackFrames: stdlibLogBridgeSkipStackFrames}
+// Trailing CR/LF is trimmed; embedded newlines are kept verbatim in the
+// message (slog's text handler escapes them to the two-char \n on output).
+// Payloads that are empty after trimming are suppressed.
+func NewStdLogBridge(ctx context.Context, stage string, opts ...StdLogBridgeOption) *log.Logger {
+	w := &stdLogBridgeWriter{ctx: ctx, stage: stage, skipStackFrames: stdLogBridgeSkipStackFrames}
 	for _, opt := range opts {
 		opt(w)
 	}
 	return log.New(w, "", 0)
 }
 
-// StdlibLogBridgeOption configures a logger returned by NewStdlibLogBridge.
-type StdlibLogBridgeOption func(*errorCtxWriter)
+// StdLogBridgeOption configures a logger returned by NewStdLogBridge.
+type StdLogBridgeOption func(*stdLogBridgeWriter)
 
-// WithFilter drops any line that contains at least one of the given substrings.
-func WithFilter(substrings []string) StdlibLogBridgeOption {
-	return func(w *errorCtxWriter) { w.filter = substrings }
+// WithFilter drops a Write whose payload contains any of the given substrings.
+func WithFilter(substrings []string) StdLogBridgeOption {
+	return func(w *stdLogBridgeWriter) { w.filter = substrings }
 }
 
-type errorCtxWriter struct {
+type stdLogBridgeWriter struct {
 	ctx             context.Context
 	stage           string
 	filter          []string
 	skipStackFrames int
 }
 
-func (w *errorCtxWriter) Write(p []byte) (int, error) {
+func (w *stdLogBridgeWriter) Write(p []byte) (int, error) {
 	n := len(p)
-	rest := p
-	for len(rest) > 0 {
-		var line []byte
-		if i := bytes.IndexByte(rest, '\n'); i >= 0 {
-			line, rest = rest[:i], rest[i+1:]
-		} else {
-			line, rest = rest, nil
-		}
-		if len(line) > 0 && line[len(line)-1] == '\r' {
-			line = line[:len(line)-1]
-		}
-		if len(line) == 0 || w.skip(line) {
-			continue
-		}
-		LogCtx(w.ctx, w.skipStackFrames, LogLevelError, w.stage, string(line))
+	msg := bytes.TrimRight(p, "\r\n")
+	if len(msg) == 0 || w.skip(msg) {
+		return n, nil
 	}
+	LogCtx(w.ctx, w.skipStackFrames, LogLevelError, w.stage, string(msg))
 	return n, nil
 }
 
-func (w *errorCtxWriter) skip(line []byte) bool {
+func (w *stdLogBridgeWriter) skip(msg []byte) bool {
 	for _, pattern := range w.filter {
-		if bytes.Contains(line, []byte(pattern)) {
+		if bytes.Contains(msg, []byte(pattern)) {
 			return true
 		}
 	}

@@ -19,6 +19,13 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
+func TestLog(t *testing.T) {
+	logger.InfoCtx(context.Background(), "st1", "sdsdsd\nsdsdsd")
+	b := logger.NewStdLogBridge(context.Background(), "st2")
+	b.Println("sdsdsd\nssdsdsd")
+	b.Print("sdsd\nsdfdf")
+}
+
 func Test_SetLogLevelWithRestore(t *testing.T) {
 	require := require.New(t)
 	func() {
@@ -250,30 +257,22 @@ func Test_CtxFuncs_StageAttr(t *testing.T) {
 	})
 }
 
-func Test_NewStdlibLogBridge(t *testing.T) {
-	t.Run("single line forwarded to ErrorCtx with stage and ctx attrs", func(t *testing.T) {
+func Test_NewStdLogBridge(t *testing.T) {
+	t.Run("single line forwarded as one Error entry with stage and ctx attrs", func(t *testing.T) {
 		logCap := logger.StartCapture(t, logger.LogLevelError)
 		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
 			logger.LogAttr_VApp:      "myapp",
 			logger.LogAttr_Extension: "sys._HTTPServer",
 		})
-		logger.NewStdlibLogBridge(ctx, "endpoint.http.error").Println("boom")
+		logger.NewStdLogBridge(ctx, "endpoint.http.error").Println("boom")
 		logCap.HasLine("boom", "stage=endpoint.http.error", "vapp=myapp", "extension=sys._HTTPServer")
 	})
 
-	t.Run("multi-line input produces one entry per non-empty line; CRLF trimmed", func(t *testing.T) {
-		logCap := logger.StartCapture(t, logger.LogLevelError)
-		logger.NewStdlibLogBridge(context.Background(), "s").Println("first\nsecond\r\nthird")
-		logCap.HasLine("first")
-		logCap.HasLine("second")
-		logCap.NotContains("second\\r")
-		logCap.HasLine("third")
-	})
-
-	t.Run("empty and blank lines are not emitted", func(t *testing.T) {
+	t.Run("multi-line payload produces one entry with embedded newlines preserved; trailing CRLF trimmed", func(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelError)
-		logger.NewStdlibLogBridge(context.Background(), "s").Print("only\n\n\n")
+		logger.NewStdLogBridge(context.Background(), "s").Print("first\nsecond\r\n")
+		logCap.HasLine(`msg="first\nsecond"`)
 		nonEmpty := 0
 		for line := range strings.SplitSeq(strings.TrimRight(logCap.String(), "\n"), "\n") {
 			if line != "" {
@@ -283,18 +282,26 @@ func Test_NewStdlibLogBridge(t *testing.T) {
 		require.Equal(1, nonEmpty)
 	})
 
+	t.Run("payload that is empty after trimming is suppressed", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		logger.NewStdLogBridge(context.Background(), "s").Print("\r\n")
+		require.Empty(logCap.String())
+	})
+
 	t.Run("Error level disabled suppresses writes", func(t *testing.T) {
 		logCap := logger.StartCapture(t, logger.LogLevelNone)
-		logger.NewStdlibLogBridge(context.Background(), "s").Println("shouldnotappear")
+		logger.NewStdLogBridge(context.Background(), "s").Println("shouldnotappear")
 		logCap.NotContains("shouldnotappear")
 	})
 
-	t.Run("WithFilter drops matching lines and keeps others", func(t *testing.T) {
+	t.Run("WithFilter drops Writes whose payload contains any substring", func(t *testing.T) {
 		logCap := logger.StartCapture(t, logger.LogLevelError)
-		l := logger.NewStdlibLogBridge(context.Background(), "s", logger.WithFilter([]string{"drop", "noise"}))
-		l.Println("keep this\nplease drop me\nnoise here\nalso keep")
+		l := logger.NewStdLogBridge(context.Background(), "s", logger.WithFilter([]string{"drop", "noise"}))
+		l.Println("please drop me")
+		l.Println("noise here")
+		l.Println("keep this")
 		logCap.HasLine("keep this")
-		logCap.HasLine("also keep")
 		logCap.NotContains("please drop me")
 		logCap.NotContains("noise here")
 	})

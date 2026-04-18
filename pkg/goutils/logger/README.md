@@ -85,26 +85,15 @@ func processPayment(ctx context.Context) {
 type ctxWriter struct{ ctx context.Context }
 
 func (w *ctxWriter) Write(p []byte) (int, error) {
-    rest := p
-    for len(rest) > 0 {
-        var line []byte
-        if i := bytes.IndexByte(rest, '\n'); i >= 0 {
-            line, rest = rest[:i], rest[i+1:]
-        } else {
-            line, rest = rest, nil
-        }
-        if len(line) > 0 && line[len(line)-1] == '\r' {
-            line = line[:len(line)-1] // boilerplate: trim CRLF
-        }
-        // boilerplate: filter noisy lines manually
-        if bytes.Contains(line, []byte("TLS handshake error")) {
-            continue
-        }
-        if len(line) == 0 {
-            continue
-        }
-        slog.ErrorContext(w.ctx, string(line)) // no stage, no src
+    msg := bytes.TrimRight(p, "\r\n") // boilerplate: trim trailing CRLF
+    if len(msg) == 0 {
+        return len(p), nil
     }
+    // boilerplate: filter noisy payloads manually
+    if bytes.Contains(msg, []byte("TLS handshake error")) {
+        return len(p), nil
+    }
+    slog.ErrorContext(w.ctx, string(msg)) // no stage, wrong src frame
     return len(p), nil
 }
 
@@ -120,7 +109,7 @@ srv.ErrorLog = log.New(&ctxWriter{ctx: ctx}, "", 0)
 ```go
 import "github.com/voedger/voedger/pkg/goutils/logger"
 
-srv.ErrorLog = logger.NewStdlibLogBridge(ctx, "endpoint.http.error",
+srv.ErrorLog = logger.NewStdLogBridge(ctx, "endpoint.http.error",
     logger.WithFilter([]string{"TLS handshake error"}))
 ```
 
@@ -211,10 +200,10 @@ cap.HasLine("started", "reqid=42")
     | `LogAttr_WSID`      | `wsid`      | `1001`        |
     | `LogAttr_Extension` | `extension` | `myFunc`      |
 
-- **Stdlib log bridge** - Adapts byte-oriented stdlib `*log.Logger`
-  (e.g. `http.Server.ErrorLog`) to context-aware `ErrorCtx` with
-  optional line filtering
-  - [NewStdlibLogBridge: loggerctx.go#L100](loggerctx.go#L100)
+- **Stdlib log bridge** - Adapts stdlib `*log.Logger` instances
+  (e.g. `http.Server.ErrorLog`) to context-aware `ErrorCtx` with one
+  record per `Write` and optional payload filtering
+  - [NewStdLogBridge: loggerctx.go#L100](loggerctx.go#L100)
   - [WithFilter option: loggerctx.go#L112](loggerctx.go#L112)
 - **Output customization** - Pluggable `PrintLine` with automatic
   stderr/stdout routing per level
