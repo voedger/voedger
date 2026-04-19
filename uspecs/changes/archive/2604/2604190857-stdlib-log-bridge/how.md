@@ -11,14 +11,14 @@
   - Add `stdLogBridgeSkipStackFrames = 3`, positioned next to `logCtxSkipFrames`; value chosen so `getFuncName` (called from `logCtx`) skips the bridge's `Write`, stdlib `*log.Logger.output`, and stdlib `Println/Printf/Print` frame, landing on the user code that invoked the stdlib logger
   - The exact frame count is verified by the unit test asserting the `src=` attribute in the captured output
 - Functional options
-  - Define exported `type StdLogBridgeOption func(*stdLogBridgeWriter)` in `types.go`; implement `WithFilter(substrings []string) StdLogBridgeOption` in `stdlogbridge.go` that skips empty substrings and appends the rest to the writer's filters as `[]byte` slices
+  - Define exported `type StdLogBridgeOption func(*stdLogBridgeWriter)` in `types.go`; implement variadic `WithFilter(substrings ...string) StdLogBridgeOption` in `stdlogbridge.go` that skips empty substrings and appends the rest to the writer's filters as `[]byte` slices
   - Keep the writer type unexported so options are the only way to mutate its state, preserving the "cannot be misused as a generic streaming sink" invariant
 - Tests live in `logger_test.go` as `Test_NewStdLogBridge` using the existing `StartCapture` helper (see `logcapture.go`) with `t.Run` subtests for the five cases from the issue
   - Use `StartCapture(t, LogLevelNone)` for the "disabled level suppresses writes" subtest (level is auto-restored on cleanup)
   - Assert the text-handler-escaped form `msg="first\nsecond"` verbatim for the multi-line case; assert `src=` points at the test function for the single-line case
 - README updates in `pkg/goutils/logger/README.md`
   - Add feature bullet under `## Features` with links into `stdlogbridge.go`
-  - Add a new `<details>` pair under `## Problem` showing the DIY `io.Writer` adapter (CRLF trim, substring skip, `log.New` tuning, and the resulting wrong `src`) versus the one-liner `http.Server{ErrorLog: logger.NewStdErrorLogBridge(ctx, "http", logger.WithFilter([]string{"TLS handshake error"}))}`
+  - Add a new `<details>` pair under `## Problem` showing the DIY `io.Writer` adapter (CRLF trim, substring skip, `log.New` tuning, and the resulting wrong `src`) versus the one-liner `http.Server{ErrorLog: logger.NewStdErrorLogBridge(ctx, "http", logger.WithFilter("TLS handshake error"))}`
 
 References:
 

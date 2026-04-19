@@ -7,7 +7,7 @@
 - [x] create: [pkg/goutils/logger/stdlogbridge.go](../../../../../pkg/goutils/logger/stdlogbridge.go)
   - add: `NewStdErrorLogBridge(ctx, stage, opts...) *log.Logger` that constructs the writer with `logLevel: LogLevelError`
   - add: `Write` method that short-circuits when `isEnabled(w.logLevel)` is false, applies `WithFilter` substrings, trims trailing `\r`/`\n`, drops empty payloads, forwards via `LogCtx(ctx, stdLogBridgeSkipStackFrames, w.logLevel, stage, payload)` exactly once per call
-  - add: `WithFilter(substrings []string) StdLogBridgeOption` that skips empty substrings and stores the rest as `[]byte` slices
+  - add: variadic `WithFilter(substrings ...string) StdLogBridgeOption` that skips empty substrings and stores the rest as `[]byte` slices
 - [x] update: [pkg/goutils/logger/types.go](../../../../../pkg/goutils/logger/types.go)
   - add: unexported `stdLogBridgeWriter` struct with `ctx`, `stage`, `logLevel`, `filters [][]byte` fields
   - add: exported `StdLogBridgeOption func(*stdLogBridgeWriter)`
@@ -37,6 +37,6 @@ ctx := logger.WithContextAttrs(context.Background(), map[string]any{
 srv := &http.Server{
     Addr: ":8080",
     ErrorLog: logger.NewStdErrorLogBridge(ctx, "http",
-        logger.WithFilter([]string{"TLS handshake error"})),
+        logger.WithFilter("TLS handshake error")),
 }
 ```

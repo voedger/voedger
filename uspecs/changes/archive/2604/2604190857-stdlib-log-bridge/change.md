@@ -27,7 +27,7 @@ Add a single entry point in `pkg/goutils/logger` that produces a stdlib `*log.Lo
 
 Add filtering and caller-frame plumbing:
 
-- Functional-option type `StdLogBridgeOption` and option `WithFilter(substrings []string)` that drops a `Write` whose payload contains any of the given substrings; empty substrings are ignored and substrings are pre-converted to `[]byte` once to avoid per-`Write` allocation
+- Functional-option type `StdLogBridgeOption` and variadic option `WithFilter(substrings ...string)` that drops a `Write` whose payload contains any of the given substrings; empty substrings are ignored and substrings are pre-converted to `[]byte` once to avoid per-`Write` allocation
 - Unexported constant `stdLogBridgeSkipStackFrames = 3` in `consts.go` so `src` attribute points at the caller of `*log.Logger.{Println,Print,Printf}`, not at an internal stdlib or bridge frame
 
 Add unit tests in `logger_test.go` (`Test_NewStdLogBridge`) covering:

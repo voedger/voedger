@@ -11,7 +11,7 @@ import (
 	"log"
 )
 
-func WithFilter(substrings []string) StdLogBridgeOption {
+func WithFilter(substrings ...string) StdLogBridgeOption {
 	return func(w *stdLogBridgeWriter) {
 		for _, str := range substrings {
 			if len(str) == 0 {

@@ -33,7 +33,7 @@ Add `NewStdErrorLogBridge(ctx context.Context, stage string, opts ...StdLogBridg
 
 ### Options
 
-Add functional-option type `StdLogBridgeOption` and option `WithFilter(substrings []string)` that drops a `Write` whose payload contains any of the given substrings. Empty substrings are ignored; the remaining substrings are pre-converted to `[]byte` once and stored as `filters [][]byte` on the writer to avoid a `string->[]byte` conversion on every `Write`.
+Add functional-option type `StdLogBridgeOption` and variadic option `WithFilter(substrings ...string)` that drops a `Write` whose payload contains any of the given substrings. Empty substrings are ignored; the remaining substrings are pre-converted to `[]byte` once and stored as `filters [][]byte` on the writer to avoid a `string->[]byte` conversion on every `Write`.
 
 ### Constants
 

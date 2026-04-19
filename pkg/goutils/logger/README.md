@@ -138,7 +138,7 @@ import (
 func newServer(ctx context.Context) *http.Server {
     return &http.Server{
         ErrorLog: logger.NewStdErrorLogBridge(ctx, "http",
-            logger.WithFilter([]string{"TLS handshake error"})),
+            logger.WithFilter("TLS handshake error")),
     }
 }
 ```

@@ -298,7 +298,7 @@ func Test_NewStdLogBridge(t *testing.T) {
 	t.Run("WithFilter drops matching writes and forwards the rest", func(t *testing.T) {
 		logCap := logger.StartCapture(t, logger.LogLevelError)
 		l := logger.NewStdErrorLogBridge(context.Background(), "",
-			logger.WithFilter([]string{"TLS handshake error"}))
+			logger.WithFilter("TLS handshake error"))
 		l.Println("http: TLS handshake error from 1.2.3.4: read: connection reset")
 		l.Println("server started")
 		logCap.NotContains("TLS handshake error")
