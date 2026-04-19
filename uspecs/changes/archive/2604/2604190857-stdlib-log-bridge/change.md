@@ -21,13 +21,13 @@ Add a single entry point in `pkg/goutils/logger` that produces a stdlib `*log.Lo
 
 - `NewStdErrorLogBridge(ctx context.Context, stage string, opts ...StdLogBridgeOption) *log.Logger` returning the exact type `http.Server.ErrorLog` expects; the writer's level is held in an unexported `logLevel` field initialized to `LogLevelError`
 - Unexported writer `stdLogBridgeWriter` (declared in `types.go`) not exposed so it cannot be misused as a generic streaming sink
-- Trims trailing `\r`/`\n`, suppresses payloads empty after trimming, forwards remaining payload via `LogCtx(ctx, skipStackFrames, w.logLevel, stage, payload)` exactly once per `Write`
+- Skips the `Write` entirely when `w.logLevel` is disabled; otherwise trims trailing `\r`/`\n`, suppresses payloads empty after trimming, forwards remaining payload via `LogCtx(ctx, skipStackFrames, w.logLevel, stage, payload)` exactly once per `Write`
 - Embedded newlines kept verbatim in the message so multi-line payloads (e.g. net/http panic stack traces) stay a single correlatable log event
 - Contract: one `Write` call produces at most one log record; partial lines spanning multiple `Write` calls are not buffered
 
 Add filtering and caller-frame plumbing:
 
-- Functional-option type `StdLogBridgeOption` and option `WithFilter(substrings []string)` that drops a `Write` whose payload contains any of the given substrings
+- Functional-option type `StdLogBridgeOption` and option `WithFilter(substrings []string)` that drops a `Write` whose payload contains any of the given substrings; empty substrings are ignored and substrings are pre-converted to `[]byte` once to avoid per-`Write` allocation
 - Unexported constant `stdLogBridgeSkipStackFrames = 3` in `consts.go` so `src` attribute points at the caller of `*log.Logger.{Println,Print,Printf}`, not at an internal stdlib or bridge frame
 
 Add unit tests in `logger_test.go` (`Test_NewStdLogBridge`) covering:
@@ -41,4 +41,4 @@ Add unit tests in `logger_test.go` (`Test_NewStdLogBridge`) covering:
 Update README:
 
 - New feature entry under `## Features`
-- Before/after examples under `## Problem` contrasting a DIY `io.Writer` adapter (CRLF trim + substring filter + `log.New` tuning + wrong src frame) against `NewStdlibLogBridge(..., WithFilter(...))`
+- Before/after examples under `## Problem` contrasting a DIY `io.Writer` adapter (CRLF trim + substring filter + `log.New` tuning + wrong src frame) against `NewStdErrorLogBridge(..., WithFilter(...))`

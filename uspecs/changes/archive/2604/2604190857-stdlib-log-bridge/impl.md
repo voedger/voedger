@@ -6,10 +6,10 @@
   - add: unexported constant `stdLogBridgeSkipStackFrames = 3`
 - [x] create: [pkg/goutils/logger/stdlogbridge.go](../../../../../pkg/goutils/logger/stdlogbridge.go)
   - add: `NewStdErrorLogBridge(ctx, stage, opts...) *log.Logger` that constructs the writer with `logLevel: LogLevelError`
-  - add: `Write` method that applies `WithFilter` substrings, trims trailing `\r`/`\n`, drops empty payloads, forwards via `LogCtx(ctx, stdLogBridgeSkipStackFrames, w.logLevel, stage, payload)` exactly once per call
-  - add: `WithFilter(substrings []string) StdLogBridgeOption`
+  - add: `Write` method that short-circuits when `isEnabled(w.logLevel)` is false, applies `WithFilter` substrings, trims trailing `\r`/`\n`, drops empty payloads, forwards via `LogCtx(ctx, stdLogBridgeSkipStackFrames, w.logLevel, stage, payload)` exactly once per call
+  - add: `WithFilter(substrings []string) StdLogBridgeOption` that skips empty substrings and stores the rest as `[]byte` slices
 - [x] update: [pkg/goutils/logger/types.go](../../../../../pkg/goutils/logger/types.go)
-  - add: unexported `stdLogBridgeWriter` struct with `ctx`, `stage`, `logLevel`, `filters` fields
+  - add: unexported `stdLogBridgeWriter` struct with `ctx`, `stage`, `logLevel`, `filters [][]byte` fields
   - add: exported `StdLogBridgeOption func(*stdLogBridgeWriter)`
 - [x] update: [pkg/goutils/logger/logger_test.go](../../../../../pkg/goutils/logger/logger_test.go)
   - add: `Test_NewStdLogBridge` with subtests for single-line forwarding (stage + ctx attrs + src), multi-line preservation (`msg="first\nsecond"`, CRLF trimmed, one line), empty-after-trim suppression, disabled level suppression, `WithFilter` drop behavior

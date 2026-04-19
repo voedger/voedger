@@ -13,7 +13,12 @@ import (
 
 func WithFilter(substrings []string) StdLogBridgeOption {
 	return func(w *stdLogBridgeWriter) {
-		w.filters = append(w.filters, substrings...)
+		for _, str := range substrings {
+			if len(str) == 0 {
+				continue
+			}
+			w.filters = append(w.filters, []byte(str))
+		}
 	}
 }
 
@@ -27,8 +32,11 @@ func NewStdErrorLogBridge(ctx context.Context, stage string, opts ...StdLogBridg
 
 func (w *stdLogBridgeWriter) Write(p []byte) (int, error) {
 	n := len(p)
+	if !isEnabled(w.logLevel) {
+		return n, nil
+	}
 	for _, s := range w.filters {
-		if bytes.Contains(p, []byte(s)) {
+		if bytes.Contains(p, s) {
 			return n, nil
 		}
 	}

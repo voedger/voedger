@@ -46,7 +46,7 @@ type stdLogBridgeWriter struct {
 	ctx      context.Context
 	stage    string
 	logLevel TLogLevel
-	filters  []string
+	filters  [][]byte // not []string to avoid string->[]byte conversion on each log line
 }
 
 type StdLogBridgeOption func(*stdLogBridgeWriter)

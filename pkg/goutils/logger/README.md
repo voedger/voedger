@@ -191,9 +191,9 @@ func newServer(ctx context.Context) *http.Server {
   output (e.g. `http.Server.ErrorLog`) into the voedger ctx logger
   at Error level with one `Write` = one record, trailing CRLF trim,
   embedded newlines preserved, and optional substring filtering
-  - [NewStdErrorLogBridge: stdlogbridge.go#L29](stdlogbridge.go#L29)
-  - [WithFilter: stdlogbridge.go#L23](stdlogbridge.go#L23)
-  - [stdLogBridgeWriter.Write: stdlogbridge.go#L37](stdlogbridge.go#L37)
+  - [NewStdErrorLogBridge: stdlogbridge.go#L25](stdlogbridge.go#L25)
+  - [WithFilter: stdlogbridge.go#L14](stdlogbridge.go#L14)
+  - [stdLogBridgeWriter.Write: stdlogbridge.go#L33](stdlogbridge.go#L33)
 
 ## Use
 
