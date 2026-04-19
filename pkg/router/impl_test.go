@@ -581,10 +581,13 @@ func Test_HTTPErrorLog_ForwardedToLogger(t *testing.T) {
 	})
 
 	t.Run("real http internals write to ErrorLog on handler panic", func(t *testing.T) {
-		_, _ = http.Get("http://" + srv.listener.Addr().String() + "/")
-
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get("http://" + srv.listener.Addr().String() + "/")
+		require.ErrorIs(err, io.EOF)
+		if resp != nil {
+			resp.Body.Close()
+		}
 		logCap.EventuallyHasLine("panic serving", "stage=endpoint.http.error", "extension=sys._HTTPServer")
-		log.Println(logCap.String())
 	})
 }
 
