@@ -77,6 +77,74 @@ func processPayment(ctx context.Context) {
 
 </details>
 
+Consumers of stdlib `*log.Logger` (e.g. `http.Server.ErrorLog`,
+`acme/autocert`, third-party libraries) have no first-class way to
+forward byte-oriented output into the structured logger, so teams
+reinvent ad-hoc `io.Writer` adapters that lose ctx attrs, misreport
+the caller frame, and split multi-line panic traces into
+disconnected records.
+
+<details>
+<summary>Without NewStdErrorLogBridge</summary>
+
+```go
+// Ad-hoc adapter: no ctx attrs, wrong src frame, no stage,
+// per-line splitting fragments net/http panic stack traces.
+type filteringWriter struct {
+    out     io.Writer
+    filters []string
+}
+
+func (f *filteringWriter) Write(p []byte) (int, error) {
+    for _, s := range f.filters { // boilerplate: substring drop
+        if bytes.Contains(p, []byte(s)) {
+            return len(p), nil
+        }
+    }
+    trimmed := bytes.TrimRight(p, "\r\n") // boilerplate: CRLF trim
+    if len(trimmed) == 0 {
+        return len(p), nil
+    }
+    // boilerplate: splits multi-line payloads, each line logged
+    // separately so a single panic stack becomes N disconnected
+    // records; src attribute points at this Write, not the caller
+    for _, line := range bytes.Split(trimmed, []byte("\n")) {
+        fmt.Fprintln(f.out, string(line))
+    }
+    return len(p), nil
+}
+
+srv := &http.Server{
+    ErrorLog: log.New(&filteringWriter{
+        out:     os.Stderr,
+        filters: []string{"TLS handshake error"},
+    }, "", 0),
+}
+```
+
+</details>
+
+<details>
+<summary>With NewStdErrorLogBridge</summary>
+
+```go
+import (
+    "context"
+    "net/http"
+
+    "github.com/voedger/voedger/pkg/goutils/logger"
+)
+
+func newServer(ctx context.Context) *http.Server {
+    return &http.Server{
+        ErrorLog: logger.NewStdErrorLogBridge(ctx, "http",
+            logger.WithFilter([]string{"TLS handshake error"})),
+    }
+}
+```
+
+</details>
+
 ## Features
 
 - **Level filtering** - Hierarchical levels (`Error`→`Trace`) with
@@ -97,7 +165,7 @@ func processPayment(ctx context.Context) {
   - **Predefined attribute key constants** ([consts.go](consts.go#L19))
 
     | Constant            | Key         | Example value |
-    | ------------------- | ----------- | ------------- |
+    |---------------------|-------------|---------------|
     | `LogAttr_VApp`      | `vapp`      | `my.app`      |
     | `LogAttr_Feat`      | `feat`      | `magicmenu`   |
     | `LogAttr_ReqID`     | `reqid`     | `42`          |
@@ -119,6 +187,13 @@ func processPayment(ctx context.Context) {
   - [HasLine: logcapture.go#L30](logcapture.go#L30)
   - [EventuallyHasLine: logcapture.go#L41](logcapture.go#L41)
   - [NotContains: logcapture.go#L78](logcapture.go#L78)
+- **Stdlib `*log.Logger` bridge** - forward byte-oriented stdlib
+  output (e.g. `http.Server.ErrorLog`) into the voedger ctx logger
+  at Error level with one `Write` = one record, trailing CRLF trim,
+  embedded newlines preserved, and optional substring filtering
+  - [NewStdErrorLogBridge: stdlogbridge.go#L29](stdlogbridge.go#L29)
+  - [WithFilter: stdlogbridge.go#L23](stdlogbridge.go#L23)
+  - [stdLogBridgeWriter.Write: stdlogbridge.go#L37](stdlogbridge.go#L37)
 
 ## Use
 

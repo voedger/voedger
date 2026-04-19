@@ -250,6 +250,62 @@ func Test_CtxFuncs_StageAttr(t *testing.T) {
 	})
 }
 
+func Test_NewStdLogBridge(t *testing.T) {
+	t.Run("single-line forwarding with stage and ctx attrs", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+			logger.LogAttr_VApp: "myapp",
+			logger.LogAttr_WSID: 42,
+		})
+		l := logger.NewStdErrorLogBridge(ctx, "http")
+		l.Println("hello bridge")
+		logCap.HasLine("hello bridge", "level=ERROR", "stage=http", "vapp=myapp", "wsid=42", "Test_NewStdLogBridge")
+	})
+
+	t.Run("multi-line payload kept as single record with escaped newlines", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		l := logger.NewStdErrorLogBridge(context.Background(), "")
+		l.Print("first\nsecond\r\n")
+		out := logCap.String()
+		require.Contains(out, `msg="first\nsecond"`)
+		nonEmpty := 0
+		for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+			if len(line) > 0 {
+				nonEmpty++
+			}
+		}
+		require.Equal(1, nonEmpty)
+	})
+
+	t.Run("payload empty after trimming is suppressed", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		l := logger.NewStdErrorLogBridge(context.Background(), "")
+		l.Print("\r\n")
+		l.Print("")
+		require.Empty(logCap.String())
+	})
+
+	t.Run("disabled log level suppresses writes", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelNone)
+		l := logger.NewStdErrorLogBridge(context.Background(), "")
+		l.Println("never printed")
+		require.Empty(logCap.String())
+	})
+
+	t.Run("WithFilter drops matching writes and forwards the rest", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		l := logger.NewStdErrorLogBridge(context.Background(), "",
+			logger.WithFilter([]string{"TLS handshake error"}))
+		l.Println("http: TLS handshake error from 1.2.3.4: read: connection reset")
+		l.Println("server started")
+		logCap.NotContains("TLS handshake error")
+		logCap.HasLine("server started")
+	})
+}
+
 func TestMultithread(t *testing.T) {
 	toLog := []string{}
 	for i := 0; i < 100; i++ {
