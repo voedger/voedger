@@ -101,7 +101,6 @@ func (s *httpServer) prepareBasicServer(handler http.Handler) (err error) {
 		Handler:      handler,
 		ReadTimeout:  time.Duration(s.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.WriteTimeout) * time.Second,
-		ErrorLog:     log.New(&annoyingErrorsFilter{log.Default().Writer()}, log.Default().Prefix(), log.Default().Flags()),
 	}
 	return nil
 }
@@ -114,6 +113,7 @@ func (s *httpServer) preRun(ctx context.Context) {
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return s.rootLogCtx // need to track both client disconnect and app finalize
 	}
+	s.server.ErrorLog = logger.NewStdErrorLogBridge(s.rootLogCtx, "endpoint.http.error", logger.WithFilter(skipAnnoyingErrors...))
 	logger.InfoCtx(s.rootLogCtx, "endpoint.listen.start", s.listener.Addr().(*net.TCPAddr).String())
 }
 

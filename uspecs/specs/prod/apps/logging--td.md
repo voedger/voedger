@@ -92,6 +92,10 @@ HTTP root context is derived from VVM context:
 - Server stops accepting connections: level `Info`, stage `endpoint.shutdown`, msg (empty)
 - Error on http server shutdown: level `Error`, stage `endpoint.shutdown.error`, msg `<error message>`
 - Server exits unexpectedly: level `Error`, stage `endpoint.unexpectedstop`, msg `<err>`
+- http server internal error log: level `Error`, stage `endpoint.http.error`, msg `<trimmed line emitted to http.Server.ErrorLog>`
+  - `http.Server.ErrorLog` is bridged to voedger logger via `logger.NewStdErrorLogBridge(s.rootLogCtx, "endpoint.http.error", logger.WithFilter(skipAnnoyingErrors...))`
+  - Attributes are inherited from the http server root log context (`vapp="sys/voedger"`, `extension=<server name>`)
+  - Lines matching any substring in `skipAnnoyingErrors` (currently `"TLS handshake error"`) are suppressed by `logger.WithFilter`
 
 #### Application deployment
 
