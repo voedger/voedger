@@ -555,6 +555,39 @@ func expectResp(t *testing.T, resp *http.Response, contentType string, statusCod
 	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Blob-Name"}, resp.Header["Access-Control-Allow-Headers"])
 }
 
+func Test_HTTPErrorLog_ForwardedToLogger(t *testing.T) {
+	require := require.New(t)
+	logCap := logger.StartCapture(t, logger.LogLevelError)
+
+	srv := &httpServer{
+		name:          "sys._HTTPServer",
+		listenAddress: "127.0.0.1:0",
+	}
+	require.NoError(srv.prepareBasicServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	})))
+	srv.preRun(context.Background())
+	go srv.server.Serve(srv.listener) //nolint errcheck
+	defer srv.server.Close()
+
+	t.Run("forwarded with stage and extension", func(t *testing.T) {
+		srv.server.ErrorLog.Println("boom on connection X")
+		logCap.HasLine("boom on connection X", "stage=endpoint.http.error", "extension=sys._HTTPServer")
+	})
+
+	t.Run("TLS handshake errors are filtered out", func(t *testing.T) {
+		srv.server.ErrorLog.Println("http: TLS handshake error from 1.2.3.4:5678: bad record MAC")
+		logCap.NotContains("bad record MAC")
+	})
+
+	t.Run("real http internals write to ErrorLog on handler panic", func(t *testing.T) {
+		_, _ = http.Get("http://" + srv.listener.Addr().String() + "/")
+
+		logCap.EventuallyHasLine("panic serving", "stage=endpoint.http.error", "extension=sys._HTTPServer")
+		log.Println(logCap.String())
+	})
+}
+
 // https://untill.atlassian.net/browse/AIR-3528
 func TestSubscribeAndWatch_NoSuperfluousWriteHeader(t *testing.T) {
 	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
