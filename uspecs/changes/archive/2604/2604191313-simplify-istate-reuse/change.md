@@ -3,6 +3,7 @@ registered_at: 2026-04-04T10:33:39Z
 change_id: 2604041033-simplify-istate-reuse
 baseline: 9f5dc79dd02b7738d79555554c885341a09c4aa1
 issue_url: https://untill.atlassian.net/browse/AIR-3517
+archived_at: 2026-04-19T13:13:24Z
 ---
 
 # Change request: Simplify IState reuse in processors

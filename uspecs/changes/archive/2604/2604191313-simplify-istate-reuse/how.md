@@ -30,13 +30,13 @@ The only place that needs simplification is the command processor's `hostStatePr
 
 References:
 
-- [pkg/processors/command/types.go](../../pkg/processors/command/types.go)
-- [pkg/processors/command/impl.go](../../pkg/processors/command/impl.go)
-- [pkg/processors/command/provide.go](../../pkg/processors/command/provide.go)
-- [pkg/state/stateprovide/impl_command_processor_state.go](../../pkg/state/stateprovide/impl_command_processor_state.go)
-- [pkg/processors/query/impl.go](../../pkg/processors/query/impl.go)
-- [pkg/processors/query2/impl.go](../../pkg/processors/query2/impl.go)
-- [pkg/state/stateprovide/impl_query_processor_state.go](../../pkg/state/stateprovide/impl_query_processor_state.go)
-- [pkg/processors/actualizers/impl.go](../../pkg/processors/actualizers/impl.go)
-- [pkg/processors/actualizers/async.go](../../pkg/processors/actualizers/async.go)
-- [pkg/state/stateprovide/impl_host_state.go](../../pkg/state/stateprovide/impl_host_state.go)
+- [pkg/processors/command/types.go](../../../../pkg/processors/command/types.go)
+- [pkg/processors/command/impl.go](../../../../pkg/processors/command/impl.go)
+- [pkg/processors/command/provide.go](../../../../pkg/processors/command/provide.go)
+- [pkg/state/stateprovide/impl_command_processor_state.go](../../../../pkg/state/stateprovide/impl_command_processor_state.go)
+- [pkg/processors/query/impl.go](../../../../pkg/processors/query/impl.go)
+- [pkg/processors/query2/impl.go](../../../../pkg/processors/query2/impl.go)
+- [pkg/state/stateprovide/impl_query_processor_state.go](../../../../pkg/state/stateprovide/impl_query_processor_state.go)
+- [pkg/processors/actualizers/impl.go](../../../../pkg/processors/actualizers/impl.go)
+- [pkg/processors/actualizers/async.go](../../../../pkg/processors/actualizers/async.go)
+- [pkg/state/stateprovide/impl_host_state.go](../../../../pkg/state/stateprovide/impl_host_state.go)
