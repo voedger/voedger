@@ -25,7 +25,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
@@ -33,7 +32,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state/safestate"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -260,7 +258,6 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,
-		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
 		isequencer.SequencesTrustLevel_0, nil)
@@ -945,7 +942,7 @@ func appStructsFromSQL(packagePath string, appdefSQL string, prepareAppCfg appCf
 			WLogOffset:        wlogOffset,
 		},
 	})
-	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cud := rebWs.CUDBuilder().Create(appdef.QNameCDocWorkspaceDescriptor)
 	cud.PutRecordID(appdef.SystemField_ID, 1)
 	cud.PutQName("WSKind", testWorkspaceDescriptor)
 	rawWsEvent, err := rebWs.BuildRawEvent()

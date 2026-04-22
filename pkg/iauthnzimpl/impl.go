@@ -138,7 +138,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		QName: iauthnz.QNameRoleWorkspaceOwner,
 	}
 
-	wsDesc, err := as.Records().GetSingleton(req.RequestWSID, qNameCDocWorkspaceDescriptor)
+	wsDesc, err := as.Records().GetSingleton(req.RequestWSID, appdef.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		return nil, istructs.NullWSID, err
 	}

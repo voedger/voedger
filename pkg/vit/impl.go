@@ -35,12 +35,11 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
-	"github.com/voedger/voedger/pkg/irates"
+
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -93,11 +92,11 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.MetricsServicePort = 0
 	cfg.AdminPort = 0
 
-	// [~server.design.sequences/tuc.VVMConfig.ConfigureSequencesTrustLevel~impl]
 	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
 
 	cfg.Time = testingu.MockTime
 	cfg.SchemasCache = nonTestAppsSchemasCache
+	cfg.BusyProcessorLogMode = vvmpkg.BusyProcessorLogMode_Silent
 
 	emailCaptor := &implIEmailSender_captor{
 		emailCaptorCh: make(chan state.EmailMessage, 1), // must be buffered
@@ -169,8 +168,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
 	// get rid of huge amount of logs reporting about workspaces init process
-	loggerRestore := logger.SetLogLevelWithRestore(logger.LogLevelWarning)
-	defer loggerRestore()
+	defer logger.SetLogLevelWithRestore(logger.LogLevelWarning)()
 
 	// launch the server
 	// leadership duration - ten years to avoid leadership expiration when time bumps in tests (including 1 day add on each test)
@@ -419,7 +417,7 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	o := []httpu.ReqOptFunc{createVITOpts()}
+	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...)}
 	o = append(o, opts...)
 	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, o...)
 	require.NoError(vit.T, err)
@@ -455,7 +453,7 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 		},
 		ReadCloser: io.NopCloser(bytes.NewReader(content)),
 	}
-	o := []httpu.ReqOptFunc{createVITOpts()}
+	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...)}
 	o = append(o, opts...)
 	blobSUUID, err := vit.IFederation.UploadTempBLOB(appQName, wsid, blobReader, duration, o...)
 	require.NoError(vit.T, err)
@@ -641,23 +639,6 @@ func (vit *VIT) SchedulerNow() time.Time {
 
 func (vit *VIT) NextName() string {
 	return "name_" + strconv.Itoa(vit.NextNumber())
-}
-
-// sets `bs` as state of Buckets for `rateLimitName` in `appQName`
-// will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
-func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName appdef.QName, bs irates.BucketState) {
-	vit.T.Helper()
-	as, err := vit.BuiltIn(appQName)
-	require.NoError(vit.T, err)
-	appBuckets := istructsmem.IBucketsFromIAppStructs(as)
-	initialState, err := appBuckets.GetDefaultBucketsState(rateLimitName)
-	require.NoError(vit.T, err)
-	appBuckets.SetDefaultBucketState(rateLimitName, bs)
-	appBuckets.ResetRateBuckets(rateLimitName, bs)
-	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
-		appBuckets.SetDefaultBucketState(rateLimitName, initialState)
-		appBuckets.ResetRateBuckets(rateLimitName, initialState)
-	})
 }
 
 // CaptureEmail waits for and returns the next sent email

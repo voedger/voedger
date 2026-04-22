@@ -226,10 +226,10 @@ func newMockedKeyBuilder(mockedStorage *MockedStorage, entity appdef.QName) *moc
 func (mkb *mockedKeyBuilder) HashCode() (uint64, error) {
 	if mkb.ID_ == 0 && len(mkb.Data) > 0 {
 		// Convert map to a sorted slice of key-value pairs to ensure consistent ordering
-		var pairs []struct {
+		pairs := make([]struct {
 			Key   string
 			Value any
-		}
+		}, 0, len(mkb.Data))
 		for k, v := range mkb.Data {
 			pairs = append(pairs, struct {
 				Key   string

@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -127,6 +129,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						p = nil
 					} else {
 						if err = execQuery(ctx, qwork); err == nil {
+							logger.VerboseCtx(qwork.msg.RequestCtx(), "qp.success")
 							if err = processors.CheckResponseIntent(qwork.state); err == nil {
 								err = qwork.state.ApplyIntents()
 							}
@@ -148,7 +151,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
-						logger.Error(fmt.Sprintf("%d/%s exec error: %s", qwork.msg.WSID(), qwork.msg.QName(), err))
+						logger.ErrorCtx(qwork.msg.RequestCtx(), "qp.error", err)
 					}
 					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
 						// have an error before 200ok is sent -> send the status from the actual error
@@ -187,10 +190,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
-				return coreutils.NewSysError(http.StatusTooManyRequests)
+			exceeded, limit := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host())
+			if !exceeded {
+				return nil
 			}
-			return nil
+			retryAfter := processors.RetryAfterSecondsOnLimitExceeded(qw.appStructs.AppDef(), limit)
+			return coreutils.NewHTTPErrorf(http.StatusTooManyRequests).AddHeader(httpu.RetryAfter, strconv.Itoa(retryAfter))
 		}),
 		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
 			if processors.SetPrincipalsForAnonymousOnlyFunc(qw.appStructs.AppDef(), qw.msg.QName(), qw.msg.WSID(), qw) {
@@ -274,6 +279,21 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			err = coreutils.JSONUnmarshal(qw.msg.Body(), &qw.requestData)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
+		}),
+		operator("check unexpected request body fields", func(_ context.Context, qw *queryWork) error {
+			var unexpected []string
+			for key := range qw.requestData {
+				switch key {
+				case "args", "elements", "filters", "orderBy", "count", "startFrom":
+				default:
+					unexpected = append(unexpected, key)
+				}
+			}
+			if len(unexpected) > 0 {
+				sort.Strings(unexpected)
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", ")))
+			}
+			return nil
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), qw)
@@ -433,6 +453,8 @@ type queryWork struct {
 	responseWriterGetter func() bus.IResponseWriter
 }
 
+var _ processors.IProcessorWorkpiece = (*queryWork)(nil)
+
 func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
 	return &queryWork{
@@ -444,6 +466,11 @@ func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 		secretReader:       secretReader,
 		rowsProcessorErrCh: make(chan error, 1),
 	}
+}
+
+// used by e.g. q.sys.IssueVerifiedValueToken
+func (qw *queryWork) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind) {
+	qw.appPart.ResetRateLimit(resource, operation, qw.msg.WSID(), qw.msg.Host())
 }
 
 // need for q.sys.EnrichPrincipalToken
@@ -496,6 +523,10 @@ func (qw *queryWork) Roles() []appdef.QName {
 
 func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
 	qw.principals = prns
+}
+
+func (qw *queryWork) LogCtx() context.Context {
+	return qw.msg.RequestCtx()
 }
 
 func borrowAppPart(_ context.Context, qw *queryWork) error {
@@ -594,7 +625,14 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 	}
 	argsType := qw.iQuery.Param()
 	requestArgs := istructs.NewNullObject()
-	if argsType != nil {
+	if argsType == nil {
+		if len(args) > 0 {
+			return execQueryArgs, fmt.Errorf("args are not expected")
+		}
+	} else {
+		if err = processors.CheckUnexpectedFields(args, argsType); err != nil {
+			return execQueryArgs, err
+		}
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
 		requestArgsBuilder.FillFromJSON(args)
 		requestArgs, err = requestArgsBuilder.Build()
@@ -625,7 +663,7 @@ type element struct {
 }
 
 func (e element) NewOutputRow() IOutputRow {
-	fields := make([]string, 0)
+	fields := make([]string, 0, len(e.fields)+len(e.refs))
 	for _, field := range e.fields {
 		fields = append(fields, field.Field())
 	}

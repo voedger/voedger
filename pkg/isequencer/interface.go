@@ -30,8 +30,8 @@ type ISeqStorage interface {
 
 type IVVMSeqStorageAdapter interface {
 	GetNumber(appID ClusterAppID, wsid WSID, seqID SeqID) (ok bool, number Number, err error)
-	GetPLogOffset(partitionID PartitionID) (ok bool, pLogOffset PLogOffset, err error)
-	PutPLogOffset(partitionID PartitionID, plogOffset PLogOffset) error
+	GetPLogOffset(appID ClusterAppID, partitionID PartitionID) (ok bool, pLogOffset PLogOffset, err error)
+	PutPLogOffset(appID ClusterAppID, partitionID PartitionID, plogOffset PLogOffset) error
 	PutNumbers(appID ClusterAppID, batch []SeqValue) error
 }
 
@@ -44,7 +44,6 @@ type IVVMSeqStorageAdapter interface {
 // - Actualization: Making the persistent state of the sequences consistent with the PLog.
 // - Flushing: Writing the accumulated sequence values to the storage.
 // - LRU Cache: Least Recently Used cache that keep the most recent next sequence values in memory.
-// [~server.design.sequences/cmp.ISequencer~impl]
 type ISequencer interface {
 
 	// Start starts Sequencing Transaction for the given WSID.
@@ -55,7 +54,6 @@ type ISequencer interface {
 	// - Actualization is in progress
 	// - The number of unflushed values exceeds the maximum threshold
 	// If ok is true, the caller must call Flush() or Actualize() to complete the Sequencing Transaction.
-	// [~server.design.sequences/cmp.ISequencer.Start~impl]
 	Start(wsKind WSKind, wsID WSID) (plogOffset PLogOffset, ok bool)
 
 	// Next returns the next sequence number for the given SeqID.
@@ -72,10 +70,8 @@ type ISequencer interface {
 	// Panics if Actualization is already in progress.
 	// Panics if Sequencing Transaction is not in progress.
 	// Flow:
+	// - Clear inproc, purge LRU Cache
 	// - Mark Sequencing Transaction as not in progress
-	// - Cancel and wait Flushing
-	// - Empty LRU Cache
-	// - Do Actualization process
-	// - Write next PLogOffset
+	// - Start actualizer goroutine (which stops/restarts flusher, clears toBeFlushed, reads PLog offset from storage, actualizes)
 	Actualize()
 }

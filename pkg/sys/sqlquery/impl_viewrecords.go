@@ -53,7 +53,7 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 			}
 
 			kk = append(kk, keyPart{
-				name:  name,
+				name:  recoverFieldName(view, name),
 				value: r.Right.(*sqlparser.SQLVal).Val,
 			})
 		case *sqlparser.AndExpr:
@@ -78,11 +78,14 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 
 	kb := appStructs.ViewRecords().KeyBuilder(viewRecordQName)
 
-	for _, k := range kk {
-		f := view.Key().Field(k.name)
+	for i, k := range kk {
+		correctedName := recoverFieldName(view.Key(), k.name)
+		kk[i].name = correctedName
+		f := view.Key().Field(correctedName)
 		if f == nil {
 			return fmt.Errorf("field '%s' does not exist in '%s' key def", k.name, viewRecordQName)
 		}
+
 		switch f.DataKind() {
 		case appdef.DataKind_int32:
 			fallthrough

@@ -5,8 +5,9 @@
 package commandprocessor
 
 import (
+	"bytes"
 	"context"
-	"fmt"
+	"encoding/json"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -55,7 +56,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 		}
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
-			hsp := newHostStateProvider(vvmCtx, secretReader)
+			hs := newReusableHostState(vvmCtx, secretReader)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
 				pipeline.WireFunc("applyRecords", func(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 					if cmd.reapplier != nil {
@@ -76,6 +77,9 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 							cmd.syncProjectorsStart = tm.Now()
 							if err != nil {
 								cmd.appPartitionRestartScheduled = true
+								logger.ErrorCtx(cmd.logCtx, "sp.error", err)
+							} else {
+								logger.VerboseCtx(cmd.logCtx, "sp.success")
 							}
 							return err
 						}),
@@ -93,7 +97,8 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 						}
 						return err
 					})),
-				)))
+				)),
+			)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("borrowAppPart", borrowAppPart),
 				pipeline.WireFunc("getCmdQName", getCmdQName),
@@ -108,8 +113,10 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 				pipeline.WireFunc("getICommand", getICommand),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),
+				pipeline.WireFunc("checkUnexpectedRequestBodyFields", checkUnexpectedRequestBodyFields),
 				pipeline.WireFunc("getWorkspace", cmdProc.getWorkspace),
 				pipeline.WireFunc("apiv2_denyODocCUD", apiv2_denyODocCUD),
+				pipeline.WireFunc("setPLogOffset", setPLogOffset),
 				pipeline.WireFunc("getRawEventBuilderBuilders", cmdProc.getRawEventBuilder),
 				pipeline.WireFunc("getArgsObject", getArgsObject),
 				pipeline.WireFunc("getUnloggedArgsObject", getUnloggedArgsObject),
@@ -135,6 +142,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 				pipeline.WireFunc("validateCmdResult", validateCmdResult),
 				pipeline.WireFunc("getIDGenerator", getIDGenerator),
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
+				pipeline.WireFunc("logEventAndCUDs", logEventAndCUDs),
 				pipeline.WireFunc("store", cmdProc.storeOp.DoSync),
 				pipeline.WireFunc("notifyAsyncActualizers", cmdProc.notifyAsyncActualizers),
 			)
@@ -146,10 +154,10 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 					start := tm.Now()
 					cmdMes := intf.(ICommandMessage)
 					cmd := &cmdWorkpiece{
-						cmdMes:            cmdMes,
-						requestData:       coreutils.MapObject{},
-						appParts:          appParts,
-						hostStateProvider: hsp,
+						cmdMes:      cmdMes,
+						requestData: coreutils.MapObject{},
+						appParts:    appParts,
+						hostState:   hs,
 						metrics: commandProcessorMetrics{
 							vvmName: string(vvm),
 							app:     cmdMes.AppQName(),
@@ -160,21 +168,44 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 						defer cmd.Release()
 						cmd.metrics.increase(CommandsTotal, 1.0)
 						cmdHandlingErr := cmdPipeline.SendSync(cmd)
-						if cmdHandlingErr != nil {
-							logger.Error(fmt.Sprintf("%d/%s exec error: %s", cmd.cmdMes.WSID(), cmd.cmdMes.QName(), cmdHandlingErr))
-						}
+						logHandlingError(cmd, cmdHandlingErr)
 						sendResponse(cmd, cmdHandlingErr)
+						if cmdHandlingErr == nil {
+							logSuccess(cmd)
+						}
 						if cmd.appPartitionRestartScheduled {
-							logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
+							logger.WarningCtx(newRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID()), "cp.partition_recovery", "partition will be restarted due of an error on writing to Log: ", cmdHandlingErr)
 							delete(cmdProc.appsPartitions, cmd.cmdMes.AppQName())
 						}
 					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
-					cmdProc.appsPartitions = map[appdef.AppQName]map[istructs.PartitionID]*appPartition{} // clear appPartitions to test recovery
-					return
 				}
 			}
+			cmdProc.appsPartitions = map[appdef.AppQName]map[istructs.PartitionID]*appPartition{}
 		})
 	}
+}
+
+func logHandlingError(cmd *cmdWorkpiece, err error) {
+	if err == nil {
+		return
+	}
+	body := compactBody(cmd.cmdMes.Body())
+	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelError, "cp.error", err, ", body: ", body)
+}
+
+func logSuccess(cmd *cmdWorkpiece) {
+	if !logger.IsVerbose() {
+		return
+	}
+	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelVerbose, "cp.success", "result: ", cmd.cmdResToLog)
+}
+
+func compactBody(body []byte) string {
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, body); err != nil {
+		return string(body)
+	}
+	return buf.String()
 }

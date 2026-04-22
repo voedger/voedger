@@ -39,6 +39,7 @@ linters:
         - G101
         - G601
         - G602
+        - G117 # exported fields like "Pwd" matches secret pattern
     misspell:
       ignore-rules:
         - untill
@@ -54,13 +55,13 @@ linters:
           arguments:
             - allowFloats: 0.0,0.,1.0,1.,2.0,2.
               allowInts: 0,1,2
-              allowStrs: '""'
+              allowStrs: '"","to"'
               maxLitCount: "3"
           severity: warning
     staticcheck:
       checks:
         - all
-        - '-QF1008' # possibly dangerous: could remove embedded field ... from selector
+        - "-QF1008" # possibly dangerous: could remove embedded field ... from selector
     testifylint:
       disable:
         - float-compare
@@ -80,19 +81,23 @@ linters:
       - std-error-handling
     rules:
       - linters:
-        - gosec
-        - revive
-        - goconst
+          - gosec
+          - revive
+          - goconst
+          - prealloc
         path: _test.go
       - linters:
-        - errcheck
+          - errcheck
         source: 'require\.Panics(?:WithValue)?'
       - linters:
-        - testifylint
+          - testifylint
         text: (do not use require in http handlers)|(must only be used in the goroutine running the test function)|(use require\.Equal)
       - linters:
-        - staticcheck
+          - staticcheck
         text: should not use underscores
+      - linters:
+          - prealloc
+        path: pkg/vit/
     paths:
       - third_party$
       - builtin$

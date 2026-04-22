@@ -12,17 +12,14 @@ const (
 	// [~server.design.orch/KeyPrefix_VVMLeader~impl]
 	pKeyPrefix_VVMLeader
 
-	// [~server.design.sequences/cmp.VVMSeqStorageAdapter.KeyPrefixSeqStoragePart~impl]
 	pKeyPrefix_SeqStorage_Part
 
-	// [~server.design.sequences/cmp.VVMSeqStorageAdapter.KeyPrefixSeqStorageWS~impl]
 	pKeyPrefix_SeqStorage_WS
 
 	pKeyPrefix_AppTTL
 )
 
 const (
-	// [~server.design.sequences/cmp.VVMSeqStorageAdapter.PLogOffsetCC~impl]
 	PLogOffsetCC = uint32(0)
 )
 

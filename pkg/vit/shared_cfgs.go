@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -91,6 +92,8 @@ var (
 	QNameApp1_WDocCapabilities               = appdef.NewQName(app1PkgName, "Capabilities")
 	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
 	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
+	QNameCmdIPRated                          = appdef.NewQName(app1PkgName, "IPRatedCmd")
+	QNameQryIPRated                          = appdef.NewQName(app1PkgName, "IPRatedQry")
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
 	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
 	TestSMTPCfg                              = smtp.Cfg{
@@ -238,13 +241,15 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		istructsmem.NullCommandExec,
 	))
 
-	// per-app limits
-	cfg.FunctionRateLimits.AddAppLimit(QNameCmdRated, maxRateLimit2PerMinute)
-	cfg.FunctionRateLimits.AddAppLimit(QNameQryRated, maxRateLimit2PerMinute)
+	cfg.Resources.Add(istructsmem.NewQueryFunction(
+		QNameQryIPRated,
+		istructsmem.NullQueryExec,
+	))
 
-	// per-workspace limits
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameCmdRated, maxRateLimit4PerHour)
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQryRated, maxRateLimit4PerHour)
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		QNameCmdIPRated,
+		istructsmem.NullCommandExec,
+	))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(app1PkgName, "MockQry"),
@@ -391,6 +396,13 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(
+		appdef.NewQName(app1PkgName, "TestQryRawArg"),
+		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+			body := args.ArgumentObject.AsString(processors.Field_RawObject_Body)
+			return callback(&coreutils.TestObject{Data: map[string]interface{}{"Res": body}})
+		},
+	))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestDeniedCmd"), istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "TestDeniedQuery"), istructsmem.NullQueryExec))
 
@@ -468,6 +480,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 	}))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryVoid"), istructsmem.NullQueryExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdVoid"), istructsmem.NullCommandExec))
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdODocWithBLOB"), istructsmem.NullCommandExec))
 

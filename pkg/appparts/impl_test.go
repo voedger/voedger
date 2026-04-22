@@ -138,7 +138,6 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 
 	appStructs := istructsmem.Provide(
 		appConfigs,
-		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
 

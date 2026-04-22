@@ -53,7 +53,7 @@ func TestBasicUsage(t *testing.T) {
 
 		// workspace owned by the user
 		istructs.WSID(2): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=1
 				1: {
 					"OwnerWSID": int64(1), // the same as ProfileWSID
@@ -63,7 +63,7 @@ func TestBasicUsage(t *testing.T) {
 
 		// child workspace. Parent is WSID 2
 		istructs.WSID(3): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=2
 				1: {
 					"OwnerWSID": int64(2),
@@ -226,7 +226,7 @@ func TestAuthenticate(t *testing.T) {
 
 		// workspace owned by the user
 		istructs.WSID(2): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=1
 				1: {
 					"OwnerWSID": int64(1), // the same as ProfileWSID
@@ -236,7 +236,7 @@ func TestAuthenticate(t *testing.T) {
 
 		// child workspace. Parent is WSID 2
 		istructs.WSID(3): {
-			qNameCDocWorkspaceDescriptor: {
+			appdef.QNameCDocWorkspaceDescriptor: {
 				// cdoc.sys.WorkspaceDescriptor.ID=1, .OwnerWSID=2
 				1: {
 					"OwnerWSID": int64(2),
@@ -462,17 +462,14 @@ type implIAppStructs struct {
 	appQName appdef.AppQName
 }
 
-func (as *implIAppStructs) AppDef() appdef.IAppDef                             { panic("") }
-func (as *implIAppStructs) Events() istructs.IEvents                           { panic("") }
-func (as *implIAppStructs) Records() istructs.IRecords                         { return as.records }
-func (as *implIAppStructs) ViewRecords() istructs.IViewRecords                 { return as.views }
-func (as *implIAppStructs) ObjectBuilder(appdef.QName) istructs.IObjectBuilder { panic("") }
-func (as *implIAppStructs) Resources() istructs.IResources                     { panic("") }
-func (as *implIAppStructs) ClusterAppID() istructs.ClusterAppID                { panic("") }
-func (as *implIAppStructs) AppQName() appdef.AppQName                          { return as.appQName }
-func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.WSID) bool {
-	panic("")
-}
+func (as *implIAppStructs) AppDef() appdef.IAppDef                                         { panic("") }
+func (as *implIAppStructs) Events() istructs.IEvents                                       { panic("") }
+func (as *implIAppStructs) Records() istructs.IRecords                                     { return as.records }
+func (as *implIAppStructs) ViewRecords() istructs.IViewRecords                             { return as.views }
+func (as *implIAppStructs) ObjectBuilder(appdef.QName) istructs.IObjectBuilder             { panic("") }
+func (as *implIAppStructs) Resources() istructs.IResources                                 { panic("") }
+func (as *implIAppStructs) ClusterAppID() istructs.ClusterAppID                            { panic("") }
+func (as *implIAppStructs) AppQName() appdef.AppQName                                      { return as.appQName }
 func (as *implIAppStructs) DescribePackageNames() []string                                 { panic("") }
 func (as *implIAppStructs) DescribePackage(string) interface{}                             { panic("") }
 func (as *implIAppStructs) SyncProjectors() istructs.Projectors                            { panic("") }

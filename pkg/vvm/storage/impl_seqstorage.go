@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 )
 
-// [~server.design.sequences/cmp.VVMSeqStorageAdapter~impl]
 type implVVMSeqStorageAdapter struct {
 	sysVVMStorage ISysVvmStorage
 }
@@ -21,7 +20,7 @@ type implVVMSeqStorageAdapter struct {
 const (
 	numberPKeySize      = 4 + 4 + 8
 	numberCColsSize     = 2
-	pLogOffsetPKeySize  = 4 + 2
+	pLogOffsetPKeySize  = 4 + 4 + 2
 	pLogOffsetCColsSize = 4
 )
 
@@ -38,10 +37,11 @@ func (s *implVVMSeqStorageAdapter) GetNumber(appID isequencer.ClusterAppID, wsid
 	return ok, isequencer.Number(binary.BigEndian.Uint64(data)), err
 }
 
-func (s *implVVMSeqStorageAdapter) GetPLogOffset(partitionID isequencer.PartitionID) (ok bool, pLogOffset isequencer.PLogOffset, err error) {
+func (s *implVVMSeqStorageAdapter) GetPLogOffset(appID isequencer.ClusterAppID, partitionID isequencer.PartitionID) (ok bool, pLogOffset isequencer.PLogOffset, err error) {
 	pKey := make([]byte, 0, pLogOffsetPKeySize)
 	cCols := make([]byte, pLogOffsetCColsSize)
 	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_Part)
+	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	pKey = binary.BigEndian.AppendUint16(pKey, uint16(partitionID))
 
 	data := make([]byte, utils.Uint64Size)
@@ -49,10 +49,11 @@ func (s *implVVMSeqStorageAdapter) GetPLogOffset(partitionID isequencer.Partitio
 	return ok, isequencer.PLogOffset(binary.BigEndian.Uint64(data)), err
 }
 
-func (s *implVVMSeqStorageAdapter) PutPLogOffset(partitionID isequencer.PartitionID, pLogOffset isequencer.PLogOffset) error {
+func (s *implVVMSeqStorageAdapter) PutPLogOffset(appID isequencer.ClusterAppID, partitionID isequencer.PartitionID, pLogOffset isequencer.PLogOffset) error {
 	pKey := make([]byte, 0, pLogOffsetPKeySize)
 	cCols := make([]byte, pLogOffsetCColsSize)
 	pKey = binary.BigEndian.AppendUint32(pKey, pKeyPrefix_SeqStorage_Part)
+	pKey = binary.BigEndian.AppendUint32(pKey, appID)
 	pKey = binary.BigEndian.AppendUint16(pKey, uint16(partitionID))
 	pLogOffsetBytes := make([]byte, utils.Uint64Size)
 	binary.BigEndian.PutUint64(pLogOffsetBytes, uint64(pLogOffset))

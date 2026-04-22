@@ -132,14 +132,14 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 
 		mockWorkspaceRecord := &mockRecord{}
 		mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
-		mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
+		mockWorkspaceRecord.On("QName").Return(appdef.QNameCDocWorkspaceDescriptor)
 
 		records := &mockRecords{}
 		records.
 			On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(singleton1, nil).
 			On("GetSingleton", istructs.WSID(2), testRecordQName2).Return(nullRecord, nil).
 			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil).
-			On("GetSingleton", mock.Anything, qNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
+			On("GetSingleton", mock.Anything, appdef.QNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
 
 		appStructs := &mockAppStructs{}
 		appStructs.
@@ -161,7 +161,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		k3 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k3.PutQName(sys.Storage_Record_Field_Singleton, testRecordQName2)
 		k3.PutInt64(sys.Storage_Record_Field_WSID, 3)
-		k4 := storage.NewKeyBuilder(qNameCDocWorkspaceDescriptor, nil)
+		k4 := storage.NewKeyBuilder(appdef.QNameCDocWorkspaceDescriptor, nil)
 		k4.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 		batchItems := []state.GetBatchItem{
 			{Key: k1},
@@ -210,11 +210,11 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 
 		mockWorkspaceRecord := &mockRecord{}
 		mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
-		mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
+		mockWorkspaceRecord.On("QName").Return(appdef.QNameCDocWorkspaceDescriptor)
 
 		records := &mockRecords{}
 		records.On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(&mockRecord{}, errTest)
-		records.On("GetSingleton", mock.Anything, qNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
+		records.On("GetSingleton", mock.Anything, appdef.QNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(createAppDef()).

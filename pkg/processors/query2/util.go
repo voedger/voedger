@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -27,10 +28,12 @@ import (
 )
 
 func queryRateLimitExceeded(ctx context.Context, qw *queryWork) error {
-	if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.QName(), qw.msg.WSID()) {
-		return coreutils.NewSysError(http.StatusTooManyRequests)
+	exceeded, limit := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host())
+	if !exceeded {
+		return nil
 	}
-	return nil
+	retryAfter := processors.RetryAfterSecondsOnLimitExceeded(qw.appStructs.AppDef(), limit)
+	return coreutils.NewHTTPErrorf(http.StatusTooManyRequests).AddHeader(httpu.RetryAfter, strconv.Itoa(retryAfter))
 }
 func querySetRequestType(ctx context.Context, qw *queryWork) error {
 	if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
@@ -83,7 +86,19 @@ type queryWork struct {
 	profileWSID          istructs.WSID
 }
 
-var _ pipeline.IWorkpiece = (*queryWork)(nil) // ensure that queryWork implements pipeline.IWorkpiece
+var _ processors.IProcessorWorkpiece = (*queryWork)(nil)
+
+func (qw *queryWork) AppPartitions() appparts.IAppPartitions { return qw.appParts }
+
+func (qw *queryWork) AppPartition() appparts.IAppPartition { return qw.appPart }
+
+func (qw *queryWork) GetPrincipals() []iauthnz.Principal { return qw.principals }
+
+func (qw *queryWork) Roles() []appdef.QName { return qw.roles }
+
+func (qw *queryWork) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind) {
+	qw.appPart.ResetRateLimit(resource, operation, qw.msg.WSID(), qw.msg.Host())
+}
 
 func (qw *queryWork) Release() {
 	if ap := qw.appPart; ap != nil {
@@ -132,8 +147,8 @@ func newQueryWork(msg IQueryMessage, appParts appparts.IAppPartitions,
 		metrics:            metrics,
 		secretReader:       secretReader,
 		rowsProcessorErrCh: make(chan error, 1),
-		queryParams:        msg.QueryParams(),
-		federation:         federation,
+
+		federation: federation,
 	}
 }
 
@@ -153,13 +168,13 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 }
 
 func NewIQueryMessage(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, responder bus.IResponder,
-	queryParams QueryParams, docID istructs.IDType, apiPath processors.APIPath,
+	rawParams map[string]string, docID istructs.IDType, apiPath processors.APIPath,
 	qName appdef.QName, partition istructs.PartitionID, host string, token string, workspaceQName appdef.QName, headerAccept string) IQueryMessage {
 	return &implIQueryMessage{
 		appQName:       appQName,
 		wsid:           wsid,
 		responder:      responder,
-		queryParams:    queryParams,
+		rawParams:      rawParams,
 		docID:          docID,
 		apiPath:        apiPath,
 		requestCtx:     requestCtx,
@@ -196,4 +211,8 @@ func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
 
 func (qw *queryWork) SetPrincipals(prns []iauthnz.Principal) {
 	qw.principals = prns
+}
+
+func (qw *queryWork) LogCtx() context.Context {
+	return qw.msg.RequestCtx()
 }

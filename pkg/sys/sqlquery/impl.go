@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/dml"
@@ -24,11 +25,13 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/processors"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.ITokens, blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
@@ -102,24 +105,59 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		}
 		stmt, err := sqlparser.Parse(op.CleanSQL)
 		if err != nil {
-			return err
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, err.Error())
 		}
 		s := stmt.(*sqlparser.Select)
 
+		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
+		sourceTableName := recoverTableName(appStructs.AppDef(), appdef.NewQName(table.Qualifier.String(), table.Name.String()))
+		sourceTableType := appStructs.AppDef().Type(sourceTableName)
+
 		f := &filter{fields: make(map[string]bool)}
+		var blobFuncs []blobFuncDesc
+		seenFields := make(map[string]bool)
 		for _, intf := range s.SelectExprs {
 			switch expr := intf.(type) {
 			case *sqlparser.StarExpr:
 				f.acceptAll = true
 			case *sqlparser.AliasedExpr:
-				column := expr.Expr.(*sqlparser.ColName)
-				if !column.Qualifier.Name.IsEmpty() {
-					f.fields[fmt.Sprintf("%s.%s", column.Qualifier.Name, column.Name)] = true
-				} else {
-					f.fields[column.Name.String()] = true
+				switch colExpr := expr.Expr.(type) {
+				case *sqlparser.ColName:
+					column := expr.Expr.(*sqlparser.ColName)
+					fieldName := ""
+					if !column.Qualifier.Name.IsEmpty() {
+						fieldName = fmt.Sprintf("%s.%s", column.Qualifier.Name, column.Name)
+					} else {
+						fieldName = column.Name.String()
+					}
+					if sourceTableType.QName() != appdef.NullQName { // null if e.g. sys.plog, sys.wlog
+						if sourceTableWithFields, ok := sourceTableType.(appdef.IWithFields); ok {
+							fieldName = recoverFieldName(sourceTableWithFields, fieldName)
+						}
+					}
+					if seenFields[fieldName] {
+						return fieldSeenErr(fieldName)
+					}
+					seenFields[fieldName] = true
+					f.fields[fieldName] = true
+				case *sqlparser.FuncExpr:
+					bf, err := parseFuncExpr(colExpr, sourceTableType)
+					if err != nil {
+						return coreutils.NewHTTPError(http.StatusBadRequest, err)
+					}
+					outputKey := fmt.Sprintf("%s(%s)", bf.funcName, bf.fieldName)
+					if seenFields[outputKey] {
+						return fieldSeenErr(outputKey)
+					}
+					seenFields[outputKey] = true
+					blobFuncs = append(blobFuncs, bf)
+				default:
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unsupported select expression:", sqlparser.String(colExpr))
 				}
 			}
 		}
+
+		hasRequestedBlobFunctions := len(blobFuncs) > 0
 
 		var whereExpr sqlparser.Expr
 		if s.Where == nil {
@@ -128,27 +166,27 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			whereExpr = s.Where.Expr
 		}
 
-		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
-		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
-		if source.Entity() == "blob" {
-			// FIXME: eliminate this hack
-			// sys.BLOB translates to sys.blob by vitess-sqlparser
-			// https://github.com/voedger/voedger/issues/3708
-			source = appdef.NewQName(appdef.SysPackage, "BLOB")
+		// Validate blob function constraints
+		if hasRequestedBlobFunctions {
+			if whereExpr != nil {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "WHERE clause is not allowed with blobinfo/blobtext functions")
+			}
 		}
 
-		kind := appStructs.AppDef().Type(source).Kind()
-		if _, ok := appStructs.AppDef().Type(source).(appdef.IStructure); ok {
+		kind := appStructs.AppDef().Type(sourceTableName).Kind()
+		if _, ok := appStructs.AppDef().Type(sourceTableName).(appdef.IStructure); ok {
 			// is a structure -> check ACL
 			switch kind {
-			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc:
+			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord,
+				appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
 				fields := make([]string, 0, len(f.fields))
 				for f := range f.fields {
 					fields = append(fields, f)
 				}
-				apppart := args.Workpiece.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
-				roles := args.Workpiece.(interface{ Roles() []appdef.QName }).Roles()
-				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, source, fields, roles)
+				wp := args.Workpiece.(processors.IProcessorWorkpiece)
+				apppart := wp.AppPartition()
+				roles := wp.Roles()
+				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, sourceTableName, fields, roles)
 				if err != nil {
 					// notest
 					if errors.Is(err, appdef.ErrNotFoundError) {
@@ -166,29 +204,88 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			if op.EntityID > 0 {
 				return errors.New("ID must not be specified on select from view")
 			}
-			return readViewRecords(ctx, wsID, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
+			if hasRequestedBlobFunctions {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "blob functions are not supported on views")
+			}
+			return coreutils.WrapSysError(readViewRecords(ctx, wsID, sourceTableName, whereExpr, appStructs, f, callback),
+				http.StatusBadRequest)
 		case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
+			if hasRequestedBlobFunctions {
+				return handleRequestedBlobFunctions(ctx, args.State, blobFuncs, blobHandlerPtr, requestSenderPtr,
+					wsID, sourceTableName, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID))
+			}
+			return coreutils.WrapSysError(readRecords(wsID, sourceTableName, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
 				http.StatusBadRequest)
 		default:
-			if source != plog && source != wlog {
+			if sourceTableName != plog && sourceTableName != wlog {
 				break
 			}
 			limit, offset, e := params(whereExpr, s.Limit, istructs.Offset(op.EntityID))
 			if e != nil {
 				return e
 			}
-			appParts := args.Workpiece.(interface {
-				AppPartitions() appparts.IAppPartitions
-			}).AppPartitions()
-			if source == plog {
-				return readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
+			appParts := args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
+			if sourceTableName == plog {
+				return coreutils.WrapSysError(readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts),
+					http.StatusBadRequest)
 			}
-			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
+			return coreutils.WrapSysError(readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef()),
+				http.StatusBadRequest)
 		}
 
-		return fmt.Errorf("do not know how to read from the requested %s, %s", source, kind)
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest,
+			fmt.Sprintf("do not know how to read from the requested %s, %s", sourceTableName, kind))
 	}
+}
+
+func handleRequestedBlobFunctions(ctx context.Context, state istructs.IState, blobFuncs []blobFuncDesc,
+	blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr,
+	wsID istructs.WSID, sourceTableName appdef.QName, whereExpr sqlparser.Expr, appStructs istructs.IAppStructs,
+	f *filter, callback istructs.ExecQueryCallback, recordID istructs.RecordID) error {
+	isSingleton := false
+	if iSingleton, ok := appStructs.AppDef().Type(sourceTableName).(appdef.ISingleton); ok {
+		isSingleton = iSingleton.Singleton()
+	}
+	if !isSingleton && recordID == 0 {
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "blob functions require a document ID or a singleton")
+	}
+
+	subjKB, err := state.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
+	if err != nil {
+		// notest
+		return err
+	}
+	subj, err := state.MustExist(subjKB)
+	if err != nil {
+		// notest
+		return err
+	}
+	token := subj.AsString(sys.Storage_RequestSubject_Field_Token)
+
+	blobResults, err := executeBlobFunctions(ctx, blobFuncs, blobHandlerPtr, requestSenderPtr,
+		state.App(), wsID, sourceTableName, recordID, token)
+	if err != nil {
+		return err
+	}
+
+	if len(f.fields) > 0 || f.acceptAll {
+		wrappedCallback := func(obj istructs.IObject) error {
+			recJSON := obj.AsString("")
+			merged, err := mergeJSONWithBlobResults(recJSON, blobResults)
+			if err != nil {
+				return err
+			}
+			return callback(&result{value: merged})
+		}
+		return coreutils.WrapSysError(readRecords(wsID, sourceTableName, whereExpr, appStructs, f, wrappedCallback, recordID),
+			http.StatusBadRequest)
+	}
+
+	resultJSON, err := blobFuncResultToJSON(blobResults)
+	if err != nil {
+		return err
+	}
+	return callback(&result{value: resultJSON})
 }
 
 func params(expr sqlparser.Expr, limit *sqlparser.Limit, simpleOffset istructs.Offset) (int, istructs.Offset, error) {
@@ -262,6 +359,34 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 	return o, eq, nil
 }
 
+// vitess-sqlparser lowercases all identifiers; recover the original case from the schema
+func recoverTableName(appDef appdef.IAppDef, source appdef.QName) appdef.QName {
+	switch source {
+	case plog, wlog:
+		return source
+	}
+	if appDef.Type(source).Kind() == appdef.TypeKind_null {
+		for _, t := range appDef.Types() {
+			if strings.EqualFold(t.QName().Pkg(), source.Pkg()) && strings.EqualFold(t.QName().Entity(), source.Entity()) {
+				return t.QName()
+			}
+		}
+	}
+	return source
+}
+
+// vitess-sqlparser lowercases all identifiers; recover the original case from the schema
+func recoverFieldName(withFields appdef.IWithFields, name string) string {
+	if withFields.Field(name) == nil {
+		for _, f := range withFields.Fields() {
+			if strings.EqualFold(f.Name(), name) {
+				return f.Name()
+			}
+		}
+	}
+	return name
+}
+
 func getFilter(f func(string) bool) coreutils.MapperOpt {
 	return coreutils.Filter(func(name string, kind appdef.DataKind) bool {
 		return f(name)
@@ -310,4 +435,8 @@ func renderDBEvent(data map[string]interface{}, f *filter, event istructs.IDbEve
 		errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
 		data["Error"] = errorData
 	}
+}
+
+func fieldSeenErr(fieldName string) error {
+	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("field %q is selected more than once", fieldName))
 }

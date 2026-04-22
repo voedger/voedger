@@ -71,7 +71,7 @@ Rules:
 - Always use actual relative paths from the Change File to particular file (e.g., ../../specs/domain/myctx/my.feature)
 - Use relative paths for both existing files and new files that don't exist yet
 - Technical design section
-  - Reference existing architecture files (e.g., `../../specs/prod/apps/vvm-orch--arch.md`) when updating them
+  - Reference existing architecture files (e.g., `../../specs/prod/apps/arch-vvm-orch.md`) when updating them
   - Use templates from `{templates_folder}/tmpl-td.md` for structure of new files
 - Construction section
   - If design sections exist, run `git diff <baseline> -- {specs_folder}/` to identify exact spec changes (baseline from Change File frontmatter)
@@ -89,7 +89,7 @@ Example:
 
 ## Technical design
 
-- [ ] update: [apps/vvm-orch--arch.md](../../specs/prod/apps/vvm-orch--arch.md)
+- [ ] update: [apps/arch-vvm-orch.md](../../specs/prod/apps/arch-vvm-orch.md)
   - update: Leadership renewal interval documentation (1s instead of TTL/2)
 
 ## Construction

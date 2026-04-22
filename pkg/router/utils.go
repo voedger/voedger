@@ -6,21 +6,25 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"runtime/debug"
 	"strconv"
-	"strings"
+	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/processors"
 )
 
 var onBeforeWriteResponse func(w http.ResponseWriter) // not nil in tests only
@@ -58,7 +62,7 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 	if onBeforeWriteResponse != nil {
 		onBeforeWriteResponse(w)
 	}
-	if _, err := w.Write([]byte(data)); err != nil {
+	if _, err := w.Write([]byte(data)); err != nil { //nolint G705 data is always JSON; Content-Type is set to application/json by all callers
 		stack := debug.Stack()
 		log.Println("failed to write response:", err, "\n", string(stack))
 		return false
@@ -67,20 +71,9 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 	return true
 }
 
-type filteringWriter struct {
-	w io.Writer
-}
-
-func (fw *filteringWriter) Write(p []byte) (n int, err error) {
-	if strings.Contains(string(p), "TLS handshake error") {
-		return len(p), nil
-	}
-	return fw.w.Write(p)
-}
-
 func replyServiceUnavailable(rw http.ResponseWriter) {
+	rw.Header().Set("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 	rw.WriteHeader(http.StatusServiceUnavailable)
-	rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
 }
 
 func replyErr(rw http.ResponseWriter, err error) {
@@ -119,6 +112,7 @@ func createBusRequest(data validatedData, req *http.Request) bus.Request {
 		AppQName: data.appQName,
 		Resource: data.vars[URLPlaceholder_resourceName],
 		Body:     data.body,
+		Host:     remoteIP(req.RemoteAddr),
 	}
 
 	if docIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
@@ -134,4 +128,74 @@ func createBusRequest(data validatedData, req *http.Request) bus.Request {
 		res.Query[k] = v[0]
 	}
 	return res
+}
+
+func resolveExtension(busRequest bus.Request) string {
+	if busRequest.IsAPIV2 {
+		if busRequest.QName == appdef.NullQName {
+			return apiPathToExtension(processors.APIPath(busRequest.APIPath))
+		}
+		return busRequest.QName.String()
+	}
+	return busRequest.Resource
+}
+
+func withLogAttribs(ctx context.Context, data validatedData, busRequest bus.Request, req *http.Request) context.Context {
+	newReqID := fmt.Sprintf("%s-%d", globalServerStartTime, reqID.Add(1))
+	enrichedCtx := logger.WithContextAttrs(ctx, map[string]any{
+		logger.LogAttr_ReqID:     newReqID,
+		logger.LogAttr_WSID:      data.wsid,
+		logger.LogAttr_VApp:      data.appQName,
+		logger.LogAttr_Extension: resolveExtension(busRequest),
+		logAttrib_Origin:         req.Header.Get(httpu.Origin),
+		logAttrib_RemoteAddr:     req.RemoteAddr,
+	})
+	return enrichedCtx
+}
+
+func logLatency(ctx context.Context, sentAt time.Time) {
+	if logger.IsVerbose() {
+		logger.VerboseCtx(ctx, "routing.latency1", fmt.Sprintf("%dms", time.Since(sentAt).Milliseconds()))
+	}
+}
+
+func logServeRequest(ctx context.Context, limiter *wsQueryLimiter) {
+	if logger.IsVerbose() {
+		logger.LogCtx(ctx, 1, logger.LogLevelVerbose, "routing.accepted", "")
+	}
+	if limiter != nil {
+		limiter.tryFlush()
+	}
+}
+
+func apiPathToExtension(apiPath processors.APIPath) string {
+	switch apiPath {
+	case processors.APIPath_Docs:
+		return "sys._Docs"
+	case processors.APIPath_CDocs:
+		return "sys._CDocs"
+	case processors.APIPaths_Schema:
+		return "sys._Schema"
+	case processors.APIPath_Schemas_WorkspaceRoles:
+		return "sys._Schemas_WorkspaceRoles"
+	case processors.APIPath_Schemas_WorkspaceRole:
+		return "sys._Schemas_WorkspaceRole"
+	case processors.APIPath_Auth_Login:
+		return "sys._Auth_Login"
+	case processors.APIPath_Auth_Refresh:
+		return "sys._Auth_Refresh"
+	case processors.APIPath_Users:
+		return "sys._Users"
+	case processors.APIPath_N10N_SubscribeAndWatch:
+		return "sys._N10N_SubscribeAndWatch"
+	}
+	return strconv.Itoa(int(apiPath))
+}
+
+func remoteIP(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	return host
 }

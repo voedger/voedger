@@ -29,6 +29,8 @@ const SysWorkspaceName = "Workspace"
 
 var SysWorkspaceQName = NewQName(SysPackage, SysWorkspaceName)
 
+var QNameCDocWorkspaceDescriptor = NewQName(SysPackage, "WorkspaceDescriptor")
+
 const AnyName = "ANY"
 
 // QNameANY is substitution denotes that a Function param or result can be any type

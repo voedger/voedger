@@ -10,14 +10,16 @@ import (
 	"log"
 	"testing"
 
+	"time"
+
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
+	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -93,7 +95,7 @@ func TestBasicUsage(t *testing.T) {
 	}()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(appConfigs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -221,7 +223,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	p := Provide(appConfigs(), testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -315,7 +317,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+		provider := Provide(cfgs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
@@ -537,16 +539,18 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 		cfg.Resources.Add(NewQueryFunction(queryQName, NullQueryExec))
 
-		cfg.FunctionRateLimits.AddAppLimit(queryQName, istructs.RateLimit{
-			Period:                1,
-			MaxAllowedPerDuration: 2,
-		})
-		cfg.FunctionRateLimits.AddWorkspaceLimit(queryQName, istructs.RateLimit{
-			Period:                3,
-			MaxAllowedPerDuration: 4,
-		})
+		appRateName := appdef.NewQName("functions", "appRate")
+		wsRateName := appdef.NewQName("functions", "wsRate")
+		wsb.AddRate(appRateName, 2, time.Nanosecond, []appdef.RateScope{appdef.RateScope_AppPartition})
+		wsb.AddRate(wsRateName, 4, 3*time.Nanosecond, []appdef.RateScope{appdef.RateScope_Workspace})
+		wsb.AddLimit(appdef.NewQName("functions", "appLimit"),
+			[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH,
+			filter.QNames(queryQName), appRateName)
+		wsb.AddLimit(appdef.NewQName("functions", "wsLimit"),
+			[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH,
+			filter.QNames(queryQName), wsRateName)
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+		provider := Provide(cfgs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
@@ -576,7 +580,7 @@ func Test_Provide(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, builder.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil, isequencer.SequencesTrustLevel_0, nil)
+		p := Provide(cfgs, testTokensFactory(), nil, isequencer.SequencesTrustLevel_0, nil)
 		require.NotNil(p)
 
 		_, err := p.BuiltIn(appdef.NewAppQName("test1", "unknownApp"))
@@ -585,7 +589,7 @@ func Test_Provide(t *testing.T) {
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
-		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+		provider := Provide(test.AppConfigs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 		app, err := provider.BuiltIn(test.appName)
 		require.NoError(err)

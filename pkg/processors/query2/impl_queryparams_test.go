@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Test_BasicUsage(t *testing.T) {
@@ -24,7 +26,7 @@ func Test_BasicUsage(t *testing.T) {
 			"where":   `{"id_department":123456,"number":{"$gte":100,"$lte":200}}`,
 			"args":    `{"key":"value"}`,
 		}
-		parsedParams, err := ParseQueryParams(params)
+		parsedParams, err := ParseQueryParams(params, appdef.NullQName)
 		require.NoError(err)
 		require.NotNil(parsedParams)
 		require.NotNil(parsedParams.Constraints)
@@ -46,23 +48,65 @@ func Test_BasicUsage(t *testing.T) {
 		}, parsedParams.Argument)
 	})
 
-	t.Run("error", func(t *testing.T) {
+	t.Run("error: invalid limit", func(t *testing.T) {
 		params := map[string]string{
 			"order": "id,created_at",
 			"limit": "ten",
 		}
-		parsedParams, err := ParseQueryParams(params)
+		parsedParams, err := ParseQueryParams(params, appdef.NullQName)
 		require.ErrorContains(err, "invalid 'limit' parameter")
+		require.Nil(parsedParams)
+	})
+
+	t.Run("error: invalid args JSON for non-raw query", func(t *testing.T) {
+		params := map[string]string{
+			"args": "not valid json",
+		}
+		parsedParams, err := ParseQueryParams(params, appdef.NullQName)
+		require.ErrorContains(err, "invalid 'args' parameter")
 		require.Nil(parsedParams)
 	})
 
 	t.Run("empty", func(t *testing.T) {
 		params := map[string]string{}
-		parsedParams, err := ParseQueryParams(params)
+		parsedParams, err := ParseQueryParams(params, appdef.NullQName)
 		require.NoError(err)
 		require.NotNil(parsedParams)
 		require.Nil(parsedParams.Constraints)
 		require.Nil(parsedParams.Argument)
+	})
+
+	t.Run("sys.Raw: non-JSON stored in RawArg", func(t *testing.T) {
+		params := map[string]string{
+			"args": "hello raw world",
+		}
+		parsedParams, err := ParseQueryParams(params, istructs.QNameRaw)
+		require.NoError(err)
+		require.NotNil(parsedParams)
+		require.Nil(parsedParams.Argument)
+		require.Equal("hello raw world", parsedParams.RawArg)
+	})
+
+	t.Run("sys.Raw: JSON stored in RawArg without unmarshalling", func(t *testing.T) {
+		params := map[string]string{
+			"args": `{"key":"value"}`,
+		}
+		parsedParams, err := ParseQueryParams(params, istructs.QNameRaw)
+		require.NoError(err)
+		require.NotNil(parsedParams)
+		require.JSONEq(`{"key":"value"}`, parsedParams.RawArg)
+		require.Nil(parsedParams.Argument)
+	})
+
+	t.Run("non-raw: JSON args unmarshalled into Argument", func(t *testing.T) {
+		params := map[string]string{
+			"args": `{"key":"value"}`,
+		}
+		parsedParams, err := ParseQueryParams(params, appdef.NullQName)
+		require.NoError(err)
+		require.NotNil(parsedParams)
+		require.Empty(parsedParams.RawArg)
+		require.Equal(map[string]interface{}{"key": "value"}, parsedParams.Argument)
 	})
 
 }

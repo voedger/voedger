@@ -20,7 +20,7 @@ var (
 )
 
 func AddWorkspaceDescriptorStubDef(wsb appdef.IWorkspaceBuilder) {
-	wsDesc := wsb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
+	wsDesc := wsb.AddCDoc(appdef.QNameCDocWorkspaceDescriptor)
 	wsDesc.
 		AddField(authnz.Field_WSKind, appdef.DataKind_QName, true).
 		AddField("Status", appdef.DataKind_int32, true).
@@ -49,7 +49,7 @@ func CreateCDocWorkspaceDescriptorStub(as istructs.IAppStructs, partNum istructs
 			SyncedAt:                     istructs.UnixMilli(now.UnixMilli()),
 		},
 	)
-	cdocWSDesc := reb.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cdocWSDesc := reb.CUDBuilder().Create(appdef.QNameCDocWorkspaceDescriptor)
 	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
 	cdocWSDesc.PutQName("WSKind", wsKind)
 	cdocWSDesc.PutInt32("Status", int32(authnz.WorkspaceStatus_Active))

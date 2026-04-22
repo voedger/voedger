@@ -444,7 +444,7 @@ func (v *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) 
 	key := wsTypeKey{wsid: wsid, appQName: v.appStructsFunc().AppQName()}
 	wsKind, ok := v.wsidKinds[key]
 	if !ok {
-		wsDesc, err := v.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
+		wsDesc, err := v.appStructsFunc().Records().GetSingleton(wsid, appdef.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			// notest
 			return appdef.NullQName, err
@@ -465,7 +465,7 @@ func (v *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) 
 }
 
 func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
-	if entity == qNameCDocWorkspaceDescriptor {
+	if entity == appdef.QNameCDocWorkspaceDescriptor {
 		return nil // This QName always can be read and write. Otherwise sys.CreateWorkspace is not able to create descriptor.
 	}
 	if wsid != istructs.NullWSID && v.appStructsFunc().Records() != nil { // NullWSID only stores actualizer offsets

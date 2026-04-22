@@ -6,8 +6,6 @@
 package registry
 
 import (
-	"time"
-
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
@@ -17,11 +15,6 @@ func provideChangePassword(cfgRegistry *istructsmem.AppConfigType) {
 		qNameCmdChangePassword,
 		cmdChangePasswordExec,
 	))
-
-	cfgRegistry.FunctionRateLimits.AddAppLimit(qNameCmdChangePassword, istructs.RateLimit{
-		Period:                time.Minute,
-		MaxAllowedPerDuration: 1,
-	})
 }
 
 // sys/registry/pseudoWSID

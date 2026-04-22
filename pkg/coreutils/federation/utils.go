@@ -118,3 +118,13 @@ func unexpectedStatusErr(expectedCodes []int, actualCode int, sysErr error) erro
 	}
 	return fmt.Errorf("%s: %w", errStr, sysErr)
 }
+
+func blobSizeFromHeader(httpResp *httpu.HTTPResponse) (uint64, error) {
+	contentLenStr := httpResp.HTTPResp.Header.Get(httpu.ContentLength)
+	res, err := strconvu.ParseUint64(contentLenStr)
+	if err != nil {
+		// notest
+		return 0, fmt.Errorf("failed to parse Content-Length header: %w", err)
+	}
+	return res, nil
+}

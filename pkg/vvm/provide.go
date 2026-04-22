@@ -111,7 +111,7 @@ func Provide(vvmCfg *VVMConfig) (voedgerVM *VoedgerVM, err error) {
 		// each restaurant must go to the same cmd proc -> one single cmd processor behind the each command service channel
 		iprocbusmem.ChannelGroup{
 			NumChannels:       uint(vvmCfg.NumCommandProcessors),
-			ChannelBufferSize: uint(DefaultNumCommandProcessors), // to avoid bus timeout on big values of `vvmCfg.NumCommandProcessors``
+			ChannelBufferSize: vvmCfg.CommandProcessorChannelBufferSize,
 		},
 		ProcessorChannel_Command,
 	)
@@ -221,6 +221,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideBuildInfo,
 		provideAppsExtensionPoints,
 		provideStatelessResources,
+		providePostWireInterfacePtrs,
 		provideSidecarApps,
 		provideN10NQuotas,
 		provideWLimiterFactory,
@@ -231,6 +232,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		provideStateOpts,
 		n10n.NewIN10NProc,
 		provideHTTPClient,
+		provideIRequestSenderPtr,
+		provideBlobHandlerPtr,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -247,6 +250,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 			"SecretsReader",
 			"SequencesTrustLevel",
 			"SchemasCache",
+			"BusyProcessorLogMode",
 			"PolicyOptsForFederationWithRetry",
 		),
 	))
@@ -284,8 +288,8 @@ func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISched
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
-	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
+	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
+	postWireInterfacePtrs btstrp.PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps))
 	for _, app := range builtinApps {
@@ -304,7 +308,7 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		return btstrp.Bootstrap(federation, asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
+		return btstrp.Bootstrap(federation, asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens, storageProvider, postWireInterfacePtrs, blobHandler, requestSender)
 	}), nil
 }
 
@@ -320,12 +324,12 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 // provide builtInAppsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
-func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
+func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, appTokensFactory payloads.IAppTokensFactory,
 	storageProvider istorage.IAppStorageProvider, seqTrustLevel isequencer.SequencesTrustLevel, sysVvmStorage storage.ISysVvmStorage) istructs.IAppStructsProvider {
 	appTTLStorageFactory := func(clusterAppID istructs.ClusterAppID) istructs.IAppTTLStorage {
 		return storage.NewAppTTLStorage(sysVvmStorage, clusterAppID)
 	}
-	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider, seqTrustLevel, appTTLStorageFactory)
+	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), appTokensFactory, storageProvider, seqTrustLevel, appTTLStorageFactory)
 }
 
 func provideBasicAsyncActualizerConfig(
@@ -372,10 +376,10 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[appdef.AppQName]extens
 
 func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) istructsmem.IStatelessResources {
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, postWireInterfacePtrs btstrp.PostWireInterfacePtrs) istructsmem.IStatelessResources {
 	ssr := istructsmem.NewStatelessResources()
 	sysprovide.ProvideStateless(ssr, vvmCfg.SMTPConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.Time, itokens, federation,
-		asp, atf)
+		asp, atf, postWireInterfacePtrs.BlobHandler, postWireInterfacePtrs.RequestSender)
 	return ssr
 }
 
@@ -558,15 +562,20 @@ func provideMetricsServicePortGetter(ms metrics.MetricsService) func() metrics.M
 
 func provideRouterParams(cfg *VVMConfig, port VVMPortType) router.RouterParams {
 	res := router.RouterParams{
-		WriteTimeout:         cfg.RouterWriteTimeout,
-		ReadTimeout:          cfg.RouterReadTimeout,
-		ConnectionsLimit:     cfg.RouterConnectionsLimit,
+		HTTPServerParams: router.HTTPServerParams{
+			Port:             int(port),
+			WriteTimeout:     cfg.RouterWriteTimeout,
+			ReadTimeout:      cfg.RouterReadTimeout,
+			ConnectionsLimit: cfg.RouterConnectionsLimit,
+			UseProxyProtocol: cfg.RouterUseProxyProtocol,
+		},
 		HTTP01ChallengeHosts: cfg.RouterHTTP01ChallengeHosts,
 		RouteDefault:         cfg.RouteDefault,
 		Routes:               cfg.Routes,
 		RoutesRewrite:        cfg.RoutesRewrite,
 		RouteDomains:         cfg.RouteDomains,
-		Port:                 int(port),
+		MaxQueriesPerWS:      cfg.RouterMaxQueriesPerWS,
+		ITime:                cfg.Time,
 	}
 	return res
 }
@@ -744,6 +753,24 @@ func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, met
 	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory, iTime timeu.ITime) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
 	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName), iTime)
+}
+
+func provideBlobHandlerPtr() blobprocessor.IRequestHandlerPtr {
+	return new(blobprocessor.IRequestHandler)
+}
+
+func provideIRequestSenderPtr() bus.IRequestSenderPtr {
+	return new(bus.IRequestSender)
+}
+
+func providePostWireInterfacePtrs(blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr,
+	blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr) btstrp.PostWireInterfacePtrs {
+	return btstrp.PostWireInterfacePtrs{
+		BlobberAppStorage: blobberAppStoragePtr,
+		RouterAppStorage:  routerAppStoragePtr,
+		BlobHandler:       blobHandlerPtr,
+		RequestSender:     requestSenderPtr,
+	}
 }
 
 func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {

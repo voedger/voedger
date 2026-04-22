@@ -37,9 +37,6 @@ var (
 	QNameCDocChildWorkspace               = appdef.NewQName(appdef.SysPackage, "ChildWorkspace")
 	QNameCommandInitChildWorkspace        = appdef.NewQName(appdef.SysPackage, "InitChildWorkspace")
 
-	// at workspace is wrong: deactivate workspace uses invite.QNameCDocSubject, invite uses cdoc.sys.WorkspaceDescriptor -> import cycle
-	QNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
-
 	// should be here because: collection->qp(tests)->workspace(checkISWSActive)->collection(read out subjects) -> import cycle
 	//                               breaking this ^^^
 	Field_Status = "Status"

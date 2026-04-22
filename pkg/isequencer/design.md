@@ -192,7 +192,7 @@ func (s *sequencer) Flush() {
 // It ensures thread-safe access to sequence values and handles various caching layers.
 //
 // Flow:
-// - Validate equencing Transaction status
+// - Validate sequencing Transaction status
 // - Get initialValue from s.params.SeqTypes and ensure that SeqID is known
 // - Try to obtain the next value using:
 //   - Try s.lru (can be evicted)

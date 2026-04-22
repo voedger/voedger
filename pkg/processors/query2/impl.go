@@ -69,6 +69,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 						}
 						qwork.metrics.Increase(queryprocessor.Metric_ExecSeconds, time.Since(now).Seconds())
 						if err == nil {
+							logger.VerboseCtx(qwork.msg.RequestCtx(), "qp.success")
 							if err = processors.CheckResponseIntent(qwork.state); err == nil {
 								err = qwork.state.ApplyIntents()
 							}
@@ -90,7 +91,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					statusCode := http.StatusOK
 					if err != nil {
 						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
-						logger.Error(fmt.Sprintf("%d/%s exec error: %s", qwork.msg.WSID(), qwork.msg.QName(), err))
+						logger.ErrorCtx(qwork.msg.RequestCtx(), "qp.error", err)
 					}
 					if qwork.apiPathHandler.isArrayResult {
 						if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
@@ -103,7 +104,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					} else if err != nil {
 						respondErr := qwork.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: statusCode}, err)
 						if respondErr != nil {
-							logger.Error(fmt.Sprintf("failed to send the error %s: %s", err.Error(), respondErr.Error()))
+							logger.ErrorCtx(qwork.msg.RequestCtx(), "qp.error", "failed to send error: ", respondErr.Error())
 						}
 					}
 				}()
@@ -204,6 +205,18 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				return nil
 			}
 			return qw.apiPathHandler.setRequestType(ctx, qw)
+		}),
+		operator("parse query params", func(ctx context.Context, qw *queryWork) (err error) {
+			argQName := appdef.NullQName
+			if qw.iQuery != nil && qw.iQuery.Param() != nil {
+				argQName = qw.iQuery.Param().QName()
+			}
+			qp, err := ParseQueryParams(qw.msg.RawParams(), argQName)
+			if err != nil {
+				return coreutils.WrapSysError(err, http.StatusBadRequest)
+			}
+			qw.queryParams = *qp
+			return nil
 		}),
 		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.apiPathHandler.requestOpKind == appdef.OperationKind_null {
@@ -307,9 +320,22 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	argsType := qw.iQuery.Param()
 	requestArgs := istructs.NewNullObject()
-	if argsType != nil {
+	if argsType == nil {
+		if len(qw.queryParams.Argument) > 0 {
+			return execQueryArgs, fmt.Errorf("args are not expected")
+		}
+	} else {
+		if argsType.QName() != istructs.QNameRaw {
+			if err = processors.CheckUnexpectedFields(qw.queryParams.Argument, argsType); err != nil {
+				return execQueryArgs, err
+			}
+		}
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
-		requestArgsBuilder.FillFromJSON(qw.msg.QueryParams().Argument)
+		if argsType.QName() == istructs.QNameRaw {
+			requestArgsBuilder.PutChars(processors.Field_RawObject_Body, qw.queryParams.RawArg)
+		} else {
+			requestArgsBuilder.FillFromJSON(qw.queryParams.Argument)
+		}
 		requestArgs, err = requestArgsBuilder.Build()
 		if err != nil {
 			return execQueryArgs, err

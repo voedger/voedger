@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -89,34 +90,75 @@ func TestBackgroundCleaner(t *testing.T) {
 	defer cleanupTestData(params)
 
 	r := require.New(t)
-	iTime := testingu.MockTime
+	iTime := testingu.NewMockTime()
 	factory := Provide(params, iTime)
 	storageProvider := istorageimpl.Provide(factory)
 
-	// get the required AppStorage for the app
+	firstTimerArmed := make(chan struct{})
+	iTime.SetOnNextTimerArmed(func() { close(firstTimerArmed) })
+
 	storage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
 	r.NoError(err)
+	<-firstTimerArmed
 
-	// cleanup interval is 1 hour
-	// this value expires in 1 hour
+	// expires in 1 hour (50*60 = 3000s < 3600s)
 	ok, err := storage.InsertIfNotExists([]byte("pKey"), []byte("cCols1"), []byte("value1"), 50*60)
 	r.NoError(err)
 	r.True(ok)
-	// this value does NOT expire in 1 hour
+	// does NOT expire in 1 hour (61*60 = 3660s > 3600s)
 	ok, err = storage.InsertIfNotExists([]byte("pKey"), []byte("cCols2"), []byte("value2"), 61*60)
 	r.NoError(err)
 	r.True(ok)
+	// expires in 1 hour — nil clustering columns (exercises safeKey path in makeTTLKey/removeKey)
+	ok, err = storage.InsertIfNotExists([]byte("pKey2"), nil, []byte("value3"), 50*60)
+	r.NoError(err)
+	r.True(ok)
+
+	cleanerDone := make(chan struct{})
+	iTime.SetOnNextNewTimerChan(func() { close(cleanerDone) })
 
 	iTime.Sleep(time.Hour)
+	<-cleanerDone
 
 	value := make([]byte, 0)
 	ok, err = storage.TTLGet([]byte("pKey"), []byte("cCols2"), &value)
 	r.NoError(err)
 	r.True(ok)
 
-	ok, err = storage.TTLGet([]byte("pKey"), []byte("cCols1"), &value)
+	// cleanerDone guarantees the cleanup transaction committed; verify physical deletion
+	// wait for deletion
+	impl := storage.(*appStorageType)
+	r.Eventually(func() bool {
+		var deleted bool
+		viewErr := impl.db.View(func(tx *bolt.Tx) error {
+			dataBucket := tx.Bucket([]byte(dataBucketName))
+			if dataBucket == nil {
+				// if data bucket is gone, key is gone
+				deleted = true
+				return nil
+			}
+			bucket := dataBucket.Bucket([]byte("pKey"))
+			if bucket == nil {
+				// if pkey bucket is gone, key is gone
+				deleted = true
+				return nil
+			}
+			toBeDeleted := bucket.Get(safeKey([]byte("cCols1")))
+			deleted = len(toBeDeleted) == 0
+			return nil
+		})
+		r.NoError(viewErr)
+		return deleted
+	}, time.Second, 50*time.Millisecond, "cCols1 not deleted from data bucket after TTL expiration")
+	err = impl.db.View(func(tx *bolt.Tx) error {
+		dataBucket := tx.Bucket([]byte(dataBucketName))
+		r.NotNil(dataBucket)
+
+		// pKey2 had only the nil-cCols entry; removeKey must have deleted the whole sub-bucket
+		r.Nil(dataBucket.Bucket([]byte("pKey2")), "pKey2 bucket not deleted after nil-cCols TTL expiration")
+		return nil
+	})
 	r.NoError(err)
-	r.False(ok)
 }
 
 func prepareTestData() (params ParamsType) {

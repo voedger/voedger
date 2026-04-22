@@ -21,8 +21,8 @@ import (
 	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 )
 
-// body and bodyReader are mutual exclusive
-func req(ctx context.Context, method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
+// body and bodyReader are mutually exclusive
+func newRequest(ctx context.Context, method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
 	if bodyReader != nil {
 		req, err = http.NewRequestWithContext(ctx, method, url, bodyReader)
 	} else {
@@ -55,14 +55,15 @@ func (c *implIHTTPClient) Req(ctx context.Context, urlStr string, body string, o
 	return c.req(ctx, urlStr, body, optFuncs...)
 }
 
-func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	opts := &reqOpts{
+func (c *implIHTTPClient) compileOpts(urlStr string, optFuncs ...ReqOptFunc) (opts *reqOpts, err error) {
+	opts = &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
 		validators: []func(IReqOpts) (panicMessage string){
 			optsValidator_responseHandling,
 		},
 		customOpts: map[any]any{},
+		urlStr:     urlStr,
 	}
 	for _, defaultOptFunc := range c.defaultOpts {
 		defaultOptFunc(opts)
@@ -81,12 +82,12 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 		opts.expectedHTTPCodes = append(opts.expectedHTTPCodes, http.StatusOK, http.StatusCreated)
 	}
 	if len(opts.urlPath) > 0 {
-		netURL, err := url.Parse(urlStr)
+		netURL, err := url.Parse(opts.urlStr)
 		if err != nil {
 			return nil, err
 		}
 		netURL.Path = opts.urlPath
-		urlStr = netURL.String()
+		opts.urlStr = netURL.String()
 	}
 	if opts.withoutAuth {
 		delete(opts.headers, Authorization)
@@ -98,10 +99,38 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 			panic(panicMessage)
 		}
 	}
+	return opts, nil
+}
+
+func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+	opts, err := c.compileOpts(urlStr, optFuncs...)
+	if err != nil {
+		return nil, err
+	}
+
 	startTime := time.Now()
+
+	var bodyReaderBytes []byte
+	if opts.bodyReader != nil {
+		bodyReaderBytes, err = io.ReadAll(opts.bodyReader)
+		if closer, ok := opts.bodyReader.(io.Closer); ok {
+			closer.Close()
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read request body: %w", err)
+		}
+	}
 
 	reqCtx, cancel := context.WithTimeout(ctx, maxHTTPRequestTimeout)
 	defer cancel()
+
+	// For long-polling (SSE) requests, use the caller's context so the
+	// connection stays alive after req() returns (defer cancel() would
+	// kill reqCtx immediately). reqCtx is still used for the retry loop.
+	httpCtx := reqCtx
+	if opts.responseHandler != nil {
+		httpCtx = ctx
+	}
 
 	retrierCfg := retrier.NewConfig(httpBaseRetryDelay, httpMaxRetryDelay)
 	retrierCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, abortErr error) {
@@ -114,11 +143,15 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
-		req, err := req(ctx, opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
+		var bodyReader io.Reader
+		if bodyReaderBytes != nil {
+			bodyReader = bytes.NewReader(bodyReaderBytes)
+		}
+		req, err := newRequest(httpCtx, opts.method, opts.urlStr, body, bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
-		resp, err := c.client.Do(req)
+		resp, err := c.client.Do(req) //nolint G704 URL is intentionally caller-provided
 		if err != nil {
 			return nil, err
 		}
@@ -140,8 +173,8 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 					// Sleep for the custom delay, respecting context cancellation
 					select {
 					case <-time.After(retryAfterDuration):
-					case <-ctx.Done():
-						return nil, ctx.Err()
+					case <-reqCtx.Done():
+						return nil, reqCtx.Err()
 					}
 				}
 			}

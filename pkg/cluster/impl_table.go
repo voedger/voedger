@@ -19,23 +19,25 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func updateTable(update update, federation federation.IFederation, itokens itokens.ITokens) error {
+func updateTable(update update, federation federation.IFederation, itokens itokens.ITokens) (cudWLogOffset istructs.Offset, err error) {
 	jsonFields, err := json.Marshal(update.setFields)
 	if err != nil {
 		// notest
-		return err
+		return 0, err
 	}
 	cudBody := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, update.id, jsonFields)
 	sysToken, err := payloads.GetSystemPrincipalToken(itokens, update.AppQName)
 	if err != nil {
 		// notest
-		return err
+		return 0, err
 	}
-	_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.AppQName, update.wsid), cudBody,
+	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.AppQName, update.wsid), cudBody,
 		httpu.WithAuthorizeBy(sysToken),
-		httpu.WithDiscardResponse(),
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return resp.CurrentWLogOffset, nil
 }
 
 func insertTable(update update, federation federation.IFederation, itokens itokens.ITokens, istate istructs.IState, intents istructs.IIntents) error {

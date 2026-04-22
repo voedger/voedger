@@ -58,6 +58,10 @@ ALTERABLE WORKSPACE UserProfileWS INHERITS sys.ProfileWS (
 		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(sys.AppSecret) INTENTS(SendMail);
 	);
 
+	RATE VerifierRate 5 PER 10 MINUTES PER WORKSPACE;
+	LIMIT InitiateEmailVerificationLimit ON QUERY InitiateEmailVerification WITH RATE VerifierRate;
+	LIMIT IssueVerifiedValueTokenLimit ON QUERY IssueVerifiedValueToken WITH RATE VerifierRate;
+
 	GRANT SELECT, UPDATE ON TABLE UserProfile TO ProfileOwner;
 	GRANT EXECUTE ON QUERY DescribePackageNames TO ProfileOwner;
 	GRANT EXECUTE ON QUERY DescribePackage TO ProfileOwner;

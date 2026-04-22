@@ -110,7 +110,7 @@ func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds ielections.Leaders
 	// nolint:revive
 	processKillThreshold := time.Duration(leadershipDurationSeconds) * time.Second / 4
 	time.Sleep(processKillThreshold)
-	logger.Error("the process is still alive after the time alloted for graceful shutdown -> terminating...")
+	logger.Error("the process is still alive after the time allotted for graceful shutdown -> terminating...")
 	os.Exit(1)
 }
 

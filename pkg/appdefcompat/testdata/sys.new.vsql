@@ -105,6 +105,14 @@ WORKSPACE SomeWorkspace INHERITS pkg1.TestWorkspace, pkg2.TestWorkspace (
     )
 );
 
+WORKSPACE DescTestWs(
+    DESCRIPTOR RenamedDescriptor(); -- ValueChanged: descriptor name changed
+);
+
+WORKSPACE ImplicitDescWs(
+    DESCRIPTOR CustomDescriptor(); -- ValueChanged: implicit descriptor was ImplicitDescWsDescriptor, now explicitly named differently
+);
+
 ALTERABLE WORKSPACE Profile(
 
 );

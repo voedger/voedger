@@ -25,9 +25,16 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		NewID ref -- filled on `insert table` only
 	);
 
+	TYPE VSqlUpdate2Result (
+		LogWLogOffset int64 NOT NULL,
+		CUDWLogOffset int64 NOT NULL
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(AppDeploymentDescriptor);
 		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
+		COMMAND LogVSqlUpdate(VSqlUpdateParams);
+		QUERY VSqlUpdate2(VSqlUpdateParams) RETURNS VSqlUpdate2Result;
 	);
 
 	ROLE ClusterAdmin;

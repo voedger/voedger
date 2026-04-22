@@ -4,12 +4,6 @@
 
 package iauthnzimpl
 
-import "github.com/voedger/voedger/pkg/appdef"
-
-var (
-	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
-)
-
 const (
 	field_OwnerWSID = "OwnerWSID"
 )

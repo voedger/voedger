@@ -6,6 +6,8 @@
 package limiter
 
 import (
+	"errors"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -53,6 +55,49 @@ func (l *Limiter) Exceeded(resource appdef.QName, operation appdef.OperationKind
 	}
 
 	return false, appdef.NullQName
+}
+
+func (l *Limiter) ResetLimits(resource appdef.QName, operation appdef.OperationKind, workspace istructs.WSID, remoteAddr string) {
+	limits, ok := l.limits[resource]
+	if !ok {
+		return
+	}
+	for _, limit := range limits {
+		if !limit.Op(operation) {
+			continue
+		}
+		key := irates.BucketKey{
+			RateLimitName: limit.QName(),
+		}
+		if limit.Rate().Scope(appdef.RateScope_Workspace) {
+			key.Workspace = workspace
+		}
+		if limit.Rate().Scope(appdef.RateScope_IP) {
+			key.RemoteAddr = remoteAddr
+		}
+		if limit.Filter().Option() == appdef.LimitFilterOption_EACH {
+			key.QName = resource
+		}
+		defaultState, err := l.buckets.GetDefaultBucketsState(limit.QName())
+		if err != nil {
+			continue
+		}
+		err = l.buckets.SetBucketState(key, defaultState)
+		if errors.Is(err, irates.ErrorRateLimitNotFound) {
+			// SetBucketState returns ErrorRateLimitNotFound when no bucket exists for the key.
+			// In the production IBuckets implementation (iratesce.bucketsType), bucketByKey
+			// auto-creates a bucket when a default state exists for the RateLimitName.
+			// Since Limiter.init() registers default states for all limits, and we iterate
+			// only over those limits here, this error cannot occur in practice.
+			// For alternative IBuckets implementations: resetting a bucket that was never
+			// used (no tokens taken) is a no-op by definition, so skipping is safe.
+			continue
+		}
+		if err != nil {
+			// notest
+			panic(err)
+		}
+	}
 }
 
 func (l *Limiter) init() {

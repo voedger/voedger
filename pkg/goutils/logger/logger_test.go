@@ -9,9 +9,7 @@
 package logger_test
 
 import (
-	"bytes"
-	"io"
-	"os"
+	"context"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,69 +17,43 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
-func Test_BasicUsage(t *testing.T) {
-
-	// "Hello world"
-	{
-		logger.Error("Error", "arg1", "arg2")
-		logger.Warning("My warning")
-		logger.Info("My info")
-
-		// IsVerbose() is used to avoid unnecessary calculations
-		if logger.IsVerbose() {
-			logger.Verbose("!!! You should NOT see this verbose message since default level is INFO")
-		}
-
-		// IsTrace() is used to avoid unnecessary calculations
-		if logger.IsTrace() {
-			logger.Trace("!!! You should NOT see this trace message since default level is INFO")
-		}
-	}
-
-	// Changing LogLevel
-	{
-		logger.SetLogLevel(logger.LogLevelTrace)
-		if logger.IsTrace() {
-			logger.Trace("Now you should see my Trace")
-		}
-		if logger.IsVerbose() {
-			logger.Verbose("Now you should see my Verbose")
-		}
-		logger.SetLogLevel(logger.LogLevelError)
-		logger.Trace("!!! You should NOT see my Trace")
-		logger.Warning("!!! You should NOT see my warning")
-		logger.SetLogLevel(logger.LogLevelInfo)
-		logger.Warning("You should see my warning")
-		logger.Warning("You should see my info")
-	}
-
-	// Let see how it looks when using from methods
-	{
-		m := mystruct{}
-		m.iWantToLog()
-	}
-}
-
-func Test_BasicUsage_SetLogLevelWithRestore(t *testing.T) {
-
-	// Log level is set to LogLevelTrace and then restored to the previous value
-	defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
-
-	logger.Trace("You SHOULD see this trace")
-
-}
-
 func Test_SetLogLevelWithRestore(t *testing.T) {
-
-	trySetLevelWithRestore := func() {
+	require := require.New(t)
+	func() {
 		defer logger.SetLogLevelWithRestore(logger.LogLevelTrace)()
-		logger.Trace("You SHOULD see this trace")
-	}
-	trySetLevelWithRestore()
-	logger.Trace("You should NOT see this trace")
+		require.True(logger.IsTrace())
+	}()
+	require.False(logger.IsTrace())
+}
+
+func TestLegacyFuncs_BasicUsage(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+	logger.Verbose("verbose message")
+	logger.Info("info message")
+	logger.Warning("warning message")
+	logger.Error("error message")
+	logCap.HasLine("verbose message")
+	logCap.HasLine("info message")
+	logCap.HasLine("warning message")
+	logCap.HasLine("error message")
+}
+
+func TestSlogFuncs_BasicUsage(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+	ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+		logger.LogAttr_VApp: "myapp",
+		logger.LogAttr_WSID: 42,
+	})
+	logger.VerboseCtx(ctx, "", "verbose ctx message")
+	logger.InfoCtx(ctx, "", "info ctx message")
+	logger.ErrorCtx(ctx, "", "error ctx message")
+	logger.LogCtx(ctx, 0, logger.LogLevelInfo, "", "log ctx message")
+	logCap.HasLine("verbose ctx message", "vapp=myapp", "wsid=42")
+	logCap.HasLine("info ctx message", "vapp=myapp")
+	logCap.HasLine("error ctx message", "wsid=42")
+	logCap.HasLine("log ctx message", "vapp=myapp", "wsid=42")
 }
 
 func loggerHelperWithSkipStackFrames(skipStackFrames int, msg string) error {
@@ -89,178 +61,260 @@ func loggerHelperWithSkipStackFrames(skipStackFrames int, msg string) error {
 	return nil
 }
 
-func Test_BasicUsage_SkipStackFrames(t *testing.T) {
-
-	logger.SetLogLevel(logger.LogLevelTrace)
-
-	// [logger_test.loggerHelperWithSkipStackFrames:...]: myStunningPrefix: hello
-	_ = loggerHelperWithSkipStackFrames(0, "hello")
-
-	// logger_test.Test_SkipStackFrames:...]: myStunningPrefix: hello
-	_ = loggerHelperWithSkipStackFrames(1, "hello")
-}
-
 func Test_BasicUsage_CustomPrintLine(t *testing.T) {
-
 	require := require.New(t)
 
-	// Define myPrintLine
 	myPrintLine := func(level logger.TLogLevel, line string) {
 		line += "myPrintLine"
 		logger.DefaultPrintLine(level, line)
 	}
 
-	// Use myPrintLine as logger.PrintLine
-
 	logger.PrintLine = myPrintLine
-	defer func() {
-		logger.PrintLine = logger.DefaultPrintLine
-	}()
+	defer func() { logger.PrintLine = logger.DefaultPrintLine }()
 
-	{
-		logger.SetLogLevel(logger.LogLevelTrace)
-		strStdout, strStderr, err := testingu.CaptureStdoutStderr(func() error {
-			logger.Trace("hello")
-			return nil
-		})
-		require.NoError(err)
-		require.Empty(strStderr)
-		require.Contains(strStdout, "myPrintLine")
-	}
-
+	logCap := logger.StartCapture(t, logger.LogLevelTrace)
+	logger.Trace("hello")
+	require.Contains(logCap.String(), "myPrintLine")
 }
 
 func Test_SkipStackFrames(t *testing.T) {
-
-	require := require.New(t)
-	logger.SetLogLevel(logger.LogLevelTrace)
-
 	const funcNamePattern = "loggerHelperWithSkipStackFrames"
 
-	{
-		// [logger_test.loggerHelperSkip0StackFrames:69]: myStunningPrefix: hello
-		strStdout, strStderr, err := testingu.CaptureStdoutStderr(func() error {
-			return loggerHelperWithSkipStackFrames(0, "hello")
-		})
-		require.NoError(err)
-		require.Empty(strStderr)
-		require.Contains(strStdout, funcNamePattern)
-	}
+	t.Run("skipStackFrames=0 shows helper func name", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelTrace)
+		_ = loggerHelperWithSkipStackFrames(0, "hello")
+		logCap.HasLine(funcNamePattern)
+	})
 
-	{
-		// logger_test.Test_SkipStackFrames:80]: myStunningPrefix: hello
-		strStdout, strStderr, err := testingu.CaptureStdoutStderr(func() error {
-			return loggerHelperWithSkipStackFrames(1, "hello")
-		})
-		require.NoError(err)
-		require.Empty(strStderr)
-		require.NotContains(strStdout, funcNamePattern)
-	}
-
+	t.Run("skipStackFrames=1 hides helper func name", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelTrace)
+		_ = loggerHelperWithSkipStackFrames(1, "hello")
+		logCap.NotContains(funcNamePattern)
+	})
 }
 
 func Test_StdoutStderr_LogLevel(t *testing.T) {
+	t.Run("LogLevelError: Error visible, Warning suppressed", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		logger.Error("Error", "arg1", "arg2")
+		logger.Warning("My warning")
+		logCap.HasLine("Error arg1 arg2")
+		logCap.NotContains("My warning")
+	})
 
-	require := require.New(t)
-
-	// LogLevelError
-	{
-		logger.SetLogLevel(logger.LogLevelError)
-		strStdout, strStderr, err := testingu.CaptureStdoutStderr(func() error {
-			logger.Error("Error", "arg1", "arg2")
-			logger.Warning("My warning")
-			return nil
-		})
-		require.NoError(err)
-		require.Contains(strStderr, "Error arg1 arg2")
-		require.Empty(strStdout)
-	}
-
-	// LogLevelWarning
-	{
-		logger.SetLogLevel(logger.LogLevelWarning)
-		strStdout, strStderr, err := testingu.CaptureStdoutStderr(func() error {
-			logger.Error("Error", "arg1", "arg2")
-			logger.Warning("My warning")
-			return nil
-		})
-		require.NoError(err)
-		require.Contains(strStderr, "Error arg1 arg2")
-		require.Contains(strStdout, "My warning")
-	}
-
+	t.Run("LogLevelWarning: Error and Warning both visible", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelWarning)
+		logger.Error("Error", "arg1", "arg2")
+		logger.Warning("My warning")
+		logCap.HasLine("Error arg1 arg2")
+		logCap.HasLine("My warning")
+	})
 }
 
 func Test_CheckSetLevels(t *testing.T) {
-
-	require := require.New(t)
-
-	logger.SetLogLevel(logger.LogLevelNone)
-	require.False(logger.IsError())
-	require.False(logger.IsWarning())
-	require.False(logger.IsInfo())
-	require.False(logger.IsVerbose())
-	require.False(logger.IsTrace())
-
-	logger.SetLogLevel(logger.LogLevelError)
-	require.True(logger.IsError())
-	require.False(logger.IsWarning())
-	require.False(logger.IsInfo())
-	require.False(logger.IsVerbose())
-	require.False(logger.IsTrace())
-
-	logger.SetLogLevel(logger.LogLevelWarning)
-	require.True(logger.IsError())
-	require.True(logger.IsWarning())
-	require.False(logger.IsInfo())
-	require.False(logger.IsVerbose())
-	require.False(logger.IsTrace())
-
-	logger.SetLogLevel(logger.LogLevelInfo)
-	require.True(logger.IsError())
-	require.True(logger.IsWarning())
-	require.True(logger.IsInfo())
-	require.False(logger.IsVerbose())
-	require.False(logger.IsTrace())
-
-	logger.SetLogLevel(logger.LogLevelVerbose)
-	require.True(logger.IsError())
-	require.True(logger.IsWarning())
-	require.True(logger.IsInfo())
-	require.True(logger.IsVerbose())
-	require.False(logger.IsTrace())
-
-	logger.SetLogLevel(logger.LogLevelTrace)
-	require.True(logger.IsError())
-	require.True(logger.IsWarning())
-	require.True(logger.IsInfo())
-	require.True(logger.IsVerbose())
-	require.True(logger.IsTrace())
-
+	allChecks := []func() bool{logger.IsError, logger.IsWarning, logger.IsInfo, logger.IsVerbose, logger.IsTrace}
+	testCases := []struct {
+		name      string
+		level     logger.TLogLevel
+		activeIdx int
+	}{
+		{"None", logger.LogLevelNone, -1},
+		{"Error", logger.LogLevelError, 0},
+		{"Warning", logger.LogLevelWarning, 1},
+		{"Info", logger.LogLevelInfo, 2},
+		{"Verbose", logger.LogLevelVerbose, 3},
+		{"Trace", logger.LogLevelTrace, 4},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require := require.New(t)
+			defer logger.SetLogLevelWithRestore(tc.level)()
+			for i, check := range allChecks {
+				require.Equal(i <= tc.activeIdx, check())
+			}
+		})
+	}
 }
 
-type mystruct struct {
+func Test_WithContextAttrs(t *testing.T) {
+	t.Run("attrs appear in output", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+			logger.LogAttr_VApp: "untill.fiscalcloud",
+			logger.LogAttr_Feat: "magicmenu",
+		})
+		logger.VerboseCtx(ctx, "", "hello ctx")
+		logCap.HasLine("hello ctx", "vapp=untill.fiscalcloud", "feat=magicmenu")
+	})
+
+	t.Run("attrs accumulate across WithContextAttrs calls", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_VApp: "myapp"})
+		ctx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_Feat: "myfeat"})
+		logger.VerboseCtx(ctx, "", "accumulated")
+		logCap.HasLine("vapp=myapp", "feat=myfeat")
+	})
+
+	t.Run("same key is overwritten", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{logger.LogAttr_VApp: "first"})
+		ctx = logger.WithContextAttrs(ctx, map[string]any{logger.LogAttr_VApp: "second"})
+		logger.VerboseCtx(ctx, "", "overwrite")
+		logCap.HasLine("vapp=second")
+		logCap.NotContains("vapp=first")
+	})
 }
 
-func (m *mystruct) iWantToLog() {
-	logger.Error("OOPS")
+func Test_CtxFuncs_StandardAttrs(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelTrace)
+	ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+		logger.LogAttr_ReqID:     42,
+		logger.LogAttr_WSID:      100,
+		logger.LogAttr_Extension: "c.sys.UploadBLOBHelper",
+	})
+	logger.InfoCtx(ctx, "", "standard attrs")
+	logCap.HasLine("reqid=42", "wsid=100", "extension=c.sys.UploadBLOBHelper")
+}
+
+func Test_CtxFuncs_SLogLevels(t *testing.T) {
+	testCases := []struct {
+		name      string
+		level     logger.TLogLevel
+		logFn     func(context.Context, string, ...interface{})
+		msg       string
+		wantLevel string
+	}{
+		{name: "ErrorCtx", level: logger.LogLevelError, logFn: logger.ErrorCtx, msg: "error msg", wantLevel: "ERROR"},
+		{name: "WarningCtx", level: logger.LogLevelWarning, logFn: logger.WarningCtx, msg: "warning msg", wantLevel: "WARN"},
+		{name: "InfoCtx", level: logger.LogLevelInfo, logFn: logger.InfoCtx, msg: "info msg", wantLevel: "INFO"},
+		{name: "VerboseCtx", level: logger.LogLevelVerbose, logFn: logger.VerboseCtx, msg: "verbose msg", wantLevel: "DEBUG"},
+		{name: "TraceCtx", level: logger.LogLevelTrace, logFn: logger.TraceCtx, msg: "trace msg", wantLevel: "DEBUG"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logCap := logger.StartCapture(t, tc.level)
+			tc.logFn(context.Background(), "", tc.msg)
+			logCap.HasLine("level="+tc.wantLevel, "msg=\""+tc.msg+"\"")
+		})
+	}
+}
+
+func Test_CtxFuncs_LevelFiltering(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("VerboseCtx suppressed at Info level", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelInfo)
+		logger.VerboseCtx(ctx, "", "should not appear")
+		logCap.NotContains("should not appear")
+	})
+
+	t.Run("TraceCtx suppressed at Info level", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelInfo)
+		logger.TraceCtx(ctx, "", "should not appear")
+		logCap.NotContains("should not appear")
+	})
+
+	t.Run("ErrorCtx captured with attrs", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		ctx2 := logger.WithContextAttrs(ctx, map[string]any{"k": "v"})
+		logger.ErrorCtx(ctx2, "", "boom")
+		logCap.HasLine("boom", "k=v")
+	})
+
+	t.Run("WarningCtx visible at Warning level", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelWarning)
+		logger.WarningCtx(ctx, "", "warn msg")
+		logCap.HasLine("warn msg")
+	})
+}
+
+func Test_CtxFuncs_EmptyContext(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+	logger.VerboseCtx(context.Background(), "", "no attrs")
+	logCap.HasLine("no attrs")
+}
+
+func Test_CtxFuncs_StageAttr(t *testing.T) {
+	t.Run("stage appears when non-empty", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		logger.VerboseCtx(context.Background(), "endpoint.validation", "test msg")
+		logCap.HasLine("stage=endpoint.validation", "test msg")
+	})
+
+	t.Run("stage omitted when empty", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		logger.VerboseCtx(context.Background(), "", "no stage msg")
+		logCap.HasLine("no stage msg")
+		logCap.NotContains("stage=")
+	})
+}
+
+func Test_NewStdLogBridge(t *testing.T) {
+	t.Run("single-line forwarding with stage and ctx attrs", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		ctx := logger.WithContextAttrs(context.Background(), map[string]any{
+			logger.LogAttr_VApp: "myapp",
+			logger.LogAttr_WSID: 42,
+		})
+		l := logger.NewStdErrorLogBridge(ctx, "http")
+		l.Println("hello bridge")
+		logCap.HasLine("hello bridge", "level=ERROR", "stage=http", "vapp=myapp", "wsid=42", "Test_NewStdLogBridge")
+	})
+
+	t.Run("multi-line payload kept as single record with escaped newlines", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		l := logger.NewStdErrorLogBridge(context.Background(), "")
+		l.Print("first\nsecond\r\n")
+		out := logCap.String()
+		require.Contains(out, `msg="first\nsecond"`)
+		nonEmpty := 0
+		for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+			if len(line) > 0 {
+				nonEmpty++
+			}
+		}
+		require.Equal(1, nonEmpty)
+	})
+
+	t.Run("payload empty after trimming is suppressed", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		l := logger.NewStdErrorLogBridge(context.Background(), "")
+		l.Print("\r\n")
+		l.Print("")
+		require.Empty(logCap.String())
+	})
+
+	t.Run("disabled log level suppresses writes", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelNone)
+		l := logger.NewStdErrorLogBridge(context.Background(), "")
+		l.Println("never printed")
+		require.Empty(logCap.String())
+	})
+
+	t.Run("WithFilter drops matching writes and forwards the rest", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelError)
+		l := logger.NewStdErrorLogBridge(context.Background(), "",
+			logger.WithFilter("TLS handshake error"))
+		l.Println("http: TLS handshake error from 1.2.3.4: read: connection reset")
+		l.Println("server started")
+		logCap.NotContains("TLS handshake error")
+		logCap.HasLine("server started")
+	})
 }
 
 func TestMultithread(t *testing.T) {
-	require := require.New(t)
-	r, w, err := os.Pipe()
-	require.NoError(err)
-	oldStdout := os.Stdout
-	defer func() { os.Stdout = oldStdout }()
-	os.Stdout = w
-	wg := sync.WaitGroup{}
-	wg.Add(1000)
-
 	toLog := []string{}
 	for i := 0; i < 100; i++ {
 		toLog = append(toLog, strings.Repeat(strconv.Itoa(i), 10))
 	}
 
+	logCap := logger.StartCapture(t, logger.LogLevelInfo)
+	wg := sync.WaitGroup{}
+	wg.Add(1000)
 	for i := 0; i < 1000; i++ {
 		go func() {
 			for i := 0; i < 100; i++ {
@@ -269,21 +323,9 @@ func TestMultithread(t *testing.T) {
 			wg.Done()
 		}()
 	}
-
-	stdout := ""
-	wait := make(chan struct{})
-	go func() {
-		buf := bytes.NewBuffer(nil)
-		_, err := io.Copy(buf, r)
-		require.NoError(err)
-		stdout = buf.String()
-		close(wait)
-	}()
 	wg.Wait()
-	w.Close()
-	<-wait
 
-	logged := strings.Split(stdout, "\n")
+	logged := strings.Split(logCap.String(), "\n")
 outer:
 	for _, loggedActual := range logged {
 		if len(loggedActual) == 0 {

@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts/internal/limiter"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Example() {
@@ -94,5 +95,49 @@ func Example() {
 	// false .
 	// false .
 	// false .
+	// false .
+}
+
+func Example_resetLimits() {
+	cmdName := appdef.NewQName("test", "cmd")
+	app := func() appdef.IAppDef {
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsName := appdef.NewQName("test", "workspace")
+		wsb := adb.AddWorkspace(wsName)
+		_ = wsb.AddCommand(cmdName)
+
+		rateName := appdef.NewQName("test", "rate")
+		wsb.AddRate(rateName, 3, time.Minute, []appdef.RateScope{appdef.RateScope_Workspace})
+		wsb.AddLimit(
+			appdef.NewQName("test", "limit"),
+			[]appdef.OperationKind{appdef.OperationKind_Execute},
+			appdef.LimitFilterOption_EACH,
+			filter.WSTypes(wsName, appdef.TypeKind_Command),
+			rateName)
+
+		return adb.MustBuild()
+	}()
+
+	buckets := iratesce.TestBucketsFactory()
+	Limiter := limiter.New(app, buckets)
+
+	var ws istructs.WSID = 1
+
+	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``))
+	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``))
+	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``))
+	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``)) // exceeded
+
+	Limiter.ResetLimits(cmdName, appdef.OperationKind_Execute, ws, ``)
+
+	fmt.Println(Limiter.Exceeded(cmdName, appdef.OperationKind_Execute, ws, ``)) // allowed again
+
+	// Output:
+	// false .
+	// false .
+	// false .
+	// true test.limit
 	// false .
 }

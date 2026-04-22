@@ -9,6 +9,8 @@ package actualizers
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -290,15 +293,180 @@ func getProjectorsInError(t *testing.T, metrics imetrics.IMetrics, appName appde
 	return projInErrors
 }
 
+func Test_AsynchronousActualizer_Logs(t *testing.T) {
+	t.Run("execute projector logs args all cuds and success", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
+		appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1)
+		cmdQName := appdef.NewQName("test", "logging_execute_cmd")
+		argQName := appdef.NewQName("test", "logging_execute_arg")
+		recQName1 := appdef.NewQName("test", "logging_execute_rec1")
+		recQName2 := appdef.NewQName("test", "logging_execute_rec2")
+		projectorQName := appdef.NewQName("test", "logging_execute_projector")
+
+		broker, cleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+			Channels:                2,
+			ChannelsPerSubject:      2,
+			Subscriptions:           2,
+			SubscriptionsPerSubject: 2,
+		}, timeu.NewITime())
+		defer cleanup()
+
+		actCfg := &BasicAsyncActualizerConfig{
+			Broker: broker,
+		}
+
+		appParts, appStructs, stop := deployTestApp(
+			appName, totalPartitions, false,
+			testWorkspace, testWorkspaceDescriptor,
+			func(wsb appdef.IWorkspaceBuilder) {
+				cmd := wsb.AddCommand(cmdQName)
+				cmd.SetParam(argQName)
+				wsb.AddObject(argQName).AddField("name", appdef.DataKind_string, false)
+				wsb.AddCDoc(recQName1).AddField("name", appdef.DataKind_string, false)
+				wsb.AddCDoc(recQName2).AddField("name", appdef.DataKind_string, false)
+				wsb.AddProjector(projectorQName).Events().Add(
+					[]appdef.OperationKind{appdef.OperationKind_Execute},
+					filter.QNames(cmdQName))
+			},
+			func(cfg *istructsmem.AppConfigType) {
+				cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
+				cfg.AddAsyncProjectors(istructs.Projector{
+					Name: projectorQName,
+					Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error { return nil },
+				})
+			},
+			actCfg)
+		defer stop()
+
+		idGen := istructsmem.NewIDGenerator()
+		createWS(appStructs, istructs.WSID(1001), testWorkspace, testWorkspaceDescriptor, partitionNr, istructs.Offset(1), idGen)
+
+		f := pLogFiller{
+			app:       appStructs,
+			partition: partitionNr,
+			offset:    istructs.Offset(2),
+			cmdQName:  cmdQName,
+			fillEvent: func(reb istructs.IRawEventBuilder) {
+				reb.ArgumentObjectBuilder().PutString("name", "hello")
+				cuds := reb.CUDBuilder()
+				cuds.Create(recQName1).PutRecordID(appdef.SystemField_ID, 1)
+				cuds.Create(recQName2).PutRecordID(appdef.SystemField_ID, 2)
+			},
+		}
+		topOffset := f.fill(1001, idGen)
+
+		appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
+		for getActualizerOffset(require, appStructs, partitionNr, projectorQName) < topOffset {
+			time.Sleep(time.Microsecond)
+		}
+
+		logCap.HasLine("stage=ap",
+			fmt.Sprintf("vapp=%s", appName),
+			fmt.Sprintf("extension=ap.%s", projectorQName),
+			"wsid=1001", "woffset=",
+			fmt.Sprintf("poffset=%d", topOffset),
+			fmt.Sprintf("evqname=%s", cmdQName),
+			"args={", `\"name\":\"hello\"`,
+			fmt.Sprintf("triggeredby=%s", cmdQName),
+		)
+		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQName1), "op=create",
+			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQName1))
+		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQName2), "op=create",
+			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQName2))
+		require.Equal(2, strings.Count(logCap.String(), "op=create"))
+		require.Equal(2, strings.Count(logCap.String(), "newfields="))
+		logCap.NotContains("oldfields=")
+		logCap.HasLine("stage=ap.success")
+	})
+
+	t.Run("record projector logs only triggering cuds", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
+		appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1)
+		cmdQName := appdef.NewQName("test", "logging_cud_cmd")
+		recQNameLogged := appdef.NewQName("test", "logging_cud_logged")
+		recQNameSkipped := appdef.NewQName("test", "logging_cud_skipped")
+		projectorQName := appdef.NewQName("test", "logging_cud_projector")
+
+		broker, cleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+			Channels:                2,
+			ChannelsPerSubject:      2,
+			Subscriptions:           2,
+			SubscriptionsPerSubject: 2,
+		}, timeu.NewITime())
+		defer cleanup()
+
+		actCfg := &BasicAsyncActualizerConfig{
+			Broker: broker,
+		}
+
+		appParts, appStructs, stop := deployTestApp(
+			appName, totalPartitions, false,
+			testWorkspace, testWorkspaceDescriptor,
+			func(wsb appdef.IWorkspaceBuilder) {
+				wsb.AddCommand(cmdQName)
+				wsb.AddCDoc(recQNameLogged).AddField("name", appdef.DataKind_string, false)
+				wsb.AddCDoc(recQNameSkipped).AddField("name", appdef.DataKind_string, false)
+				wsb.AddProjector(projectorQName).Events().Add(
+					[]appdef.OperationKind{appdef.OperationKind_Insert},
+					filter.QNames(recQNameLogged))
+			},
+			func(cfg *istructsmem.AppConfigType) {
+				cfg.Resources.Add(istructsmem.NewCommandFunction(cmdQName, istructsmem.NullCommandExec))
+				cfg.AddAsyncProjectors(istructs.Projector{
+					Name: projectorQName,
+					Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error { return nil },
+				})
+			},
+			actCfg)
+		defer stop()
+
+		idGen := istructsmem.NewIDGenerator()
+		createWS(appStructs, istructs.WSID(1001), testWorkspace, testWorkspaceDescriptor, partitionNr, istructs.Offset(1), idGen)
+
+		f := pLogFiller{
+			app:       appStructs,
+			partition: partitionNr,
+			offset:    istructs.Offset(2),
+			cmdQName:  cmdQName,
+			fillEvent: func(reb istructs.IRawEventBuilder) {
+				cuds := reb.CUDBuilder()
+				cuds.Create(recQNameLogged).PutRecordID(appdef.SystemField_ID, 1)
+				cuds.Create(recQNameSkipped).PutRecordID(appdef.SystemField_ID, 2)
+			},
+		}
+		topOffset := f.fill(1001, idGen)
+
+		appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
+		for getActualizerOffset(require, appStructs, partitionNr, projectorQName) < topOffset {
+			time.Sleep(time.Microsecond)
+		}
+
+		logCap.HasLine("stage=ap", "args={}", fmt.Sprintf("triggeredby=%s", recQNameLogged))
+		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQNameLogged), "op=create",
+			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQNameLogged))
+		logCap.NotContains(fmt.Sprintf("rectype=%s", recQNameSkipped))
+		require.Equal(1, strings.Count(logCap.String(), "op=create"))
+		require.Equal(1, strings.Count(logCap.String(), "newfields="))
+		logCap.NotContains("oldfields=")
+		logCap.HasLine("stage=ap.success")
+	})
+}
+
 // Tests that error is handled correctly.
-// Async actualizer should write the error to log, then rebuild and restart itself after a 30-second pause
+// Async actualizer should write the error to log, then rebuild and restart itself after retry backoff
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 	name := appdef.NewQName("test", "failing_projector")
 
-	attempts := 0
+	var attempts atomic.Int32
+	restoreCh := make(chan struct{})
 
 	errorsCh := make(chan string, 10)
 
@@ -311,12 +479,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	defer cleanup()
 
 	actConf := &BasicAsyncActualizerConfig{
-		Broker: broker,
-
-		LogError: func(args ...interface{}) {
-			errorsCh <- fmt.Sprint("error: ", args)
-		},
-
+		Broker:        broker,
 		BundlesLimit:  10,
 		FlushInterval: 10 * time.Millisecond,
 	}
@@ -342,11 +505,12 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 					Name: name,
 					Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 						if event.Workspace() == 1002 {
-							if attempts == 0 {
-								attempts++
+							switch attempts.Add(1) {
+							case 1:
 								return errors.New("test error")
+							case 2:
+								<-restoreCh
 							}
-							attempts++
 						}
 						return nil
 					},
@@ -370,32 +534,35 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
 
-	// Wait for the logged error
-	errStr := <-errorsCh
-
-	require.Equal("error: [test.failing_projector [1] wsid[1002] offset[0]: test error]", errStr)
+	logCap.EventuallyHasLine("stage=ap.error",
+		fmt.Sprintf("vapp=%s", appName),
+		fmt.Sprintf("extension=ap.%s", name),
+		"wsid=1002", `msg="test error"`,
+	)
 
 	// wait until the istructs.Projector version is updated with the 1st record
 	for getActualizerOffset(require, appStructs, partitionNr, name) < istructs.Offset(1) {
 		time.Sleep(time.Microsecond)
 	}
-	require.Equal(1, attempts)
-	projInErr := getProjectorsInError(t, actConf.Metrics, appName, actConf.VvmName)
-	require.NotNil(projInErr)
-	require.Equal(1.0, *projInErr)
+	require.Eventually(func() bool {
+		projInErr := getProjectorsInError(t, actConf.Metrics, appName, actConf.VvmName)
+		return projInErr != nil && *projInErr == 1.0
+	}, time.Second, 10*time.Millisecond)
+	close(restoreCh)
 
 	// Now the istructs.Projector must handle the log till the end
 	for getActualizerOffset(require, appStructs, partitionNr, name) < topOffset {
 		time.Sleep(time.Microsecond)
 	}
-	projInErr = getProjectorsInError(t, actConf.Metrics, appName, actConf.VvmName)
-	require.NotNil(projInErr)
-	require.Equal(0.0, *projInErr)
+	require.Eventually(func() bool {
+		projInErr := getProjectorsInError(t, actConf.Metrics, appName, actConf.VvmName)
+		return projInErr != nil && *projInErr == 0.0
+	}, time.Second, 10*time.Millisecond)
 
 	// stop services
 	stop()
 
-	require.Equal(2, attempts)
+	require.EqualValues(2, attempts.Load())
 
 	select {
 	case err := <-errorsCh:
@@ -494,6 +661,7 @@ type pLogFiller struct {
 	partition istructs.PartitionID
 	offset    istructs.Offset
 	cmdQName  appdef.QName
+	fillEvent func(istructs.IRawEventBuilder)
 }
 
 func (f *pLogFiller) fill(wsid istructs.WSID, idGen istructs.IIDGenerator) (offset istructs.Offset) {
@@ -505,6 +673,9 @@ func (f *pLogFiller) fill(wsid istructs.WSID, idGen istructs.IIDGenerator) (offs
 			QName:             f.cmdQName,
 		},
 	})
+	if f.fillEvent != nil {
+		f.fillEvent(reb)
+	}
 	rawEvent, err := reb.BuildRawEvent()
 	if err != nil {
 		panic(err)
@@ -763,9 +934,6 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		FlushInterval: 2 * time.Second,
 		Broker:        broker,
 		AAMetrics:     actMetrics,
-		LogError: func(args ...interface{}) {
-			require.Fail("actualizer error", args...)
-		},
 	}
 
 	t0 := time.Now()
@@ -895,7 +1063,6 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		FlushInterval:         1000 * time.Millisecond,
 		Broker:                broker,
 		AAMetrics:             actMetrics,
-		LogError:              func(args ...interface{}) {},
 		FlushPositionInterval: 10 * time.Second,
 	}
 

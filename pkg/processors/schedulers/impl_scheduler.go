@@ -23,9 +23,10 @@ import (
 )
 
 type scheduler struct {
-	name string
-	conf SchedulerConfig
-	job  appdef.QName
+	name   string
+	conf   SchedulerConfig
+	job    appdef.QName
+	logCtx context.Context
 	// init:
 	jobInErrAddr *imetrics.MetricValue
 	schedule     cron.Schedule
@@ -41,16 +42,13 @@ func (a *scheduler) Prepare() {
 		a.conf.IntentsLimit = defaultIntentsLimit
 	}
 
-	if a.conf.LogError == nil {
-		a.conf.LogError = logger.Error
-	}
-
 	a.retrierCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, abortErr error) {
 		a.finit() // even execute if a.init has failed
-		a.conf.LogError(a.name, opErr)
 		if errors.Is(opErr, appparts.ErrNotFound) {
+			logger.ErrorCtx(a.logCtx, "job.error", fmt.Sprintf("appparts %s, will try again", opErr.Error()))
 			return true, nil
 		}
+		logger.ErrorCtx(a.logCtx, "job.error", opErr)
 		return false, opErr
 	}
 	a.name = fmt.Sprintf("%v [idx: %d, id: %d]", a.job, a.conf.AppWSIdx, a.conf.Workspace)
@@ -76,7 +74,7 @@ func (a *scheduler) runJob() {
 			borrowedPartition.Release()
 		}
 		if err != nil {
-			a.conf.LogError(a.name, err)
+			logger.ErrorCtx(a.logCtx, "job.error", err)
 			if atomic.CompareAndSwapInt32(&a.projErrState, 0, 1) {
 				if a.jobInErrAddr != nil {
 					a.jobInErrAddr.Increase(1)
@@ -112,9 +110,7 @@ func (a *scheduler) runJob() {
 	if err = borrowedPartition.Invoke(a.ctx, a.job, state, state); err != nil {
 		return
 	}
-	if logger.IsVerbose() {
-		logger.Verbose("invoked " + a.name)
-	}
+	logger.VerboseCtx(a.logCtx, "job.success")
 	err = state.ApplyIntents()
 	if err != nil {
 		return
@@ -146,7 +142,6 @@ func (a *scheduler) init() (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to parse cron schedule: %w", err)
 	}
-	logger.Trace(a.name, "started")
 	return nil
 }
 
@@ -154,13 +149,13 @@ func (a *scheduler) keepRunning() {
 	now := a.conf.Time.Now()
 	nextTime := a.schedule.Next(now)
 	for a.ctx.Err() == nil {
-		logger.Info(a.name, "schedule", "now", now, "next", nextTime)
+		logger.VerboseCtx(a.logCtx, "job.schedule", "now=", now, ",next=", nextTime)
 		timerChan := a.conf.Time.NewTimerChan(nextTime.Sub(now))
 		select {
 		case <-a.ctx.Done():
 			return
 		case now = <-timerChan:
-			logger.Info(a.name, "wake", "now", now)
+			logger.VerboseCtx(a.logCtx, "job.wake-up", now)
 			a.runJob()
 			nextTime = a.schedule.Next(now)
 		}
@@ -168,9 +163,6 @@ func (a *scheduler) keepRunning() {
 }
 
 func (a *scheduler) finit() {
-	if logger.IsTrace() {
-		logger.Trace(a.name + "s finalized")
-	}
 	if a.jobInErrAddr != nil {
 		if atomic.CompareAndSwapInt32(&a.projErrState, 1, 0) {
 			a.jobInErrAddr.Increase(-1)

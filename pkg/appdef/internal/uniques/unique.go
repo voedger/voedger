@@ -131,7 +131,7 @@ func (uu *WithUniques) addUnique(name appdef.QName, fields []appdef.FieldName, c
 	}
 
 	for _, un := range uu.uniques {
-		ff := make([]appdef.FieldName, 0)
+		ff := make([]appdef.FieldName, 0, len(un.Fields()))
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}

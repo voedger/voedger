@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -77,7 +76,7 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCUD, NullCommandExec))
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+		provider := Provide(cfgs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 		var err error
 		app, err = provider.BuiltIn(istructs.AppQName_test1_app1)

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/processors/oldacl"
@@ -87,6 +88,10 @@ func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
 }
 
+func (c *cmdWorkpiece) LogCtx() context.Context {
+	return c.logCtx
+}
+
 // used in projectors.NewSyncActualizerFactoryFactory
 func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 	return c.pLogEvent
@@ -95,6 +100,23 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 // need for update corrupted in c.cluster.VSqlUpdate and for various funcs of sys package
 func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 	return c.appStructs
+}
+
+// need for sync projectors for logging
+func (c *cmdWorkpiece) PLogOffset() istructs.Offset {
+	return c.pLogOffset
+}
+
+func (c *cmdWorkpiece) GetPrincipals() []iauthnz.Principal {
+	return c.principals
+}
+
+func (c *cmdWorkpiece) ResetRateLimit(resource appdef.QName, operation appdef.OperationKind) {
+	c.appPart.ResetRateLimit(resource, operation, c.cmdMes.WSID(), c.cmdMes.Host())
+}
+
+func (c *cmdWorkpiece) Roles() []appdef.QName {
+	return c.roles
 }
 
 // https://github.com/voedger/voedger/issues/3163
@@ -137,6 +159,7 @@ func (c *cmdWorkpiece) Release() {
 		c.appPart = nil
 		ap.Release()
 	}
+	c.hostState.wp = nil
 }
 
 func borrowAppPart(_ context.Context, cmd *cmdWorkpiece) error {
@@ -234,12 +257,10 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, cmd *cmdWorkpiece) (
 }
 
 func (cmdProc *cmdProc) getHostState(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset,
-		cmd.argsObject, cmd.unloggedArgsObject, cmd.cmdMes.PartitionID(), cmd.cmdMes.Origin())
-	hs.ClearIntents()
-	cmd.eca.State = hs
-	cmd.eca.Intents = hs
+	cmd.hostState.bind(cmd)
+	cmd.hostState.state.ClearIntents()
+	cmd.eca.State = cmd.hostState.state
+	cmd.eca.Intents = cmd.hostState.state
 	return nil
 }
 
@@ -256,16 +277,29 @@ func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idG
 	}
 }
 
-func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
-	ap := &appPartition{
+func newRecoveryCtx(ctx context.Context, partID istructs.PartitionID) context.Context {
+	return logger.WithContextAttrs(ctx, map[string]any{
+		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
+		logger.LogAttr_Extension: "sys._Recovery",
+		"partid":                 partID,
+	})
+}
+
+func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *appPartition, err error) {
+	recoveryCtx := newRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID())
+	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.start", "")
+	ap = &appPartition{
 		workspaces:     map[istructs.WSID]*workspace{},
 		nextPLogOffset: istructs.FirstOffset,
 	}
 	var lastPLogEvent istructs.IPLogEvent
+	var lastPLogOffset istructs.Offset
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 
 		for rec := range event.CUDs {
+			// note: not needed to check for Singleton here
+			// because within UpdateOnSync: syncID<nextRecordID -> skip
 			if rec.IsNew() {
 				ws.idGenerator.UpdateOnSync(rec.ID())
 			}
@@ -280,25 +314,37 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 			lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 		}
 		lastPLogEvent = event
+		lastPLogOffset = plogOffset
 		return nil
 	}
 
 	if err := cmd.appStructs.Events().ReadPLog(ctx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
+		logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.readplog.error", err)
 		return nil, err
 	}
 
 	if lastPLogEvent != nil {
 		// re-apply the last event
+		cmd.logCtx, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
+			"cp.partition_recovery.reapply", nil, "")
+		if err != nil {
+			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.logeventandcuds.error", err)
+			return nil, err
+		}
 		cmd.pLogEvent = lastPLogEvent
 		cmd.workspace = ap.getWorkspace(lastPLogEvent.Workspace())
 		cmd.workspace.NextWLogOffset-- // cmdProc.storeOp will bump it
 		cmd.reapplier = cmd.appStructs.GetEventReapplier(cmd.pLogEvent)
+		cmd.pLogOffset = lastPLogOffset // need to get PLogOffset in sync projectors on logging
 		if err := cmdProc.storeOp.DoSync(ctx, cmd); err != nil {
+			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.storeop.error", err)
 			return nil, err
 		}
-		cmd.pLogEvent = nil
-		cmd.workspace = nil
+		cmd.pLogOffset = istructs.NullOffset
 		cmd.reapplier = nil
+		cmd.workspace = nil
+		cmd.pLogEvent = nil
+		cmd.logCtx = nil
 		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
 	}
 
@@ -307,8 +353,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		// notest
 		return nil, err
 	}
-	logger.Info(fmt.Sprintf(`app "%s" partition %d recovered: nextPLogOffset %d, workspaces: %s`, cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(),
-		ap.nextPLogOffset, string(worskapcesJSON)))
+	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "completed, nextPLogOffset ", ap.nextPLogOffset, ", workspaces ", string(worskapcesJSON))
 	return ap, nil
 }
 
@@ -329,8 +374,40 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, cmd *cmdWorkpiece) (err error
 	return
 }
 
+func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
+	oldRecs := make(map[istructs.RecordID]istructs.IRecord, len(cmd.parsedCUDs))
+	for _, pc := range cmd.parsedCUDs {
+		if pc.existingRecord != nil {
+			oldRecs[istructs.RecordID(pc.id)] = pc.existingRecord // nolint G115
+		}
+	}
+	enrichedLogCtx, err := processors.LogEventAndCUDs(
+		cmd.cmdMes.RequestCtx(),
+		cmd.pLogEvent,
+		cmd.rawEvent.PLogOffset(),
+		cmd.appStructs.AppDef(),
+		0,
+		"cp.plog_saved",
+		func(cud istructs.ICUDRow) (bool, string, error) {
+			if oldRec, ok := oldRecs[cud.ID()]; ok {
+				oldFields, err := json.Marshal(coreutils.FieldsToMap(oldRec, cmd.appStructs.AppDef()))
+				if err != nil {
+					// notest
+					return false, "", err
+				}
+				return true, fmt.Sprintf("oldfields=%s", oldFields), nil
+			}
+			return true, "oldfields={}", nil
+		},
+		"",
+	)
+
+	cmd.logCtx = enrichedLogCtx
+	return err
+}
+
 func getWSDesc(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
+	cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), appdef.QNameCDocWorkspaceDescriptor)
 	return err
 }
 
@@ -372,10 +449,12 @@ func checkWSActive(_ context.Context, cmd *cmdWorkpiece) (err error) {
 }
 
 func limitCallRate(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	if cmd.appStructs.IsFunctionRateLimitsExceeded(cmd.cmdQName, cmd.cmdMes.WSID()) {
-		return coreutils.NewHTTPErrorf(http.StatusTooManyRequests)
+	exceeded, limit := cmd.appPart.IsLimitExceeded(cmd.cmdQName, appdef.OperationKind_Execute, cmd.cmdMes.WSID(), cmd.cmdMes.Host())
+	if !exceeded {
+		return nil
 	}
-	return nil
+	retryAfter := processors.RetryAfterSecondsOnLimitExceeded(cmd.appStructs.AppDef(), limit)
+	return coreutils.NewHTTPErrorf(http.StatusTooManyRequests).AddHeader(httpu.RetryAfter, strconv.Itoa(retryAfter))
 }
 
 func (cmdProc *cmdProc) authenticate(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -400,7 +479,7 @@ func getPrincipalsRoles(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	return nil
 }
 
-func (cmdProc *cmdProc) authorizeRequest(_ context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) authorizeRequest(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	ws := cmd.iWorkspace
 	if ws == nil {
 		// c.sys.CreateWorkspace
@@ -416,15 +495,15 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, cmd *cmdWorkpiece) (
 	if !newACLOk && !oldACLOk {
 		return coreutils.NewHTTPErrorf(http.StatusForbidden)
 	}
-	if !newACLOk && oldACLOk {
-		logger.Verbose("newACL not ok, but oldACL ok.", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
+	if !newACLOk && oldACLOk && logger.IsVerbose() {
+		logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "", "newACL not ok, but oldACL ok. ", appdef.OperationKind_Execute, cmd.cmdQName, cmd.roles)
 	}
 	return nil
 }
 
 func unmarshalRequestBody(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.iCommand.Param() != nil && cmd.iCommand.Param().QName() == istructs.QNameRaw {
-		cmd.requestData["args"] = map[string]interface{}{
+		cmd.requestData[args] = map[string]interface{}{
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = coreutils.JSONUnmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
@@ -433,8 +512,48 @@ func unmarshalRequestBody(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	return
 }
 
+func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) error {
+	if cmd.cmdMes.APIPath() == processors.APIPath_Docs {
+		return nil
+	}
+	// var unexpected []string
+	var unexpectedAllowed []string
+	for key := range cmd.requestData {
+		switch key {
+		case args, "unloggedArgs", "cuds":
+		default:
+			unexpectedAllowed = append(unexpectedAllowed, key)
+			// unexpected = append(unexpected, key)
+		}
+	}
+	if len(unexpectedAllowed) > 0 {
+		logger.WarningCtx(cmd.cmdMes.RequestCtx(), "cp.validate", fmt.Sprintf("unexpected field(s): %s, allowing for backward compatibility", strings.Join(unexpectedAllowed, ", ")))
+	}
+	// FIXME: deny unexpected fields in https://untill.atlassian.net/browse/AIR-3437 after https://untill.atlassian.net/browse/AIR-3438
+	// if len(unexpected) > 0 {
+	// 	sort.Strings(unexpected)
+	// 	return fmt.Errorf("unexpected field(s): %s", strings.Join(unexpected, ", "))
+	// }
+	if args, exists, err := cmd.requestData.AsObject(args); err != nil {
+		return err
+	} else if exists && len(args) > 0 && cmd.iCommand.Param() == nil {
+		return fmt.Errorf("args are not expected")
+	}
+	if unloggedArgs, exists, err := cmd.requestData.AsObject("unloggedArgs"); err != nil {
+		return err
+	} else if exists && len(unloggedArgs) > 0 && cmd.iCommand.UnloggedParam() == nil {
+		return fmt.Errorf("unloggedArgs are not expected")
+	}
+	return nil
+}
+
 func (cmdProc *cmdProc) getWorkspace(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	cmd.workspace = cmd.appPartition.getWorkspace(cmd.cmdMes.WSID())
+	return nil
+}
+
+func setPLogOffset(_ context.Context, cmd *cmdWorkpiece) (err error) {
+	cmd.pLogOffset = cmd.appPartition.nextPLogOffset
 	return nil
 }
 
@@ -444,7 +563,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, cmd *cmdWorkpiece)
 		Workspace:         cmd.cmdMes.WSID(),
 		QName:             cmd.cmdQName,
 		RegisteredAt:      istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
-		PLogOffset:        cmd.appPartition.nextPLogOffset,
+		PLogOffset:        cmd.pLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 
@@ -471,7 +590,7 @@ func getArgsObject(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		return nil
 	}
 	aob := cmd.reb.ArgumentObjectBuilder()
-	args, exists, err := cmd.requestData.AsObject("args")
+	args, exists, err := cmd.requestData.AsObject(args)
 	if err != nil {
 		return err
 	}
@@ -558,7 +677,7 @@ func appendBLOBOwnershipUpdaters(ctx context.Context, cmd *cmdWorkpiece) (err er
 }
 
 func checkResponseIntent(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	return processors.CheckResponseIntent(cmd.hostStateProvider.state)
+	return processors.CheckResponseIntent(cmd.hostState.state)
 }
 
 func buildRawEvent(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -767,7 +886,7 @@ func checkIsActiveInCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	return nil
 }
 
-func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) authorizeRequestCUDs(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	ws := cmd.iWorkspace
 	if ws == nil {
 		// c.sys.CreateWorkspace
@@ -785,8 +904,8 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, cmd *cmdWorkpiec
 		if !newACLOk && !oldACLOk {
 			return coreutils.NewHTTPError(http.StatusForbidden, parsedCUD.xPath.Errorf("operation forbidden"))
 		}
-		if !newACLOk && oldACLOk {
-			logger.Verbose("newACL not ok, but oldACL ok.", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
+		if !newACLOk && oldACLOk && logger.IsVerbose() {
+			logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "", "newACL not ok, but oldACL ok. ", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
 		}
 	}
 	return
@@ -812,13 +931,12 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 	return coreutils.WrapSysError(err, http.StatusBadRequest)
 }
 
-func (cmdProc *cmdProc) notifyAsyncActualizers(_ context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) notifyAsyncActualizers(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
 		Projection: actualizers.PLogUpdatesQName,
 		WS:         istructs.WSID(cmd.cmdMes.PartitionID()),
 	}, cmd.rawEvent.PLogOffset())
-	logger.Verbose("async actualizers are notified: offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmd.cmdMes.PartitionID())
 	return nil
 }
 
@@ -840,17 +958,13 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 		body.Truncate(body.Len() - 1)
 		body.WriteString("}")
-		if logger.IsVerbose() {
-			logger.Verbose("generated IDs:", cmd.idGeneratorReporter.generatedIDs)
-		}
 	}
 	if cmd.cmdResult != nil {
 		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.appStructs.AppDef())
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
-			// notest
-			logger.Error("failed to marshal response: " + err.Error())
-			return
+			// notest: impossible
+			panic("failed to marshal response: " + err.Error())
 		}
 		body.WriteString(`,"Result":`)
 		body.Write(cmdResultBytes)
@@ -876,6 +990,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 		res = string(camelCasedResBytes)
 	}
+	cmd.cmdResToLog = res
 	bus.ReplyJSON(cmd.cmdMes.Responder(), cmd.statusCodeOfSuccess, res)
 }
 

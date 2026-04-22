@@ -7,15 +7,12 @@ package sys_it
 import (
 	"fmt"
 	"testing"
-	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/sys/verifier"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -103,6 +100,9 @@ func TestResetPasswordLimits(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+
+	verifierRateMaxAllowed, verifierRatePeriod := vit.RatePerPeriod(istructs.AppQName_test1_app1, appdef.NewQName(appdef.SysPackage, "VerifierRate"))
+
 	var (
 		profileWSID istructs.WSID
 		token       string
@@ -110,25 +110,20 @@ func TestResetPasswordLimits(t *testing.T) {
 	)
 
 	t.Run("InitiateResetPasswordByEmail", func(t *testing.T) {
-		// mock rate limits
-		rateLimitName_InitiateEmailVerification := istructsmem.GetFunctionRateLimitName(verifier.QNameQueryInitiateEmailVerification, istructs.RateLimitKind_byWorkspace)
-		vit.MockBuckets(istructs.AppQName_test1_app1, rateLimitName_InitiateEmailVerification, irates.BucketState{
-			Period:             time.Minute,
-			MaxTokensPerPeriod: 1,
-		})
+		// deplete the real bucket
+		for range verifierRateMaxAllowed {
+			_, _ = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
+				body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+				return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
+			})
+		}
 
-		// 1st call -> ok, do not store the code
-		_, _ = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
-			return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
-		})
-
-		// 2nd call -> limit exceeded
+		// next call -> limit exceeded
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect429())
 
-		// proceed to the next minute to restore rates
-		vit.TimeAdd(time.Minute)
+		// proceed to the next period to restore rates
+		vit.TimeAdd(verifierRatePeriod)
 
 		// call again to get actual token and code
 		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
@@ -143,33 +138,32 @@ func TestResetPasswordLimits(t *testing.T) {
 	})
 
 	t.Run("IssueVerifiedValueTokenForResetPassword", func(t *testing.T) {
-		// mock rate limits
-		rateLimitName_IssueVerifiedValueToken := istructsmem.GetFunctionRateLimitName(verifier.QNameQueryIssueVerifiedValueToken, istructs.RateLimitKind_byWorkspace)
-		vit.MockBuckets(istructs.AppQName_test1_app1, rateLimitName_IssueVerifiedValueToken, irates.BucketState{
-			Period:             time.Minute,
-			MaxTokensPerPeriod: 1,
-		})
-
 		wrongCode := code + "1"
 		wrongCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, wrongCode, profileWSID,
 			istructs.AppQName_test1_app1)
 
-		// 1st call with wrong code -> 400 bad request
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, httpu.Expect400())
+		// deplete the real bucket with wrong code calls
+		for range verifierRateMaxAllowed {
+			vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, httpu.Expect400())
+		}
 
-		// 2nd call with wrong code -> mocked limit exceeded, 429 Too many reuqets
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", wrongCodeBody, httpu.Expect429())
-
-		// next calls with correct code -> 429 anyway
+		// next call with correct code -> 429 anyway because limit is exceeded
 		goodCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
 			istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", goodCodeBody, httpu.Expect429())
 
-		// proceed to the next minute to restore rates
-		vit.TimeAdd(time.Minute)
+		// proceed to the next period to restore rates
+		vit.TimeAdd(verifierRatePeriod)
+
+		// regenerate token and code because previous ones are expired already
+		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
+			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+			return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
+		})
+		goodCodeBody = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
+			istructs.AppQName_test1_app1)
 
 		// expect no errors now
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", goodCodeBody)
-
 	})
 }

@@ -6,6 +6,7 @@
 package router
 
 import (
+	"sync/atomic"
 	"time"
 )
 
@@ -47,10 +48,20 @@ const (
 	URLPlaceholder_field          = "field"
 	hours24                       = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503 = 1
+	DefaultMaxQueriesPerWSLimit   = 10
+	rejectionLogInterval          = 10 * time.Second
+	logAttrib_Origin              = "origin"
+	logAttrib_RemoteAddr          = "remoteaddr"
+	logAttrib_Projection          = "projection"
+	logAttrib_ChannelID           = "channelid"
+	n10nErrorStage                = "n10n.error"
 )
 
 var (
-	onRequestCtxClosed func() = nil // used in tests
+	onRequestCtxClosed    func() = nil // used in tests
+	reqID                        = atomic.Uint64{}
+	globalServerStartTime        = time.Now().Format("01021504")
+	skipAnnoyingErrors           = []string{"TLS handshake error"}
 )
 
 const (

@@ -13,7 +13,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/valyala/bytebufferpool"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func parseRoutes(routesURLs map[string]route, routes map[string]string, isRewrite bool) error {
@@ -30,7 +29,6 @@ func parseRoutes(routesURLs map[string]route, routes map[string]string, isRewrit
 			isRewrite,
 			"",
 		}
-		logger.Info("reverse proxy route registered: ", from, " -> ", to)
 	}
 	return nil
 }
@@ -40,21 +38,20 @@ func parseRoutes(routesURLs map[string]route, routes map[string]string, isRewrit
 // route rewrite: /grafana-rewrite=http://10.0.0.3:3000/rewritten : https://alpha.dev.untill.ru/grafana-rewrite/foo -> http://10.0.0.3:3000/rewritten/foo
 // default route: http://10.0.0.3:3000/not-found : https://alpha.dev.untill.ru/unknown/foo -> http://10.0.0.3:3000/not-found/unknown/foo
 // route domain : resellerportal.dev.untill.ru=http://resellerportal : https://resellerportal.dev.untill.ru/foo -> http://resellerportal/foo
-func (s *httpService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err error) {
+func (s *routerService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err error) {
 	routes := map[string]route{}
 	reverseProxy := &httputil.ReverseProxy{Director: func(r *http.Request) {}} // director's job is done by redirectMatcher
-	if err := parseRoutes(routes, s.Routes, false); err != nil {
+	if err := parseRoutes(routes, s.routes, false); err != nil {
 		return nil, err
 	}
-	if err = parseRoutes(routes, s.RoutesRewrite, true); err != nil {
+	if err = parseRoutes(routes, s.routesRewrite, true); err != nil {
 		return nil, err
 	}
 	var defaultRouteURL *url.URL
-	if len(s.RouteDefault) > 0 {
-		if defaultRouteURL, err = parseURL(s.RouteDefault); err != nil {
+	if len(s.routeDefault) > 0 {
+		if defaultRouteURL, err = parseURL(s.routeDefault); err != nil {
 			return nil, err
 		}
-		logger.Info("default route registered: ", s.RouteDefault)
 	}
 	return func(req *http.Request, rm *mux.RouteMatch) bool {
 		pathPrefix := bytebufferpool.Get()
@@ -64,7 +61,7 @@ func (s *httpService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err
 		if colonPos := strings.Index(hostNoPort, ":"); colonPos > 0 {
 			hostNoPort = hostNoPort[:colonPos]
 		}
-		if targetDomainStr, ok := s.RouteDomains[hostNoPort]; ok {
+		if targetDomainStr, ok := s.routeDomains[hostNoPort]; ok {
 			targetDomain, err := url.Parse(targetDomainStr)
 			if err != nil {
 				panic(err)
@@ -113,8 +110,6 @@ func parseURL(urlStr string) (url *url.URL, err error) {
 }
 
 func redirect(req *http.Request, targetPath string, targetURL *url.URL) {
-	srcURL := req.URL.String()
-	srcHost := req.Host
 	req.URL.Path = targetPath
 	req.Host = targetURL.Host
 	req.URL.Scheme = targetURL.Scheme
@@ -124,8 +119,5 @@ func redirect(req *http.Request, targetPath string, targetURL *url.URL) {
 		req.URL.RawQuery = targetQuery + req.URL.RawQuery
 	} else {
 		req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
-	}
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("reverse proxy: incoming %s %s%s, redirecting to %s", req.Method, srcHost, srcURL, req.URL))
 	}
 }

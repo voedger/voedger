@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/isequencer"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -63,21 +62,20 @@ type AppConfigType struct {
 
 	dynoSchemes *dynobuf.DynoBufSchemes
 
-	storage            istorage.IAppStorage // will be initialized on prepare()
-	versions           *vers.Versions
-	qNames             *qnames.QNames
-	cNames             *containers.Containers
-	singletons         *singletons.Singletons
-	prepared           bool
-	app                *appStructsType
-	FunctionRateLimits functionRateLimits
-	syncProjectors     istructs.Projectors
-	asyncProjectors    istructs.Projectors
-	cudValidators      []istructs.CUDValidator
-	eventValidators    []istructs.EventValidator
-	numAppWorkspaces   istructs.NumAppWorkspaces
-	jobs               []BuiltinJob
-	seqTypes           map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number
+	storage          istorage.IAppStorage // will be initialized on prepare()
+	versions         *vers.Versions
+	qNames           *qnames.QNames
+	cNames           *containers.Containers
+	singletons       *singletons.Singletons
+	prepared         bool
+	app              *appStructsType
+	syncProjectors   istructs.Projectors
+	asyncProjectors  istructs.Projectors
+	cudValidators    []istructs.CUDValidator
+	eventValidators  []istructs.EventValidator
+	numAppWorkspaces istructs.NumAppWorkspaces
+	jobs             []BuiltinJob
+	seqTypes         map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -101,9 +99,6 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 	cfg.cNames = containers.New()
 	cfg.singletons = singletons.New()
 
-	cfg.FunctionRateLimits = functionRateLimits{
-		limits: map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
-	}
 	return &cfg
 }
 
@@ -125,7 +120,7 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 }
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
-func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.IAppStorage) error {
+func (cfg *AppConfigType) prepare(appStorage istorage.IAppStorage) error {
 	// if cfg.QNameID == istructs.NullClusterAppID {…} — unnecessary check. QNameID must be checked before prepare()
 
 	if cfg.prepared {
@@ -165,9 +160,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	if err := cfg.singletons.Prepare(cfg.storage, cfg.versions, cfg.AppDef); err != nil {
 		return err
 	}
-
-	// prepare functions rate limiter
-	cfg.FunctionRateLimits.prepare(buckets)
 
 	if err := cfg.validateResources(); err != nil {
 		return err

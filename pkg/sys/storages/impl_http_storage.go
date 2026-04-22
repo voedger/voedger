@@ -12,14 +12,18 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
+
+var requestNumber atomic.Uint64
 
 type httpStorage struct {
 	httpClient httpu.IHTTPClient
@@ -167,9 +171,19 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		})
 	}
 
+	var reqNumber uint64
+	if logger.IsVerbose() {
+		reqNumber = requestNumber.Add(1)
+		logger.Verbose("req ", reqNumber, ": ", method, " ", kb.url, " body: ", string(kb.body))
+	}
+
 	resp, err := s.httpClient.ReqReader(ctx, kb.url, body, opts...)
 	if err != nil && !errors.Is(err, httpu.ErrUnexpectedStatusCode) {
 		return errorResult(err)
+	}
+
+	if logger.IsVerbose() && reqNumber > 0 { // avoiding case when Verbose level set after request was sent
+		logger.Verbose("resp ", reqNumber, ": ", resp.HTTPResp.StatusCode, " body: ", resp.Body)
 	}
 
 	return callback(nil, &httpValue{
@@ -191,13 +205,13 @@ func (v *httpValue) AsBytes(string) []byte { return v.body }
 func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) } // nolint G115
 func (v *httpValue) AsString(name string) string {
 	if name == sys.Storage_HTTP_Field_Header {
-		var res strings.Builder
+		res := &strings.Builder{}
 		for k, v := range v.header {
 			if len(v) > 0 {
 				if res.Len() > 0 {
 					res.WriteString("\n")
 				}
-				res.WriteString(fmt.Sprintf("%s: %s", k, v[0])) // FIXME: len(v)>2 ?
+				fmt.Fprintf(res, "%s: %s", k, v[0]) // FIXME: len(v)>2 ?
 			}
 		}
 		return res.String()

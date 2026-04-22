@@ -75,6 +75,12 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 		require.NoError(err)
 		require.Equal(authnz.DefaultPrincipalTokenExpiration, gp.Duration)
 	})
+
+	t.Run("sign up and sign in with special JSON characters in password", func(t *testing.T) {
+		specialLoginName := vit.NextName()
+		specialLogin := vit.SignUp(specialLoginName, `p"a\ss`, istructs.AppQName_test1_app1)
+		vit.SignIn(specialLogin)
+	})
 }
 
 func TestTTL(t *testing.T) {
@@ -304,7 +310,7 @@ func TestGlobalRoles(t *testing.T) {
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken), httpu.Expect400())
 
 	// update global roles allowed for the System principal
-	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"}}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken))
 
 	// now global roles are in the new token

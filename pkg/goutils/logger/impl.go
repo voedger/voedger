@@ -39,7 +39,7 @@ func isEnabled(logLevel TLogLevel) bool {
 	return curLogLevel >= logLevel
 }
 
-func (p *logPrinter) getFuncName(skipCount int) (funcName string, line int) {
+func getFuncName(skipCount int) (funcName string, line int) {
 	var fn string
 	pc, _, line, ok := runtime.Caller(skipCount)
 	details := runtime.FuncForPC(pc)
@@ -67,7 +67,7 @@ func (p *logPrinter) getFormattedMsg(msgType string, funcName string, line int, 
 }
 
 func (p *logPrinter) print(skipStackFrames int, level TLogLevel, msgType string, args ...interface{}) {
-	funcName, line := p.getFuncName(skipStackFrames + globalSkipStackFramesCount)
+	funcName, line := getFuncName(skipStackFrames + globalSkipStackFramesCount)
 	out := p.getFormattedMsg(msgType, funcName, line, args...)
 
 	PrintLine(level, out)

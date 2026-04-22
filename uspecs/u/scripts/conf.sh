@@ -7,7 +7,7 @@ set -Eeuo pipefail
 #   Manages uspecs lifecycle: install, update, upgrade, and invocation method configuration
 #
 # Usage:
-#   conf.sh install --nlia [--alpha] [--pr]
+#   conf.sh install --nlia [--alpha] [--local] [--override] [--pr] [-y]
 #   conf.sh update [--pr]
 #   conf.sh upgrade [--pr]
 #   conf.sh im --add nlia
@@ -23,25 +23,26 @@ ALPHA_BRANCH="${USPECS_ALPHA_BRANCH:-main}"
 GITHUB_API="https://api.github.com"
 GITHUB_RAW="https://raw.githubusercontent.com"
 
-case "$OSTYPE" in
-    msys*|cygwin*) _TMP_BASE=$(cygpath -w "$TEMP") ;;
-    *)             _TMP_BASE="/tmp" ;;
-esac
+# Minimal error function for the curl-pipe case (overwritten by utils.sh when sourced).
+error() { echo "Error: $1" >&2; exit 1; }
 
-_TEMP_DIRS=()
-_TEMP_FILES=()
-
-if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
-    _script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    # shellcheck source=_lib/utils.sh
-    source "$_script_dir/_lib/utils.sh"
-    checkcmds curl
-fi
-
-error() {
-    echo "Error: $1" >&2
-    exit 1
+# Authenticated curl for GitHub API and raw content requests.
+# Uses USPECS_GITHUB_TOKEN when set (required for private repositories).
+github_curl() {
+    local auth_args=()
+    if [[ -n "${USPECS_GITHUB_TOKEN:-}" ]]; then
+        auth_args=(-H "Authorization: token $USPECS_GITHUB_TOKEN")
+    fi
+    curl -fsSL "${auth_args[@]}" "$@"
 }
+
+# Source _lib/git.sh only when running from a file (not piped via curl).
+# When piped, BASH_SOURCE[0] is empty or not a file path, so we skip sourcing
+# and rely on the self-contained cmd_install path (Phase 1 of curl-pipe install).
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
+    # shellcheck source=_lib/git.sh
+    source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/git.sh"
+fi
 
 get_timestamp() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
@@ -104,8 +105,8 @@ load_config() {
 }
 
 get_latest_tag() {
-    curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        _grep '"name":' | \
+    github_curl "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
+        grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
         head -n 1
 }
@@ -116,10 +117,10 @@ get_latest_minor_tag() {
     IFS='.' read -r major minor _ <<< "$current_version"
 
     local result
-    result=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
-        _grep '"name":' | \
+    result=$(github_curl "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tags" | \
+        grep '"name":' | \
         sed 's/.*"name": *"v\?\([^"]*\)".*/\1/' | \
-        _grep "^$major\.$minor\." | \
+        grep "^$major\.$minor\." | \
         head -n 1 || true)
     echo "${result:-$current_version}"
 }
@@ -130,16 +131,33 @@ get_latest_major_tag() {
 
 get_latest_commit_info() {
     local response
-    response=$(curl -fsSL "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
+    response=$(github_curl "$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/commits/$ALPHA_BRANCH")
     local sha
-    sha=$(echo "$response" | _grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
+    sha=$(echo "$response" | grep '"sha":' | head -n 1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
     local commit_date
-    commit_date=$(echo "$response" | _grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
+    commit_date=$(echo "$response" | grep '"date":' | head -n 1 | sed 's/.*"date": *"\([^"]*\)".*/\1/')
     echo "$sha $commit_date"
 }
 
 get_alpha_version() {
-    curl -fsSL "$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ALPHA_BRANCH/version.txt" | tr -d '[:space:]'
+    github_curl "$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ALPHA_BRANCH/version.txt" | tr -d '[:space:]'
+}
+
+get_local_version() {
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    tr -d '[:space:]' < "$script_dir/../../../version.txt"
+}
+
+get_local_commit_info() {
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    local repo_root
+    repo_root=$(native_path "$(cd "$script_dir/../../.." && pwd)")
+    local sha timestamp
+    sha=$(git -C "$repo_root" log -1 --format="%H")
+    timestamp=$(git -C "$repo_root" log -1 --format="%cI")
+    echo "$sha $timestamp"
 }
 
 is_alpha_version() {
@@ -150,8 +168,8 @@ download_archive() {
     local ref="$1"
     local temp_dir="$2"
 
-    local archive_url="https://github.com/$REPO_OWNER/$REPO_NAME/archive/$ref.tar.gz"
-    curl -fsSL "$archive_url" | tar -xz -C "$temp_dir" --strip-components=1
+    local archive_url="$GITHUB_API/repos/$REPO_OWNER/$REPO_NAME/tarball/$ref"
+    github_curl "$archive_url" | tar -xz -C "$temp_dir" --strip-components=1
 }
 
 get_nli_file() {
@@ -213,34 +231,6 @@ format_version_string_branch() {
 
     # Sanitize to ensure valid git branch name
     sanitize_branch_name "$result"
-}
-
-cleanup_temp() {
-    if [[ ${#_TEMP_FILES[@]} -gt 0 ]]; then
-        for file in "${_TEMP_FILES[@]}"; do
-            rm -f "$file"
-        done
-    fi
-    if [[ ${#_TEMP_DIRS[@]} -gt 0 ]]; then
-        for dir in "${_TEMP_DIRS[@]}"; do
-            rm -rf "$dir"
-        done
-    fi
-}
-trap cleanup_temp EXIT
-
-create_temp_dir() {
-    local temp_dir
-    temp_dir=$(mktemp -d "$_TMP_BASE/uspecs.XXXXXX")
-    _TEMP_DIRS+=("$temp_dir")
-    echo "$temp_dir"
-}
-
-create_temp_file() {
-    local temp_file
-    temp_file=$(mktemp "$_TMP_BASE/uspecs.XXXXXX")
-    _TEMP_FILES+=("$temp_file")
-    echo "$temp_file"
 }
 
 show_operation_plan() {
@@ -308,7 +298,7 @@ show_operation_plan() {
 
         local -A pr_info
         local pr_remote="" default_branch="" target_repo_url="" pr_branch=""
-        if get_pr_info "$script_dir/_lib/pr.sh" pr_info "$project_dir" 2>/dev/null; then
+        if git_pr_info pr_info "$project_dir" 2>/dev/null; then
             pr_remote="${pr_info[pr_remote]:-}"
             default_branch="${pr_info[default_branch]:-}"
             target_repo_url=$(git -C "$project_dir" remote get-url "$pr_remote" 2>/dev/null)
@@ -331,8 +321,13 @@ show_operation_plan() {
 
 confirm_action() {
     local action="$1"
+    local yes_flag="${2:-false}"
 
     echo ""
+
+    if [[ "$yes_flag" == "true" ]]; then
+        return 0
+    fi
 
     # Try to read from /dev/tty (works even when stdin is piped)
     if [ -e /dev/tty ]; then
@@ -358,6 +353,10 @@ replace_uspecs_u() {
     echo "Removing installation metadata file from archive..."
     rm -f "$source_dir/uspecs/u/uspecs.yml"
     echo "Removing old uspecs/u files..."
+    # Delete only regular files, not directories. Removing directories while they
+    # may still be in use causes "directory busy" errors on Windows (and with some
+    # tools on other platforms). Leaving empty directories behind is harmless
+    # because cp -r will overwrite or reuse them.
     find "$project_dir/uspecs/u" -type f -delete
     echo "Installing new uspecs/u..."
     cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
@@ -374,7 +373,7 @@ has_markers() {
     local file="$1"
     local begin_marker="$2"
     local end_marker="$3"
-    _grep -q "$begin_marker" "$file" && _grep -q "$end_marker" "$file"
+    grep -q "$begin_marker" "$file" && grep -q "$end_marker" "$file"
 }
 
 inject_instructions() {
@@ -395,7 +394,7 @@ inject_instructions() {
     fi
 
     local temp_extract
-    temp_extract=$(create_temp_file)
+    temp_create_file temp_extract
     sed -n "/$begin_marker/,/$end_marker/p" "$source_file" > "$temp_extract"
 
     if [[ ! -s "$temp_extract" ]]; then
@@ -421,7 +420,7 @@ inject_instructions() {
     fi
 
     local temp_output
-    temp_output=$(create_temp_file)
+    temp_create_file temp_output
     sed "/$begin_marker/,\$d" "$target_file" > "$temp_output"
     cat "$temp_extract" >> "$temp_output"
     sed "1,/$end_marker/d" "$target_file" >> "$temp_output"
@@ -480,6 +479,10 @@ write_metadata() {
 resolve_update_version() {
     local current_version="$1"
     local project_dir="$2"
+    local -n _ruv_target_version="$3"
+    local -n _ruv_target_ref="$4"
+    local -n _ruv_commit="$5"
+    local -n _ruv_commit_timestamp="$6"
 
     if is_alpha_version "$current_version"; then
         echo "Checking for alpha updates..."
@@ -487,21 +490,24 @@ resolve_update_version() {
         load_config "$project_dir" config
         local current_commit="${config[commit]:-}"
         local current_commit_timestamp="${config[commit_timestamp]:-}"
-        read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
+        local fetched_commit fetched_timestamp
+        read -r fetched_commit fetched_timestamp <<< "$(get_latest_commit_info)"
 
-        if [[ "$current_commit" == "$commit" ]]; then
+        if [[ "$current_commit" == "$fetched_commit" ]]; then
             echo "Already on the latest alpha version: $current_version"
-            echo "  Commit: $commit"
+            echo "  Commit: $fetched_commit"
             echo "  Timestamp: $current_commit_timestamp"
             return 1
         fi
-        target_version=$(get_alpha_version)
-        target_ref="$commit"
+        _ruv_target_version=$(get_alpha_version)
+        _ruv_target_ref="$fetched_commit"
+        _ruv_commit="$fetched_commit"
+        _ruv_commit_timestamp="$fetched_timestamp"
     else
         echo "Checking for stable updates..."
-        target_version=$(get_latest_minor_tag "$current_version")
+        _ruv_target_version=$(get_latest_minor_tag "$current_version")
 
-        if [[ "$target_version" == "$current_version" ]]; then
+        if [[ "$_ruv_target_version" == "$current_version" ]]; then
             echo "Already on the latest stable minor version: $current_version"
 
             local latest_major
@@ -514,7 +520,7 @@ resolve_update_version() {
             return 1
         fi
 
-        target_ref="v$target_version"
+        _ruv_target_ref="v$_ruv_target_version"
     fi
     return 0
 }
@@ -522,20 +528,22 @@ resolve_update_version() {
 resolve_upgrade_version() {
     local current_version="$1"
     local project_dir="$2"
+    local -n _rugv_target_version="$3"
+    local -n _rugv_target_ref="$4"
 
     if is_alpha_version "$current_version"; then
         error "Only applicable for stable versions. Alpha versions always track the latest commit from $ALPHA_BRANCH branch, use update instead"
     fi
 
     echo "Checking for major upgrades..."
-    target_version=$(get_latest_major_tag)
+    _rugv_target_version=$(get_latest_major_tag)
 
-    if [[ "$target_version" == "$current_version" ]]; then
+    if [[ "$_rugv_target_version" == "$current_version" ]]; then
         echo "Already on the latest major version: $current_version"
         return 1
     fi
 
-    target_ref="v$target_version"
+    _rugv_target_ref="v$_rugv_target_version"
     return 0
 }
 
@@ -550,7 +558,10 @@ cmd_apply() {
 
     local project_dir="" version="" commit="" commit_timestamp="" pr_flag=false
     local current_version=""
+    local override=false
     local invocation_methods=()
+
+    local yes_flag=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -560,11 +571,14 @@ cmd_apply() {
             --commit-timestamp) commit_timestamp="$2"; shift 2 ;;
             --current-version) current_version="$2"; shift 2 ;;
             --pr) pr_flag=true; shift ;;
+            --override) override=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
+            -y) yes_flag=true; shift ;;
             *) error "Unknown flag: $1" ;;
         esac
     done
+
 
     [[ -z "$project_dir" ]] && error "--project-dir is required"
     [[ -z "$version" ]] && error "--version is required"
@@ -579,29 +593,47 @@ cmd_apply() {
     local version_string
     version_string=$(format_version_string "$version" "$commit" "$commit_timestamp")
 
+    # Safe version to create branches
     local version_string_branch
     version_string_branch=$(format_version_string_branch "$version" "$commit" "$commit_timestamp")
 
     local metadata_file="$project_dir/uspecs/u/uspecs.yml"
 
-    if [[ "$command_name" == "install" && -f "$metadata_file" ]]; then
+    if [[ "$command_name" == "install" && "$override" != "true" && -f "$metadata_file" ]]; then
         error "uspecs is already installed, use update instead"
     fi
 
-    # PR: fast-forward default branch (may update local uspecs.yml)
+    # PR: remember current branch, fast-forward default branch (may update local uspecs.yml)
+    local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
-        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" ffdefault)
+        prev_branch=$(git -C "$project_dir" symbolic-ref --short HEAD)
+        (cd "$project_dir" && git_ffdefault)
+        atexit_push "git -C '$project_dir' checkout '$prev_branch' || true"
     fi
 
     local -A config
     if [[ "$command_name" == "install" ]]; then
-        if [[ -f "$metadata_file" ]]; then
+        if [[ "$override" != "true" && -f "$metadata_file" ]]; then
             error "uspecs is already installed, use update instead"
+        fi
+        if [[ "$override" == "true" && -f "$metadata_file" ]]; then
+            load_config "$project_dir" config
+            if [[ -n "$commit" && "${config[commit]:-}" == "$commit" ]] || \
+               [[ -z "$commit" && "${config[version]:-}" == "$version" ]]; then
+                echo "Version is already installed. Remove uspecs.yml to force reinstall."
+                return 0
+            fi
         fi
     else
         load_config "$project_dir" config
         if [[ "${config[version]:-}" != "$current_version" ]]; then
             error "Installed version '${config[version]:-}' does not match expected '$current_version'. Re-run the command to pick up the current installed version."
+        fi
+        # After ffdefault the local uspecs.yml may already reflect the incoming version
+        if [[ -n "$commit" && "${config[commit]:-}" == "$commit" ]] || \
+           [[ -z "$commit" && "${config[version]:-}" == "$version" ]]; then
+            echo "Already up to date"
+            return 0
         fi
     fi
 
@@ -615,14 +647,14 @@ cmd_apply() {
 
     # Show operation plan and confirm
     show_operation_plan "$command_name" "$current_version" "$version" "$commit" "$commit_timestamp" "$plan_invocation_methods_str" "$pr_flag" "$project_dir" "$script_dir"
-    confirm_action "$command_name" || return 0
+    if ! confirm_action "$command_name" "$yes_flag"; then
+        return 0
+    fi
 
-    # PR: capture current branch, then create feature branch
+    # PR: create feature branch from default branch
     local branch_name="${command_name}-uspecs-${version_string_branch}"
-    local prev_branch=""
     if [[ "$pr_flag" == "true" ]]; then
-        prev_branch=$(cd "$project_dir" && git symbolic-ref --short HEAD)
-        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" prbranch "$branch_name")
+        (cd "$project_dir" && git_prbranch "$branch_name")
     fi
 
     # Save existing metadata for update/upgrade
@@ -636,14 +668,8 @@ cmd_apply() {
         invocation_methods_str=$(IFS=', '; echo "${invocation_methods[*]}")
     fi
 
-    if [[ "$command_name" == "install" ]]; then
-        rm -f "$source_dir/uspecs/u/uspecs.yml"
-        echo "Installing uspecs/u..."
-        mkdir -p "$project_dir/uspecs"
-        cp -r "$source_dir/uspecs/u" "$project_dir/uspecs/"
-    else
-        replace_uspecs_u "$source_dir" "$project_dir"
-    fi
+    mkdir -p "$project_dir/uspecs/u"
+    replace_uspecs_u "$source_dir" "$project_dir"
 
     # Write metadata
     echo "Writing installation metadata..."
@@ -666,16 +692,19 @@ cmd_apply() {
         local pr_title="uspecs ${version_string}"
         local pr_body="$pr_title"
         local pr_info_file
-        pr_info_file=$(create_temp_file)
+        temp_create_file pr_info_file
+
+        # git_pr --next-branch handles its own branch switch; remove our atexit handler
+        atexit_pop
 
         # Capture PR info from stderr while showing normal output
-        (cd "$project_dir" && bash "$script_dir/_lib/pr.sh" pr --title "$pr_title" --body "$pr_body" \
+        (cd "$project_dir" && git_pr --title "$pr_title" --body "$pr_body" \
             --next-branch "$prev_branch" --delete-branch) 2> "$pr_info_file"
 
         # Parse PR info from temp file
-        pr_url=$(_grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
-        pr_branch=$(_grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
-        pr_base=$(_grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
+        pr_url=$(grep '^PR_URL=' "$pr_info_file" | cut -d= -f2-)
+        pr_branch=$(grep '^PR_BRANCH=' "$pr_info_file" | cut -d= -f2)
+        pr_base=$(grep '^PR_BASE=' "$pr_info_file" | cut -d= -f2)
     fi
 
     echo ""
@@ -695,15 +724,21 @@ cmd_apply() {
 
 cmd_install() {
     local alpha=false
+    local local_flag=false
     local pr_flag=false
+    local yes_flag=false
+    local override=false
     local invocation_methods=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --alpha) alpha=true; shift ;;
+            --local) local_flag=true; shift ;;
             --pr) pr_flag=true; shift ;;
+            --override) override=true; shift ;;
             --nlia) invocation_methods+=("nlia"); shift ;;
             --nlic) invocation_methods+=("nlic"); shift ;;
+            -y) yes_flag=true; shift ;;
             *) error "Unknown flag: $1" ;;
         esac
     done
@@ -711,11 +746,16 @@ cmd_install() {
     if [[ ${#invocation_methods[@]} -eq 0 ]]; then
         error "At least one invocation method (--nlia or --nlic) is required"
     fi
+    if [[ "$alpha" == "true" && "$local_flag" == "true" ]]; then
+        error "--alpha and --local are mutually exclusive"
+    fi
 
     local project_dir
-    project_dir=$(native_path "$PWD")
+    project_dir=$PWD
 
-    check_not_installed "$project_dir"
+    if [[ "$override" != "true" ]]; then
+        check_not_installed "$project_dir"
+    fi
 
     local ref version commit="" commit_timestamp=""
     if [[ "$alpha" == "true" ]]; then
@@ -724,18 +764,17 @@ cmd_install() {
         read -r commit commit_timestamp <<< "$(get_latest_commit_info)"
         ref="$commit"
         echo "Latest alpha version: $version"
+    elif [[ "$local_flag" == "true" ]]; then
+        echo "Using local version..."
+        version=$(get_local_version)
+        read -r commit commit_timestamp <<< "$(get_local_commit_info)"
+        echo "Local version: $version"
     else
         echo "Fetching latest stable version..."
         version=$(get_latest_tag)
         ref="v$version"
         echo "Latest version: $version"
     fi
-
-    local temp_dir
-    temp_dir=$(create_temp_dir)
-
-    echo "Downloading uspecs..."
-    download_archive "$ref" "$temp_dir"
 
     local apply_args=("install" "--project-dir" "$project_dir" "--version" "$version")
     for method in "${invocation_methods[@]}"; do
@@ -744,12 +783,28 @@ cmd_install() {
     if [[ -n "$commit" ]]; then
         apply_args+=("--commit" "$commit" "--commit-timestamp" "$commit_timestamp")
     fi
+    if [[ "$override" == "true" ]]; then
+        apply_args+=("--override")
+    fi
     if [[ "$pr_flag" == "true" ]]; then
         apply_args+=("--pr")
     fi
+    if [[ "$yes_flag" == "true" ]]; then
+        apply_args+=("-y")
+    fi
 
     echo "Running install..."
-    bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
+    if [[ "$local_flag" == "true" ]]; then
+        bash "${BASH_SOURCE[0]}" apply "${apply_args[@]}"
+    else
+        local temp_dir
+        temp_dir=$(mktemp -d)
+        # shellcheck disable=SC2064
+        trap "rm -rf '$temp_dir'" EXIT
+        echo "Downloading uspecs..."
+        download_archive "$ref" "$temp_dir"
+        bash "$temp_dir/uspecs/u/scripts/conf.sh" apply "${apply_args[@]}"
+    fi
 }
 
 cmd_update_or_upgrade() {
@@ -757,11 +812,16 @@ cmd_update_or_upgrade() {
     shift
 
     local pr_flag=false
+    local yes_flag=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --pr)
                 pr_flag=true
+                shift
+                ;;
+            -y)
+                yes_flag=true
                 shift
                 ;;
             *)
@@ -779,15 +839,15 @@ cmd_update_or_upgrade() {
     load_config "$project_dir" config
     local current_version="${config[version]:-}"
 
-    local target_version target_ref commit commit_timestamp
+    local target_version="" target_ref="" commit="" commit_timestamp=""
     if [[ "$command_name" == "update" ]]; then
-        resolve_update_version "$current_version" "$project_dir" || return 0
+        resolve_update_version "$current_version" "$project_dir" target_version target_ref commit commit_timestamp || return 0
     else
-        resolve_upgrade_version "$current_version" "$project_dir" || return 0
+        resolve_upgrade_version "$current_version" "$project_dir" target_version target_ref || return 0
     fi
 
     local temp_dir
-    temp_dir=$(create_temp_dir)
+    temp_create_dir temp_dir
 
     echo "Downloading uspecs..."
     download_archive "$target_ref" "$temp_dir"
@@ -799,6 +859,9 @@ cmd_update_or_upgrade() {
     fi
     if [[ "$pr_flag" == "true" ]]; then
         apply_args+=("--pr")
+    fi
+    if [[ "$yes_flag" == "true" ]]; then
+        apply_args+=("-y")
     fi
 
     echo "Running ${command_name}..."
@@ -853,10 +916,10 @@ cmd_im() {
         fi
 
         if [[ -z "$temp_source" ]]; then
-            temp_source=$(create_temp_file)
+            temp_create_file temp_source
             echo "Downloading source file for triggering instructions..."
             local source_url="$GITHUB_RAW/$REPO_OWNER/$REPO_NAME/$ref/AGENTS.md"
-            if ! curl -fsSL "$source_url" -o "$temp_source"; then
+            if ! github_curl "$source_url" -o "$temp_source"; then
                 error "Failed to download source file from $source_url"
             fi
         fi
@@ -929,6 +992,13 @@ cmd_im() {
 }
 
 main() {
+    # git_path and error are available from utils.sh when sourced (file-based execution).
+    # When piped, they are not available; the install command doesn't need git_path,
+    # and error messages use inline echo/exit.
+    if type -t git_path &>/dev/null; then
+        git_path
+    fi
+
     if [[ $# -lt 1 ]]; then
         error "Usage: conf.sh <command> [args...]"
     fi

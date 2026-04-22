@@ -18,7 +18,7 @@ func prnsToString(prns []iauthnz.Principal) string {
 	if len(prns) == 0 {
 		return "<no principals>"
 	}
-	res := strings.Builder{}
+	res := &strings.Builder{}
 	res.WriteString("[")
 	for i := 0; i < len(prns); i++ {
 		prn := prns[i]
@@ -42,10 +42,10 @@ func prnsToString(prns []iauthnz.Principal) string {
 			res.WriteString(" " + prn.Name)
 		}
 		if prn.ID > 0 {
-			res.WriteString(fmt.Sprintf(",ID %d", prn.ID))
+			fmt.Fprintf(res, ",ID %d", prn.ID)
 		}
 		if prn.WSID > 0 {
-			res.WriteString(fmt.Sprintf(",WSID %d", prn.WSID))
+			fmt.Fprintf(res, ",WSID %d", prn.WSID)
 		}
 		if i != len(prns)-1 {
 			res.WriteString(";")

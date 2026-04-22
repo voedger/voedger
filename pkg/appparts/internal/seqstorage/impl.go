@@ -15,7 +15,7 @@ import (
 func (ss *implISeqStorage) ActualizeSequencesFromPLog(ctx context.Context, offset isequencer.PLogOffset, batcher func(ctx context.Context, batch []isequencer.SeqValue, offset isequencer.PLogOffset) error) error {
 	return ss.events.ReadPLog(ctx, ss.partitionID, istructs.Offset(offset), istructs.ReadToTheEnd,
 		func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-			batch := []isequencer.SeqValue{}
+			batch := make([]isequencer.SeqValue, 0, 2)
 			argType := ss.appDef.Type(event.ArgumentObject().QName())
 
 			// odocs
@@ -47,7 +47,7 @@ func (ss *implISeqStorage) WriteValuesAndNextPLogOffset(batch []isequencer.SeqVa
 		// notest
 		return err
 	}
-	return ss.storage.PutPLogOffset(isequencer.PartitionID(ss.partitionID), pLogOffset)
+	return ss.storage.PutPLogOffset(ss.appID, isequencer.PartitionID(ss.partitionID), pLogOffset)
 }
 
 func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer.SeqID) ([]isequencer.Number, error) {
@@ -66,7 +66,7 @@ func (ss *implISeqStorage) ReadNumbers(wsid isequencer.WSID, seqIDs []isequencer
 }
 
 func (ss *implISeqStorage) ReadNextPLogOffset() (isequencer.PLogOffset, error) {
-	_, pLogOffset, err := ss.storage.GetPLogOffset(isequencer.PartitionID(ss.partitionID))
+	_, pLogOffset, err := ss.storage.GetPLogOffset(ss.appID, isequencer.PartitionID(ss.partitionID))
 	if err != nil {
 		// notest
 		return 0, err

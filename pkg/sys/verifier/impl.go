@@ -17,11 +17,11 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -161,13 +161,7 @@ func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) 
 		}
 
 		// code ok -> reset per-profile rate limit
-		appBuckets := istructsmem.IBucketsFromIAppStructs(as)
-		rateLimitName := istructsmem.GetFunctionRateLimitName(QNameQueryIssueVerifiedValueToken, istructs.RateLimitKind_byWorkspace)
-		appBuckets.ResetRateBuckets(rateLimitName, irates.BucketState{
-			Period:             RateLimit_IssueVerifiedValueToken.Period,
-			MaxTokensPerPeriod: RateLimit_IssueVerifiedValueToken.MaxAllowedPerDuration,
-			TakenTokens:        0,
-		})
+		args.Workpiece.(processors.IProcessorWorkpiece).ResetRateLimit(QNameQueryIssueVerifiedValueToken, appdef.OperationKind_Execute)
 
 		return callback(&ivvtResult{verifiedValueToken: verifiedValueToken})
 	}

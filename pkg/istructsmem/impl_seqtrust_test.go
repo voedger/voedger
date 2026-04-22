@@ -12,7 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -61,7 +60,7 @@ func TestSequencesTrustLevel(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(appConfigs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -208,7 +207,7 @@ func TestEventReapplier(t *testing.T) {
 	}()
 
 	storageProvider := simpleStorageProvider()
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(appConfigs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -254,7 +253,7 @@ func TestEventReapplier(t *testing.T) {
 			require.NoError(reapplier.PutWLog())
 		})
 		t.Run("initially read from storage", func(t *testing.T) {
-			provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+			provider := Provide(appConfigs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
 			app, err := provider.BuiltIn(appName)
 			require.NoError(err)
 			var dbPLogEvent istructs.IPLogEvent

@@ -147,6 +147,7 @@ func TestPutPLogOffset(t *testing.T) {
 	appStorageProvider := provider.Provide(mem.Provide(testingu.MockTime))
 	sysVvmAppStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(err)
+	testAppID := isequencer.ClusterAppID(1)
 	testPartitionID := isequencer.PartitionID(42)
 	seqStorage := NewVVMSeqStorageAdapter(sysVvmAppStorage)
 
@@ -154,32 +155,45 @@ func TestPutPLogOffset(t *testing.T) {
 	pLogOffset := isequencer.PLogOffset(42)
 
 	// initially missing
-	ok, num, err := seqStorage.GetPLogOffset(testPartitionID)
+	ok, num, err := seqStorage.GetPLogOffset(testAppID, testPartitionID)
 	require.NoError(err)
 	require.False(ok)
 	require.Zero(num)
 
 	// write
-	require.NoError(seqStorage.PutPLogOffset(testPartitionID, pLogOffset))
+	require.NoError(seqStorage.PutPLogOffset(testAppID, testPartitionID, pLogOffset))
 
 	// read
-	ok, num, err = seqStorage.GetPLogOffset(testPartitionID)
+	ok, num, err = seqStorage.GetPLogOffset(testAppID, testPartitionID)
 	require.NoError(err)
 	require.True(ok)
 	require.Equal(pLogOffset, num)
 
-	// storage for an another partition must be different
-	testPartitionID2 := isequencer.PartitionID(123)
-	seqStorage2 := NewVVMSeqStorageAdapter(sysVvmAppStorage)
-	pLogOffset2 := isequencer.PLogOffset(100)
-	require.NoError(seqStorage2.PutPLogOffset(testPartitionID2, pLogOffset2))
-	ok, num, err = seqStorage2.GetPLogOffset(testPartitionID2)
-	require.NoError(err)
-	require.True(ok)
-	require.Equal(pLogOffset2, num)
-	ok, num, err = seqStorage.GetPLogOffset(testPartitionID)
-	require.NoError(err)
-	require.True(ok)
-	require.Equal(pLogOffset, num)
+	t.Run("different partitions are independent", func(t *testing.T) {
+		testPartitionID2 := isequencer.PartitionID(123)
+		pLogOffset2 := isequencer.PLogOffset(100)
+		require.NoError(seqStorage.PutPLogOffset(testAppID, testPartitionID2, pLogOffset2))
+		ok, num, err := seqStorage.GetPLogOffset(testAppID, testPartitionID2)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal(pLogOffset2, num)
+		ok, num, err = seqStorage.GetPLogOffset(testAppID, testPartitionID)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal(pLogOffset, num)
+	})
 
+	t.Run("different apps are independent", func(t *testing.T) {
+		testAppID2 := isequencer.ClusterAppID(2)
+		pLogOffset3 := isequencer.PLogOffset(200)
+		require.NoError(seqStorage.PutPLogOffset(testAppID2, testPartitionID, pLogOffset3))
+		ok, num, err := seqStorage.GetPLogOffset(testAppID2, testPartitionID)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal(pLogOffset3, num)
+		ok, num, err = seqStorage.GetPLogOffset(testAppID, testPartitionID)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal(pLogOffset, num)
+	})
 }

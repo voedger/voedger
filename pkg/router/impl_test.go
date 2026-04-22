@@ -14,6 +14,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -25,7 +27,10 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -159,6 +164,26 @@ func TestBasicUsage_Respond(t *testing.T) {
 type testObject struct {
 	IntField int
 	StrField string
+}
+
+func TestSysErrorHeaders(t *testing.T) {
+	require := require.New(t)
+	sysErr := coreutils.SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate limit exceeded"}.
+		AddHeader("Retry-After", "10")
+	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+		go func() {
+			err := responder.Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: sysErr.HTTPStatus}, sysErr)
+			require.NoError(err)
+		}()
+	})
+	defer tearDown(router)
+
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
+	require.NoError(err)
+	defer resp.Body.Close()
+
+	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal("10", resp.Header.Get("Retry-After"))
 }
 
 func TestHandlerPanic(t *testing.T) {
@@ -367,28 +392,16 @@ func TestAdminService(t *testing.T) {
 	})
 
 	t.Run("unable to work from non-127.0.0.1", func(t *testing.T) {
-		nonLocalhostIP := ""
-		addrs, err := net.InterfaceAddrs()
-		require.NoError(err)
-		for _, address := range addrs {
-			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-				if ipnet.IP.To4() != nil {
-					nonLocalhostIP = ipnet.IP.To4().String()
-					break
-				}
-			}
+		nonLocalhostIP := findNonLoopbackIP(t)
+		_, dialErr := net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
+		if dialErr == nil {
+			t.Fatalf("admin service is reachable from non-loopback IP %s", nonLocalhostIP)
 		}
-		if len(nonLocalhostIP) == 0 {
-			t.Skip("unable to find local non-loopback ip address")
+		if !errors.Is(dialErr, context.DeadlineExceeded) && !strings.Contains(dialErr.Error(), "connection refused") &&
+			!strings.Contains(dialErr.Error(), "i/o timeout") {
+			t.Fatal(dialErr)
 		}
-		// hostport
-		_, err = net.DialTimeout("tcp", fmt.Sprintf("%v:%d", nonLocalhostIP, router.adminPort()), 1*time.Second)
-		require.Error(err)
-		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "connection refused") &&
-			!strings.Contains(err.Error(), "i/o timeout") {
-			t.Fatal(err)
-		}
-		log.Println(err)
+		log.Println(dialErr)
 	})
 }
 
@@ -423,14 +436,18 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandl
 	onRequestCtxClosed = func() {
 		router.clientDisconnections <- struct{}{}
 	}
+	waitForServer(t, router.port())
+	waitForServer(t, router.adminPort())
 }
 
 func setUp(t *testing.T, requestHandler bus.RequestHandler) *testRouter {
 	rp := RouterParams{
-		Port:             0,
-		WriteTimeout:     DefaultRouterWriteTimeout,
-		ReadTimeout:      DefaultRouterReadTimeout,
-		ConnectionsLimit: DefaultConnectionsLimit,
+		HTTPServerParams: HTTPServerParams{
+			Port:             0,
+			WriteTimeout:     DefaultRouterWriteTimeout,
+			ReadTimeout:      DefaultRouterReadTimeout,
+			ConnectionsLimit: DefaultConnectionsLimit,
+		},
 	}
 	router := &testRouter{
 		wg:                   &sync.WaitGroup{},
@@ -451,6 +468,56 @@ func tearDown(router *testRouter) {
 	router.httpService.Stop()
 	router.adminService.Stop()
 	router.wg.Wait()
+}
+
+func waitForServer(t *testing.T, port int) {
+	t.Helper()
+	client := &http.Client{
+		Timeout: 100 * time.Millisecond,
+	}
+	require.Eventually(t, func() bool {
+		resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/check", port))
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+		}
+		if err != nil {
+			return false
+		}
+		return resp.StatusCode == http.StatusOK
+	}, 1*time.Second, 10*time.Millisecond)
+}
+
+// findNonLoopbackIP returns a non-loopback IPv4 address that does not route to localhost.
+// Virtual adapters (e.g. VirtualBox Host-Only) may silently forward traffic to 127.0.0.1,
+// so a canary listener on 127.0.0.1 is used to detect and skip such IPs.
+func findNonLoopbackIP(t *testing.T) string {
+	t.Helper()
+	canary, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer canary.Close()
+	canaryAddr := canary.Addr().(*net.TCPAddr)
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, address := range addrs {
+		ipnet, ok := address.(*net.IPNet)
+		if !ok || ipnet.IP.IsLoopback() || ipnet.IP.To4() == nil {
+			continue
+		}
+		ip := ipnet.IP.To4().String()
+		conn, dialErr := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, canaryAddr.Port), 500*time.Millisecond)
+		if dialErr == nil {
+			conn.Close()
+			t.Logf("skipping %s: virtual adapter routes to localhost", ip)
+			continue
+		}
+		return ip
+	}
+	t.Skip("no non-loopback IP that does not route to localhost")
+	return ""
 }
 
 func (t testRouter) port() int {
@@ -486,4 +553,82 @@ func expectResp(t *testing.T, resp *http.Response, contentType string, statusCod
 	require.Contains(t, resp.Header["Content-Type"][0], contentType, resp.Header)
 	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])
 	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Blob-Name"}, resp.Header["Access-Control-Allow-Headers"])
+}
+
+func Test_HTTPErrorLog_ForwardedToLogger(t *testing.T) {
+	require := require.New(t)
+	logCap := logger.StartCapture(t, logger.LogLevelError)
+
+	srv := &httpServer{
+		name:          "sys._HTTPServer",
+		listenAddress: "127.0.0.1:0",
+	}
+	require.NoError(srv.prepareBasicServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	})))
+	srv.preRun(context.Background())
+	go srv.server.Serve(srv.listener) //nolint errcheck
+	defer srv.server.Close()
+
+	t.Run("forwarded with stage and extension", func(t *testing.T) {
+		srv.server.ErrorLog.Println("boom on connection X")
+		logCap.HasLine("boom on connection X", "stage=endpoint.http.error", "extension=sys._HTTPServer")
+	})
+
+	t.Run("TLS handshake errors are filtered out", func(t *testing.T) {
+		srv.server.ErrorLog.Println("http: TLS handshake error from 1.2.3.4:5678: bad record MAC")
+		logCap.NotContains("bad record MAC")
+	})
+
+	t.Run("real http internals write to ErrorLog on handler panic", func(t *testing.T) {
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get("http://" + srv.listener.Addr().String() + "/")
+		require.ErrorIs(err, io.EOF)
+		if resp != nil {
+			resp.Body.Close()
+		}
+		logCap.EventuallyHasLine("panic serving", "stage=endpoint.http.error", "extension=sys._HTTPServer")
+	})
+}
+
+// https://untill.atlassian.net/browse/AIR-3528
+func TestSubscribeAndWatch_NoSuperfluousWriteHeader(t *testing.T) {
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
+	broker, brokerCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels:           1,
+		ChannelsPerSubject: 1,
+
+		// force max subscriptions 0 to make failure on the first subscription
+		Subscriptions:           0,
+		SubscriptionsPerSubject: 0,
+	}, testingu.MockTime)
+	defer brokerCleanup()
+
+	svc := &routerService{n10n: broker}
+	srv := httptest.NewUnstartedServer(svc.subscribeAndWatchHandler())
+
+	// redirect internal http error logging into logCap
+	srv.Config.ErrorLog = log.New(logCap, "", log.Flags())
+
+	srv.Start()
+	defer srv.Close()
+
+	// Trigger the "subscriptions quota exceeded" error to force the following flow:
+	// - handler commits HTTP 200 OK when starting SSE communication
+	// - subscription error occurs and is sent to the client as an SSE event
+	// The test asserts that no second WriteHeader attempt is made on error
+	payload := `{"SubjectLogin":"test","ProjectionKey":[{"App":"test/app","Projection":"test.proj","WS":1}]}`
+	resp, err := http.Get(srv.URL + "/n10n/channel?payload=" + url.QueryEscape(payload))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Verify that the error was sent as an SSE event
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(body), "event: error")
+	require.Contains(t, string(body), "data: subscribe failed")
+
+	// Verify that no duplicate WriteHeader call was logged by the HTTP server internals
+	logCap.NotContains("http: superfluous response.WriteHeader call")
 }

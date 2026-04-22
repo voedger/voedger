@@ -7,8 +7,6 @@ package router
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -28,13 +26,15 @@ import (
 func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobprocessor.IRequestHandler, autocertCache autocert.Cache,
 	requestSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
 	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := getHTTPService("HTTP server", httpu.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
+	httpServ := getRouterService("sys._HTTPServer", httpu.ListenAddr(rp.Port), rp, broker, blobRequestHandler,
 		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
 	adminEndpoint := fmt.Sprintf("%s:%d", httpu.LocalhostIP, rp.AdminPort)
-	adminSrv = getHTTPService("Admin HTTP server", adminEndpoint, RouterParams{
-		WriteTimeout:     rp.WriteTimeout,
-		ReadTimeout:      rp.ReadTimeout,
-		ConnectionsLimit: rp.ConnectionsLimit,
+	adminSrv = getRouterService("sys._AdminHTTPServer", adminEndpoint, RouterParams{
+		HTTPServerParams: HTTPServerParams{
+			WriteTimeout:     rp.WriteTimeout,
+			ReadTimeout:      rp.ReadTimeout,
+			ConnectionsLimit: rp.ConnectionsLimit,
+		},
 	}, broker, nil, requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
 
 	if rp.Port != HTTPSPort {
@@ -57,42 +57,52 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 	if crtMgr.Cache == nil {
 		crtMgr.Cache = autocert.DirCache(rp.CertDir)
 	}
-	httpServ.name = "HTTPS server"
+	httpServ.name = "sys._HTTPSServer"
 	httpsService := &httpsService{
-		httpService: httpServ,
-		crtMgr:      crtMgr,
+		routerService: httpServ,
+		crtMgr:        crtMgr,
 	}
 
 	// handle Lets Encrypt callback over 80 port - only port 80 allowed
-	filteringLogger := log.New(&filteringWriter{log.Default().Writer()}, log.Default().Prefix(), log.Default().Flags())
 	acmeService := &acmeService{
-		Server: http.Server{
-			Addr:         ":80",
-			ReadTimeout:  DefaultACMEServerReadTimeout,
-			WriteTimeout: DefaultACMEServerWriteTimeout,
-			Handler:      crtMgr.HTTPHandler(nil),
-			ErrorLog:     filteringLogger,
-		},
+		httpServer: getHTTPServer("sys._ACMEServer", ":80", HTTPServerParams{
+			WriteTimeout: int(DefaultACMEServerWriteTimeout.Seconds()),
+			ReadTimeout:  int(DefaultACMEServerReadTimeout.Seconds()),
+		}),
+		handler: crtMgr.HTTPHandler(nil),
 	}
 	return httpsService, acmeService, adminSrv
 }
 
-func getHTTPService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
+func getRouterService(name string, listenAddress string, rp RouterParams, broker in10n.IN10nBroker,
 	blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, iTokens itokens.ITokens,
-	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) *httpService {
-	httpServ := &httpService{
-		RouterParams:       rp,
+	federation federation.IFederation, appTokensFactory payloads.IAppTokensFactory) *routerService {
+	return &routerService{
+		httpServer:         getHTTPServer(name, listenAddress, rp.HTTPServerParams),
+		routeDefault:       rp.RouteDefault,
+		routes:             rp.Routes,
+		routesRewrite:      rp.RoutesRewrite,
+		routeDomains:       rp.RouteDomains,
 		n10n:               broker,
 		requestSender:      requestSender,
 		numsAppsWorkspaces: numsAppsWorkspaces,
-		listenAddress:      listenAddress,
-		name:               name,
 		blobRequestHandler: blobRequestHandler,
 		iTokens:            iTokens,
 		federation:         federation,
 		appTokensFactory:   appTokensFactory,
+		queryLimiter: &wsQueryLimiter{
+			maxQPerWS:  rp.MaxQueriesPerWS,
+			iTime:      rp.ITime,
+			rejections: make(map[rejectionKey]*rejectionCounter),
+		},
 	}
+}
 
-	return httpServ
+func getHTTPServer(name string, listenAddress string, params HTTPServerParams) httpServer {
+	return httpServer{
+		HTTPServerParams: params,
+		listenAddress:    listenAddress,
+		name:             name,
+	}
 }

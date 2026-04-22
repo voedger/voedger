@@ -87,12 +87,15 @@ func IsTrace() bool {
 
 var PrintLine func(level TLogLevel, line string) = DefaultPrintLine
 
+var legacyOut io.Writer = os.Stdout
+var legacyErr io.Writer = os.Stderr
+
 func DefaultPrintLine(level TLogLevel, line string) {
 	var w io.Writer
 	if level == LogLevelError {
-		w = os.Stderr
+		w = legacyErr
 	} else {
-		w = os.Stdout
+		w = legacyOut
 	}
 	fmt.Fprintln(w, line)
 }

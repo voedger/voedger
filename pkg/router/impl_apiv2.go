@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -21,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
+	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -28,72 +30,74 @@ import (
 	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
-func (s *httpService) registerHandlersV2() {
+func (s *routerService) registerHandlersV2() {
+	l := s.queryLimiter
+
 	// create: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodPost).Name("create")
 
 	// update, deactivate, read single doc: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/docs/{pkg}.{table}/{id}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/docs/{%s}.{%s}/{%s:[0-9]+}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table,
 		URLPlaceholder_id),
-		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_Docs, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodPatch, http.MethodDelete, http.MethodGet).Name("update or read single")
 
 	// read collection: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/cdocs/{pkg}.{table}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/cdocs/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_table),
-		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_CDocs, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_table(s.requestSender, processors.APIPath_CDocs, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodGet).Name("read collection")
 
 	// execute cmd: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/commands/{pkg}.{command}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/commands/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_command),
-		corsHandler(requestHandlerV2_extension(s.requestSender, processors.APIPath_Commands, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_extension(s.requestSender, processors.APIPath_Commands, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodPost).Name("exec cmd")
 
 	// execute query: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/queries/{pkg}.{query}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/queries/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_query),
-		corsHandler(requestHandlerV2_extension(s.requestSender, processors.APIPath_Queries, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_extension(s.requestSender, processors.APIPath_Queries, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodGet).Name("exec query")
 
 	// view: /api/v2/apps/{owner}/{app}/workspaces/{wsid}/views/{pkg}.{view}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/workspaces/{%s:[0-9]+}/views/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_wsid, URLPlaceholder_pkg, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_view(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_view(s.requestSender, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodGet).Name("view")
 
 	// schemas: get workspace schema: /api/v2/apps/{owner}/{app}/schemas
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_schemas(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_schemas(s.requestSender, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodGet).Name("schemas")
 
 	// schemas, workspace roles: get workspace schema: /api/v2/apps/{owner}/{app}/schemas/{pkg}.{workspace}/roles
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas/{%s}.{%s}/roles",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_pkg, URLPlaceholder_workspaceName),
-		corsHandler(requestHandlerV2_schemas_wsRoles(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_schemas_wsRoles(s.requestSender, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodGet).Name("schemas, workspace roles")
 
 	// schemas, workspace role: get workspace schema: /api/v2/apps/{owner}/{app}/schemas/{pkg}.{workspace}/roles/{pkg}.{role}
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/schemas/{%s}.{%s}/roles/{%s}.{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_pkg, URLPlaceholder_workspaceName, URLPlaceholder_rolePkg, URLPlaceholder_role),
-		corsHandler(requestHandlerV2_schemas_wsRole(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_schemas_wsRole(s.requestSender, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodGet).Name("schemas, workspace role")
 
 	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/login",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_auth_login(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_auth_login(s.requestSender, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodPost).Name("auth login")
 
 	// auth/login: /api/v2/apps/{owner}/{app}/auth/login
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/auth/refresh",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces))).
+		corsHandler(requestHandlerV2_auth_refresh(s.requestSender, s.numsAppsWorkspaces, l))).
 		Methods(http.MethodOptions, http.MethodPost).Name("auth refresh")
 
 	// create user /api/v2/apps/{owner}/{app}/users
@@ -148,40 +152,42 @@ func (s *httpService) registerHandlersV2() {
 	// [~server.n10n/cmp.routerCreateChannelHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications",
 		URLPlaceholder_appOwner, URLPlaceholder_appName),
-		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.requestSender))).
+		corsHandler(requestHandlerV2_notifications_subscribeAndWatch(s.numsAppsWorkspaces, s.requestSender, l))).
 		Methods(http.MethodOptions, http.MethodPost).Name("notifications subscribe + watch")
 
 	// notifications unsubscribe /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
 	// [~server.n10n/cmp.routerUnsubscribeHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.requestSender))).
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.requestSender, l))).
 		Methods(http.MethodOptions, http.MethodDelete).Name("notifications unsubscribe")
 
 	// notifications subscribe to an extra view /api/v2/apps/{owner}/{app}/notifications/{channelId}/workspaces/{wsid}/subscriptions/{entity}
 	// [~server.n10n/cmp.routerAddSubscriptionHandler~impl]
 	s.router.HandleFunc(fmt.Sprintf("/api/v2/apps/{%s}/{%s}/notifications/{%s}/workspaces/{%s}/subscriptions/{%s}",
 		URLPlaceholder_appOwner, URLPlaceholder_appName, URLPlaceholder_channelID, URLPlaceholder_wsid, URLPlaceholder_view),
-		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.requestSender))).
+		corsHandler(requestHandlerV2_notifications(s.numsAppsWorkspaces, s.requestSender, l))).
 		Methods(http.MethodOptions, http.MethodPut).Name("notifications subscribe to an extra view")
 }
 
-func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_schemas(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPaths_Schema)
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
-func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_schemas_wsRoles(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRoles)
 		busRequest.WorkspaceQName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_workspaceName])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
@@ -195,8 +201,21 @@ func requestHandlerV2_changePassword(numsAppsWorkspaces map[appdef.AppQName]istr
 			return
 		}
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"%s","NewPassword":"%s"}}`,
-			login, busRequest.AppQName, oldPassword, newPassword)
+		bodyBytes, err := json.Marshal(map[string]any{
+			"args": map[string]any{
+				"Login":   login,
+				"AppName": busRequest.AppQName.String(),
+			},
+			"unloggedArgs": map[string]any{
+				"OldPassword": oldPassword,
+				"NewPassword": newPassword,
+			},
+		})
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		body := string(bodyBytes)
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.ChangePassword", pseudoWSID)
 		if _, err = federation.Func(url, body, httpu.WithMethod(http.MethodPost), httpu.WithDiscardResponse()); err != nil { // null auth
 			replyErr(rw, err)
@@ -226,8 +245,23 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.CurrentClusterID())
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateEmailLogin", pseudoWSID)
 		wsKindInitData := fmt.Sprintf(`{"DisplayName":%q}`, displayName)
-		body := fmt.Sprintf(`{"args":{"Email":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
-			verifiedEmailToken, busRequest.AppQName, istructs.SubjectKind_User, wsKindInitData, istructs.CurrentClusterID(), pwd)
+		bodyBytes, err := json.Marshal(map[string]any{
+			"args": map[string]any{
+				"Email":                    verifiedEmailToken,
+				"AppName":                  busRequest.AppQName.String(),
+				"SubjectKind":              istructs.SubjectKind_User,
+				"WSKindInitializationData": wsKindInitData,
+				"ProfileCluster":           istructs.CurrentClusterID(),
+			},
+			"unloggedArgs": map[string]any{
+				"Password": pwd,
+			},
+		})
+		if err != nil {
+			ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		body := string(bodyBytes)
 		sysToken, err := payloads.GetSystemPrincipalToken(iTokens, istructs.AppQName_sys_registry)
 		if err != nil {
 			// notest
@@ -246,7 +280,8 @@ func requestHandlerV2_create_user(numsAppsWorkspaces map[appdef.AppQName]istruct
 	})
 }
 
-func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, reqSender bus.IRequestSender) http.HandlerFunc {
+func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, reqSender bus.IRequestSender,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForN10N(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		_, ok := rw.(http.Flusher)
 		if !ok {
@@ -257,12 +292,13 @@ func requestHandlerV2_notifications_subscribeAndWatch(numsAppsWorkspaces map[app
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.IsN10N = true
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
 // handles both unsubscribe and subscribe to an extra view
-func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, reqSender bus.IRequestSender) http.HandlerFunc {
+func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, reqSender bus.IRequestSender,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForN10N(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		var err error
 		busRequest := createBusRequest(data, req)
@@ -276,7 +312,7 @@ func requestHandlerV2_notifications(numsAppsWorkspaces map[appdef.AppQName]istru
 			return
 		}
 
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
@@ -304,18 +340,20 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 }
 
 // [~server.authnz/cmp.routerRefreshHandler~impl]
-func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_auth_refresh(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Auth_Refresh)
 		busRequest.Method = http.MethodGet
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
 // [~server.authnz/cmp.routerLoginPathHandler~impl]
-func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
@@ -324,7 +362,7 @@ func requestHandlerV2_auth_login(reqSender bus.IRequestSender, numsAppsWorkspace
 		queryParams := map[string]string{}
 		queryParams["args"] = string(busRequest.Body)
 		busRequest.Query = queryParams
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
@@ -342,7 +380,7 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 		if !blobRequestHandler.HandleRead_V2(data.appQName, data.wsid, data.header, req.Context(),
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
 				replyErr(rw, sysErr)
-			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender) {
+			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender, iblobstoragestg.RLimiter_Null) {
 			replyServiceUnavailable(rw)
 		}
 	})
@@ -356,7 +394,7 @@ func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHa
 		if !blobRequestHandler.HandleReadTemp_V2(data.appQName, data.wsid, data.header, req.Context(),
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
 				replyErr(rw, sysErr)
-			}, requestSender, suuid) {
+			}, requestSender, suuid, iblobstoragestg.RLimiter_Null) {
 			replyServiceUnavailable(rw)
 		}
 	})
@@ -389,28 +427,31 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 	})
 }
 
-func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_schemas_wsRole(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Schemas_WorkspaceRole)
 		busRequest.WorkspaceQName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_workspaceName])
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_rolePkg], data.vars[URLPlaceholder_role])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
-func requestHandlerV2_view(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_view(reqSender bus.IRequestSender, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(processors.APIPath_Views)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_view])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
-func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		entity := ""
 		switch apiPath {
@@ -423,11 +464,12 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], entity)
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
-func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.APIPath, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces,
+	limiter *wsQueryLimiter) http.HandlerFunc {
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 		if recordIDStr, hasDocID := data.vars[URLPlaceholder_id]; hasDocID {
@@ -442,23 +484,56 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], data.vars[URLPlaceholder_table])
-		sendRequestAndReadResponse(req, busRequest, reqSender, rw)
+		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
 
-func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter) {
+func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter, data validatedData,
+	limiter *wsQueryLimiter) {
+	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
+
+	// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
+	// The shim reroutes c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2 (query processor),
+	// so it must share the wsQueryLimiter gating with native queries.
+	isShim := isVSqlUpdateV2Call(busRequest)
+
+	// limiter is nil for Admin and ACME services
+	if limiter != nil && (isShim || (busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)))) {
+		if !limiter.acquire(busRequest.WSID) {
+			limiter.onQueryDrop(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
+			replyServiceUnavailable(rw)
+			return
+		}
+		defer limiter.release(busRequest.WSID)
+	}
+
 	// req's BaseContext is router service's context. See service.Start()
 	// router app closing or client disconnected -> req.Context() is done
 	// will create new cancellable context and cancel it if http section send is failed.
-	// requestCtx.Done() -> SendRequest implementation will notify the handler that the consumer has left us
-	requestCtx, cancel := context.WithCancel(req.Context())
+	// case: the client is gracefully disconnected
+	// 	- reqCtxWithExtensionAttrib is done, no additional cancelation needed
+	// case: the ethernet cable is broken
+	//   - reqCtxWithExtensionAttrib is not done
+	//   - the router is failed to send data to the client.
+	//   - need to explicitly cancel the context to inform the handler that the client is gone.
+	requestCtx, cancel := context.WithCancel(reqCtxWithExtensionAttrib)
 	defer cancel() // to avoid context leak
+
+	logServeRequest(requestCtx, limiter)
+
+	if isShim {
+		dispatchVSqlUpdateShim_V2(requestCtx, rw, busRequest, reqSender)
+		return
+	}
+
+	sentAt := time.Now()
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {
-		logger.Error("sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
+		logger.ErrorCtx(requestCtx, "routing.send2vvm.error", "sending request to VVM on", busRequest.QName, "is failed:", err, ". Body:\n", string(busRequest.Body))
 		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	logLatency(requestCtx, sentAt)
 
 	initResponse(rw, respMeta)
 	reply_v2(requestCtx, rw, respCh, respErr, cancel, respMeta)

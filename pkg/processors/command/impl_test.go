@@ -26,6 +26,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -101,6 +102,8 @@ func TestBasicUsage(t *testing.T) {
 		cfg.Resources.Add(testCmd)
 	}
 
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
 	app := setUp(t, prepareWS)
 	defer tearDown(app)
 
@@ -147,9 +150,12 @@ func TestBasicUsage(t *testing.T) {
 		// check that command is handled and notifications were sent
 		<-check
 		<-check
+
+		logCap.HasLine("stage=cp.success")
 	})
 
 	t.Run("500 internal server error command exec error", func(t *testing.T) {
+		logCap.Reset()
 		request := bus.Request{
 			Body:     []byte(`{"args":{"Text":"fire error"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp,
@@ -168,6 +174,8 @@ func TestBasicUsage(t *testing.T) {
 			counter++
 		}
 		require.NoError(*respErr)
+
+		logCap.HasLine("stage=cp.error", "fire error")
 	})
 }
 
@@ -213,6 +221,8 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	require := require.New(t)
 
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	testErr := errors.New("test error")
 	counter := 0
@@ -253,8 +263,16 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
 	// 2nd c.sys.CUD -> sync projector failure, expect 500 internal server error
+	logCap.Reset()
 	respData = sendCUD(t, 1, app, http.StatusInternalServerError)
 	require.Equal(testErr.Error(), respData["sys.Error"].(map[string]interface{})["Message"].(string))
+
+	logCap.EventuallyHasLine(
+		"stage=cp.partition_recovery",
+		"vapp=sys/voedger",
+		"extension=sys._Recovery",
+		"partition will be restarted",
+	)
 
 	// PLog and record is applied but WLog is not written here because sync projector is failed
 	// partition is scheduled to be recovered
@@ -269,6 +287,8 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 
 func TestRecovery(t *testing.T) {
 	require := require.New(t)
+
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
 	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
@@ -292,12 +312,25 @@ func TestRecovery(t *testing.T) {
 	require.Equal(istructs.FirstUserRecordID+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.FirstUserRecordID+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
 
+	logCap.Reset()
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
 	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
 	require.Equal(istructs.FirstUserRecordID+3, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
 	require.Equal(istructs.FirstUserRecordID+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.FirstUserRecordID+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+
+	logCap.HasLine(
+		"stage=cp.partition_recovery.start",
+		"vapp=sys/voedger",
+		"extension=sys._Recovery",
+		"partid=1",
+	)
+	logCap.HasLine("stage=cp.partition_recovery.complete",
+		"vapp=sys/voedger",
+		"extension=sys._Recovery",
+		"partid=1",
+	)
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 2, app)
@@ -650,10 +683,11 @@ func TestRateLimit(t *testing.T) {
 			wsb.AddRole(iauthnz.QNameRoleSystem)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
 
-			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
-				Period:                time.Minute,
-				MaxAllowedPerDuration: 2,
-			})
+			rateName := appdef.NewQName(appdef.SysPackage, "MyCmdRate")
+			wsb.AddRate(rateName, 2, time.Minute, []appdef.RateScope{appdef.RateScope_Workspace})
+			wsb.AddLimit(appdef.NewQName(appdef.SysPackage, "MyCmdLimit"),
+				[]appdef.OperationKind{appdef.OperationKind_Execute}, appdef.LimitFilterOption_EACH,
+				filter.QNames(qName), rateName)
 		})
 	defer tearDown(app)
 
@@ -676,6 +710,18 @@ func TestRateLimit(t *testing.T) {
 	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.Error(err)
 	require.Equal(http.StatusTooManyRequests, cmdRespMeta.StatusCode)
+
+	// 4th call: inspect the SysError directly to assert Retry-After header: period/count = 60s/2 = 30s
+	respCh, _, _, err := app.requestSender.SendRequest(app.ctx, request)
+	require.NoError(err)
+	var sysErr coreutils.SysError
+	for elem := range respCh {
+		if se, ok := elem.(coreutils.SysError); ok {
+			sysErr = se
+		}
+	}
+	require.Equal(http.StatusTooManyRequests, sysErr.HTTPStatus)
+	require.Equal("30", sysErr.Headers()[httpu.RetryAfter])
 }
 
 type testApp struct {
@@ -743,7 +789,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	appDef, err := adb.Build()
 	require.NoError(err)
 
-	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
+	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider, isequencer.SequencesTrustLevel_0, nil)
 
 	secretReader := isecretsimpl.ProvideSecretReader()
@@ -786,7 +832,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		if authHeader, ok := request.Header[httpu.Authorization]; ok {
 			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
-		icm := NewCommandMessage(vvmCtx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "", "")
+		icm := NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "", "")
 		serviceChannel <- icm
 	})
 
@@ -823,4 +869,183 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		appTokens:         appTokens,
 		sysAuthHeader:     getAuthHeader(systemToken),
 	}
+}
+
+func TestLogEventAndCUDs(t *testing.T) {
+	testQName := appdef.NewQName("test", "Article")
+	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
+
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
+	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+		wsb.AddCDoc(testQName).AddField("Name", appdef.DataKind_string, false)
+		wsb.AddCommand(cudQName)
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
+	})
+	defer tearDown(app)
+
+	t.Run("verbose level emits event and cud log entries", func(t *testing.T) {
+		require := require.New(t)
+
+		logCap.Reset()
+
+		// insert
+		req := bus.Request{
+			WSID:     1,
+			AppQName: istructs.AppQName_untill_airs_bp,
+			Resource: "c.sys.CUD",
+			Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.Article","Name":"hello"}}]}`),
+			Header:   app.sysAuthHeader,
+		}
+		cmdRespMeta, cmdResp, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
+		require.NoError(sysErr)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+		newID := cmdResp.NewIDs["1"]
+		require.NotZero(newID)
+
+		logCap.HasLine("stage=cp.plog_saved", "evqname=sys.CUD")
+		logCap.HasLine(fmt.Sprintf("rectype=%s", testQName), fmt.Sprintf("recid=%d", newID), "op=create")
+
+		// update: newfields=world, oldfields=hello
+		logCap.Reset()
+		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.Article","Name":"world"}}]}`, newID))
+		cmdRespMeta, _, sysErr = bus.GetCommandResponse(app.ctx, app.requestSender, req)
+		require.NoError(sysErr)
+		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
+
+		logCap.HasLine(
+			fmt.Sprintf("recid=%d", newID),
+			"op=update",
+			fmt.Sprintf(`newfields={\"Name\":\"world\",\"sys.ID\":%d,\"sys.IsActive\":true,\"sys.QName\":\"test.Article\"}`, newID),
+			fmt.Sprintf(`oldfields={\"Name\":\"hello\",\"sys.ID\":%d,\"sys.IsActive\":true,\"sys.QName\":\"test.Article\"}`, newID),
+		)
+	})
+
+	t.Run("info level emits nothing", func(t *testing.T) {
+		require := require.New(t)
+		defer logger.SetLogLevelWithRestore(logger.LogLevelInfo)()
+
+		logCap.Reset()
+
+		req := bus.Request{
+			WSID:     1,
+			AppQName: istructs.AppQName_untill_airs_bp,
+			Resource: "c.sys.CUD",
+			Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.Article"}}]}`),
+			Header:   app.sysAuthHeader,
+		}
+		_, _, sysErr := bus.GetCommandResponse(app.ctx, app.requestSender, req)
+		require.NoError(sysErr)
+		logCap.NotContains("evqname")
+	})
+}
+
+func TestSyncProjectorLogging(t *testing.T) {
+	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
+	projQName := appdef.NewQName(appdef.SysPackage, "TestProj")
+	projExtension := "p." + projQName.String() // extension attr value used by sync actualizer
+
+	addStdRoles := func(wsb appdef.IWorkspaceBuilder) {
+		wsb.AddRole(iauthnz.QNameRoleAuthenticatedUser)
+		wsb.AddRole(iauthnz.QNameRoleEveryone)
+		wsb.AddRole(iauthnz.QNameRoleSystem)
+	}
+
+	t.Run("sp.triggeredby and sp.success on success", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
+		app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+			wsb.AddCRecord(testCRecord)
+			wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+			wsb.AddWDoc(testWDoc)
+			wsb.AddCommand(cudQName)
+			addStdRoles(wsb)
+			cfg.AddSyncProjectors(istructs.Projector{
+				Name: projQName,
+				Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error { return nil },
+			})
+			wsb.AddProjector(projQName).SetSync(true).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(cudQName))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
+		})
+		defer tearDown(app)
+
+		// warm up: trigger partition recovery before the measured portion
+		sendCUD(t, 1, app)
+
+		logCap.Reset()
+		sendCUD(t, 1, app)
+
+		// per-projector logs: extension has "p." prefix; context attrs woffset/poffset/evqname are enriched
+		logCap.HasLine("stage=sp.triggeredby", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		logCap.HasLine("stage=sp.success", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		// command-processor emits its own sp.success on sync projectors success — total must be 2
+		// like this:
+		// time=2026-03-25T11:41:09.726+03:00 level=DEBUG msg="" src=actualizers.newSyncBranch.func1:97 stage=sp.success extension=p.sys.TestProj woffset=3 poffset=4 evqname=sys.CUD
+		// time=2026-03-25T11:41:09.726+03:00 level=DEBUG msg="" src=command.setUp.setUp.ProvideServiceFactory.func5.func6.2:82 stage=sp.success woffset=3 poffset=4 evqname=sys.CUD
+		// note: extension attrib missing in the 1st line, actually it is added by router
+		require.Equal(2, strings.Count(logCap.String(), "stage=sp.success"))
+
+		// let's find the sp.success line emitted by the cmd proc, not by sync acrualizer
+		cmdSuccessLine := ""
+		for _, line := range strings.Split(logCap.String(), "\n") {
+			if strings.Contains(line, "stage=sp.success") &&
+				!strings.Contains(line, "extension="+projExtension) {
+				cmdSuccessLine = line
+				break
+			}
+		}
+		// command-processor success line: must have context attrs and a different extension than projector
+		require.NotEmpty(cmdSuccessLine)
+		require.Contains(cmdSuccessLine, "stage=sp.success")
+		require.Contains(cmdSuccessLine, "woffset=")
+		require.Contains(cmdSuccessLine, "poffset=")
+		require.Contains(cmdSuccessLine, "evqname=")
+
+	})
+
+	t.Run("sp.error on invoke failure", func(t *testing.T) {
+		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+
+		projErr := errors.New("projector failed")
+		counter := 0
+		app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+			wsb.AddCRecord(testCRecord)
+			wsb.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+			wsb.AddWDoc(testWDoc)
+			wsb.AddCommand(cudQName)
+			addStdRoles(wsb)
+			cfg.AddSyncProjectors(istructs.Projector{
+				Name: projQName,
+				Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
+					counter++
+					if counter == 2 { // 1st is WorkspaceDescriptor stub
+						return projErr
+					}
+					return nil
+				},
+			})
+			wsb.AddProjector(projQName).SetSync(true).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(cudQName))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
+		})
+		defer tearDown(app)
+
+		logCap.Reset()
+		sendCUD(t, 1, app, http.StatusInternalServerError)
+
+		// per-projector logs: extension has "p." prefix; context attrs present
+		logCap.HasLine("stage=sp.triggeredby", "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		logCap.HasLine("stage=sp.error", projErr.Error(), "extension="+projExtension, "woffset=", "poffset=", "evqname=")
+		// command-processor also emits sp.error (no per-projector extension) — total must be 2
+		require.Equal(2, strings.Count(logCap.String(), "stage=sp.error"))
+		logCap.EventuallyHasLine("stage=cp.partition_recovery", "partition will be restarted due of an error on writing to Log")
+	})
 }

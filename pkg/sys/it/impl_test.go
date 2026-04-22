@@ -8,18 +8,24 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	it "github.com/voedger/voedger/pkg/vit"
+	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
+	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func TestAuthorization(t *testing.T) {
@@ -141,7 +147,73 @@ func Test400BadRequests(t *testing.T) {
 	}
 }
 
+func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+	logCap := logger.StartCapture(t, logger.LogLevelError)
+	funcStarted := make(chan interface{}, 1000)
+	okToFinish := make(chan interface{})
+	it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
+		funcStarted <- nil
+		<-okToFinish
+		return nil
+	}
+	ownCfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "pwd"),
+			it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.BusyProcessorLogMode = vvm.BusyProcessorLogMode_Error
+		}),
+	)
+	vit := it.NewVIT(t, &ownCfg)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"args":{"Input":"Str"}}`
+	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
+	postDone := sync.WaitGroup{}
+	postDone.Add(1)
+	go func() {
+		defer postDone.Done()
+		vit.PostWS(ws, "c.app1pkg.MockCmd", body, httpu.WithAuthorizeBy(sys.Token))
+	}()
+	<-funcStarted
+
+	got503 := atomic.Int32{}
+	extras := int(vit.VVMConfig.CommandProcessorChannelBufferSize) + 1
+	for range extras {
+		postDone.Add(1)
+		go func() {
+			defer postDone.Done()
+			resp := vit.PostWS(ws, "c.app1pkg.MockCmd", body,
+				httpu.WithAuthorizeBy(sys.Token),
+				httpu.WithNoRetryPolicy(),
+				httpu.WithExpectedCode(http.StatusOK),
+				httpu.WithExpectedCode(http.StatusServiceUnavailable))
+			if resp.HTTPResp.StatusCode == http.StatusServiceUnavailable {
+				got503.Add(1)
+			}
+		}()
+	}
+
+	require.Eventually(func() bool { return got503.Load() == 1 }, 10*time.Second, 10*time.Millisecond)
+
+	logCap.HasLine("stage=vvm.submit", "no command processors available")
+
+	close(okToFinish)
+	postDone.Wait()
+	require.EqualValues(1, got503.Load())
+}
+
 func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	logCap := logger.StartCapture(t, logger.LogLevelError)
 	funcStarted := make(chan interface{})
 	okToFinish := make(chan interface{})
 	it.MockQryExec = func(input string, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
@@ -149,7 +221,17 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		<-okToFinish
 		return nil
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	ownCfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "pwd"),
+			it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.BusyProcessorLogMode = vvm.BusyProcessorLogMode_Error
+		}),
+	)
+	vit := it.NewVIT(t, &ownCfg)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
@@ -165,8 +247,9 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		<-funcStarted
 	}
 
-	// one more request to any WSID -> 503 service unavailable
 	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
+
+	logCap.HasLine("stage=vvm.submit", "no query processors v1 available")
 
 	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
 		okToFinish <- nil
@@ -564,5 +647,53 @@ func TestQueryCookiesAuth(t *testing.T) {
 	t.Run("APIv2", func(t *testing.T) {
 		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello world"}`)),
 			httpu.WithCookies(httpu.Authorization, "Bearer "+ws.Owner.Token))
+	})
+}
+
+func TestUnexpectedFields_400BadRequest(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("QPv1 unexpected field inside args", func(t *testing.T) {
+		body := `{"args":{"Text":"world","unexpected":"field"},"elements":[{"fields":["Res"]}]}`
+		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "q.sys.Echo", body,
+			it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+
+	t.Run("QPv1 unexpected field at root level", func(t *testing.T) {
+		body := `{"args":{"Text":"world"},"elements":[{"fields":["Res"]}],"unexpected":"field"}`
+		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "q.sys.Echo", body,
+			it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+
+	t.Run("QPv2", func(t *testing.T) {
+		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`,
+			ws.WSID, url.QueryEscape(`{"Text":"Hello world","unexpected":"field"}`)),
+			it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+
+	t.Run("command processor", func(t *testing.T) {
+		t.Skip("waiting for https://untill.atlassian.net/browse/AIR-3437")
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.air_table_plan"}}],"unexpected":"field"}`
+		vit.PostWS(ws, "c.sys.CUD", body, it.Expect400("unexpected field(s): unexpected")).Println()
+	})
+
+	t.Run("QPv1 args provided for void query", func(t *testing.T) {
+		body := `{"args":{"something":"value"}}`
+		vit.PostWS(ws, "q.app1pkg.QryVoid", body, it.Expect400("args are not expected")).Println()
+	})
+
+	t.Run("QPv2 args provided for void query", func(t *testing.T) {
+		vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/app1pkg.QryVoid?args=%s`,
+			ws.WSID, url.QueryEscape(`{"something":"value"}`)),
+			httpu.WithAuthorizeBy(ws.Owner.Token),
+			it.Expect400("args are not expected")).Println()
+	})
+
+	t.Run("CP args provided for void command", func(t *testing.T) {
+		body := `{"args":{"something":"value"}}`
+		vit.PostWS(ws, "c.app1pkg.CmdVoid", body, it.Expect400("args are not expected")).Println()
 	})
 }

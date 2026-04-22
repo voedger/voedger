@@ -136,34 +136,38 @@ type VVM struct {
 type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
 type VVMConfig struct {
-	VVMAppsBuilder                   VVMAppsBuilder // is a map
-	Time                             timeu.ITime
-	RouterWriteTimeout               int
-	RouterReadTimeout                int
-	RouterConnectionsLimit           int
-	RouterHTTP01ChallengeHosts       []string
-	RouteDefault                     string
-	Routes                           map[string]string
-	RoutesRewrite                    map[string]string
-	RouteDomains                     map[string]string
-	StorageFactory                   func(time timeu.ITime) (provider istorage.IAppStorageFactory, err error)
-	BLOBMaxSize                      iblobstorage.BLOBMaxSizeType
-	Name                             processors.VVMName
-	NumCommandProcessors             istructs.NumCommandProcessors
-	NumQueryProcessors               istructs.NumQueryProcessors
-	NumBLOBProcessors                istructs.NumBLOBProcessors
-	MaxPrepareQueries                MaxPrepareQueriesType
-	StorageCacheSize                 StorageCacheSizeType
-	processorsChannels               []ProcesorChannel
-	EmailSender                      state.IEmailSender
-	SecretsReader                    isecrets.ISecretReader
-	SMTPConfig                       smtp.Cfg
-	WSPostInitFunc                   workspace.WSPostInitFunc
-	DataPath                         string
-	MetricsServicePort               metrics.MetricsServicePort
-	AdminPort                        int
-	SchemasCache                     ISchemasCache // normally NullSchemasCache in production, vit.SysAppsSchemasCache in VIT tests
-	PolicyOptsForFederationWithRetry federation.PolicyOptsForWithRetry
+	VVMAppsBuilder                    VVMAppsBuilder // is a map
+	Time                              timeu.ITime
+	RouterWriteTimeout                int
+	RouterReadTimeout                 int
+	RouterConnectionsLimit            int
+	RouterMaxQueriesPerWS             int
+	RouterUseProxyProtocol            bool
+	RouterHTTP01ChallengeHosts        []string
+	RouteDefault                      string
+	Routes                            map[string]string
+	RoutesRewrite                     map[string]string
+	RouteDomains                      map[string]string
+	StorageFactory                    func(time timeu.ITime) (provider istorage.IAppStorageFactory, err error)
+	BLOBMaxSize                       iblobstorage.BLOBMaxSizeType
+	Name                              processors.VVMName
+	NumCommandProcessors              istructs.NumCommandProcessors
+	NumQueryProcessors                istructs.NumQueryProcessors
+	NumBLOBProcessors                 istructs.NumBLOBProcessors
+	CommandProcessorChannelBufferSize uint
+	MaxPrepareQueries                 MaxPrepareQueriesType
+	StorageCacheSize                  StorageCacheSizeType
+	processorsChannels                []ProcesorChannel
+	EmailSender                       state.IEmailSender
+	SecretsReader                     isecrets.ISecretReader
+	SMTPConfig                        smtp.Cfg
+	WSPostInitFunc                    workspace.WSPostInitFunc
+	DataPath                          string
+	MetricsServicePort                metrics.MetricsServicePort
+	AdminPort                         int
+	SchemasCache                      ISchemasCache // normally NullSchemasCache in production, vit.SysAppsSchemasCache in VIT tests
+	BusyProcessorLogMode              BusyProcessorLogMode
+	PolicyOptsForFederationWithRetry  federation.PolicyOptsForWithRetry // here because it is updated in VIT
 
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
@@ -184,7 +188,6 @@ type VVMConfig struct {
 	NumVVM NumVVM // amount of VVMs in the cluster. Default 1
 	IP     net.IP // current IP of the VVM. Used as the value for leaderhsip elections
 
-	// [~server.design.sequences/cmp.VVMConfig.SequencesTrustLevel~impl]
 	SequencesTrustLevel isequencer.SequencesTrustLevel
 }
 

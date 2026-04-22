@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/storages"
 
 	"golang.org/x/exp/slices"
@@ -41,7 +42,7 @@ func provideExecQryEnrichPrincipalToken(atf payloads.IAppTokensFactory) istructs
 			return err
 		}
 
-		principals := args.Workpiece.(interface{ GetPrincipals() []iauthnz.Principal }).GetPrincipals()
+		principals := args.Workpiece.(processors.IProcessorWorkpiece).GetPrincipals()
 		for _, prn := range principals {
 			if prn.Kind != iauthnz.PrincipalKind_Role {
 				continue
