@@ -39,7 +39,14 @@ func (s *httpsService) Prepare(work interface{}) error {
 }
 
 func (s *httpsService) Run(ctx context.Context) {
+	s.RunEx(ctx, func() {})
+}
+
+// pipeline.IServiceEx
+// RunEx ensures preRun completes before started() is signaled, so Stop observes a non-nil rootLogCtx with a proper happens-before
+func (s *httpsService) RunEx(ctx context.Context, started func()) {
 	s.preRun(ctx)
+	started()
 	if err := s.server.ServeTLS(s.listener, "", ""); err != http.ErrServerClosed {
 		logger.ErrorCtx(s.rootLogCtx, "endpoint.unexpectedstop", err.Error())
 	}
@@ -119,7 +126,14 @@ func (s *httpServer) preRun(ctx context.Context) {
 
 // pipeline.IService
 func (s *httpServer) Run(ctx context.Context) {
+	s.RunEx(ctx, func() {})
+}
+
+// pipeline.IServiceEx
+// RunEx ensures preRun completes before started() is signaled, so Stop observes a non-nil rootLogCtx with a proper happens-before
+func (s *httpServer) RunEx(ctx context.Context, started func()) {
 	s.preRun(ctx)
+	started()
 	if err := s.server.Serve(s.listener); err != http.ErrServerClosed {
 		logger.ErrorCtx(s.rootLogCtx, "endpoint.unexpectedstop", err.Error())
 	}
