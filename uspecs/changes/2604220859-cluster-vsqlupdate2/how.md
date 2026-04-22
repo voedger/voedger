@@ -9,22 +9,24 @@
 - Implement in package `pkg/cluster`:
   - `c.cluster.LogVSqlUpdate` is wired with `istructsmem.NullCommandExec` directly in `provide.go` - no new handler file needed (logging is done by the command processor itself via WLog)
   - `impl_vsqlupdate2.go`: query closure that
-    - parses/validates the SQL using existing `parseAndValidateQuery` from `pkg/cluster/impl_vsqlupdate.go` - the helper already relies on `args.Workpiece.(processors.IProcessorWorkpiece)`, implemented by both command and query workpieces, so it works unchanged for queries
-    - invokes `c.cluster.LogVSqlUpdate` via `federation.IFederation` against `clusterapp.ClusterAppWSID` and captures its `CurrentWLogOffset`
-    - performs the actual DML by reusing the existing `updateTable`/`insertTable`/`updateCorrupted`/`updateUnlogged` dispatch (extracted into an unexported helper shared with `provideExecCmdVSqlUpdate`), capturing the target CUD's WLog offset when applicable
+    - parses/validates the SQL using existing `parseAndValidateQuery` from `pkg/cluster/impl_vsqlupdate.go` (its first parameter is relaxed to `workpiece interface{}` so it accepts both command and query workpieces)
+    - rejects `dml.OpKind_InsertTable` with `http.StatusBadRequest` because the query path has no `istructs.IIntents` to allocate `NewID`; `insert table` stays on the legacy command path
+    - invokes `c.cluster.LogVSqlUpdate` via `federation.IFederation` against `args.WSID` and captures its `CurrentWLogOffset`
+    - performs the actual DML by reusing the existing `updateTable`/`updateCorrupted`/`updateUnlogged` dispatch (extracted into an unexported `dispatchDML` helper shared with `provideExecCmdVSqlUpdate`); `updateTable` now returns the target CUD's WLog offset (it reads `CurrentWLogOffset` from the `c.sys.CUD` response and no longer uses `WithDiscardResponse`)
     - emits a single result row with `LogWLogOffset`, `CUDWLogOffset` via the query callback
   - Register both extensions in `pkg/cluster/provide.go` using `istructsmem.NewCommandFunction` / `istructsmem.NewQueryFunction`
 - Router-side compatibility, per API version (response shape must match the entry point):
-  - API v1 (`pkg/router/impl_http.go`, `RequestHandler_V1`): detect `busRequest.Resource == "c.cluster.VSqlUpdate"`, rewrite to `q.cluster.VSqlUpdate2`, execute, and emit the v1 command response shape (`CurrentWLogOffset`, `NewIDs`)
-  - API v2 (`pkg/router/impl_apiv2.go`, `requestHandlerV2_extension` commands branch): detect `busRequest.QName == cluster.VSqlUpdate`, rewrite to `q.cluster.VSqlUpdate2` (switch `APIPath` to `APIPath_Queries`), execute, and emit the v2 command response shape
+  - API v1 (`pkg/router/impl_http.go`, `RequestHandler_V1`): detect `busRequest.Resource == "c.cluster.VSqlUpdate"` and `dml.OpKind_UpdateTable` in the body, rewrite to `q.cluster.VSqlUpdate2`, execute, and emit the v1 command response shape (`{"CurrentWLogOffset":<LogWLogOffset>}`)
+  - API v2 (`pkg/router/impl_apiv2.go`, `requestHandlerV2_extension` commands branch): detect `busRequest.QName == cluster.VSqlUpdate` and `dml.OpKind_UpdateTable` in the body, rewrite to `q.cluster.VSqlUpdate2` (switch `APIPath` to `APIPath_Queries`), execute, and emit the v2 command response shape (`{"currentWLogOffset":<LogWLogOffset>}`)
   - The two shims are separate on purpose: each must produce a response in the format of its own API version
+  - Both shims use a shared `capturingResponseWriter` to reuse `reply_v1` / `reply_v2` for the underlying streaming; the captured body is parsed with `federation.QueryResponse` / `federation.FuncResponse` to read `LogWLogOffset`
   - Keep the old `c.cluster.VSqlUpdate` extension registered until deprecation lands to avoid breaking direct handler paths used in integration tests
-- Authorization: grant `EXECUTE` on `q.cluster.VSqlUpdate2` and `c.cluster.LogVSqlUpdate` to the same roles that currently execute `c.cluster.VSqlUpdate` (system principals), in `pkg/cluster/appws.vsql`
+- Authorization: no GRANT statement is added for the new extensions; the existing `c.cluster.VSqlUpdate` is not granted either - access to cluster-app extensions is gated by the system principal check
 - Tests:
-  - Un-skip the existing tests in `pkg/sys/it/impl_vsqlupdate_test.go` (currently `t.Skip("https://github.com/voedger/voedger/issues/3845")`) - they assert end-to-end behavior of `c.cluster.VSqlUpdate` and must pass after the fix through the router shim
-  - Add subtests hitting `q.cluster.VSqlUpdate2` directly for every existing scenario (update/insert table, update corrupted, unlogged update/insert), asserting returned `LogWLogOffset` and `CUDWLogOffset`
+  - Un-skip the existing tests in `pkg/sys/it/impl_vsqlupdate_test.go` (`TestVSqlUpdate_BasicUsage_UpdateTable`, `TestVSqlUpdate_BasicUsage_InsertTable`, `TestDirectUpdateManyTypes`) - they assert end-to-end behavior of `c.cluster.VSqlUpdate` and must pass after the fix through the router shim
+  - Add `TestVSqlUpdate2_DirectQuery` hitting `q.cluster.VSqlUpdate2` directly and asserting returned `LogWLogOffset` and `CUDWLogOffset`
   - Add one new deterministic regression test using `it.NewOwnVITConfig` with `NumCommandProcessors = 1` and a short HTTP deadline
-  - Add router-level subtests covering both v1 and v2 rewrites of `c.cluster.VSqlUpdate` -> `q.cluster.VSqlUpdate2`
+  - Cover the v2 shim with an `apiv2` subtest inside `TestVSqlUpdate_BasicUsage_UpdateTable` (the original v1 path is the default for every other test that posts via `vit.PostApp`)
 - Deprecation path (tracked in `change.md`, not executed in this change unless requested):
   - After frontend/Live migrate, remove `c.cluster.VSqlUpdate` from `appws.vsql`, delete `provideExecCmdVSqlUpdate`, drop the router shim, and update the comments in `pkg/processors/command/impl.go` that reference `c.cluster.VSqlUpdate`
 

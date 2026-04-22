@@ -22,7 +22,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
-type vSqlUpdate2Result struct {
+type vSqlUpdate2Result struct { // nolint ST1003
 	istructs.NullObject
 	logWLogOffset istructs.Offset
 	cudWLogOffset istructs.Offset
@@ -31,9 +31,9 @@ type vSqlUpdate2Result struct {
 func (r *vSqlUpdate2Result) AsInt64(name string) int64 {
 	switch name {
 	case field_LogWLogOffset:
-		return int64(r.logWLogOffset)
+		return int64(r.logWLogOffset) // nolint G115
 	case field_CUDWLogOffset:
-		return int64(r.cudWLogOffset)
+		return int64(r.cudWLogOffset) // nolint G115
 	}
 	return 0
 }

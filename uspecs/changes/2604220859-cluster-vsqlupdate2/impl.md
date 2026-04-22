@@ -38,9 +38,12 @@
 The shim is implemented per API version because the response shape must match the entry point: a client calling v1 must get a v1 command response, a client calling v2 must get a v2 command response.
 
 - [x] create: [pkg/router/impl_vsqlupdate_shim.go](../../../pkg/router/impl_vsqlupdate_shim.go)
-  - add: `isVSqlUpdateV1Call`, `isVSqlUpdateV2Call` predicates (skip requests whose `args.Query` starts with `insert` — `insert table` needs `NewID` via `Intents`, unavailable in the query path, so it stays on the command path)
-  - add: `dispatchVSqlUpdateShim_V1` — rewrites `busRequest.Resource` to `q.cluster.VSqlUpdate2`, injects `elements[0].fields=[LogWLogOffset, CUDWLogOffset]`, drains the streamed response and writes `{"CurrentWLogOffset":<LogWLogOffset>}`
-  - add: `dispatchVSqlUpdateShim_V2` — rewrites `busRequest` to `APIPath_Queries` with `cluster.VSqlUpdate2` QName, moves `args` to the `args` query param and sets `keys` to `LogWLogOffset,CUDWLogOffset`, then drains the streamed response and writes `{"currentWLogOffset":<LogWLogOffset>}`
+  - add: `isVSqlUpdateV1Call`, `isVSqlUpdateV2Call` predicates that gate the shim on `isUpdateTableBody`, which uses `dml.ParseQuery` and accepts only `dml.OpKind_UpdateTable` (insert/unlogged/update-corrupted stay on the original command path)
+  - add: `capturingResponseWriter` (buffers headers/status/body, implements `http.Flusher`) so the shim can reuse `reply_v1` / `reply_v2` unchanged and then rewrite the final response shape
+  - add: `rewriteVSqlUpdateBody` — splices `"elements":[{"fields":["LogWLogOffset","CUDWLogOffset"]}]` into the incoming body via `bytes.Buffer` (no JSON round-trip)
+  - add: `dispatchVSqlUpdateShim_V1` — rewrites `busRequest.Resource` to `q.cluster.VSqlUpdate2`, calls `reply_v1` into the capturing writer, then emits `{"CurrentWLogOffset":<LogWLogOffset>}` on success
+  - add: `dispatchVSqlUpdateShim_V2` — rewrites `busRequest` to `APIPath_Queries` with `cluster.VSqlUpdate2` QName, moves `args` to the `args` query param and sets `keys` to `LogWLogOffset,CUDWLogOffset`, calls `reply_v2` into the capturing writer, then emits `{"currentWLogOffset":<LogWLogOffset>}` on success
+  - add: `extractLogWLogOffsetFromV1Body` / `extractLogWLogOffsetFromV2Body` — unmarshal the captured body via `federation.QueryResponse` / `federation.FuncResponse` and read the first `LogWLogOffset`; unreachable error branches are marked `// notest`
 - [x] update: [pkg/router/impl_http.go](../../../pkg/router/impl_http.go)
   - add: in `RequestHandler_V1`, call `isVSqlUpdateV1Call` + `dispatchVSqlUpdateShim_V1` before `SendRequest`
 - [x] update: [pkg/router/impl_apiv2.go](../../../pkg/router/impl_apiv2.go)
@@ -51,8 +54,9 @@ The shim is implemented per API version because the response shape must match th
 - [x] update: [pkg/sys/it/impl_vsqlupdate_test.go](../../../pkg/sys/it/impl_vsqlupdate_test.go)
   - add: `TestVSqlUpdate_NoDeadlockOnSharedCommandProcessor` — deterministic regression test that passes only with the shim in place
   - add: `TestVSqlUpdate2_DirectQuery` — posts directly to `q.cluster.VSqlUpdate2` and asserts the returned `LogWLogOffset` and `CUDWLogOffset` are positive
-  - add: `TestVSqlUpdate_ViaAPIV2_Shim` — posts to `c.cluster.VSqlUpdate` via `/api/v2/.../commands/cluster.VSqlUpdate` and asserts the v2 command response carries `currentWLogOffset`
-  - note: the existing tests already exercise the v1 shim end-to-end because every one of them posts to `c.cluster.VSqlUpdate` via `vit.PostApp` (the v1 entry point)
+  - change: `TestVSqlUpdate_BasicUsage_UpdateTable` — un-skipped and split into `apiv1` / `apiv2` subtests sharing a single VIT; `apiv2` posts to `/api/v2/.../commands/cluster.VSqlUpdate` and asserts the v2 command response carries `currentWLogOffset`
+  - change: un-skipped `TestVSqlUpdate_BasicUsage_InsertTable` and `TestDirectUpdateManyTypes`
+  - note: the remaining tests exercise the v1 shim end-to-end because they post to `c.cluster.VSqlUpdate` via `vit.PostApp` (the v1 entry point)
 
 ## Quick start
 
