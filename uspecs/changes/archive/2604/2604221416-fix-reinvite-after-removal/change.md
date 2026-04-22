@@ -31,14 +31,17 @@ This happens because:
 Refactor `SubjectExistsByLogin()` to return both SubjectID and isActive status:
 
 - Return `(subjectID, isActive, err)` instead of just `(subjectID, err)`
-- Callers can decide: skip if active, reactivate if inactive, create if not found
-- `ApplyJoinWorkspace` uses `existingSubjectID` directly for reactivation (no separate lookup needed)
+- Remove early skip in `ApplyJoinWorkspace` - all operations are idempotent, ensuring completion on projector retries
+- Handle three cases: create new Subject, reactivate inactive Subject, or just update Roles (retry scenario)
 
 ## How
 
 - Write failing integration test first (`TestReinviteAfterCancelAcceptedInvite`)
 - Refactor `SubjectExistsByLogin()` to return `(subjectID, isActive, err)`
-- Update `ApplyJoinWorkspace` to use `isActive` for skip check, `existingSubjectID` for reactivation
+- Update `ApplyJoinWorkspace`:
+  - Remove early skip (was causing issues on projector retries)
+  - Use switch statement: create new / reactivate inactive / update roles only
+  - All operations are idempotent (CreateJoinedWorkspace, Subject update, Invite update)
 - Update `InitiateInvitationByEMail` to use `subjectIsActive` instead of `existingSubjectID > 0`
 - Add comments explaining `Login` vs `ActualLogin` fields in vsql and projector
 

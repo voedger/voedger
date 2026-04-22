@@ -10,7 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -49,12 +48,10 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 			return err
 		}
 
-		if isActive {
-			// Active Subject already exists -> skip
-			// see https://github.com/voedger/voedger/issues/1107
-			logger.Info(fmt.Sprintf(`skip aproj.sys.ApplyJoinWorkspace: active Subject %d already exists for login "%s"`, existingSubjectID, login))
-			return nil
-		}
+		// No early skip here - all operations below are idempotent, ensuring completion on projector retries:
+		// - CreateJoinedWorkspace: checks if exists, updates if so (see impl_createjoinedworkspace.go)
+		// - Subject create/reactivate: handled by existingSubjectID check
+		// - Invite update: idempotent state transition
 
 		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 		if err != nil {
@@ -85,13 +82,14 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 
 		var body string
 		// Store cdoc.sys.Subject
-		if existingSubjectID == istructs.NullRecordID {
+		switch {
+		case existingSubjectID == istructs.NullRecordID:
 			// Create new Subject
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
 				svCDocInvite.AsString(field_ActualLogin), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
 				svCDocInvite.AsInt64(Field_InviteeProfileWSID))
-		} else {
-			// Reactivate existing Subject - first activate, then update Roles (can't update both in one call)
+		case !isActive:
+			// Reactivate inactive Subject - first activate, then update Roles (can't update both in one call)
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, existingSubjectID)
 			_, err = federation.Func(
 				fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
@@ -101,6 +99,9 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 			if err != nil {
 				return
 			}
+			fallthrough
+		default:
+			// Subject already active (retry scenario) - just update Roles
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, existingSubjectID, svCDocInvite.AsString(Field_Roles))
 		}
 		resp, err := federation.Func(
