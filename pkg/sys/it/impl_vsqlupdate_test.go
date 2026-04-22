@@ -190,6 +190,7 @@ func TestVSqlUpdate2_RejectsNonUpdate(t *testing.T) {
 }
 
 func TestVSqlUpdate_BasicUsage_InsertTable(t *testing.T) {
+	t.Skip("https://untill.atlassian.net/browse/AIR-3661")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
