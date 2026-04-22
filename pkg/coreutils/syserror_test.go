@@ -6,6 +6,7 @@ package coreutils
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -150,3 +151,88 @@ func TestNewHTTPError(t *testing.T) {
 		require.JSONEq(`{"sys.Error":{"HTTPStatus":500,"Message":"test error"}}`, sysErr.ToJSON_APIV1())
 	})
 }
+
+func TestSysError_Is(t *testing.T) {
+	require := require.New(t)
+	base := SysError{HTTPStatus: http.StatusForbidden, Message: "workspace is not initialized"}
+
+	t.Run("equal fields", func(t *testing.T) {
+		other := SysError{HTTPStatus: http.StatusForbidden, Message: "workspace is not initialized"}
+		require.ErrorIs(base, other)
+	})
+
+	t.Run("headers ignored", func(t *testing.T) {
+		withHeaders := base.AddHeader("Retry-After", "3")
+		require.ErrorIs(withHeaders, base)
+		require.ErrorIs(base, withHeaders)
+	})
+
+	t.Run("wrapped", func(t *testing.T) {
+		require.ErrorIs(fmt.Errorf("ctx: %w", base), base)
+	})
+
+	t.Run("different status", func(t *testing.T) {
+		require.NotErrorIs(base, SysError{HTTPStatus: http.StatusNotFound, Message: base.Message})
+	})
+
+	t.Run("different message", func(t *testing.T) {
+		require.NotErrorIs(base, SysError{HTTPStatus: base.HTTPStatus, Message: "other"})
+	})
+
+	t.Run("different qname", func(t *testing.T) {
+		a := SysError{HTTPStatus: http.StatusForbidden, QName: appdef.NewQName("a", "b")}
+		b := SysError{HTTPStatus: http.StatusForbidden, QName: appdef.NewQName("c", "d")}
+		require.NotErrorIs(a, b)
+	})
+
+	t.Run("different data", func(t *testing.T) {
+		a := SysError{HTTPStatus: http.StatusForbidden, Data: "x"}
+		b := SysError{HTTPStatus: http.StatusForbidden, Data: "y"}
+		require.NotErrorIs(a, b)
+	})
+
+	t.Run("non SysError target", func(t *testing.T) {
+		require.NotErrorIs(base, errors.New("other"))
+	})
+
+	t.Run("pointer target with equal fields", func(t *testing.T) {
+		other := SysError{HTTPStatus: http.StatusForbidden, Message: "workspace is not initialized"}
+		require.ErrorIs(base, &other)
+	})
+
+	t.Run("pointer target with different fields", func(t *testing.T) {
+		other := SysError{HTTPStatus: http.StatusNotFound, Message: base.Message}
+		require.NotErrorIs(base, &other)
+	})
+
+	t.Run("nil pointer target", func(t *testing.T) {
+		var nilTarget *SysError
+		require.NotErrorIs(base, nilTarget)
+	})
+}
+
+func TestSysError_As(t *testing.T) {
+	require := require.New(t)
+	original := SysError{HTTPStatus: http.StatusForbidden, Message: "test"}.AddHeader("A", "1")
+
+	t.Run("direct", func(t *testing.T) {
+		var se SysError
+		require.ErrorAs(original, &se)
+		require.Equal(original, se)
+	})
+
+	t.Run("wrapped", func(t *testing.T) {
+		var se SysError
+		require.ErrorAs(fmt.Errorf("ctx: %w", original), &se)
+		require.Equal(original, se)
+	})
+
+	t.Run("non-matching target", func(t *testing.T) {
+		var target *fakeErr
+		require.NotErrorAs(original, &target)
+	})
+}
+
+type fakeErr struct{}
+
+func (*fakeErr) Error() string { return "fake" }

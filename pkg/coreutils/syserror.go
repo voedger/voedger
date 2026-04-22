@@ -65,6 +65,22 @@ func (he SysError) Error() string {
 	return he.Message
 }
 
+func (he SysError) Is(target error) bool {
+	var t SysError
+	switch v := target.(type) {
+	case SysError:
+		t = v
+	case *SysError:
+		if v == nil {
+			return false
+		}
+		t = *v
+	default:
+		return false
+	}
+	return he.HTTPStatus == t.HTTPStatus && he.QName == t.QName && he.Message == t.Message && he.Data == t.Data
+}
+
 func (he SysError) ToJSON_APIV1() string {
 	b := bytes.NewBuffer(nil)
 	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message)
