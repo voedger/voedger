@@ -408,8 +408,8 @@ func TestAdminService(t *testing.T) {
 type testRouter struct {
 	cancel               context.CancelFunc
 	wg                   *sync.WaitGroup
-	httpService          pipeline.IService
-	adminService         pipeline.IService
+	httpService          pipeline.IServiceEx
+	adminService         pipeline.IServiceEx
 	clientDisconnections chan struct{}
 }
 
@@ -424,11 +424,11 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandl
 	router.wg.Add(2)
 	go func() {
 		defer router.wg.Done()
-		httpSrv.Run(ctx)
+		httpSrv.RunEx(ctx, func() {})
 	}()
 	go func() {
 		defer router.wg.Done()
-		adminService.Run(ctx)
+		adminService.RunEx(ctx, func() {})
 	}()
 	router.cancel = cancel
 	router.httpService = httpSrv

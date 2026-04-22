@@ -52,7 +52,7 @@ func (s *httpsService) RunEx(ctx context.Context, started func()) {
 	}
 }
 
-// pipeline.IService
+// pipeline.IServiceBase
 func (s *routerService) Prepare(work interface{}) error {
 	s.router = mux.NewRouter()
 
@@ -75,7 +75,7 @@ func (s *routerService) Prepare(work interface{}) error {
 	return s.prepareBasicServer(s.router)
 }
 
-// pipeline.IService
+// pipeline.IServiceBase
 func (s *routerService) Stop() {
 	s.httpServer.Stop()
 	if s.queryLimiter != nil {
@@ -139,7 +139,7 @@ func (s *httpServer) RunEx(ctx context.Context, started func()) {
 	}
 }
 
-// pipeline.IService
+// pipeline.IServiceBase
 func (s *httpServer) Stop() {
 	// ctx here is used to avoid eternal waiting for close idle connections and listeners
 	// all connections and listeners are closed in the explicit way (they're tracks ctx.Done()) so it is not necessary to track ctx here
