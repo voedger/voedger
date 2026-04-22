@@ -162,6 +162,33 @@ func TestVSqlUpdate2_DirectQuery(t *testing.T) {
 	require.Contains(selResp.SectionRow(len(selResp.Sections[0].Elements) - 1)[0].(string), fmt.Sprintf(`"name":"%s"`, newName))
 }
 
+func TestVSqlUpdate2_RejectsNonUpdate(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	cudBody := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, vit.NextName())
+	wlogOffset := vit.PostWS(ws, "c.sys.CUD", cudBody).CurrentWLogOffset
+
+	cases := map[string]string{
+		"insert table":     fmt.Sprintf(`insert test1.app1.%d.app1pkg.category set name = '%s'`, ws.WSID, vit.NextName()),
+		"unlogged update":  fmt.Sprintf(`unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 43 and Dummy = 1`, ws.WSID),
+		"update corrupted": fmt.Sprintf(`update corrupted test1.app1.%d.sys.WLog.%d`, ws.WSID, wlogOffset),
+	}
+
+	for name, query := range cases {
+		t.Run(name, func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["LogWLogOffset","CUDWLogOffset"]}]}`, query)
+			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "q.cluster.VSqlUpdate2", body,
+				httpu.WithAuthorizeBy(sysPrn.Token),
+				it.Expect400("'update table' only is supported", "q.cluster.VSqlUpdate2"),
+			)
+		})
+	}
+}
+
 func TestVSqlUpdate_BasicUsage_InsertTable(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()

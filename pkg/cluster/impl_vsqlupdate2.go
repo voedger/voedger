@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -40,7 +39,7 @@ func (r *vSqlUpdate2Result) AsInt64(name string) int64 {
 
 func (r *vSqlUpdate2Result) QName() appdef.QName { return qNameVSqlUpdate2Result }
 
-func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime,
+func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itokens.ITokens,
 	asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 		query := args.ArgumentObject.AsString(field_Query)
@@ -48,9 +47,9 @@ func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itoken
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
-		if update.Kind == dml.OpKind_InsertTable {
+		if update.Kind != dml.OpKind_UpdateTable {
 			return coreutils.NewHTTPError(http.StatusBadRequest,
-				fmt.Errorf("'insert table' is not supported by q.cluster.VSqlUpdate2; use c.cluster.VSqlUpdate"))
+				fmt.Errorf("'update table' only is supported by q.cluster.VSqlUpdate2; use c.cluster.VSqlUpdate"))
 		}
 
 		logWLogOffset, err := logVSqlUpdate(federation, itokens, args.WSID, query)
@@ -58,7 +57,7 @@ func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itoken
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}
 
-		cudWLogOffset, err := dispatchDML(update, federation, itokens, time, nil, nil)
+		cudWLogOffset, err := updateTable(update, federation, itokens)
 		if err != nil {
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}
