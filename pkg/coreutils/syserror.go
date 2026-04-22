@@ -65,6 +65,20 @@ func (he SysError) Error() string {
 	return he.Message
 }
 
+func (he SysError) Is(target error) bool {
+	t, ok := target.(SysError)
+	return ok && he.HTTPStatus == t.HTTPStatus && he.QName == t.QName && he.Message == t.Message && he.Data == t.Data
+}
+
+func (he SysError) As(target any) bool {
+	t, ok := target.(*SysError)
+	if !ok {
+		return false
+	}
+	*t = he
+	return true
+}
+
 func (he SysError) ToJSON_APIV1() string {
 	b := bytes.NewBuffer(nil)
 	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message)
