@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"strings"
@@ -23,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -96,6 +98,7 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 	}
 
 	t.Run("apiv1", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelInfo)
 		categoryName := vit.NextName()
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
 		categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
@@ -104,10 +107,13 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 				httpu.WithAuthorizeBy(sysPrn.Token)).Println()
 		})
+		logCap.EventuallyHasLine("rerouting", "c.cluster.VSqlUpdate", "q.cluster.VSqlUpdate2", "stage=routing.vsqlupdate")
+		log.Println(logCap.String())
 	})
 
 	t.Run("apiv2", func(t *testing.T) {
 		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelInfo)
 		categoryName := vit.NextName()
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
 		categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
@@ -120,6 +126,8 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 			require.NoError(json.Unmarshal([]byte(httpResp.Body), &m))
 			require.Positive(int64(m["currentWLogOffset"].(float64)), "currentWLogOffset must be positive in v2 shim response")
 		})
+		logCap.EventuallyHasLine("rerouting", "c.cluster.VSqlUpdate", "q.cluster.VSqlUpdate2", "stage=routing.vsqlupdate")
+		log.Println(logCap.String())
 	})
 }
 

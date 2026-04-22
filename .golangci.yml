@@ -55,7 +55,7 @@ linters:
           arguments:
             - allowFloats: 0.0,0.,1.0,1.,2.0,2.
               allowInts: 0,1,2
-              allowStrs: '""'
+              allowStrs: '"","to"'
               maxLitCount: "3"
           severity: warning
     staticcheck:

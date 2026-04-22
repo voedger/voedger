@@ -464,13 +464,6 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], entity)
-		// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
-		if isVSqlUpdateV2Call(busRequest) {
-			requestCtx, cancel := context.WithCancel(withLogAttribs(req.Context(), data, busRequest, req))
-			defer cancel()
-			dispatchVSqlUpdateShim_V2(requestCtx, rw, busRequest, reqSender)
-			return
-		}
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }
@@ -499,8 +492,13 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	limiter *wsQueryLimiter) {
 	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
+	// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
+	// The shim reroutes c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2 (query processor),
+	// so it must share the wsQueryLimiter gating with native queries.
+	isShim := isVSqlUpdateV2Call(busRequest)
+
 	// limiter is nil for Admin and ACME services
-	if limiter != nil && busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
+	if limiter != nil && (isShim || (busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)))) {
 		if !limiter.acquire(busRequest.WSID) {
 			limiter.onQueryDrop(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 			replyServiceUnavailable(rw)
@@ -522,6 +520,11 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	defer cancel() // to avoid context leak
 
 	logServeRequest(requestCtx, limiter)
+
+	if isShim {
+		dispatchVSqlUpdateShim_V2(requestCtx, rw, busRequest, reqSender)
+		return
+	}
 
 	sentAt := time.Now()
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)

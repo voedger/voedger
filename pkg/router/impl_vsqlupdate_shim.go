@@ -23,6 +23,8 @@ import (
 const (
 	vSqlUpdateFieldLogOffs = "LogWLogOffset" //nolint ST1003
 	vSqlUpdateFieldCUDOffs = "CUDWLogOffset" //nolint ST1003
+	vsqlUpdateStage        = "routing.vsqlupdate"
+	vsqlUpdateErrorStage   = "routing.vsqlupdate.error"
 )
 
 var (
@@ -112,12 +114,14 @@ func (c *capturingResponseWriter) flushTo(rw http.ResponseWriter, overrideBody s
 }
 
 func dispatchVSqlUpdateShim_V1(requestCtx context.Context, rw http.ResponseWriter, busRequest bus.Request, reqSender bus.IRequestSender) {
+	logger.InfoCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("rerouting %s to %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2))
+
 	busRequest.Resource = resourceQryVSqlUpdate2
 	busRequest.Body = rewriteVSqlUpdateBody(busRequest.Body)
 
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {
-		logger.ErrorCtx(requestCtx, "routing.send2vvm.error", "forwarding c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2 failed:", err)
+		logger.ErrorCtx(requestCtx, "routing.send2vvm.error", fmt.Sprintf("forwarding %s to %s failed: %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2, err))
 		writeCommonError_V1(rw, err, http.StatusInternalServerError)
 		return
 	}
@@ -129,15 +133,20 @@ func dispatchVSqlUpdateShim_V1(requestCtx context.Context, rw http.ResponseWrite
 	overrideBody := ""
 	if capture.status == http.StatusOK && *respErr == nil {
 		overrideBody = fmt.Sprintf(`{"CurrentWLogOffset":%d}`, extractLogWLogOffsetFromV1Body(capture.body.Bytes()))
+	} else {
+		logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("%s shim reply failed: status=%d respErr=%v body=%s", resourceCmdVSqlUpdate, capture.status, *respErr, capture.body.String()))
 	}
 	capture.flushTo(rw, overrideBody)
 }
 
 func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWriter, busRequest bus.Request, reqSender bus.IRequestSender) {
+	logger.InfoCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("rerouting %s to %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2))
+
 	args := map[string]any{}
 	if len(busRequest.Body) > 0 {
 		body := map[string]any{}
 		if err := json.Unmarshal(busRequest.Body, &body); err != nil {
+			logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("failed to parse VSqlUpdate body: %s", err))
 			ReplyCommonError(rw, fmt.Sprintf("failed to parse VSqlUpdate body: %s", err.Error()), http.StatusBadRequest)
 			return
 		}
@@ -148,6 +157,7 @@ func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWrite
 	argsBytes, err := json.Marshal(args)
 	if err != nil {
 		// notest
+		logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("failed to marshal VSqlUpdate args: %s", err))
 		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -164,7 +174,7 @@ func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWrite
 
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {
-		logger.ErrorCtx(requestCtx, "routing.send2vvm.error", "forwarding cluster.VSqlUpdate to cluster.VSqlUpdate2 failed:", err)
+		logger.ErrorCtx(requestCtx, "routing.send2vvm.error", fmt.Sprintf("forwarding %s to %s failed: %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2, err))
 		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -176,6 +186,8 @@ func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWrite
 	overrideBody := ""
 	if capture.status == http.StatusOK && *respErr == nil {
 		overrideBody = fmt.Sprintf(`{"currentWLogOffset":%d}`, extractLogWLogOffsetFromV2Body(capture.body.Bytes()))
+	} else {
+		logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("%s shim reply failed: status=%d respErr=%v body=%s", resourceCmdVSqlUpdate, capture.status, *respErr, capture.body.String()))
 	}
 	capture.flushTo(rw, overrideBody)
 }
