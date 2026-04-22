@@ -80,6 +80,7 @@ ABSTRACT WORKSPACE Workspace (
 
 	TABLE Invite INHERITS sys.CDoc (
 		SubjectKind int32,
+		-- Login: email address the invitation was sent to (set by InitiateInvitationByEMail)
 		Login varchar NOT NULL,
 		Email varchar NOT NULL,
 		Roles varchar(1024),
@@ -90,6 +91,9 @@ ABSTRACT WORKSPACE Workspace (
 		Updated int64 NOT NULL,
 		SubjectID ref,
 		InviteeProfileWSID int64,
+		-- ActualLogin: invitee's login from auth token (set by InitiateJoinWorkspace when user accepts)
+		-- Currently always equals Login because InitiateJoinWorkspace validates they match
+		-- Used for cdoc.sys.Subject.Login field
 		ActualLogin varchar,
 		UNIQUEFIELD Email
 	) WITH Tags=(WorkspaceOwnerTableTag);

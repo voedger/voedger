@@ -34,7 +34,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		cmdInitiateInvitation_ArgEmail := args.ArgumentObject.AsString(field_Email)
 		// do not check if the login from token exists in subjects, see https://github.com/voedger/voedger/issues/3698
 		// because login is Inviter here, not Invitee
-		existingSubjectID, err := SubjectExistsByLogin(cmdInitiateInvitation_ArgEmail, args.State)
+		_, subjectIsActive, err := SubjectExistsByLogin(cmdInitiateInvitation_ArgEmail, args.State)
 		if err != nil {
 			return
 		}
@@ -66,7 +66,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			}
 
 			inviteState := State(svCDocInvite.AsInt32(Field_State))
-			if existingSubjectID > 0 && !reInviteAllowedForState[inviteState] {
+			if subjectIsActive && !reInviteAllowedForState[inviteState] {
 				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf(`%w %s`, ErrReInviteNotAllowedForState, inviteState))
 			}
 

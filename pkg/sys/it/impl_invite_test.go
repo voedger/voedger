@@ -376,6 +376,54 @@ func TestWrongEmail(t *testing.T) {
 	}
 }
 
+func TestReinviteAfterCancelAcceptedInvite(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// Setup: create workspace and user
+	wsName := "TestReinviteAfterCancel_ws"
+	wsParams := it.SimpleWSParams(wsName)
+	expireDatetime := vit.Now().UnixMilli()
+
+	email := fmt.Sprintf("reinvite_after_cancel_%d@test.com", vit.NextNumber())
+	login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+	loginPrn := vit.SignIn(login)
+	ownerPrn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(wsParams, ownerPrn)
+
+	// Step 1: Invite and join
+	inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sentEmail := vit.CaptureEmail()
+	verificationCode := sentEmail.Body[:6]
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Joined)
+
+	// Step 2: Cancel accepted invite (admin removes user)
+	vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
+
+	// Step 3: Reinvite the same email
+	InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sentEmail2 := vit.CaptureEmail()
+	verificationCode2 := sentEmail2.Body[:6]
+	WaitForInviteState(vit, ws, inviteID, invite.State_Cancelled, invite.State_Invited)
+
+	// Step 4: User accepts invitation again - this should succeed
+	InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode2)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Joined)
+
+	// Verify: Subject should be active again
+	cDocSubject := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+		{"args":{"Schema":"sys.Subject"},
+		"elements":[{"fields":["Login","sys.IsActive"]}],
+		"filters":[{"expr":"eq","args":{"field":"Login","value":"%s"}}]}`, email)).SectionRow(0)
+	require.Equal(email, cDocSubject[0])
+	require.True(cDocSubject[1].(bool))
+}
+
 func TestResendInvitation(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
