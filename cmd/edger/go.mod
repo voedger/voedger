@@ -7,11 +7,11 @@ replace github.com/voedger/voedger => ../..
 require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
-	github.com/voedger/voedger v0.0.0-20251118115018-b14c6b2596f2
+	github.com/voedger/voedger v0.0.0-20260422190003-496f20ef67ec
 )
 
 require (
-	github.com/aptible/supercronic v0.2.42 // indirect
+	github.com/aptible/supercronic v0.2.44 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
