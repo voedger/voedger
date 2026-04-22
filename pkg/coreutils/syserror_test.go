@@ -194,6 +194,21 @@ func TestSysError_Is(t *testing.T) {
 	t.Run("non SysError target", func(t *testing.T) {
 		require.NotErrorIs(base, errors.New("other"))
 	})
+
+	t.Run("pointer target with equal fields", func(t *testing.T) {
+		other := SysError{HTTPStatus: http.StatusForbidden, Message: "workspace is not initialized"}
+		require.ErrorIs(base, &other)
+	})
+
+	t.Run("pointer target with different fields", func(t *testing.T) {
+		other := SysError{HTTPStatus: http.StatusNotFound, Message: base.Message}
+		require.NotErrorIs(base, &other)
+	})
+
+	t.Run("nil pointer target", func(t *testing.T) {
+		var nilTarget *SysError
+		require.NotErrorIs(base, nilTarget)
+	})
 }
 
 func TestSysError_As(t *testing.T) {

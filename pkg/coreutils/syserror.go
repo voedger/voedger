@@ -66,17 +66,19 @@ func (he SysError) Error() string {
 }
 
 func (he SysError) Is(target error) bool {
-	t, ok := target.(SysError)
-	return ok && he.HTTPStatus == t.HTTPStatus && he.QName == t.QName && he.Message == t.Message && he.Data == t.Data
-}
-
-func (he SysError) As(target any) bool {
-	t, ok := target.(*SysError)
-	if !ok {
+	var t SysError
+	switch v := target.(type) {
+	case SysError:
+		t = v
+	case *SysError:
+		if v == nil {
+			return false
+		}
+		t = *v
+	default:
 		return false
 	}
-	*t = he
-	return true
+	return he.HTTPStatus == t.HTTPStatus && he.QName == t.QName && he.Message == t.Message && he.Data == t.Data
 }
 
 func (he SysError) ToJSON_APIV1() string {
