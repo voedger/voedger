@@ -210,8 +210,14 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 
 		reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
+		// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
+		// c.cluster.VSqlUpdate synchronously calls c.sys.CUD on the same command processor.
+		// Re-route transparently to q.cluster.VSqlUpdate2 (runs in the query processor) to avoid self-deadlock.
+		// The shim runs on the query processor, so it must share the same wsQueryLimiter gating as native queries.
+		isShimV1 := isVSqlUpdateV1Call(busRequest)
+
 		// limiter is nil for Admin and ACME services
-		if limiter != nil && strings.HasPrefix(busRequest.Resource, "q.") {
+		if limiter != nil && (strings.HasPrefix(busRequest.Resource, "q.") || isShimV1) {
 			if !limiter.acquire(busRequest.WSID) {
 				limiter.onQueryDrop(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 				replyServiceUnavailable(rw)
@@ -228,6 +234,11 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		defer cancel() // to avoid context leak
 
 		logServeRequest(requestCtx, limiter)
+
+		if isShimV1 {
+			dispatchVSqlUpdateShim_V1(requestCtx, rw, busRequest, requestSender)
+			return
+		}
 
 		sentAt := time.Now()
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)

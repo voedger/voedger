@@ -28,26 +28,31 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 	asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
-		update, err := parseAndValidateQuery(args, query, asp)
+		update, err := parseAndValidateQuery(args.Workpiece, query, asp)
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
-
-		switch update.Kind {
-		case dml.OpKind_UpdateTable:
-			err = updateTable(update, federation, itokens)
-		case dml.OpKind_InsertTable:
-			err = insertTable(update, federation, itokens, args.State, args.Intents)
-		case dml.OpKind_UpdateCorrupted:
-			err = updateCorrupted(update, istructs.UnixMilli(time.Now().UnixMilli()))
-		case dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert:
-			err = updateUnlogged(update)
-		}
+		_, err = dispatchDML(update, federation, itokens, time, args.State, args.Intents)
 		return coreutils.WrapSysError(err, http.StatusBadRequest)
 	}
 }
 
-func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
+func dispatchDML(update update, federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime,
+	istate istructs.IState, intents istructs.IIntents) (cudWLogOffset istructs.Offset, err error) {
+	switch update.Kind {
+	case dml.OpKind_UpdateTable:
+		cudWLogOffset, err = updateTable(update, federation, itokens)
+	case dml.OpKind_InsertTable:
+		err = insertTable(update, federation, itokens, istate, intents)
+	case dml.OpKind_UpdateCorrupted:
+		err = updateCorrupted(update, istructs.UnixMilli(time.Now().UnixMilli()))
+	case dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert:
+		err = updateUnlogged(update)
+	}
+	return cudWLogOffset, err
+}
+
+func parseAndValidateQuery(workpiece interface{}, query string, asp istructs.IAppStructsProvider) (update update, err error) {
 	update.Op, err = dml.ParseQuery(query)
 	if err != nil {
 		return update, err
@@ -57,7 +62,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		return update, errors.New("'update' or 'insert' clause expected")
 	}
 
-	update.appParts = args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
+	update.appParts = workpiece.(processors.IProcessorWorkpiece).AppPartitions()
 
 	if update.appStructs, err = asp.BuiltIn(update.AppQName); err != nil {
 		// notest
