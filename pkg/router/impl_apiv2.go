@@ -464,6 +464,13 @@ func requestHandlerV2_extension(reqSender bus.IRequestSender, apiPath processors
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
 		busRequest.QName = appdef.NewQName(data.vars[URLPlaceholder_pkg], entity)
+		// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
+		if isVSqlUpdateV2Call(busRequest) {
+			requestCtx, cancel := context.WithCancel(withLogAttribs(req.Context(), data, busRequest, req))
+			defer cancel()
+			dispatchVSqlUpdateShim_V2(requestCtx, rw, busRequest, reqSender)
+			return
+		}
 		sendRequestAndReadResponse(req, busRequest, reqSender, rw, data, limiter)
 	})
 }

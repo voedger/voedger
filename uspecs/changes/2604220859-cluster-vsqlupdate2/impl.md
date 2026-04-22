@@ -1,0 +1,68 @@
+# Implementation plan: Replace c.cluster.VSqlUpdate with q.cluster.VSqlUpdate2 to avoid command processor deadlock
+
+## Construction
+
+### Failing regression test (red first)
+
+- [x] update: [pkg/sys/it/impl_vsqlupdate_test.go](../../../pkg/sys/it/impl_vsqlupdate_test.go)
+  - add: deterministic regression test using `it.NewOwnVITConfig` with `cfg.NumCommandProcessors = 1` (forces `c.cluster.VSqlUpdate` and the downstream `c.sys.CUD` to share the single command processor); post with a short HTTP deadline; expect a successful response within the deadline (fails with deadline-exceeded before the fix, passes after)
+
+### Schema and constants
+
+- [x] update: [pkg/cluster/appws.vsql](../../../pkg/cluster/appws.vsql)
+  - add: `TYPE VSqlUpdate2Result` with `LogWLogOffset int64`, `CUDWLogOffset int64` (no `NewID` - `VSqlUpdate2` is for updates, not inserts)
+  - add: `COMMAND LogVSqlUpdate(VSqlUpdateParams)` and `QUERY VSqlUpdate2(VSqlUpdateParams) RETURNS VSqlUpdate2Result` to the existing `EXTENSION ENGINE BUILTIN` block
+  - note: no GRANT statements added; existing `c.cluster.VSqlUpdate` is not granted either — access is gated by the sys principal check
+- [x] update: [pkg/cluster/consts.go](../../../pkg/cluster/consts.go)
+  - add: QName constants `qNameQryVSqlUpdate2`, `qNameCmdLogVSqlUpdate`, `qNameVSqlUpdate2Result`; field constants `field_LogWLogOffset`, `field_CUDWLogOffset`
+
+### Handler
+
+- [x] create: [pkg/cluster/impl_vsqlupdate2.go](../../../pkg/cluster/impl_vsqlupdate2.go)
+  - add: `provideExecQryVSqlUpdate2` that parses/validates via shared helper (reuses `parseAndValidateQuery`, which goes through `args.Workpiece.(processors.IProcessorWorkpiece)` - implemented by both command and query workpieces), rejects `InsertTable` (query path is update-only, `Intents` unavailable), invokes `c.cluster.LogVSqlUpdate` through `federation.IFederation` against `args.WSID` (ClusterAppWSID in practice), then dispatches the DML through the shared helper, emitting a single result row with `LogWLogOffset` and `CUDWLogOffset`
+- no handler file is needed for `c.cluster.LogVSqlUpdate`: it is a pure no-op that relies on WLog and is wired directly in `provide.go` using `istructsmem.NullCommandExec`
+
+### Refactor and wiring
+
+- [x] update: [pkg/cluster/impl_vsqlupdate.go](../../../pkg/cluster/impl_vsqlupdate.go)
+  - refactor: extract the `switch update.Kind { ... }` dispatch into an unexported `dispatchDML` helper reused by both `provideExecCmdVSqlUpdate` and `provideExecQryVSqlUpdate2` (DRY)
+  - refactor: change `parseAndValidateQuery` to take `workpiece interface{}` instead of `istructs.ExecCommandArgs` so it is callable from both command and query handlers
+- [x] update: [pkg/cluster/impl_table.go](../../../pkg/cluster/impl_table.go)
+  - refactor: `updateTable` now returns `(cudWLogOffset istructs.Offset, err error)` by reading `CurrentWLogOffset` from the `c.sys.CUD` response (removed `WithDiscardResponse`) so that `q.cluster.VSqlUpdate2` can expose the CUD WLog offset to callers
+- [x] update: [pkg/cluster/provide.go](../../../pkg/cluster/provide.go)
+  - add: register `c.cluster.LogVSqlUpdate` via `istructsmem.NewCommandFunction(..., istructsmem.NullCommandExec)`
+  - add: register `q.cluster.VSqlUpdate2` via `istructsmem.NewQueryFunction`
+
+### Router compatibility shim
+
+The shim is implemented per API version because the response shape must match the entry point: a client calling v1 must get a v1 command response, a client calling v2 must get a v2 command response.
+
+- [x] create: [pkg/router/impl_vsqlupdate_shim.go](../../../pkg/router/impl_vsqlupdate_shim.go)
+  - add: `isVSqlUpdateV1Call`, `isVSqlUpdateV2Call` predicates (skip requests whose `args.Query` starts with `insert` — `insert table` needs `NewID` via `Intents`, unavailable in the query path, so it stays on the command path)
+  - add: `dispatchVSqlUpdateShim_V1` — rewrites `busRequest.Resource` to `q.cluster.VSqlUpdate2`, injects `elements[0].fields=[LogWLogOffset, CUDWLogOffset]`, drains the streamed response and writes `{"CurrentWLogOffset":<LogWLogOffset>}`
+  - add: `dispatchVSqlUpdateShim_V2` — rewrites `busRequest` to `APIPath_Queries` with `cluster.VSqlUpdate2` QName, moves `args` to the `args` query param and sets `keys` to `LogWLogOffset,CUDWLogOffset`, then drains the streamed response and writes `{"currentWLogOffset":<LogWLogOffset>}`
+- [x] update: [pkg/router/impl_http.go](../../../pkg/router/impl_http.go)
+  - add: in `RequestHandler_V1`, call `isVSqlUpdateV1Call` + `dispatchVSqlUpdateShim_V1` before `SendRequest`
+- [x] update: [pkg/router/impl_apiv2.go](../../../pkg/router/impl_apiv2.go)
+  - add: in `requestHandlerV2_extension` (commands branch), call `isVSqlUpdateV2Call` + `dispatchVSqlUpdateShim_V2` before `sendRequestAndReadResponse`
+
+### Tests
+
+- [x] update: [pkg/sys/it/impl_vsqlupdate_test.go](../../../pkg/sys/it/impl_vsqlupdate_test.go)
+  - add: `TestVSqlUpdate_NoDeadlockOnSharedCommandProcessor` — deterministic regression test that passes only with the shim in place
+  - add: `TestVSqlUpdate2_DirectQuery` — posts directly to `q.cluster.VSqlUpdate2` and asserts the returned `LogWLogOffset` and `CUDWLogOffset` are positive
+  - add: `TestVSqlUpdate_ViaAPIV2_Shim` — posts to `c.cluster.VSqlUpdate` via `/api/v2/.../commands/cluster.VSqlUpdate` and asserts the v2 command response carries `currentWLogOffset`
+  - note: the existing tests already exercise the v1 shim end-to-end because every one of them posts to `c.cluster.VSqlUpdate` via `vit.PostApp` (the v1 entry point)
+
+## Quick start
+
+Call the new query directly (replaces `c.cluster.VSqlUpdate`):
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer ${SYS_TOKEN}" \
+  -d '{"args":{"Query":"update untill.app1.140737488486400.app1pkg.Customer.322685000131099 set ClientID = '\'''\'', ClientConfigured = false"},"elements":[{"fields":["LogWLogOffset","CUDWLogOffset"]}]}' \
+  "http://${HOST}/api/untill/cluster/${CLUSTER_APP_WSID}/q.cluster.VSqlUpdate2"
+```
+
+Existing callers may keep posting to `c.cluster.VSqlUpdate`; the router transparently reroutes the request to `q.cluster.VSqlUpdate2` until the old command is removed in a follow-up change.

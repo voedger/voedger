@@ -229,6 +229,14 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 
 		logServeRequest(requestCtx, limiter)
 
+		// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
+		// c.cluster.VSqlUpdate synchronously calls c.sys.CUD on the same command processor.
+		// Re-route transparently to q.cluster.VSqlUpdate2 (runs in the query processor) to avoid self-deadlock.
+		if isVSqlUpdateV1Call(busRequest) {
+			dispatchVSqlUpdateShim_V1(requestCtx, rw, busRequest, requestSender)
+			return
+		}
+
 		sentAt := time.Now()
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)
 		if err != nil {

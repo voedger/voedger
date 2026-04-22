@@ -11,8 +11,12 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -22,11 +26,107 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	it "github.com/voedger/voedger/pkg/vit"
+	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
+	"github.com/voedger/voedger/pkg/vvm"
 	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 )
 
+// TestVSqlUpdate_NoDeadlockOnSharedCommandProcessor reproduces
+// https://github.com/voedger/voedger/issues/3845: c.cluster.VSqlUpdate invokes
+// c.sys.CUD synchronously via HTTP, so when both share the single command
+// processor (NumCommandProcessors = 1) the second request can never be picked
+// up and the first one hangs forever. With a short client-side HTTP deadline
+// the hang surfaces as context.DeadlineExceeded.
+func TestVSqlUpdate_NoDeadlockOnSharedCommandProcessor(t *testing.T) {
+	require := require.New(t)
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "pwd"),
+			it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.NumCommandProcessors = 1
+		}),
+	)
+	vit := it.NewVIT(t, &cfg)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	newName := vit.NextName()
+	updateBody := fmt.Sprintf(`{"args":{"Query":"update test1.app1.%d.app1pkg.category.%d set name = '%s'"}}`, ws.WSID, categoryID, newName)
+
+	url := fmt.Sprintf("%s/api/%s/%d/c.cluster.VSqlUpdate", vit.URLStr(), istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID)
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(updateBody))
+	require.NoError(err)
+	req.Header.Set(httpu.Authorization, "Bearer "+sysPrn.Token)
+
+	resp, err := client.Do(req)
+	require.NoError(err, "c.cluster.VSqlUpdate must not deadlock when it shares the command processor with the downstream c.sys.CUD")
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(err)
+	require.Equal(http.StatusOK, resp.StatusCode, string(respBody))
+}
+
 func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
-	t.Skip("https://github.com/voedger/voedger/issues/3845")
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	updateAndCheck := func(t *testing.T, categoryID istructs.RecordID, newName string, post func(body string)) {
+		t.Helper()
+		body := fmt.Sprintf(`{"args":{"Query":"update test1.app1.%d.app1pkg.category.%d set name = '%s'"}}`, ws.WSID, categoryID, newName)
+		post(body)
+
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
+		require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
+	}
+
+	t.Run("apiv1", func(t *testing.T) {
+		categoryName := vit.NextName()
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		updateAndCheck(t, categoryID, vit.NextName(), func(body string) {
+			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+				httpu.WithAuthorizeBy(sysPrn.Token)).Println()
+		})
+	})
+
+	t.Run("apiv2", func(t *testing.T) {
+		require := require.New(t)
+		categoryName := vit.NextName()
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		updateAndCheck(t, categoryID, vit.NextName(), func(body string) {
+			url := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/commands/cluster.VSqlUpdate",
+				istructs.AppQName_sys_cluster.Owner(), istructs.AppQName_sys_cluster.Name(), clusterapp.ClusterAppWSID)
+			httpResp := vit.POST(url, body, httpu.WithAuthorizeBy(sysPrn.Token))
+			m := map[string]interface{}{}
+			require.NoError(json.Unmarshal([]byte(httpResp.Body), &m))
+			require.Positive(int64(m["currentWLogOffset"].(float64)), "currentWLogOffset must be positive in v2 shim response")
+		})
+	})
+}
+
+// TestVSqlUpdate2_DirectQuery calls q.cluster.VSqlUpdate2 directly and verifies
+// the query returns the log and CUD WLog offsets.
+func TestVSqlUpdate2_DirectQuery(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -39,19 +139,22 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
 	newName := vit.NextName()
-	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category.%d set name = '%s'"}}`, ws.WSID, categoryID, newName)
-	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-		httpu.WithAuthorizeBy(sysPrn.Token)).Println()
+	body = fmt.Sprintf(`{"args":{"Query":"update test1.app1.%d.app1pkg.category.%d set name = '%s'"},"elements":[{"fields":["LogWLogOffset","CUDWLogOffset"]}]}`,
+		ws.WSID, categoryID, newName)
+	resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "q.cluster.VSqlUpdate2", body,
+		httpu.WithAuthorizeBy(sysPrn.Token))
+	resp.Println()
 
-	// check the value is update in another app and another wsid
+	row := resp.SectionRow()
+	require.Positive(int64(row[0].(float64)), "LogWLogOffset must be positive")
+	require.Positive(int64(row[1].(float64)), "CUDWLogOffset must be positive")
+
 	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
-	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
-	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
-	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
+	selResp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+	require.Contains(selResp.SectionRow(len(selResp.Sections[0].Elements) - 1)[0].(string), fmt.Sprintf(`"name":"%s"`, newName))
 }
 
 func TestVSqlUpdate_BasicUsage_InsertTable(t *testing.T) {
-	t.Skip("waiting for https://github.com/voedger/voedger/issues/3845")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -380,7 +483,6 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 }
 
 func TestDirectUpdateManyTypes(t *testing.T) {
-	t.Skip("https://github.com/voedger/voedger/issues/3845")
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
