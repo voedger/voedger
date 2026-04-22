@@ -203,6 +203,9 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
+		// ormFile path is generated internally by generateOrmFile, not from user input
+		// so it is safe to
+		// nolint G703
 		if err := os.WriteFile(ormFile, formattedContent, filesu.FileMode_DefaultForFile); err != nil {
 			return err
 		}
