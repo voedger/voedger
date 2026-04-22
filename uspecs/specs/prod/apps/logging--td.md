@@ -161,8 +161,17 @@ Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
   - On every query request: check `lastLoggedAt` timestamp under mutex; if 10 seconds have elapsed, swap the rejections map, log one warning per key with non-zero count, update `lastLoggedAt`
   - On server shutdown: `flushAll()` logs and purges all pending entries regardless of elapsed time
 - First response from bus (immediately after `SendRequest` returns): level `Verbose`, stage `routing.latency1`, msg `<latency_ms>`
-- Error sending request to VVM: level `Error`, stage `routing.send2vvm.error`, msg `<error message>`
+- Error sending request to VVM: level `Error`, stage `routing.send2vvm.error`, msg `<error message>` or `forwarding <source resource> to <target resource> failed: <error message>` for the VSqlUpdate shim
 - Error sending response to client: level `Error`, stage `routing.response.error`, msg `<error message>`
+
+**VSqlUpdate shim** (both API v1 and API v2, emitted by `dispatchVSqlUpdateShim_V1/V2`):
+
+The router reroutes legacy `c.cluster.VSqlUpdate` command requests to the `q.cluster.VSqlUpdate2` query to avoid a command processor deadlock. Shim-specific log entries share the `routing.vsqlupdate*` subsystem so `stage=routing.vsqlupdate*` filters the whole shim feed.
+
+- Reroute announcement (emitted at the entry of both dispatchers, right before request rewriting): level `Info`, stage `routing.vsqlupdate`, msg `rerouting c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2`
+- Shim reply failure (captured status is not 200 OK or downstream `respErr` is non-nil, logged right before the reply is flushed to the client): level `Error`, stage `routing.vsqlupdate.error`, msg `c.cluster.VSqlUpdate shim reply failed: status=<status> respErr=<err> body=<captured body>`
+- APIv2 body parse failure (malformed JSON in the legacy command body): level `Error`, stage `routing.vsqlupdate.error`, msg `failed to parse VSqlUpdate body: <error>`
+- APIv2 args marshal failure (`notest`): level `Error`, stage `routing.vsqlupdate.error`, msg `failed to marshal VSqlUpdate args: <error>`
 
 ---
 
