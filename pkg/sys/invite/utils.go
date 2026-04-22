@@ -97,15 +97,29 @@ func LoginFromToken(st istructs.IState) (loginFromToken string, err error) {
 	return svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name), nil
 }
 
-func SubjectExistsByLogin(login string, state istructs.IState) (existingSubjectID istructs.RecordID, err error) {
+// SubjectExistsByLogin returns SubjectID and isActive status for a Subject with the given login.
+// Returns (0, false, nil) if no Subject exists for this login.
+func SubjectExistsByLogin(login string, state istructs.IState) (subjectID istructs.RecordID, isActive bool, err error) {
 	skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, state)
 	if err != nil {
 		// notest
-		return 0, err
+		return 0, false, err
 	}
 	val, ok, err := state.CanExist(skbViewSubjectsIdx)
-	if ok {
-		existingSubjectID = val.AsRecordID("SubjectID")
+	if err != nil || !ok {
+		return 0, false, err
 	}
-	return existingSubjectID, err
+	subjectID = val.AsRecordID(Field_SubjectID)
+
+	skbSubject, err := state.KeyBuilder(sys.Storage_Record, QNameCDocSubject)
+	if err != nil {
+		// notest
+		return 0, false, err
+	}
+	skbSubject.PutRecordID(sys.Storage_Record_Field_ID, subjectID)
+	svSubject, ok, err := state.CanExist(skbSubject)
+	if err != nil || !ok {
+		return 0, false, err
+	}
+	return subjectID, svSubject.AsBool(appdef.SystemField_IsActive), nil
 }
