@@ -3,6 +3,7 @@ registered_at: 2026-04-22T14:48:41Z
 change_id: 2604221448-vsqlupdate2-full-parity
 baseline: f91d1438f6fbf47ffd247bb8d06e47cfdff55e6e
 issue_url: https://untill.atlassian.net/browse/AIR-3665
+archived_at: 2026-04-23T11:48:36Z
 ---
 
 # Change request: Make q.cluster.VSqlUpdate2 cover all c.cluster.VSqlUpdate features
