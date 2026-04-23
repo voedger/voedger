@@ -77,7 +77,9 @@ func NewTestState(processorKind int, packagePath string, createWorkspaces ...Tes
 	ts.ctx = context.Background()
 	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	ts.httpClient, _ = httpu.NewIHTTPClientWithTransport(&testRoundTripper{ts: ts})
+
+	// no retries in tests
+	ts.httpClient, _ = httpu.NewIHTTPClientWithTransport(&testRoundTripper{ts: ts}, httpu.WithNoRetryPolicy())
 	ts.buildAppDef(packagePath, "..", createWorkspaces...)
 	ts.buildState(processorKind)
 	return ts
