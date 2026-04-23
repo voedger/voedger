@@ -13,8 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -25,6 +25,7 @@ type vSqlUpdate2Result struct { // nolint ST1003
 	istructs.NullObject
 	logWLogOffset istructs.Offset
 	cudWLogOffset istructs.Offset
+	newID         istructs.RecordID
 }
 
 func (r *vSqlUpdate2Result) AsInt64(name string) int64 {
@@ -37,9 +38,16 @@ func (r *vSqlUpdate2Result) AsInt64(name string) int64 {
 	return 0
 }
 
+func (r *vSqlUpdate2Result) AsRecordID(name string) istructs.RecordID {
+	if name == field_NewID {
+		return r.newID
+	}
+	return istructs.NullRecordID
+}
+
 func (r *vSqlUpdate2Result) QName() appdef.QName { return qNameVSqlUpdate2Result }
 
-func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itokens.ITokens,
+func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime,
 	asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 		query := args.ArgumentObject.AsString(field_Query)
@@ -47,22 +55,22 @@ func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itoken
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
-		if update.Kind != dml.OpKind_UpdateTable {
-			return coreutils.NewHTTPError(http.StatusBadRequest,
-				fmt.Errorf("'update table' only is supported by q.cluster.VSqlUpdate2; use c.cluster.VSqlUpdate"))
-		}
 
 		logWLogOffset, err := logVSqlUpdate(federation, itokens, args.WSID, query)
 		if err != nil {
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}
 
-		cudWLogOffset, err := updateTable(update, federation, itokens)
+		cudWLogOffset, newID, err := dispatchDML(update, federation, itokens, time)
 		if err != nil {
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}
 
-		return callback(&vSqlUpdate2Result{logWLogOffset: logWLogOffset, cudWLogOffset: cudWLogOffset})
+		return callback(&vSqlUpdate2Result{
+			logWLogOffset: logWLogOffset,
+			cudWLogOffset: cudWLogOffset,
+			newID:         newID,
+		})
 	}
 }
 

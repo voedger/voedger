@@ -521,8 +521,7 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 
 	logServeRequest(requestCtx, limiter)
 
-	if isShim {
-		dispatchVSqlUpdateShim_V2(requestCtx, rw, busRequest, reqSender)
+	if isShim && dispatchVSqlUpdateShim_V2(requestCtx, rw, busRequest, reqSender) {
 		return
 	}
 
