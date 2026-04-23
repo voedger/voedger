@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
-	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors"
 )
@@ -23,6 +22,7 @@ import (
 const (
 	vSqlUpdateFieldLogOffs = "LogWLogOffset" //nolint ST1003
 	vSqlUpdateFieldCUDOffs = "CUDWLogOffset" //nolint ST1003
+	vSqlUpdateFieldNewID   = "NewID"         //nolint ST1003
 	vsqlUpdateStage        = "routing.vsqlupdate"
 	vsqlUpdateErrorStage   = "routing.vsqlupdate.error"
 )
@@ -35,37 +35,13 @@ var (
 )
 
 func isVSqlUpdateV1Call(busRequest bus.Request) bool {
-	return !busRequest.IsAPIV2 && busRequest.Resource == resourceCmdVSqlUpdate && isUpdateTableBody(busRequest.Body)
+	return !busRequest.IsAPIV2 && busRequest.Resource == resourceCmdVSqlUpdate
 }
 
 func isVSqlUpdateV2Call(busRequest bus.Request) bool {
 	return busRequest.IsAPIV2 &&
 		processors.APIPath(busRequest.APIPath) == processors.APIPath_Commands &&
-		busRequest.QName == qNameCmdVSqlUpdate &&
-		isUpdateTableBody(busRequest.Body)
-}
-
-// isUpdateTableBody returns true if the VSqlUpdate body carries an "update table" DML.
-// Only this kind is routed through the query shim; any other kind stays on the command path.
-// On any error the request will be forwarded to processor where the error will be actually handled, so do not handle errors here
-func isUpdateTableBody(body []byte) bool {
-	m := map[string]any{}
-	if err := json.Unmarshal(body, &m); err != nil {
-		return false
-	}
-	args, ok := m["args"].(map[string]any)
-	if !ok {
-		return false
-	}
-	q, ok := args["Query"].(string)
-	if !ok {
-		return false
-	}
-	op, err := dml.ParseQuery(q)
-	if err != nil {
-		return false
-	}
-	return op.Kind == dml.OpKind_UpdateTable
+		busRequest.QName == qNameCmdVSqlUpdate
 }
 
 func rewriteVSqlUpdateBody(body []byte) []byte {
@@ -74,6 +50,8 @@ func rewriteVSqlUpdateBody(body []byte) []byte {
 	buf.WriteString(vSqlUpdateFieldLogOffs)
 	buf.WriteString(`","`)
 	buf.WriteString(vSqlUpdateFieldCUDOffs)
+	buf.WriteString(`","`)
+	buf.WriteString(vSqlUpdateFieldNewID)
 	buf.WriteString(`"]}]`)
 	trimmed := bytes.TrimSpace(body)
 	if len(trimmed) > 2 {
@@ -114,7 +92,7 @@ func (c *capturingResponseWriter) flushTo(rw http.ResponseWriter, overrideBody s
 }
 
 func dispatchVSqlUpdateShim_V1(requestCtx context.Context, rw http.ResponseWriter, busRequest bus.Request, reqSender bus.IRequestSender) {
-	logger.InfoCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("rerouting %s to %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2))
+	logger.VerboseCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("rerouting %s to %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2))
 
 	busRequest.Resource = resourceQryVSqlUpdate2
 	busRequest.Body = rewriteVSqlUpdateBody(busRequest.Body)
@@ -130,42 +108,34 @@ func dispatchVSqlUpdateShim_V1(requestCtx context.Context, rw http.ResponseWrite
 	initResponse(capture, respMeta)
 	reply_v1(requestCtx, capture, respCh, respErr, func() {}, busRequest, respMeta)
 
-	overrideBody := ""
-	if capture.status == http.StatusOK && *respErr == nil {
-		overrideBody = fmt.Sprintf(`{"CurrentWLogOffset":%d}`, extractLogWLogOffsetFromV1Body(capture.body.Bytes()))
-	} else {
-		logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("%s shim reply failed: status=%d respErr=%v body=%s", resourceCmdVSqlUpdate, capture.status, *respErr, capture.body.String()))
-	}
-	capture.flushTo(rw, overrideBody)
+	finalizeShimResponse(requestCtx, rw, capture, respErr, extractFromQryVSqlUpdate2ResponseV1, "CurrentWLogOffset", "Result")
 }
 
-func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWriter, busRequest bus.Request, reqSender bus.IRequestSender) {
-	logger.InfoCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("rerouting %s to %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2))
-
+func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWriter, busRequest bus.Request, reqSender bus.IRequestSender) bool {
 	args := map[string]any{}
 	if len(busRequest.Body) > 0 {
 		body := map[string]any{}
 		if err := json.Unmarshal(busRequest.Body, &body); err != nil {
-			logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("failed to parse VSqlUpdate body: %s", err))
-			ReplyCommonError(rw, fmt.Sprintf("failed to parse VSqlUpdate body: %s", err.Error()), http.StatusBadRequest)
-			return
+			return false
 		}
 		if a, ok := body["args"].(map[string]any); ok {
 			args = a
+		} else {
+			return false
 		}
 	}
 	argsBytes, err := json.Marshal(args)
 	if err != nil {
-		// notest
-		logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("failed to marshal VSqlUpdate args: %s", err))
-		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
-		return
+		return false
 	}
+
+	logger.VerboseCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("rerouting %s to %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2))
+
 	if busRequest.Query == nil {
 		busRequest.Query = map[string]string{}
 	}
 	busRequest.Query["args"] = string(argsBytes)
-	busRequest.Query["keys"] = vSqlUpdateFieldLogOffs + "," + vSqlUpdateFieldCUDOffs
+	busRequest.Query["keys"] = vSqlUpdateFieldLogOffs + "," + vSqlUpdateFieldCUDOffs + "," + vSqlUpdateFieldNewID
 	busRequest.Method = http.MethodGet
 	busRequest.APIPath = int(processors.APIPath_Queries)
 	busRequest.QName = qNameQryVSqlUpdate2
@@ -174,56 +144,72 @@ func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWrite
 
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)
 	if err != nil {
-		logger.ErrorCtx(requestCtx, "routing.send2vvm.error", fmt.Sprintf("forwarding %s to %s failed: %s", resourceCmdVSqlUpdate, resourceQryVSqlUpdate2, err))
-		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
-		return
+		return false
 	}
 
 	capture := newCapturingResponseWriter()
 	initResponse(capture, respMeta)
 	reply_v2(requestCtx, capture, respCh, respErr, func() {}, respMeta)
 
+	finalizeShimResponse(requestCtx, rw, capture, respErr, extractFromQryVSqlUpdate2ResponseV2, "currentWLogOffset", "result")
+	return true
+}
+
+func finalizeShimResponse(requestCtx context.Context, rw http.ResponseWriter, capture *capturingResponseWriter, respErr *error,
+	extract func([]byte) (logOffset, cudOffset int64, newID int64), offsetKey, resultKey string) {
 	overrideBody := ""
 	if capture.status == http.StatusOK && *respErr == nil {
-		overrideBody = fmt.Sprintf(`{"currentWLogOffset":%d}`, extractLogWLogOffsetFromV2Body(capture.body.Bytes()))
+		logOffset, cudOffset, newID := extract(capture.body.Bytes())
+		logger.VerboseCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("%s=%d (to be sent to the client as CurrentWLogOffset), %s=%d", vSqlUpdateFieldLogOffs, logOffset, vSqlUpdateFieldCUDOffs, cudOffset))
+		overrideBody = buildCmdResponse(logOffset, newID, offsetKey, resultKey)
 	} else {
 		logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("%s shim reply failed: status=%d respErr=%v body=%s", resourceCmdVSqlUpdate, capture.status, *respErr, capture.body.String()))
 	}
 	capture.flushTo(rw, overrideBody)
 }
 
-// extractLogWLogOffsetFromV1Body parses the v1 query response envelope
-// `{"sections":[{"type":"","elements":[[[[LogWLogOffset, CUDWLogOffset]]]]}]}`
-// and returns the first LogWLogOffset value.
-func extractLogWLogOffsetFromV1Body(raw []byte) int64 {
+func buildCmdResponse(logOffset int64, newID int64, offsetKey, resultKey string) string {
+	if newID > 0 {
+		return fmt.Sprintf(`{%q:%d,%q:{"NewID":%d}}`, offsetKey, logOffset, resultKey, newID)
+	}
+	return fmt.Sprintf(`{%q:%d}`, offsetKey, logOffset)
+}
+
+// extractFromQryVSqlUpdate2ResponseV1 parses the v1 query response envelope
+// `{"sections":[{"type":"","elements":[[[[LogWLogOffset, CUDWLogOffset, NewID]]]]}]}`
+// and returns LogWLogOffset, CUDWLogOffset and NewID.
+func extractFromQryVSqlUpdate2ResponseV1(raw []byte) (logOffset int64, cudOffset int64, newID int64) {
 	var env federation.QueryResponse
 	if err := json.Unmarshal(raw, &env); err != nil {
 		// notest
-		return 0
+		panic(err)
 	}
-	if v, ok := env.Sections[0].Elements[0][0][0][0].(float64); ok {
-		return int64(v)
-	}
-	// notest
-	return 0
+
+	// following data is got without any checking since we know for sure the data structure of the query result
+	// guarded by integration tests
+	row := env.Sections[0].Elements[0][0][0]
+	logOffset = int64(row[0].(float64))
+	cudOffset = int64(row[1].(float64))
+	newID = int64(row[2].(float64))
+
+	return logOffset, cudOffset, newID
 }
 
-// extractLogWLogOffsetFromV2Body parses the v2 query response envelope
-// `{"results":[{"LogWLogOffset":..., "CUDWLogOffset":...}]}` and returns the first
-// LogWLogOffset value.
-func extractLogWLogOffsetFromV2Body(raw []byte) int64 {
+// extractFromQryVSqlUpdate2ResponseV2 parses the v2 query response envelope
+// `{"results":[{"LogWLogOffset":..., "CUDWLogOffset":..., "NewID":...}]}` and returns
+// LogWLogOffset, CUDWLogOffset and NewID.
+func extractFromQryVSqlUpdate2ResponseV2(raw []byte) (logOffset int64, cudOffset int64, newID int64) {
 	var env federation.FuncResponse
 	if err := json.Unmarshal(raw, &env); err != nil {
 		// notest
-		return 0
+		panic(err)
 	}
-	if len(env.QPv2Response) == 0 {
-		// notest
-		return 0
-	}
-	if v, ok := env.QPv2Response[0][vSqlUpdateFieldLogOffs].(float64); ok {
-		return int64(v)
-	}
-	// notest
-	return 0
+
+	// following data is got without any checking since we know for sure the data structure of the query result
+	// guarded by integration tests
+	logOffset = int64(env.QPv2Response[0][vSqlUpdateFieldLogOffs].(float64))
+	cudOffset = int64(env.QPv2Response[0][vSqlUpdateFieldCUDOffs].(float64))
+	newID = int64(env.QPv2Response[0][vSqlUpdateFieldNewID].(float64))
+
+	return logOffset, cudOffset, newID
 }

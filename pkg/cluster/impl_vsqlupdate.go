@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime,
@@ -32,24 +33,39 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
-		_, err = dispatchDML(update, federation, itokens, time, args.State, args.Intents)
-		return coreutils.WrapSysError(err, http.StatusBadRequest)
+		_, newID, err := dispatchDML(update, federation, itokens, time)
+		if err != nil {
+			return coreutils.WrapSysError(err, http.StatusBadRequest)
+		}
+		if newID != istructs.NullRecordID {
+			kb, err := args.State.KeyBuilder(sys.Storage_Result, qNameVSqlUpdateResult)
+			if err != nil {
+				// notest
+				return err
+			}
+			result, err := args.Intents.NewValue(kb)
+			if err != nil {
+				// notest
+				return err
+			}
+			result.PutRecordID(field_NewID, newID)
+		}
+		return nil
 	}
 }
 
-func dispatchDML(update update, federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime,
-	istate istructs.IState, intents istructs.IIntents) (cudWLogOffset istructs.Offset, err error) {
+func dispatchDML(update update, federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime) (cudWLogOffset istructs.Offset, newID istructs.RecordID, err error) {
 	switch update.Kind {
 	case dml.OpKind_UpdateTable:
 		cudWLogOffset, err = updateTable(update, federation, itokens)
 	case dml.OpKind_InsertTable:
-		err = insertTable(update, federation, itokens, istate, intents)
+		cudWLogOffset, newID, err = insertTable(update, federation, itokens)
 	case dml.OpKind_UpdateCorrupted:
 		err = updateCorrupted(update, istructs.UnixMilli(time.Now().UnixMilli()))
 	case dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert:
 		err = updateUnlogged(update)
 	}
-	return cudWLogOffset, err
+	return cudWLogOffset, newID, err
 }
 
 func parseAndValidateQuery(workpiece interface{}, query string, asp istructs.IAppStructsProvider) (update update, err error) {

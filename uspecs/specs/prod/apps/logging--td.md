@@ -168,10 +168,11 @@ Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
 
 The router reroutes legacy `c.cluster.VSqlUpdate` command requests to the `q.cluster.VSqlUpdate2` query to avoid a command processor deadlock. Shim-specific log entries share the `routing.vsqlupdate*` subsystem so `stage=routing.vsqlupdate*` filters the whole shim feed.
 
-- Reroute announcement (emitted at the entry of both dispatchers, right before request rewriting): level `Info`, stage `routing.vsqlupdate`, msg `rerouting c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2`
+- Reroute announcement (emitted once the shim is committed to forwarding the request - in `_V1` right before request rewriting, in `_V2` after the body / args preflight succeeds): level `Verbose`, stage `routing.vsqlupdate`, msg `rerouting c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2`
+- Offset reporting (emitted on success after the query response has been captured): level `Verbose`, stage `routing.vsqlupdate`, msg `LogWLogOffset=<log> (to be sent to the client as CurrentWLogOffset), CUDWLogOffset=<cud>`
 - Shim reply failure (captured status is not 200 OK or downstream `respErr` is non-nil, logged right before the reply is flushed to the client): level `Error`, stage `routing.vsqlupdate.error`, msg `c.cluster.VSqlUpdate shim reply failed: status=<status> respErr=<err> body=<captured body>`
-- APIv2 body parse failure (malformed JSON in the legacy command body): level `Error`, stage `routing.vsqlupdate.error`, msg `failed to parse VSqlUpdate body: <error>`
-- APIv2 args marshal failure (`notest`): level `Error`, stage `routing.vsqlupdate.error`, msg `failed to marshal VSqlUpdate args: <error>`
+
+APIv2 preflight failures (malformed JSON body, missing `args` object, args marshal error, downstream `SendRequest` error) do not emit a log line - the shim returns a fall-through signal so the request is replayed against the standard command processor which owns the error reporting.
 
 ---
 

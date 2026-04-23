@@ -27,7 +27,8 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 
 	TYPE VSqlUpdate2Result (
 		LogWLogOffset int64 NOT NULL,
-		CUDWLogOffset int64 NOT NULL
+		CUDWLogOffset int64,
+		NewID ref
 	);
 
 	EXTENSION ENGINE BUILTIN (
