@@ -112,20 +112,20 @@ func dispatchVSqlUpdateShim_V1(requestCtx context.Context, rw http.ResponseWrite
 }
 
 func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWriter, busRequest bus.Request, reqSender bus.IRequestSender) bool {
-	args := map[string]any{}
-	if len(busRequest.Body) > 0 {
-		body := map[string]any{}
-		if err := json.Unmarshal(busRequest.Body, &body); err != nil {
-			return false
-		}
-		if a, ok := body["args"].(map[string]any); ok {
-			args = a
-		} else {
-			return false
-		}
+	if len(busRequest.Body) == 0 {
+		return false
+	}
+	body := map[string]any{}
+	if err := json.Unmarshal(busRequest.Body, &body); err != nil {
+		return false
+	}
+	args, ok := body["args"].(map[string]any)
+	if !ok {
+		return false
 	}
 	argsBytes, err := json.Marshal(args)
 	if err != nil {
+		// notest
 		return false
 	}
 
