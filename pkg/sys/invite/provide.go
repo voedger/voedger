@@ -21,17 +21,11 @@ func Provide(sr istructsmem.IStatelessResources, time timeu.ITime,
 	provideCmdInitiateCancelAcceptedInvite(sr, time)
 	provideCmdInitiateLeaveWorkspace(sr, time)
 	provideCmdCancelSentInvite(sr, time)
-	provideCmdCompleteInvitation(sr)
-	provideCmdCompleteJoinWorkspace(sr)
 	provideCmdCreateJoinedWorkspace(sr)
 	provideCmdUpdateJoinedWorkspaceRoles(sr)
 	provideCmdDeactivateJoinedWorkspace(sr)
 	sr.AddProjectors(appdef.SysPackagePath,
-		asyncProjectorApplyInvitation(time, federation, itokens, smtpCfg),
-		asyncProjectorApplyJoinWorkspace(time, federation, itokens),
-		asyncProjectorApplyUpdateInviteRoles(time, federation, itokens, smtpCfg),
-		asyncProjectorApplyCancelAcceptedInvite(time, federation, itokens),
-		asyncProjectorApplyLeaveWorkspace(time, federation, itokens),
+		asyncProjectorApplyInviteEvents(time, federation, itokens, smtpCfg),
 		syncProjectorInviteIndex(),
 		syncProjectorJoinedWorkspaceIndex(),
 		applyViewSubjectsIdx(),

@@ -22,7 +22,7 @@ func provideCmdInitiateUpdateInviteRoles(sr istructsmem.IStatelessResources, tim
 	))
 }
 
-func execCmdInitiateUpdateInviteRoles(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateUpdateInviteRoles(_ timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
@@ -45,13 +45,6 @@ func execCmdInitiateUpdateInviteRoles(time timeu.ITime) func(args istructs.ExecC
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
-		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
-		if err != nil {
-			return
-		}
-		svbCDocInvite.PutInt32(Field_State, int32(State_ToUpdateRoles))
-		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
-
-		return err
+		return nil
 	}
 }

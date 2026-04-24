@@ -40,8 +40,11 @@ Role management:
 Membership termination:
 
 - `c.sys.InitiateCancelAcceptedInvite`: owner removes joined member (WorkspaceOwner)
+  - Params: InviteID
 - `c.sys.InitiateLeaveWorkspace`: member voluntarily leaves (AuthenticatedUser)
+  - No params (invite found by login from auth token)
 - `c.sys.CancelSentInvite`: cancels pending invitation (WorkspaceOwner)
+  - Params: InviteID
 
 Internal commands (called by projectors via Federation):
 
@@ -114,70 +117,74 @@ Internal commands (called by projectors via Federation):
 
 ### Invite state diagram
 
+Final states: Invited, Joined, Cancelled, Left (written by projector).
+Transient state: ToBeInvited (written by command, transitioned to Invited by projector).
+Dead states (ToBeJoined, ToUpdateRoles, ToBeCancelled, ToBeLeft) -- only in old data, no longer written.
+
+`InitiateInvitationByEMail` writes State=ToBeInvited (CDoc must have a State on
+creation; on re-invite it resets State so projector knows to send a new email).
+All final state transitions are performed by `ap.sys.ApplyInviteEvents` projector.
+
 ```mermaid
 stateDiagram-v2
 
     [*] --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
 
-    ToBeInvited --> Invited: ap.sys.ApplyInvitation()
+    ToBeInvited --> Invited : ap.sys.ApplyInviteEvents()
 
-    Invited --> ToBeInvited: c.sys.InitiateInvitationByEMail() by Inviter
-    Invited --> ToBeJoined: c.sys.InitiateJoinWorkspace() by Invitee
-    Invited --> Cancelled: c.sys.CancelSentInvite() by Inviter
+    Invited --> Joined : c.sys.InitiateJoinWorkspace() by Invitee
+    Invited --> Cancelled : c.sys.CancelSentInvite() by Inviter
 
-    ToBeJoined --> Joined: ap.sys.ApplyJoinWorkspace()
-
-    Joined --> ToBeCancelled: c.sys.InitiateCancelAcceptedInvite() by Inviter
-    Joined --> ToBeLeft: c.sys.InitiateLeaveWorkspace() by Invitee
-    Joined --> ToUpdateRoles: c.sys.InitiateUpdateInviteRoles() by Inviter
-
-    ToUpdateRoles --> Joined: ap.sys.ApplyUpdateInviteRoles()
-
-    ToBeLeft --> Left: ap.sys.ApplyLeaveWorkspace()
-
-    ToBeCancelled --> Cancelled: ap.sys.ApplyCancelAcceptedInvite()
+    Joined --> Cancelled : c.sys.InitiateCancelAcceptedInvite() by Inviter
+    Joined --> Left : c.sys.InitiateLeaveWorkspace() by Invitee
+    Joined --> Joined : c.sys.InitiateUpdateInviteRoles() by Inviter
 ```
 
-**Extra** (re-invite and recovery transitions):
+Re-invite and recovery transitions:
 
 ```mermaid
 stateDiagram-v2
-    ToBeInvited --> ToBeInvited: c.sys.InitiateInvitationByEMail() by Inviter
-    ToBeInvited --> Cancelled: c.sys.CancelSentInvite() by Inviter
-    ToBeJoined --> ToBeInvited: c.sys.InitiateInvitationByEMail() by Inviter
-    ToBeJoined --> Cancelled: c.sys.CancelSentInvite() by Inviter
-    Cancelled --> ToBeInvited: c.sys.InitiateInvitationByEMail() by Inviter
-    Left --> ToBeInvited: c.sys.InitiateInvitationByEMail() by Inviter
+
+    ToBeInvited --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
+    ToBeInvited --> Cancelled : c.sys.CancelSentInvite() by Inviter
+    Cancelled --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
+    Left --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
 ```
 
 ---
 
-### Projector guards
+### Single projector design
 
-Async projectors must check invite state before doing work. If state changed (recovery action happened), projector skips silently.
+Commands do pre-validation (immediate 400 for invalid requests).
+The projector re-validates actual state before applying transitions (source of truth).
 
-Guard rules:
+`ap.sys.ApplyInviteEvents` is the sole writer of final states on `cdoc.sys.Invite`.
+It triggers on all 6 invite commands and handles each event type:
 
-- `ap.sys.ApplyInvitation`: skip unless `State == ToBeInvited`
-- `ap.sys.ApplyJoinWorkspace`: skip unless `State == ToBeJoined`
+- `InitiateInvitationByEMail`: ToBeInvited -> Invited, send invitation email
+- `InitiateJoinWorkspace`: Invited -> Joined, create Subject, create JoinedWorkspace via federation
+- `InitiateUpdateInviteRoles`: keep State=Joined, update Roles on Invite CDoc, update Subject/JoinedWorkspace roles via federation, send email
+- `InitiateCancelAcceptedInvite`: Joined -> Cancelled, deactivate Subject/JoinedWorkspace via federation
+- `InitiateLeaveWorkspace`: Joined -> Left, set IsActive=false, deactivate Subject/JoinedWorkspace via federation
+- `CancelSentInvite`: Invited/ToBeInvited -> Cancelled
 
-Projectors use commands for final state transitions instead of direct CUD. Commands validate state and return error if state changed during projector execution:
+If actual state does not match the expected source state for the event, the projector skips the event (stale).
 
-- `c.sys.CompleteInvitation` (ToBeInvited -> Invited): called by `ap.sys.ApplyInvitation`
-- `c.sys.CompleteJoinWorkspace` (ToBeJoined -> Joined): called by `ap.sys.ApplyJoinWorkspace`
+Projector gets InviteID from:
 
-Flow:
+- `event.ArgumentObject().AsRecordID(field_InviteID)` for commands that have InviteID param
+- `InitiateInvitationByEMail`: from event CUDs (command creates/updates Invite CDoc)
+- `InitiateLeaveWorkspace`: from event CUDs. Command has no InviteID param and
+  projector has no access to auth token, so command keeps a no-op CUD on the
+  Invite CDoc (touch record, no meaningful field writes) as the only way to
+  pass InviteID to the projector
 
-```text
-Projector starts
-  |-> Guard: check state == expected?
-  |   |-> No: skip (return nil)
-  |   |-> Yes: continue
-  |-> Do work (send email, create subject)
-  |-> Call command (validates state again)
-      |-> State changed? Error -> projector fails -> reapplied -> guard skips
-      |-> State still expected? Transition to final state
-```
+Dead ToBe states in old data are treated as their source state:
+
+- ToBeJoined -> treat as Invited (apply join)
+- ToUpdateRoles -> treat as Joined (apply role update)
+- ToBeCancelled -> treat as Joined (apply cancel)
+- ToBeLeft -> treat as Joined (apply leave)
 
 ---
 
@@ -190,11 +197,11 @@ Projector starts
 - Email varchar NOT NULL // same as Login
 - Roles varchar(1024)
 - ExpireDatetime int64 // unix-timestamp
-- VerificationCode varchar // set by ap.sys.ApplyInvitation
-- State int32 NOT NULL // see state diagram
+- VerificationCode varchar // set by ap.sys.ApplyInviteEvents
+- State int32 NOT NULL // see state diagram; ToBeInvited by command, final states by projector
 - Created int64 // unix-timestamp, set on creation
 - Updated int64 NOT NULL // unix-timestamp, updated on every state change
-- SubjectID ref // set by ap.sys.ApplyJoinWorkspace
+- SubjectID ref // set by ap.sys.ApplyInviteEvents
 - InviteeProfileWSID int64 // set by c.sys.InitiateJoinWorkspace
 - ActualLogin varchar // invitee's login from token, set by c.sys.InitiateJoinWorkspace
 - UNIQUEFIELD Email
@@ -219,45 +226,41 @@ Stored in invitee's profile workspace.
 
 ## Decisions
 
-### Accept TOCTOU window for projector side effects
+### Single projector as sole writer of final states
 
-There is a TOCTOU window between the projector guard and the final validated
-command. If the invite is cancelled and re-invited during this window, the state
-returns to `ToBeInvited` and the validated command succeeds against a stale
-event.
+Commands and projectors previously both wrote to the Invite CDoc, causing TOCTOU
+races and requiring guards and validated commands (CompleteInvitation,
+CompleteJoinWorkspace) as mitigation.
 
-`ApplyInvitation`: if the invite is cancelled and re-invited while the
-projector is executing, `CompleteInvitation` succeeds (state is `ToBeInvited`
-again), and a stale email is sent with the original event's template and
-verification code. The re-invite's own `ApplyInvitation` then sees state
-`Invited` and skips -- the re-invite email is never sent.
+New design: a single projector (`ap.sys.ApplyInviteEvents`) is the sole writer
+of final states (Invited, Joined, Cancelled, Left). It processes events in PLog
+order -- serialized, no races.
 
-`ApplyJoinWorkspace` execution order:
+`InitiateInvitationByEMail` writes transient State=ToBeInvited because the CDoc
+must have a State on creation (and on re-invite, to signal the projector).
+`InitiateJoinWorkspace` writes data fields from the auth token (InviteeProfileWSID,
+SubjectKind, ActualLogin) but does not write State. `InitiateLeaveWorkspace`
+keeps a no-op CUD to pass InviteID to the projector (no InviteID param, no auth
+token in projector). All other commands do no CUD.
 
-```text
-1. Guard: state == ToBeJoined? Yes -> continue
-2. Federation call: create Subject (or reactivate existing)  <-- immediate HTTP call, takes effect NOW
-3. Federation call: CreateJoinedWorkspace in invitee's profile  <-- immediate HTTP call, takes effect NOW
-4. Federation call: CompleteJoinWorkspace (ToBeJoined -> Joined)  <-- validates state
-```
+### Stale event handling
 
-Steps 2-3 are immediate HTTP requests, NOT intents. If `CancelSentInvite` runs
-after step 1 but before step 4, the Subject and JoinedWorkspace are already
-created in their respective workspaces. Step 4 rejects the transition (state is
-`Cancelled`, not `ToBeJoined`), but the side effects remain. There is a brief
-window where the user has workspace access they should not have. The cancel
-flow's own projectors (`ApplyCancelAcceptedInvite`) eventually deactivate the
-Subject and JoinedWorkspace, so the system converges to the correct state.
+Between command pre-validation and projector execution, other events may change
+the invite state. The projector re-validates actual state before applying
+transitions. If the state no longer matches the expected source state for the
+event, the projector skips it silently.
 
-Side effects are benign:
+Example: user calls CancelSentInvite (pre-validates state=Invited, creates
+event), then another command changes state before the projector runs. The
+projector sees the new state, determines the cancel event is stale, and skips.
 
-- Stale invitation email: contains a verification code that leads to a valid join (state was re-set to `ToBeInvited` then transitioned to `Invited`)
-- Subject/JoinedWorkspace: cleaned up by the cancel/leave projector that runs for the new state
-- All operations are idempotent, so re-execution on projector retry is safe
+### Federation side effects and eventual consistency
 
-For the simple cancel-only case (no re-invite), `CompleteInvitation` fails,
-the projector returns an error, flush never runs, and the email is never sent.
-`CompleteJoinWorkspace` similarly rejects the transition.
+`ApplyInviteEvents` makes federation calls (create Subject, create/update/
+deactivate JoinedWorkspace) before writing the final state. If the projector
+fails after federation calls but before state write, the calls are already
+applied. On retry, the projector re-applies them (operations are idempotent).
 
-Eliminating the window would require distributed transactions or saga
-compensation, which is disproportionate to the impact.
+If a cancel event arrives while a join is in progress, the join's side effects
+(Subject, JoinedWorkspace) persist briefly. The cancel event's handler
+eventually deactivates them, so the system converges to the correct state.

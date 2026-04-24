@@ -58,13 +58,8 @@ func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecComm
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
-		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
-		if err != nil {
-			return err
-		}
-		svbCDocInvite.PutInt32(Field_State, int32(State_ToBeLeft))
-		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
-		svbCDocInvite.PutBool(appdef.SystemField_IsActive, false)
+		// no-op CUD: keep UpdateValue so projector can discover InviteID from event.CUDs
+		_, err = args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
 
 		return
 	}
