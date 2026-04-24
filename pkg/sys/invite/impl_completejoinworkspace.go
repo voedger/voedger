@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-present unTill Pro, Ltd.
+ * Copyright (c) 2024-present unTill Software Development Group B.V.
  */
 
 package invite
