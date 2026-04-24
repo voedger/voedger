@@ -118,9 +118,9 @@ Internal commands (called by projectors via Federation):
 stateDiagram-v2
 
     [*] --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
-    
+
     ToBeInvited --> Invited: ap.sys.ApplyInvitation()
-    
+
     Invited --> ToBeInvited: c.sys.InitiateInvitationByEMail() by Inviter
     Invited --> ToBeJoined: c.sys.InitiateJoinWorkspace() by Invitee
     Invited --> Cancelled: c.sys.CancelSentInvite() by Inviter
@@ -214,3 +214,50 @@ Stored in invitee's profile workspace.
 - Roles varchar(1024) NOT NULL // comma-separated
 - InvitingWorkspaceWSID int64 NOT NULL
 - WSName varchar NOT NULL
+
+---
+
+## Decisions
+
+### Accept TOCTOU window for projector side effects
+
+There is a TOCTOU window between the projector guard and the final validated
+command. If the invite is cancelled and re-invited during this window, the state
+returns to `ToBeInvited` and the validated command succeeds against a stale
+event.
+
+`ApplyInvitation`: if the invite is cancelled and re-invited while the
+projector is executing, `CompleteInvitation` succeeds (state is `ToBeInvited`
+again), and a stale email is sent with the original event's template and
+verification code. The re-invite's own `ApplyInvitation` then sees state
+`Invited` and skips -- the re-invite email is never sent.
+
+`ApplyJoinWorkspace` execution order:
+
+```text
+1. Guard: state == ToBeJoined? Yes -> continue
+2. Federation call: create Subject (or reactivate existing)  <-- immediate HTTP call, takes effect NOW
+3. Federation call: CreateJoinedWorkspace in invitee's profile  <-- immediate HTTP call, takes effect NOW
+4. Federation call: CompleteJoinWorkspace (ToBeJoined -> Joined)  <-- validates state
+```
+
+Steps 2-3 are immediate HTTP requests, NOT intents. If `CancelSentInvite` runs
+after step 1 but before step 4, the Subject and JoinedWorkspace are already
+created in their respective workspaces. Step 4 rejects the transition (state is
+`Cancelled`, not `ToBeJoined`), but the side effects remain. There is a brief
+window where the user has workspace access they should not have. The cancel
+flow's own projectors (`ApplyCancelAcceptedInvite`) eventually deactivate the
+Subject and JoinedWorkspace, so the system converges to the correct state.
+
+Side effects are benign:
+
+- Stale invitation email: contains a verification code that leads to a valid join (state was re-set to `ToBeInvited` then transitioned to `Invited`)
+- Subject/JoinedWorkspace: cleaned up by the cancel/leave projector that runs for the new state
+- All operations are idempotent, so re-execution on projector retry is safe
+
+For the simple cancel-only case (no re-invite), `CompleteInvitation` fails,
+the projector returns an error, flush never runs, and the email is never sent.
+`CompleteJoinWorkspace` similarly rejects the transition.
+
+Eliminating the window would require distributed transactions or saga
+compensation, which is disproportionate to the impact.

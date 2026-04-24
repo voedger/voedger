@@ -19,7 +19,7 @@ Gemini identified two concerns:
 
 ## Review 2: Copilot
 
-### Ccomment (Copilot)
+### Comment (Copilot)
 
 > Should also add State_ToUpdateRoles, State_ToBeCancelled, State_ToBeLeft to allow recovery from stuck states.
 
