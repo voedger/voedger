@@ -3,6 +3,7 @@ registered_at: 2026-04-22T08:59:37Z
 change_id: 2604220859-cluster-vsqlupdate2
 baseline: 36c8ee68f6ca5db6f2495bf5c36d23ff652c07d3
 issue_url: https://untill.atlassian.net/browse/AIR-3656
+archived_at: 2026-04-24T09:16:23Z
 ---
 
 # Change request: Replace c.cluster.VSqlUpdate with q.cluster.VSqlUpdate2 to avoid command processor deadlock
