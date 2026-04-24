@@ -458,3 +458,79 @@ func TestResendInvitation(t *testing.T) {
 	require.Equal(sentEmail1Data[3], sentEmail2Data[3])
 	require.Equal(sentEmail1Data[4], sentEmail2Data[4])
 }
+
+// TestRecoverFromStuckInviteStates tests that invites stuck in transitional states
+// (ToBeInvited, ToBeJoined) can be recovered via re-invite or cancel.
+// This can happen when async projectors fail (e.g., email send failed, federation call failed).
+func TestRecoverFromStuckInviteStates(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(it.SimpleWSParams("TestRecoverStuckStates_ws"), prn)
+
+	t.Run("re-invite from State_ToBeInvited", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobeinvited_reinvite_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state by forcing State_ToBeInvited via direct CUD
+		setInviteState(vit, ws, inviteID, invite.State_ToBeInvited)
+
+		// Re-invite should succeed from State_ToBeInvited
+		InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+	})
+
+	t.Run("cancel from State_ToBeInvited", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobeinvited_cancel_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state
+		setInviteState(vit, ws, inviteID, invite.State_ToBeInvited)
+
+		// Cancel should succeed from State_ToBeInvited
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
+	})
+
+	t.Run("re-invite from State_ToBeJoined", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobejoined_reinvite_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state by forcing State_ToBeJoined via direct CUD
+		setInviteState(vit, ws, inviteID, invite.State_ToBeJoined)
+
+		// Re-invite should succeed from State_ToBeJoined
+		InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+	})
+
+	t.Run("cancel from State_ToBeJoined", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobejoined_cancel_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state
+		setInviteState(vit, ws, inviteID, invite.State_ToBeJoined)
+
+		// Cancel should succeed from State_ToBeJoined
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
+	})
+}
+
+// setInviteState directly sets invite state via CUD (for testing stuck state recovery)
+func setInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, state invite.State) {
+	vit.T.Helper()
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d}}]}`, inviteID, state)
+	vit.PostWS(ws, "c.sys.CUD", body)
+}

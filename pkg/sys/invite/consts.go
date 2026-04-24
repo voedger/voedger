@@ -96,9 +96,11 @@ const (
 var (
 	inviteValidStates = map[appdef.QName]map[State]bool{
 		qNameCmdInitiateInvitationByEMail: {
-			State_Cancelled: true,
-			State_Left:      true,
-			State_Invited:   true,
+			State_Cancelled:   true,
+			State_Left:        true,
+			State_Invited:     true,
+			State_ToBeInvited: true, // recovery from stuck state (projector failed before email sent)
+			State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
 		},
 		qNameCmdInitiateJoinWorkspace: {
 			State_Invited: true,
@@ -113,7 +115,9 @@ var (
 			State_Joined: true,
 		},
 		qNameCmdCancelSentInvite: {
-			State_Invited: true,
+			State_Invited:     true,
+			State_ToBeInvited: true, // recovery from stuck state (projector failed before email sent)
+			State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
 		},
 	}
 	reInviteAllowedForState = map[State]bool{
@@ -123,5 +127,6 @@ var (
 		// https://github.com/voedger/voedger/issues/3698
 		State_ToBeInvited: true,
 		State_Invited:     true,
+		State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
 	}
 )
