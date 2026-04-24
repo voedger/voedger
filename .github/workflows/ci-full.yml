@@ -13,6 +13,7 @@ jobs:
       go_race: "true"
       short_test: "false"
       install_tinygo: "true"
+      lint_exclude: "cmd/vpm/testdata pkg/iextengine/wazero/_testdata pkg/sys/it/testdata"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
 
