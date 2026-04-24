@@ -135,7 +135,7 @@ services:
 
 	sort.Sort(expectedNewState)
 	sort.Sort(newState)
-	require.Equal(t, len(expectedNewState), len(newState))
+	require.Len(t, newState, len(expectedNewState))
 	require.Equal(t, expectedNewState, newState)
 
 	err = cleanUp(projectName)
@@ -180,7 +180,7 @@ services:
 	newState, err := dockerContainers(projectName)
 	require.NoError(t, err)
 
-	require.Equal(t, len(expectedNewState), len(newState))
+	require.Len(t, newState, len(expectedNewState))
 	//require.Equal(t, expectedNewState.states, newState.states)
 
 	// updating image to version 7.0.11-alpine
@@ -198,7 +198,7 @@ services:
 	newState, err = dockerContainers(projectName)
 	require.NoError(t, err)
 
-	require.Equal(t, len(expectedNewState), len(newState))
+	require.Len(t, newState, len(expectedNewState))
 	//require.Equal(t, expectedNewState.states, newState.states)
 
 	// adding nginx service
@@ -235,7 +235,7 @@ services:
 
 	sort.Sort(expectedNewState)
 	sort.Sort(newState)
-	require.Equal(t, len(expectedNewState), len(newState))
+	require.Len(t, newState, len(expectedNewState))
 	require.Equal(t, expectedNewState, newState)
 
 	err = cleanUp(projectName)
@@ -249,7 +249,7 @@ func TestDockerController_InvalidComposeFile(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test on Windows.")
 	}
-	
+
 	projectName := `my`
 	sp := DockerSP{
 		Version:     "1.0",

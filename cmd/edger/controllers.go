@@ -103,7 +103,7 @@ func cleanUp(projectName string) error {
 }
 
 func buildDockerArgs(command, projectName string, filter map[string]string, args ...string) (allArgs []string) {
-	allArgs = make([]string, 0)
+	allArgs = make([]string, 0, 1+len(args)+2+2*len(filter))
 	allArgs = append(allArgs, command)
 	allArgs = append(allArgs, args...)
 	allArgs = append(allArgs, "-f", "name="+projectName)
