@@ -44,10 +44,7 @@ func execCmdCompleteJoinWorkspace(args istructs.ExecCommandArgs) (err error) {
 	}
 	svbCDocInvite.PutInt32(Field_State, int32(State_Joined))
 	svbCDocInvite.PutInt64(Field_Updated, args.ArgumentObject.AsInt64(Field_Updated))
-	subjectID := args.ArgumentObject.AsRecordID(field_SubjectID)
-	if subjectID != istructs.NullRecordID {
-		svbCDocInvite.PutRecordID(field_SubjectID, subjectID)
-	}
+	svbCDocInvite.PutRecordID(field_SubjectID, args.ArgumentObject.AsRecordID(field_SubjectID))
 
 	return
 }

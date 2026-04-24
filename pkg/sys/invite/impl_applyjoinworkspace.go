@@ -121,9 +121,9 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 		}
 
 		// Update cdoc.sys.Invite State=Joined via validated command
-		subjectID := resp.NewID()
-		if existingSubjectID != istructs.NullRecordID {
-			subjectID = 0
+		subjectID := existingSubjectID
+		if subjectID == istructs.NullRecordID {
+			subjectID = resp.NewID()
 		}
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CompleteJoinWorkspace", appQName, event.Workspace()),

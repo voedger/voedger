@@ -176,6 +176,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(login2Prn.ProfileWSID), cDocInvite[10])
 	require.Equal(float64(istructs.SubjectKind_User), cDocInvite[0])
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
+	require.NotEqual(float64(0), cDocInvite[9], "SubjectID must be set after join")
 
 	cDocJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, login2Prn)
 
