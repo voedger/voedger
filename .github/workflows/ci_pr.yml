@@ -14,5 +14,6 @@ jobs:
       running_workflow: "CI pkg-cmd PR"
       go_race: "false"
       install_tinygo: "true"
+      lint_exclude: "cmd/vpm/testdata pkg/iextengine/wazero/_testdata pkg/sys/it/testdata"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
