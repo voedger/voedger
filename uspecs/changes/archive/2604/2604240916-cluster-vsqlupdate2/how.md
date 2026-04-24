@@ -35,10 +35,10 @@
 
 References:
 
-- [pkg/cluster/appws.vsql](../../../pkg/cluster/appws.vsql)
-- [pkg/cluster/provide.go](../../../pkg/cluster/provide.go)
-- [pkg/cluster/impl_vsqlupdate.go](../../../pkg/cluster/impl_vsqlupdate.go)
-- [pkg/cluster/consts.go](../../../pkg/cluster/consts.go)
-- [pkg/processors/command/impl.go](../../../pkg/processors/command/impl.go)
-- [pkg/router/impl_apiv2.go](../../../pkg/router/impl_apiv2.go)
-- [pkg/sys/it/impl_vsqlupdate_test.go](../../../pkg/sys/it/impl_vsqlupdate_test.go)
+- [pkg/cluster/appws.vsql](../../../../../pkg/cluster/appws.vsql)
+- [pkg/cluster/provide.go](../../../../../pkg/cluster/provide.go)
+- [pkg/cluster/impl_vsqlupdate.go](../../../../../pkg/cluster/impl_vsqlupdate.go)
+- [pkg/cluster/consts.go](../../../../../pkg/cluster/consts.go)
+- [pkg/processors/command/impl.go](../../../../../pkg/processors/command/impl.go)
+- [pkg/router/impl_apiv2.go](../../../../../pkg/router/impl_apiv2.go)
+- [pkg/sys/it/impl_vsqlupdate_test.go](../../../../../pkg/sys/it/impl_vsqlupdate_test.go)
