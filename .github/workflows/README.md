@@ -32,7 +32,7 @@ with:
   short_test: "true" # Run short tests only
   go_race: "false" # Enable race detector
   install_tinygo: "true" # Install TinyGo
-  lint_exclude: "cmd/vpm/testdata pkg/iextengine/wazero/_testdata pkg/sys/it/testdata" # Paths skipped by the linter
+  lint_exclude: "cmd/vpm/testdata pkg/iextengine/wazero/_testdata pkg/sys/it/testdata examples/airs-bp2/air" # Paths skipped by the linter
 secrets:
   reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
 ```
@@ -59,7 +59,7 @@ with:
   running_workflow: "CI pkg-cmd PR" # Cancel duplicates
   go_race: "false"
   install_tinygo: "true"
-  lint_exclude: "cmd/vpm/testdata pkg/iextengine/wazero/_testdata pkg/sys/it/testdata" # Paths skipped by the linter
+  lint_exclude: "cmd/vpm/testdata pkg/iextengine/wazero/_testdata pkg/sys/it/testdata examples/airs-bp2/air" # Paths skipped by the linter
 secrets:
   reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
 ```
@@ -117,7 +117,7 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 
 1. Calls `untillpro/ci-action/.github/workflows/ci.yml@main`
    - short_test: true, go_race: false, install_tinygo: true
-   - lint_exclude: `cmd/vpm/testdata`, `pkg/iextengine/wazero/_testdata`, `pkg/sys/it/testdata`
+   - lint_exclude: `cmd/vpm/testdata`, `pkg/iextengine/wazero/_testdata`, `pkg/sys/it/testdata`, `examples/airs-bp2/air`
 2. Calls `cd-voedger.yml` to build Docker image
 
 ### PR (ci_pr.yml)
@@ -128,7 +128,7 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 
 1. Calls `untillpro/ci-action/.github/workflows/ci.yml@main`
    - go_race: true, short_test: false (full tests)
-   - lint_exclude: `cmd/vpm/testdata`, `pkg/iextengine/wazero/_testdata`, `pkg/sys/it/testdata`
+   - lint_exclude: `cmd/vpm/testdata`, `pkg/iextengine/wazero/_testdata`, `pkg/sys/it/testdata`, `examples/airs-bp2/air`
 2. On failure: Creates issue via `create_issue.yml`
 3. Calls `cd-voedger.yml` to build Docker image
 
