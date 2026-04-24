@@ -16,8 +16,3 @@ jobs:
       install_tinygo: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-  auto-merge-pr:
-    needs: call-workflow-ci
-    uses: ./.github/workflows/merge.yml
-    secrets:
-      personaltoken: ${{ secrets.REPOREADING_TOKEN }}

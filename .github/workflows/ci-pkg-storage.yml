@@ -180,17 +180,3 @@ jobs:
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}
 
-  auto-merge-pr:
-    uses: ./.github/workflows/merge.yml
-    secrets:
-      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
-    needs:
-      - determine_changes
-      - trigger_cas
-      - trigger_amazon
-    if: always() &&       
-      (
-        (needs.trigger_cas.result == 'success' && (needs.trigger_amazon.result == 'success' || needs.trigger_amazon.result == 'skipped')) ||
-        (needs.trigger_amazon.result == 'success' && (needs.trigger_cas.result == 'success' || needs.trigger_cas.result == 'skipped'))
-      )                                                                                                                               
-

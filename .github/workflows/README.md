@@ -2,21 +2,19 @@
 
 ## Workflows Overview
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `ci.yml` | Push to main (excl. pkg/istorage) | Run CI tests, build Docker image |
-| `ci_pr.yml` | PR (excl. pkg/istorage) | Run CI tests, auto-merge |
-| `ci-wf_pr.yml` | PR to .github/workflows | Auto-merge workflow changes |
-| `ci-full.yml` | Daily 5 AM UTC / manual | Full test suite with race detector |
-| `ci-pkg-storage.yml` | Push/PR to pkg/istorage paths | Run storage backend tests |
-| `ci_cas.yml` | Called by ci-pkg-storage | Cassandra/ScyllaDB tests |
-| `ci_amazon.yml` | Called by ci-pkg-storage | Amazon DynamoDB tests |
-| `cp.yml` | Reusable workflow | Cherry pick commits |
-| `linkIssue.yml` | Issue closed | Link issue to milestone |
-| `unlinkIssue.yml` | Issue reopened | Unlink issue from milestone |
-| `merge.yml` | Reusable workflow | Auto-merge PR |
-| `cd-voedger.yml` | Reusable workflow | Build and push Docker image |
-| `ctool-integration-test.yml` | Manual | Integration tests for ctool |
+| Workflow                     | Trigger                           | Purpose                            |
+| ---------------------------- | --------------------------------- | ---------------------------------- |
+| `ci.yml`                     | Push to main (excl. pkg/istorage) | Run CI tests, build Docker image   |
+| `ci_pr.yml`                  | PR (excl. pkg/istorage)           | Run CI tests                       |
+| `ci-full.yml`                | Daily 5 AM UTC / manual           | Full test suite with race detector |
+| `ci-pkg-storage.yml`         | Push/PR to pkg/istorage paths     | Run storage backend tests          |
+| `ci_cas.yml`                 | Called by ci-pkg-storage          | Cassandra/ScyllaDB tests           |
+| `ci_amazon.yml`              | Called by ci-pkg-storage          | Amazon DynamoDB tests              |
+| `cp.yml`                     | Reusable workflow                 | Cherry pick commits                |
+| `linkIssue.yml`              | Issue closed                      | Link issue to milestone            |
+| `unlinkIssue.yml`            | Issue reopened                    | Unlink issue from milestone        |
+| `cd-voedger.yml`             | Reusable workflow                 | Build and push Docker image        |
+| `ctool-integration-test.yml` | Manual                            | Integration tests for ctool        |
 
 ---
 
@@ -31,14 +29,15 @@ Main CI workflow for Go projects.
 ```yaml
 uses: untillpro/ci-action/.github/workflows/ci.yml@main
 with:
-  short_test: "true"     # Run short tests only
-  go_race: "false"       # Enable race detector
+  short_test: "true" # Run short tests only
+  go_race: "false" # Enable race detector
   install_tinygo: "true" # Install TinyGo
 secrets:
   reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
 ```
 
 **What it does:**
+
 1. Detects Go language
 2. Checks hidden folders
 3. Checks bash script headers
@@ -56,7 +55,7 @@ PR-specific CI workflow with additional checks.
 uses: untillpro/ci-action/.github/workflows/ci_pr.yml@main
 with:
   short_test: "true"
-  running_workflow: "CI pkg-cmd PR"  # Cancel duplicates
+  running_workflow: "CI pkg-cmd PR" # Cancel duplicates
   go_race: "false"
   install_tinygo: "true"
 secrets:
@@ -64,6 +63,7 @@ secrets:
 ```
 
 **Additional checks:**
+
 - Cancel duplicate running workflows
 - Check PR file size limits
 
@@ -99,14 +99,13 @@ Auto-detects Go version from go.work/go.mod.
 
 Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/scripts/`:
 
-| Script | Used By | Purpose |
-|--------|---------|---------|
-| `domergepr.sh` | merge.yml | Auto-merge PR (check team, size, squash merge) |
-| `add-issue-commit.sh` | cp.yml | Add comment to GitHub issue |
-| `cp.sh` | cp.yml | Cherry pick commits to branch |
-| `close-issue.sh` | cp.yml | Close GitHub issue |
-| `linkmilestone.sh` | linkIssue.yml | Link issue to milestone |
-| `unlinkmilestone.sh` | unlinkIssue.yml | Remove milestone from issue |
+| Script                | Used By         | Purpose                       |
+| --------------------- | --------------- | ----------------------------- |
+| `add-issue-commit.sh` | cp.yml          | Add comment to GitHub issue   |
+| `cp.sh`               | cp.yml          | Cherry pick commits to branch |
+| `close-issue.sh`      | cp.yml          | Close GitHub issue            |
+| `linkmilestone.sh`    | linkIssue.yml   | Link issue to milestone       |
+| `unlinkmilestone.sh`  | unlinkIssue.yml | Remove milestone from issue   |
 
 ---
 
@@ -121,7 +120,6 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 ### PR (ci_pr.yml)
 
 1. Calls `untillpro/ci-action/.github/workflows/ci_pr.yml@main`
-2. Calls `merge.yml` for auto-merge
 
 ### Daily Tests (ci-full.yml)
 
@@ -134,15 +132,6 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 
 1. Determines which files changed (CAS, Amazon, TTL, Elections)
 2. Triggers `ci_cas.yml` or `ci_amazon.yml` based on changes
-3. Auto-merges via `merge.yml` if tests pass
-
-### Auto-Merge (merge.yml)
-
-Runs `domergepr.sh` which:
-- Verifies PR author is in developers team
-- Checks PR size (< 200 lines)
-- Processes "Resolves #" references
-- Squash merges with branch deletion
 
 ---
 
@@ -183,7 +172,6 @@ graph TD
     subgraph "GitHub Events"
         E1["📌 Push to main<br/>pkg-cmd changes"]
         E2["🔀 PR to pkg-cmd<br/>excluding pkg/istorage"]
-        E3["🔀 PR to .github/workflows"]
         E4["⏰ Daily Schedule<br/>5 AM UTC"]
         E5["📋 Issue opened<br/>cprc/cprelease"]
         E6["🔀 PR to pkg/istorage<br/>storage paths"]
@@ -195,7 +183,6 @@ graph TD
     subgraph "Voedger Workflows"
         W1["ci.yml"]
         W2["ci_pr.yml"]
-        W3["ci-wf_pr.yml"]
         W4["ci-full.yml"]
         W5["cp.yml"]
         W6["ci-pkg-storage.yml"]
@@ -209,7 +196,6 @@ graph TD
         CW2["ci_pr.yml"]
         CW3["cp.yml"]
         CW7["cd-voedger.yml (local)"]
-        CW8["merge.yml (local)"]
         CW9["create_issue.yml"]
     end
 
@@ -223,14 +209,12 @@ graph TD
         D2["✗ Tests Fail"]
         D3["📊 Coverage Report"]
         D4["🐳 Docker Image"]
-        D5["🔗 PR Auto-Merge"]
         D6["📝 Issue Comment"]
         D7["🏷️ Milestone Link"]
     end
 
     E1 --> W1
     E2 --> W2
-    E3 --> W3
     E4 --> W4
     E5 --> W5
     E6 --> W6
@@ -241,14 +225,11 @@ graph TD
     W1 --> CW1
     W1 --> CW7
     W2 --> CW2
-    W2 --> CW8
-    W3 --> CW8
     W4 --> CW1
     W4 --> CW7
     W5 --> CW3
     W6 --> ST1
     W6 --> ST2
-    W6 --> CW8
     W7 --> D7
     W8 --> D7
 
@@ -257,9 +238,7 @@ graph TD
     CW1 --> D3
     CW2 --> D1
     CW2 --> D2
-    CW2 --> D5
     CW7 --> D4
-    CW8 --> D5
     CW3 --> D6
     ST1 --> D1
     ST1 --> D2
@@ -270,7 +249,6 @@ graph TD
 
     style E1 fill:#e1f5ff
     style E2 fill:#e1f5ff
-    style E3 fill:#e1f5ff
     style E4 fill:#fff3e0
     style E5 fill:#f3e5f5
     style E6 fill:#e8f5e9
@@ -280,7 +258,6 @@ graph TD
 
     style W1 fill:#b3e5fc
     style W2 fill:#b3e5fc
-    style W3 fill:#b3e5fc
     style W4 fill:#ffe0b2
     style W5 fill:#e1bee7
     style W6 fill:#c8e6c9
@@ -292,14 +269,12 @@ graph TD
     style CW2 fill:#81d4fa
     style CW3 fill:#ce93d8
     style CW7 fill:#ffcc80
-    style CW8 fill:#81d4fa
     style CW9 fill:#ce93d8
 
     style D1 fill:#4caf50
     style D2 fill:#f44336
     style D3 fill:#2196f3
     style D4 fill:#ff9800
-    style D5 fill:#9c27b0
     style D6 fill:#00bcd4
     style D7 fill:#673ab7
 ```
@@ -308,7 +283,7 @@ graph TD
 
 ## 2. PR to pkg-cmd: Execution and Data Flow
 
-Detailed step-by-step flow showing PR validation, testing, and auto-merge.
+Detailed step-by-step flow showing PR validation and testing.
 
 ```mermaid
 sequenceDiagram
@@ -316,9 +291,6 @@ sequenceDiagram
     participant WF as ci_pr.yml
     participant CI as ci_pr.yml
     participant Tests as Test Execution
-    participant Merge as merge.yml
-    participant domerge as domergepr.sh
-    participant PR as Pull Request
 
     GitHub->>WF: PR opened (pkg-cmd changes)
     activate WF
@@ -341,28 +313,8 @@ sequenceDiagram
     CI-->>WF: ✓ CI Success
     deactivate CI
 
-    WF->>Merge: Call merge.yml
-    activate Merge
-
-    Merge->>domerge: Run domergepr.sh
-    activate domerge
-
-    domerge->>domerge: Verify PR author
-    domerge->>domerge: Check team membership<br/>devs/developers
-    domerge->>domerge: Validate PR size<br/>< 200 lines
-    domerge->>domerge: Process issue refs<br/>Resolves #
-    domerge->>PR: Squash merge<br/>--delete-branch
-
-    PR-->>domerge: ✓ Merged
-    deactivate domerge
-
-    Merge-->>WF: ✓ Merge Complete
-    deactivate Merge
-
     WF-->>GitHub: ✓ Workflow Success
     deactivate WF
-
-    GitHub-->>PR: PR Closed & Merged
 ```
 
 ---
@@ -378,7 +330,6 @@ sequenceDiagram
     participant Detect as Determine Changes
     participant CAS as ci_cas.yml
     participant Amazon as ci_amazon.yml
-    participant Merge as merge.yml
     participant Tests as Test Results
 
     GitHub->>WF: PR to pkg/istorage
@@ -413,13 +364,7 @@ sequenceDiagram
         deactivate Amazon
     end
 
-    alt Both tests passed or skipped
-        WF->>Merge: Call merge.yml
-        activate Merge
-        Merge->>Merge: Run domergepr.sh
-        Merge-->>WF: ✓ PR Merged
-        deactivate Merge
-    else Tests failed
+    alt Tests failed
         WF->>WF: Create failure issue
     end
 
