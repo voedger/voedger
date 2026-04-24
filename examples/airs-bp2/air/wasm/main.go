@@ -70,7 +70,7 @@ func FillPbillDates() {
 	pbillDatetime := time.UnixMicro(arg.AsInt64("pdatetime"))
 	// extract year and day of year from pbill datetime
 	year := pbillDatetime.Year()
-	dayOfYear := pbillDatetime.Day()
+	dayOfYear := pbillDatetime.YearDay()
 
 	var intent orm.Intent_View_air_PbillDates
 
