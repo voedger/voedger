@@ -78,7 +78,7 @@ const (
 	// minimum amount of RAM per node in MB
 	minRAMOnAppNode = "8192"
 	minRAMOnDBNode  = "8192"
-	minRAMENode     = "8192"
+	minRAMCENode    = "8192"
 
 	swarmDbmsLabelKey = "dbm"
 	swarmAppLabelKey  = "app"

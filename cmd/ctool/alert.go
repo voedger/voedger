@@ -377,7 +377,7 @@ func (e *eventType) postAlert(cluster *clusterType) error {
 
 	fName := filepath.Join(dir, "post-alert.json")
 
-	if err = os.WriteFile(fName, eventJSON, filesu.FileMode_DefaultForDir); err != nil {
+	if err = os.WriteFile(fName, eventJSON, filesu.FileMode_DefaultForFile); err != nil {
 		return err
 	}
 

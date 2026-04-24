@@ -237,7 +237,7 @@ func (n *nodeType) minAmountOfRAM() string {
 	case nrDBNode:
 		return minRAMOnDBNode
 	default:
-		return minRAMENode
+		return minRAMCENode
 	}
 }
 
