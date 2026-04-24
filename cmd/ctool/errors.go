@@ -64,7 +64,7 @@ const errHostNotFoundInCluster = "host %s not found in cluster: %w"
 
 var ErrFileNotFound = errors.New("file not found")
 
-const errSshKeyNotFound = "ssh key %s not found: %w"
+const errSSHKeyNotFound = "ssh key %s not found: %w"
 
 var ErrDomainsNotFound = errors.New("domains not found")
 

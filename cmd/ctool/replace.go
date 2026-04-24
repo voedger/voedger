@@ -17,7 +17,7 @@ func newReplaceCmd() *cobra.Command {
 		RunE:  replace,
 	}
 
-	if !addSshKeyFlag(replaceCmd) {
+	if !addSSHKeyFlag(replaceCmd) {
 		return nil
 	}
 
@@ -45,7 +45,7 @@ func replace(cmd *cobra.Command, args []string) error {
 	replacedAddress := args[0]
 
 	// nolint
-	defer saveClusterToJson(cluster)
+	defer saveClusterToJSON(cluster)
 
 	c := newCmd(ckReplace, args)
 	if err = cluster.applyCmd(c); err != nil {

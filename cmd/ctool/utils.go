@@ -109,11 +109,12 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 
 	err := os.MkdirAll(commandDirName, filesu.FileMode_DefaultForDir)
 	if err == nil {
-		fName := filepath.Join(commandDirName, s+".log")
-		logFile, err = os.Create(fName)
-		if err == nil {
-			logFile, err = os.OpenFile(fName, os.O_RDWR, filesu.FileMode_DefaultForFile)
+		if logFile != nil {
+			_ = logFile.Close()
+			logFile = nil
 		}
+		fName := filepath.Join(commandDirName, s+".log")
+		logFile, err = os.OpenFile(fName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, filesu.FileMode_DefaultForFile)
 	}
 	return err
 }

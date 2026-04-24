@@ -26,7 +26,7 @@ import (
 
 var dryRun bool
 
-func saveClusterToJson(c *clusterType) {
+func saveClusterToJSON(c *clusterType) {
 	err := c.saveToJSON()
 	if err != nil {
 		loggerError(err.Error())
@@ -41,7 +41,7 @@ func newCluster() *clusterType {
 		Draft:                 true,
 		sshKey:                sshKey,
 		dryRun:                dryRun,
-		SshPort:               sshPort,
+		SSHPort:               sshPort,
 		Cmd:                   newCmd("", make([]string, 0)),
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
@@ -50,7 +50,7 @@ func newCluster() *clusterType {
 		Alert:                 &alertType{DiscordWebhook: emptyDiscordWebhookURL},
 	}
 
-	sshKey, exists := os.LookupEnv(envVoedgerSshKey)
+	sshKey, exists := os.LookupEnv(envVoedgerSSHKey)
 	if exists && cluster.sshKey == "" {
 		cluster.sshKey = sshKey
 	}
@@ -233,11 +233,11 @@ func (n *nodeType) hostNames() []string {
 func (n *nodeType) minAmountOfRAM() string {
 	switch n.NodeRole {
 	case nrAppNode:
-		return minRamOnAppNode
+		return minRAMOnAppNode
 	case nrDBNode:
-		return minRamOnDBNode
+		return minRAMOnDBNode
 	default:
-		return minRamCENode
+		return minRAMCENode
 	}
 }
 
@@ -619,7 +619,7 @@ type clusterType struct {
 	SubEdition            string `json:"SubEdition,omitempty"`
 	ActualClusterVersion  string
 	DesiredClusterVersion string     `json:"DesiredClusterVersion,omitempty"`
-	SshPort               string     `json:"SSHPort,omitempty"`
+	SSHPort               string     `json:"SSHPort,omitempty"`
 	Acme                  *acmeType  `json:"Acme,omitempty"`
 	Cmd                   *cmdType   `json:"Cmd,omitempty"`
 	LastAttemptError      string     `json:"LastAttemptError,omitempty"`
@@ -690,12 +690,12 @@ func equalIPs(ip1, ip2 string) bool {
 func (c *clusterType) nodeByHost(addrOrHostName string) *nodeType {
 
 	if c.SubEdition == clusterSubEditionSE3 {
-		switch {
-		case addrOrHostName == "app-node-1" || addrOrHostName == "db-node-1":
+		switch addrOrHostName {
+		case "app-node-1", "db-node-1":
 			addrOrHostName = "node-1"
-		case addrOrHostName == "app-node-2" || addrOrHostName == "db-node-2":
+		case "app-node-2", "db-node-2":
 			addrOrHostName = "node-2"
-		case addrOrHostName == "db-node-3":
+		case "db-node-3":
 			addrOrHostName = "node-3"
 		}
 	}
@@ -718,7 +718,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	}
 
 	// nolint
-	defer saveClusterToJson(c)
+	defer saveClusterToJSON(c)
 
 	switch cmd.Kind {
 	case ckAcme:
@@ -889,7 +889,7 @@ func (c *clusterType) loadFromJSON() error {
 		c.Nodes[0].NodeRole = nrN1Node
 	case clusterEditionSE:
 		if c.SubEdition == clusterSubEditionSE3 {
-			err = fmt.Errorf("the configuration of the SE3 cluster is not supported. You must use ctool version 0.0.6.")
+			err = fmt.Errorf("the configuration of the SE3 cluster is not supported. You must use ctool version 0.0.6")
 		} else {
 			c.Edition = clusterEditionN5
 			c.SubEdition = ""
@@ -904,8 +904,8 @@ func (c *clusterType) setEnv() error {
 
 	setEnv := "Set env %s = %s"
 
-	logger.Verbose(fmt.Sprintf(setEnv, envVoedgerNodeSshPort, c.SshPort))
-	if err := os.Setenv(envVoedgerNodeSshPort, c.SshPort); err != nil {
+	logger.Verbose(fmt.Sprintf(setEnv, envVoedgerNodeSSHPort, c.SSHPort))
+	if err := os.Setenv(envVoedgerNodeSSHPort, c.SSHPort); err != nil {
 		return err
 	}
 
@@ -915,8 +915,8 @@ func (c *clusterType) setEnv() error {
 	}
 
 	if c.sshKey != "" {
-		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerSshKey, c.sshKey))
-		if err := os.Setenv(envVoedgerSshKey, c.sshKey); err != nil {
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerSSHKey, c.sshKey))
+		if err := os.Setenv(envVoedgerSSHKey, c.sshKey); err != nil {
 			return err
 		}
 	}
@@ -957,7 +957,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	defer c.updateNodeIndexes()
 
 	// nolint
-	defer saveClusterToJson(c)
+	defer saveClusterToJSON(c)
 
 	if cmd == initN1Cmd || cmd == initCeCmd { // N1/CE args
 		c.Edition = clusterEditionN1
@@ -1094,9 +1094,10 @@ func (c *clusterType) checkVersion() error {
 	loggerInfo("Cluster version: ", clusterVersion)
 
 	vr := compareVersions(version, clusterVersion)
-	if vr == 1 {
+	switch vr {
+	case 1:
 		return fmt.Errorf(errCtoolVersionNewerThanClusterVersion, version, clusterVersion, ErrIncorrectVersion)
-	} else if vr == -1 {
+	case -1:
 		return fmt.Errorf(errClusterVersionNewerThanCtoolVersion, clusterVersion, version, clusterVersion, ErrIncorrectVersion)
 	}
 
@@ -1105,9 +1106,10 @@ func (c *clusterType) checkVersion() error {
 
 func (c *clusterType) needUpgrade() (bool, error) {
 	vr := compareVersions(version, c.ActualClusterVersion)
-	if vr == -1 {
+	switch vr {
+	case -1:
 		return false, fmt.Errorf(errClusterVersionNewerThanCtoolVersion, c.ActualClusterVersion, version, c.ActualClusterVersion, ErrIncorrectVersion)
-	} else if vr == 1 {
+	case 1:
 		return true, nil
 	}
 
