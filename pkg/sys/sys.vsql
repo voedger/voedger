@@ -184,6 +184,18 @@ ABSTRACT WORKSPACE Workspace (
 		InviteID ref NOT NULL
 	);
 
+	TYPE CompleteInvitationParams (
+		InviteID ref NOT NULL,
+		VerificationCode text NOT NULL,
+		Updated int64 NOT NULL
+	);
+
+	TYPE CompleteJoinWorkspaceParams (
+		InviteID ref NOT NULL,
+		SubjectID ref,
+		Updated int64 NOT NULL
+	);
+
 	TYPE CreateJoinedWorkspaceParams (
 		Roles text NOT NULL,
 		InvitingWorkspaceWSID int64 NOT NULL,
@@ -411,6 +423,8 @@ ABSTRACT WORKSPACE Workspace (
 		COMMAND InitiateCancelAcceptedInvite(InitiateCancelAcceptedInviteParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		COMMAND InitiateLeaveWorkspace WITH Tags=(AllowedToAuthenticatedTag);
 		COMMAND CancelSentInvite(CancelSentInviteParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		COMMAND CompleteInvitation(CompleteInvitationParams);
+		COMMAND CompleteJoinWorkspace(CompleteJoinWorkspaceParams);
 		COMMAND CreateJoinedWorkspace(CreateJoinedWorkspaceParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams) WITH Tags=(WorkspaceOwnerFuncTag);

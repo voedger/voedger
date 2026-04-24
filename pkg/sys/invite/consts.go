@@ -22,6 +22,8 @@ var (
 	qNameCmdDeactivateJoinedWorkspace    = appdef.NewQName(appdef.SysPackage, "DeactivateJoinedWorkspace")
 	qNameCmdInitiateLeaveWorkspace       = appdef.NewQName(appdef.SysPackage, "InitiateLeaveWorkspace")
 	qNameCmdCancelSentInvite             = appdef.NewQName(appdef.SysPackage, "CancelSentInvite")
+	qNameCmdCompleteInvitation           = appdef.NewQName(appdef.SysPackage, "CompleteInvitation")
+	qNameCmdCompleteJoinWorkspace        = appdef.NewQName(appdef.SysPackage, "CompleteJoinWorkspace")
 	QNameCDocInvite                      = appdef.NewQName(appdef.SysPackage, "Invite")
 	qNameViewInviteIndex                 = appdef.NewQName(appdef.SysPackage, "InviteIndexView")
 	qNameProjectorInviteIndex            = appdef.NewQName(appdef.SysPackage, "ProjectorInviteIndex")
@@ -129,4 +131,16 @@ var (
 		State_Invited:     true,
 		State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
 	}
+
+	// Called before invite record load and state guard check. Blocking here
+	// lets the test change state so the guard sees the new value and skips.
+	OnBeforeApplyInvitation    func()
+	OnBeforeApplyJoinWorkspace func()
+
+	// Called after the state guard passes but before side effects and the
+	// CompleteInvitation/CompleteJoinWorkspace command call. Blocking here
+	// lets the test change state to exercise the TOCTOU path: the command
+	// rejects the stale update, projector fails, reapply hits the guard.
+	OnAfterGuardApplyInvitation    func()
+	OnAfterGuardApplyJoinWorkspace func()
 )

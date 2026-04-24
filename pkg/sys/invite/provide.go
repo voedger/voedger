@@ -21,6 +21,8 @@ func Provide(sr istructsmem.IStatelessResources, time timeu.ITime,
 	provideCmdInitiateCancelAcceptedInvite(sr, time)
 	provideCmdInitiateLeaveWorkspace(sr, time)
 	provideCmdCancelSentInvite(sr, time)
+	provideCmdCompleteInvitation(sr)
+	provideCmdCompleteJoinWorkspace(sr)
 	provideCmdCreateJoinedWorkspace(sr)
 	provideCmdUpdateJoinedWorkspaceRoles(sr)
 	provideCmdDeactivateJoinedWorkspace(sr)

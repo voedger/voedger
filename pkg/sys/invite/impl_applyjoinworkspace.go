@@ -27,7 +27,9 @@ func asyncProjectorApplyJoinWorkspace(time timeu.ITime, federation federation.IF
 
 func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		// it is AFTER EXECUTE ON (InitiateJoinWorkspace) so no doc checking here
+		if OnBeforeApplyJoinWorkspace != nil {
+			OnBeforeApplyJoinWorkspace()
+		}
 		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
@@ -36,6 +38,12 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 		svCDocInvite, err := s.MustExist(skbCDocInvite)
 		if err != nil {
 			return
+		}
+		if State(svCDocInvite.AsInt32(Field_State)) != State_ToBeJoined {
+			return nil
+		}
+		if OnAfterGuardApplyJoinWorkspace != nil {
+			OnAfterGuardApplyJoinWorkspace()
 		}
 
 		// Check if Subject exists for this user
@@ -112,17 +120,15 @@ func applyJoinWorkspace(time timeu.ITime, federation federation.IFederation, tok
 			return
 		}
 
-		// Store cdoc.sys.Invite
-		if existingSubjectID == istructs.NullRecordID {
-			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"SubjectID":%d,"Updated":%d}}]}`,
-				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, resp.NewID(), time.Now().UnixMilli())
-		} else {
-			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`,
-				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, time.Now().UnixMilli())
+		// Update cdoc.sys.Invite State=Joined via validated command
+		subjectID := resp.NewID()
+		if existingSubjectID != istructs.NullRecordID {
+			subjectID = 0
 		}
 		_, err = federation.Func(
-			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
-			body,
+			fmt.Sprintf("api/%s/%d/c.sys.CompleteJoinWorkspace", appQName, event.Workspace()),
+			fmt.Sprintf(`{"args":{"InviteID":%d,"SubjectID":%d,"Updated":%d}}`,
+				svCDocInvite.AsRecordID(appdef.SystemField_ID), subjectID, time.Now().UnixMilli()),
 			httpu.WithAuthorizeBy(token),
 			httpu.WithDiscardResponse())
 

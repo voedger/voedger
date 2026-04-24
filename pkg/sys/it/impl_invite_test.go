@@ -289,6 +289,63 @@ func TestCancelSentInvite(t *testing.T) {
 	})
 }
 
+// happy path: tested via projectors in TestInvite_BasicUsage (ApplyInvitation calls CompleteInvitation)
+func TestCompleteInvitation(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	email := fmt.Sprintf("testcompleteinvitation_%d@123.com", vit.NextNumber())
+	login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+	loginPrn := vit.SignIn(login)
+	ws := vit.CreateWorkspace(it.SimpleWSParams("TestCompleteInvitation_ws"), loginPrn)
+
+	t.Run("invite not exists -> 400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"123456","Updated":%d}}`,
+			istructs.NonExistingRecordID, vit.Now().UnixMilli())
+		vit.PostWSSys(ws, "c.sys.CompleteInvitation", body, it.Expect400RefIntegrity_Existence())
+	})
+
+	t.Run("wrong state -> 409", func(t *testing.T) {
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		// state: ToBeInvited -> Invited (projector completes), command expects ToBeInvited
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+		vit.CaptureEmail()
+
+		body := fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"123456","Updated":%d}}`,
+			inviteID, vit.Now().UnixMilli())
+		vit.PostWSSys(ws, "c.sys.CompleteInvitation", body, it.Expect409("invite state invalid"))
+	})
+}
+
+// happy path: tested via projectors in TestInvite_BasicUsage (ApplyJoinWorkspace calls CompleteJoinWorkspace)
+func TestCompleteJoinWorkspace(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ownerEmail := fmt.Sprintf("testcompletejoin_owner_%d@123.com", vit.NextNumber())
+	ownerLogin := vit.SignUp(ownerEmail, "1", istructs.AppQName_test1_app1)
+	ownerPrn := vit.SignIn(ownerLogin)
+	ws := vit.CreateWorkspace(it.SimpleWSParams("TestCompleteJoinWorkspace_ws"), ownerPrn)
+
+	t.Run("invite not exists -> 400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"InviteID":%d,"SubjectID":0,"Updated":%d}}`,
+			istructs.NonExistingRecordID, vit.Now().UnixMilli())
+		vit.PostWSSys(ws, "c.sys.CompleteJoinWorkspace", body, it.Expect400RefIntegrity_Existence())
+	})
+
+	t.Run("wrong state -> 409", func(t *testing.T) {
+		guestEmail := fmt.Sprintf("testcompletejoin_guest_%d@123.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), guestEmail, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		// state: ToBeInvited -> Invited (projector completes), command expects ToBeJoined
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+		vit.CaptureEmail()
+
+		body := fmt.Sprintf(`{"args":{"InviteID":%d,"SubjectID":0,"Updated":%d}}`,
+			inviteID, vit.Now().UnixMilli())
+		vit.PostWSSys(ws, "c.sys.CompleteJoinWorkspace", body, it.Expect409("invite state invalid"))
+	})
+}
+
 func TestInactiveCDocSubject(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -533,4 +590,114 @@ func setInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d}}]}`, inviteID, state)
 	vit.PostWS(ws, "c.sys.CUD", body)
+}
+
+// TestProjectorStateGuards verifies Layer 1 protection: projectors skip stale events
+// when the invite state has been changed by a recovery action.
+// Uses test hooks to deterministically block projectors and change state.
+func TestProjectorStateGuards(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(it.SimpleWSParams("TestProjectorStateGuards_ws"), prn)
+
+	getInviteState := func(inviteID istructs.RecordID) invite.State {
+		entity := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+			{"args":{"Schema":"sys.Invite"},
+			"elements":[{"fields":["State","sys.ID"]}],
+			"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
+		return invite.State(entity[0].(float64))
+	}
+
+	t.Run("ApplyInvitation guard: cancel from ToBeInvited", func(t *testing.T) {
+		require := require.New(t)
+
+		proceed := make(chan struct{})
+		invite.OnBeforeApplyInvitation = func() { <-proceed }
+		defer func() { invite.OnBeforeApplyInvitation = nil }()
+
+		email := fmt.Sprintf("guard_l1_inv_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		close(proceed)
+
+		WaitForInviteState(vit, ws, inviteID, invite.State_Cancelled)
+		require.Equal(invite.State_Cancelled, getInviteState(inviteID))
+	})
+
+	t.Run("ApplyJoinWorkspace guard: re-invite from ToBeJoined", func(t *testing.T) {
+		require := require.New(t)
+
+		email := fmt.Sprintf("guard_l1_join_%d@test.com", vit.NextNumber())
+		login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+		loginPrn := vit.SignIn(login)
+
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		sentEmail := vit.CaptureEmail()
+		verificationCode := sentEmail.Body[:6]
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		proceed := make(chan struct{})
+		invite.OnBeforeApplyJoinWorkspace = func() { <-proceed }
+		defer func() { invite.OnBeforeApplyJoinWorkspace = nil }()
+
+		InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode)
+		InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		close(proceed)
+
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+		require.Equal(invite.State_Invited, getInviteState(inviteID))
+	})
+
+	t.Run("ApplyInvitation TOCTOU: cancel after guard", func(t *testing.T) {
+		require := require.New(t)
+
+		reached := make(chan struct{})
+		proceed := make(chan struct{})
+		invite.OnAfterGuardApplyInvitation = func() {
+			close(reached)
+			<-proceed
+		}
+		defer func() { invite.OnAfterGuardApplyInvitation = nil }()
+
+		email := fmt.Sprintf("guard_l2_inv_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		<-reached
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		close(proceed)
+
+		WaitForInviteState(vit, ws, inviteID, invite.State_Cancelled)
+		require.Equal(invite.State_Cancelled, getInviteState(inviteID))
+	})
+
+	t.Run("ApplyJoinWorkspace TOCTOU: cancel after guard", func(t *testing.T) {
+		require := require.New(t)
+
+		email := fmt.Sprintf("guard_l2_join_%d@test.com", vit.NextNumber())
+		login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+		loginPrn := vit.SignIn(login)
+
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		sentEmail := vit.CaptureEmail()
+		verificationCode := sentEmail.Body[:6]
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		reached := make(chan struct{})
+		proceed := make(chan struct{})
+		invite.OnAfterGuardApplyJoinWorkspace = func() {
+			close(reached)
+			<-proceed
+		}
+		defer func() { invite.OnAfterGuardApplyJoinWorkspace = nil }()
+
+		InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode)
+		<-reached
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		close(proceed)
+
+		WaitForInviteState(vit, ws, inviteID, invite.State_Cancelled)
+		require.Equal(invite.State_Cancelled, getInviteState(inviteID))
+	})
 }

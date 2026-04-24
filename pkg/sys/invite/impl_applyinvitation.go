@@ -45,6 +45,25 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 			return
 		}
 
+		if OnBeforeApplyInvitation != nil {
+			OnBeforeApplyInvitation()
+		}
+		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
+		if err != nil {
+			return
+		}
+		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, svViewInviteIndex.AsRecordID(field_InviteID))
+		svCDocInvite, err := s.MustExist(skbCDocInvite)
+		if err != nil {
+			return
+		}
+		if State(svCDocInvite.AsInt32(Field_State)) != State_ToBeInvited {
+			return nil
+		}
+		if OnAfterGuardApplyInvitation != nil {
+			OnAfterGuardApplyInvitation()
+		}
+
 		verificationCode := coreutils.EmailVerificationCode()
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
@@ -91,15 +110,15 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 			return
 		}
 
-		// Update cdoc.Invite State=Invited
+		// Update cdoc.Invite State=Invited via validated command
 		appQName := s.App()
 		authToken, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 		if err != nil {
 			return
 		}
 		_, err = federation.Func(
-			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
-			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"VerificationCode":"%s","Updated":%d}}]}`, svViewInviteIndex.AsRecordID(field_InviteID), State_Invited, verificationCode, time.Now().UnixMilli()),
+			fmt.Sprintf("api/%s/%d/c.sys.CompleteInvitation", appQName, event.Workspace()),
+			fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s","Updated":%d}}`, svViewInviteIndex.AsRecordID(field_InviteID), verificationCode, time.Now().UnixMilli()),
 			httpu.WithAuthorizeBy(authToken),
 			httpu.WithDiscardResponse())
 
