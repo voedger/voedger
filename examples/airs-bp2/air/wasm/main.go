@@ -41,7 +41,7 @@ func Pbill() {
 		billID := pbill.Get_id_bill()
 		intent := orm.Package_untill.WDoc_bill.Update(billID)
 
-		intent.Set_close_year(int32(time.Now().UTC().Year()))
+		intent.Set_close_year(int32(time.Now().UTC().Year())) //nolint G115
 	}
 
 	// Prepare intent for Package_air.WSingleton_NextNumbers
@@ -74,7 +74,7 @@ func FillPbillDates() {
 
 	var intent orm.Intent_View_air_PbillDates
 
-	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
+	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear)) //nolint G115
 	if !ok {
 		intent = val.Insert()
 		intent.Set_FirstOffset(offs)
