@@ -16,7 +16,7 @@ func newRepeatCmd() *cobra.Command {
 		RunE:  repeat,
 	}
 
-	if newCluster().Edition != clusterEditionN1 && !addSshKeyFlag(repeatCmd) {
+	if newCluster().Edition != clusterEditionN1 && !addSSHKeyFlag(repeatCmd) {
 		return nil
 	}
 
@@ -42,7 +42,7 @@ func repeat(cmd *cobra.Command, arg []string) error {
 	}
 
 	// nolint
-	defer saveClusterToJson(cluster)
+	defer saveClusterToJSON(cluster)
 
 	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)

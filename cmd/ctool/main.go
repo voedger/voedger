@@ -73,10 +73,10 @@ func main() {
 
 // adds to the command flag --ssh-key
 // If the environment variable VOEDGER_SSH_KEY is not established, then the flag is marked as a required
-func addSshKeyFlag(cmds ...*cobra.Command) bool {
+func addSSHKeyFlag(cmds ...*cobra.Command) bool {
 	for _, cmd := range cmds {
 		cmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-		value, exists := os.LookupEnv(envVoedgerSshKey)
+		value, exists := os.LookupEnv(envVoedgerSSHKey)
 		if !exists || value == "" {
 			if err := cmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
 				loggerError(err.Error())

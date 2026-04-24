@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -106,7 +107,7 @@ func newBackupCmd() *cobra.Command {
 		Short: "Backup the database",
 	}
 
-	if c.Edition != clusterEditionN1 && !addSshKeyFlag(backupCmd) {
+	if c.Edition != clusterEditionN1 && !addSSHKeyFlag(backupCmd) {
 		return nil
 	}
 	backupCmd.AddCommand(backupNodeCmd, backupCronCmd, backupListCmd, backupNowCmd)
@@ -189,7 +190,7 @@ func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
 		return err
 	}
 	if !exists {
-		err = errors.Join(err, fmt.Errorf(errSshKeyNotFound, cmd.Args[3], ErrFileNotFound))
+		err = errors.Join(err, fmt.Errorf(errSSHKeyNotFound, cmd.Args[3], ErrFileNotFound))
 	}
 
 	return err
@@ -208,7 +209,7 @@ func newBackupErrorEvent(host string, err error) *eventType {
 			alertLabelInstance: host,
 			alertLabelSeverity: "error",
 		},
-		GeneratorURL: fmt.Sprintf("http://%s:9093", host)}
+		GeneratorURL: "http://" + net.JoinHostPort(host, "9093")}
 }
 
 func backupCENode(cmd *cobra.Command, args []string) error {

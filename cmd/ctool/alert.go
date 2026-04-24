@@ -87,7 +87,7 @@ func newAlertCmd() *cobra.Command {
 		}
 
 		alertConfigsCmd.AddCommand(alertConfigsDownloadCmd, alertConfigsUploadCmd)
-		if !addSshKeyFlag(alertConfigsDownloadCmd, alertConfigsUploadCmd, alertRemoveDiscordCmd, alertAddDiscordCmd) {
+		if !addSSHKeyFlag(alertConfigsDownloadCmd, alertConfigsUploadCmd, alertRemoveDiscordCmd, alertAddDiscordCmd) {
 			return nil
 		}
 		alertCmd.AddCommand(alertConfigsCmd)
@@ -363,7 +363,7 @@ type eventType struct {
 
 func (e *eventType) postAlert(cluster *clusterType) error {
 
-	eventJson, err := json.Marshal([]eventType{*e})
+	eventJSON, err := json.Marshal([]eventType{*e})
 	if err != nil {
 		return err
 	}
@@ -377,7 +377,7 @@ func (e *eventType) postAlert(cluster *clusterType) error {
 
 	fName := filepath.Join(dir, "post-alert.json")
 
-	if err = os.WriteFile(fName, eventJson, filesu.FileMode_DefaultForDir); err != nil {
+	if err = os.WriteFile(fName, eventJSON, filesu.FileMode_DefaultForDir); err != nil {
 		return err
 	}
 

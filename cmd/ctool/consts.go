@@ -76,18 +76,18 @@ const (
 	ckAcme    = "acme"
 
 	// minimum amount of RAM per node in MB
-	minRamOnAppNode = "8192"
-	minRamOnDBNode  = "8192"
-	minRamCENode    = "8192"
+	minRAMOnAppNode = "8192"
+	minRAMOnDBNode  = "8192"
+	minRAMENode     = "8192"
 
 	swarmDbmsLabelKey = "dbm"
 	swarmAppLabelKey  = "app"
 	swarmMonLabelKey  = "mon"
 
 	// Variable environment
-	envVoedgerNodeSshPort = "VOEDGER_NODE_SSH_PORT"
+	envVoedgerNodeSSHPort = "VOEDGER_NODE_SSH_PORT"
 	envVoedgerAcmeDomains = "VOEDGER_ACME_DOMAINS"
-	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
+	envVoedgerSSHKey      = "VOEDGER_SSH_KEY"
 	envVoedgerCeNode      = "VOEDGER_CE_NODE"
 	envVoedgerHTTPPort    = "VOEDGER_HTTP_PORT"
 	envVoedgerEdition     = "VOEDGER_EDITION"
