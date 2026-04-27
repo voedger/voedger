@@ -39,7 +39,7 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 			return
 		}
 		skbViewInviteIndex.PutInt32(field_Dummy, value_Dummy_One)
-		skbViewInviteIndex.PutString(Field_Login, event.ArgumentObject().AsString(field_Email))
+		skbViewInviteIndex.PutString(Field_Login, event.ArgumentObject().AsString(Field_Email))
 		svViewInviteIndex, err := s.MustExist(skbViewInviteIndex)
 		if err != nil {
 			return
@@ -63,7 +63,7 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 			EmailTemplatePlaceholder_InviteID, strconvu.UintToString(svViewInviteIndex.AsRecordID(field_InviteID)),
 			EmailTemplatePlaceholder_WSID, strconvu.UintToString(event.Workspace()),
 			EmailTemplatePlaceholder_WSName, svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName),
-			EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(field_Email),
+			EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(Field_Email),
 		)
 
 		// Send invitation email
@@ -72,7 +72,7 @@ func applyInvitationProjector(time timeu.ITime, federation federation.IFederatio
 			return
 		}
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Subject, event.ArgumentObject().AsString(field_EmailSubject))
-		skbSendMail.PutString(sys.Storage_SendMail_Field_To, event.ArgumentObject().AsString(field_Email))
+		skbSendMail.PutString(sys.Storage_SendMail_Field_To, event.ArgumentObject().AsString(Field_Email))
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Body, replacer.Replace(emailTemplate))
 		skbSendMail.PutString(sys.Storage_SendMail_Field_From, smtpCfg.GetFrom())
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Host, smtpCfg.Host)
