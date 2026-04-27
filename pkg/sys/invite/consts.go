@@ -39,7 +39,7 @@ var (
 )
 
 const (
-	field_Email                 = "Email"
+	Field_Email                 = "Email"
 	Field_Roles                 = "Roles"
 	field_ExpireDatetime        = "ExpireDatetime"
 	field_InviteID              = "InviteID"

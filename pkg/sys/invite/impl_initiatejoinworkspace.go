@@ -60,7 +60,7 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommand
 		}
 
 		loginFromToken := svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
-		emailWeSentTo := svCDocInvite.AsString(field_Email)
+		emailWeSentTo := svCDocInvite.AsString(Field_Email)
 		if loginFromToken != emailWeSentTo {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("invitation was sent to %s but current login is %s", emailWeSentTo, loginFromToken))
 		}
