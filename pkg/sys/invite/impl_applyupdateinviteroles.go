@@ -86,7 +86,7 @@ func applyUpdateInviteRolesProjector(time timeu.ITime, federation federation.IFe
 			return
 		}
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Subject, event.ArgumentObject().AsString(field_EmailSubject))
-		skbSendMail.PutString(sys.Storage_SendMail_Field_To, svCDocInvite.AsString(field_Email))
+		skbSendMail.PutString(sys.Storage_SendMail_Field_To, svCDocInvite.AsString(Field_Email))
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Body, replacer.Replace(emailTemplate))
 		skbSendMail.PutString(sys.Storage_SendMail_Field_From, smtpCfg.GetFrom())
 		skbSendMail.PutString(sys.Storage_SendMail_Field_Host, smtpCfg.Host)

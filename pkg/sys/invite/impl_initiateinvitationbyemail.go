@@ -31,7 +31,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
-		cmdInitiateInvitation_ArgEmail := args.ArgumentObject.AsString(field_Email)
+		cmdInitiateInvitation_ArgEmail := args.ArgumentObject.AsString(Field_Email)
 		// do not check if the login from token exists in subjects, see https://github.com/voedger/voedger/issues/3698
 		// because login is Inviter here, not Invitee
 		_, subjectIsActive, err := SubjectExistsByLogin(cmdInitiateInvitation_ArgEmail, args.State)
@@ -48,7 +48,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			return
 		}
 		skbViewInviteIndex.PutInt32(field_Dummy, value_Dummy_One)
-		skbViewInviteIndex.PutString(Field_Login, args.ArgumentObject.AsString(field_Email))
+		skbViewInviteIndex.PutString(Field_Login, args.ArgumentObject.AsString(Field_Email))
 		svViewInviteIndex, ok, err := args.State.CanExist(skbViewInviteIndex)
 		if err != nil {
 			return
@@ -97,8 +97,8 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		}
 		now := tm.Now().UnixMilli()
 		svbCDocInvite.PutRecordID(appdef.SystemField_ID, istructs.RecordID(1))
-		svbCDocInvite.PutString(Field_Login, args.ArgumentObject.AsString(field_Email))
-		svbCDocInvite.PutString(field_Email, args.ArgumentObject.AsString(field_Email))
+		svbCDocInvite.PutString(Field_Login, args.ArgumentObject.AsString(Field_Email))
+		svbCDocInvite.PutString(Field_Email, args.ArgumentObject.AsString(Field_Email))
 		svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 		svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 		svbCDocInvite.PutInt64(field_Created, now)
