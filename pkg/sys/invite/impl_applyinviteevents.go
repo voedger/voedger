@@ -83,7 +83,7 @@ func inviteIDFromEvent(cmd appdef.QName, event istructs.IPLogEvent, s istructs.I
 			return istructs.NullRecordID, err
 		}
 		skb.PutInt32(field_Dummy, value_Dummy_One)
-		skb.PutString(Field_Login, event.ArgumentObject().AsString(field_Email))
+		skb.PutString(Field_Login, event.ArgumentObject().AsString(Field_Email))
 		sv, err := s.MustExist(skb)
 		if err != nil {
 			return istructs.NullRecordID, err
@@ -166,12 +166,12 @@ func handleApplyInvitation(event istructs.IPLogEvent, s istructs.IState, intents
 		EmailTemplatePlaceholder_InviteID, strconvu.UintToString(inviteID),
 		EmailTemplatePlaceholder_WSID, strconvu.UintToString(event.Workspace()),
 		EmailTemplatePlaceholder_WSName, svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName),
-		EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(field_Email),
+		EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(Field_Email),
 	)
 
 	if err = sendEmail(s, intents, smtpCfg,
 		event.ArgumentObject().AsString(field_EmailSubject),
-		event.ArgumentObject().AsString(field_Email),
+		event.ArgumentObject().AsString(Field_Email),
 		replacer.Replace(emailTemplate)); err != nil {
 		return err
 	}
@@ -314,7 +314,7 @@ func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, 
 
 	if err = sendEmail(s, intents, smtpCfg,
 		event.ArgumentObject().AsString(field_EmailSubject),
-		svCDocInvite.AsString(field_Email),
+		svCDocInvite.AsString(Field_Email),
 		replacer.Replace(emailTemplate)); err != nil {
 		return err
 	}
