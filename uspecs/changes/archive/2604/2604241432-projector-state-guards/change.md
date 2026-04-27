@@ -3,39 +3,40 @@ registered_at: 2026-04-24T10:00:36Z
 change_id: 2604241000-projector-state-guards
 baseline: f91d1438f6fbf47ffd247bb8d06e47cfdff55e6e
 issue_url: https://untill.atlassian.net/browse/AIR-3704
+pre_cleanup_head: a917956fcaeeeb1ae5acdacabad2f83a316da9dc
 archived_at: 2026-04-24T14:32:29Z
 ---
 
-# Change request: Add state guards to invite projectors
+# Change request: Refactor invite flow - single projector and roles validation
 
 ## Why
 
-PR [#4511](https://github.com/voedger/voedger/pull/4511) fixed recovery from stuck invite states (ToBeInvited, ToBeJoined) by allowing commands to accept these transitional states. During review, a race condition was identified.
+Invitations can get stuck in transitional states (`State_ToBeInvited`, `State_ToBeJoined`) when async projectors fail. The `ApplyJoinWorkspace` projector had an early-return bug that skipped updating invite state when an inactive Subject existed, leaving invites permanently stuck in `State_ToBeJoined`. Even after fixing the projector (change [2604221416-fix-reinvite-after-removal](../2604221416-fix-reinvite-after-removal/change.md)), already-stuck invites could not be recovered because commands `InitiateInvitationByEMail` and `CancelSentInvite` did not accept these transitional states.
 
-### Problem
+PR [#4511](https://github.com/voedger/voedger/pull/4511) restored recovery by letting those commands accept `ToBe*` states. Reviewers then identified a race between commands and async projectors `ApplyInvitation` / `ApplyJoinWorkspace`: stale projector events could overwrite recovered state (e.g., flip `Cancelled` back to `Invited`). The initial plan added projector state guards plus dedicated commands `c.sys.CompleteInvitation` / `c.sys.CompleteJoinWorkspace`, but analysis showed this preserved the underlying problem - commands and projectors both mutating Invite state. A simpler design segregates concerns: commands accept input, pre-validate, and persist data fields only; a single projector applies state transitions and side effects atomically.
 
-Async projectors `ApplyInvitation` and `ApplyJoinWorkspace` do not check the current invite state before performing side effects and updating state via CUD. The sequence:
-
-- Invite created -> State = ToBeInvited, projector event queued
-- Owner cancels invite -> State = Cancelled (via CancelSentInvite)
-- Projector runs from queue, sends email, sets State = Invited (overwrites Cancelled)
-
-The same applies to `ApplyJoinWorkspace`:
-
-- User joins -> State = ToBeJoined, projector event queued
-- Owner re-invites -> State = ToBeInvited (via InitiateInvitationByEMail)
-- Projector runs from queue, creates subject, sets State = Joined (overwrites ToBeInvited)
-
-### Impact
-
-- Cancelled invites silently become active again
-- Re-invited users get joined to workspace with stale role assignments
-- No error or log - the overwrite is silent
+A second concern surfaced during this work: invite Roles were never validated, so any workspace owner could grant arbitrary, malformed, or `sys.*` roles.
 
 ## What
 
-- Layer 1 - projector state guards: each projector checks current invite state before doing work, skips if state changed (recovery action already happened)
-- Layer 2 - command-based state transitions: replace direct `c.sys.CUD` calls in projectors with dedicated commands (`c.sys.CompleteInvitation`, `c.sys.CompleteJoinWorkspace`) that validate expected state at execution time, closing the TOCTOU gap between guard check and state update
-- Prepare invite specifications
-  - `uspecs/specs/prod/prod--domain.md`: expand auth context with workspace membership
-  - `uspecs/specs/prod/auth/invites--td.md`: feature technical design for invite system
+Invite flow refactor (segregation of concerns):
+
+- Replace 5 separate invite projectors with a single `ap.sys.ApplyInviteEvents` projector reacting to all invite commands
+- Move all invite state transitions and side effects out of commands into the single projector
+- Keep commands responsible for data writes and pre-validation only; remove non-initial `State` writes
+- Remove `c.sys.CompleteInvitation` and `c.sys.CompleteJoinWorkspace` commands and their params
+- Remove projector test hooks (`OnBeforeApply*`, `OnAfterGuard*`) and the projector-state-guards machinery
+- Preserve all `State_*` numeric values for backward compatibility; keep `ToBeInvited` written by `InitiateInvitationByEMail` as the only legitimate `ToBe*` write
+- Keep legacy `ToBe*` states accepted by command pre-validation so old stuck records remain recoverable
+
+Roles validation:
+
+- Add `validateInviteRoles` helper that rejects malformed QNames, system roles (`sys.*`), and roles not declared in the target workspace
+- Call `validateInviteRoles` in `InitiateInvitationByEMail` and `InitiateUpdateInviteRoles`
+- Convert `iauthnz.IsSystemRole` to a package-prefix check (`role.Pkg() == appdef.SysPackage`) instead of a static slice
+- Rename test role `app1pkg.WorkspaceSubject` to `app1pkg.InviteTestRole` for clarity
+
+Specifications:
+
+- Update `uspecs/specs/prod/prod--domain.md`: expand auth context with workspace membership
+- Update `uspecs/specs/prod/auth/invites--td.md`: replace state diagram and projector design with single-projector model, mark legacy `ToBe*` states

@@ -1,4 +1,4 @@
-# Implementation plan: Add state guards to invite projectors
+# Implementation plan: Refactor invite flow - single projector and roles validation
 
 ## Functional design
 
@@ -8,82 +8,87 @@
 ## Technical design
 
 - [x] update: [invites--td.md](../../../../specs/prod/auth/invites--td.md)
-  - update: Extra state diagram - add recovery transitions from ToBeInvited and ToBeJoined (PR 4511)
-  - add: Projector guards subsection - describe state check behavior (skip if state changed)
-  - add: New commands for state transitions (CompleteInvitation, CompleteJoinWorkspace)
+  - replace: state diagram - mark legacy `ToBe*` states, single-projector transitions
+  - replace: projector guards section with single-projector design
+  - remove: CompleteInvitation, CompleteJoinWorkspace from commands list
+  - update: Decisions section
 
 ## Construction
 
-- [x] Review
+### Segregation of concerns
 
-### Layer 1: Projector state guards
-
-Prevents projector from doing any work when the invite state has already changed.
-Covers the case when recovery action completes before projector starts.
-
-- [x] update: [impl_applyinvitation.go](../../../../../pkg/sys/invite/impl_applyinvitation.go)
-  - add: Check `State == ToBeInvited` after loading invite, return nil if not
-- [x] update: [impl_applyjoinworkspace.go](../../../../../pkg/sys/invite/impl_applyjoinworkspace.go)
-  - add: Check `State == ToBeJoined` after loading invite, return nil if not
-
-### Layer 2: Command-based state transitions
-
-Layer 1 alone has a TOCTOU gap: state can change between the guard check and the
-CUD that updates state. Layer 2 replaces direct CUD with dedicated commands that
-validate the expected state at execution time.
-
-If command returns error (state changed between guard and command), projector fails
-and is reapplied. On reapply, Layer 1 guard sees the actual state and skips.
-
-- [x] add: [impl_completeinvitation.go](../../../../../pkg/sys/invite/impl_completeinvitation.go)
-  - `c.sys.CompleteInvitation` command (ToBeInvited -> Invited)
-  - validate: `State == ToBeInvited`, error otherwise
-  - set: State, VerificationCode, Updated
-- [x] add: [impl_completejoinworkspace.go](../../../../../pkg/sys/invite/impl_completejoinworkspace.go)
-  - `c.sys.CompleteJoinWorkspace` command (ToBeJoined -> Joined)
-  - validate: `State == ToBeJoined`, error otherwise
-  - set: State, SubjectID, Updated
-- [x] add: VSQL declarations in [sys.vsql](../../../../../pkg/sys/sys.vsql)
-  - add: `CompleteInvitationParams` type
-  - add: `CompleteJoinWorkspaceParams` type
-  - add: `COMMAND CompleteInvitation` declaration
-  - add: `COMMAND CompleteJoinWorkspace` declaration
+- [x] update: [sys.vsql](../../../../../pkg/sys/sys.vsql)
+  - remove: CompleteInvitationParams, CompleteJoinWorkspaceParams types
+  - remove: CompleteInvitation, CompleteJoinWorkspace commands
+  - add: ApplyInviteEvents projector declaration `AFTER EXECUTE ON (InitiateInvitationByEMail, InitiateJoinWorkspace, InitiateUpdateInviteRoles, InitiateCancelAcceptedInvite, InitiateLeaveWorkspace, CancelSentInvite)`
 - [x] update: [consts.go](../../../../../pkg/sys/invite/consts.go)
-  - add: QName vars for new commands
+  - keep: all `State_*` constants (numeric values preserved)
+  - remove: QNames for CompleteInvitation, CompleteJoinWorkspace
+  - remove: 5 separate projector QNames -> 1 (`qNameAPApplyInviteEvents`)
+  - remove: test hooks (`OnBeforeApply*`, `OnAfterGuard*`)
+  - update: `inviteValidStates` (keep `ToBe*` for old data recovery)
+- [x] add: [impl_applyinviteevents.go](../../../../../pkg/sys/invite/impl_applyinviteevents.go)
+  - add: `ap.sys.ApplyInviteEvents` projector handling all invite events
+  - add: per-command handlers re-validate actual state and apply transition + side effects, skip stale events
+- [x] remove: pkg/sys/invite/impl_applyinvitation.go
+- [x] remove: pkg/sys/invite/impl_applyjoinworkspace.go
+- [x] remove: pkg/sys/invite/impl_applyupdateinviteroles.go
+- [x] remove: pkg/sys/invite/impl_applycancelacceptedinvite.go
+- [x] remove: pkg/sys/invite/impl_applyleaveworkspace.go
+- [x] remove: pkg/sys/invite/impl_completeinvitation.go
+- [x] remove: pkg/sys/invite/impl_completejoinworkspace.go
 - [x] update: [provide.go](../../../../../pkg/sys/invite/provide.go)
-  - add: register new commands
-- [x] update: [impl_applyinvitation.go](../../../../../pkg/sys/invite/impl_applyinvitation.go)
-  - replace: `federation.Func("c.sys.CUD")` with `federation.Func("c.sys.CompleteInvitation")`
-- [x] update: [impl_applyjoinworkspace.go](../../../../../pkg/sys/invite/impl_applyjoinworkspace.go)
-  - replace: direct CUD state update with `federation.Func("c.sys.CompleteJoinWorkspace")`
+  - register: ApplyInviteEvents projector
+  - remove: old projector and Complete* command registrations
+- [x] update: [impl_initiateinvitationbyemail.go](../../../../../pkg/sys/invite/impl_initiateinvitationbyemail.go)
+  - keep: Invite CDoc create/update with data fields and `State=ToBeInvited`
+- [x] update: [impl_initiatejoinworkspace.go](../../../../../pkg/sys/invite/impl_initiatejoinworkspace.go)
+  - keep: InviteeProfileWSID/SubjectKind/ActualLogin writes
+  - remove: State write
+- [x] update: [impl_initiateupdateinviteroles.go](../../../../../pkg/sys/invite/impl_initiateupdateinviteroles.go)
+  - remove: all CUD on Invite (projector writes Roles)
+- [x] update: [impl_initiatecancelacceptedinvite.go](../../../../../pkg/sys/invite/impl_initiatecancelacceptedinvite.go)
+  - remove: all CUD on Invite
+- [x] update: [impl_initiateleaveworkspace.go](../../../../../pkg/sys/invite/impl_initiateleaveworkspace.go)
+  - keep: no-op CUD (carries InviteID to projector via event.CUDs)
+  - remove: State/IsActive/Updated writes
+- [x] update: [impl_cancelsentinvite.go](../../../../../pkg/sys/invite/impl_cancelsentinvite.go)
+  - remove: all CUD on Invite
 
-### Test hooks and tests
+### Roles validation
 
-Two hooks per projector: before guard (Layer 1 tests) and after guard (Layer 2 tests).
-Hooks are nil in production. Tests set hook, block via channel, change state, unblock.
-Layer 2 tests use `reached` channel to ensure projector is blocked before state change.
+- [x] update: [iauthnz/utils.go](../../../../../pkg/iauthnz/utils.go)
+  - update: `IsSystemRole` uses package prefix check (`role.Pkg() == appdef.SysPackage`)
+  - remove: `slices` import and `SysRoles` usage from `IsSystemRole`
+- [x] update: [iauthnzimpl/impl_test.go](../../../../../pkg/iauthnzimpl/impl_test.go)
+  - update: IssueAPIToken test allowed case uses non-sys QName (e.g. `appdef.NewQName("test", "role")`)
+- [x] add: [invite/utils.go](../../../../../pkg/sys/invite/utils.go)
+  - add: `validateInviteRoles(rolesStr string, ws appdef.IWorkspace) error`
+  - logic: split by comma, trim, parse QName, reject `sys.*`, reject roles not declared in workspace
+  - return: `coreutils.NewHTTPError(http.StatusBadRequest, ...)`
+- [x] add: [invite/utils_test.go](../../../../../pkg/sys/invite/utils_test.go)
+  - add: extensive unit tests for `validateInviteRoles`
+- [x] update: [impl_initiateinvitationbyemail.go](../../../../../pkg/sys/invite/impl_initiateinvitationbyemail.go)
+  - add: call `validateInviteRoles` early
+- [x] update: [impl_initiateupdateinviteroles.go](../../../../../pkg/sys/invite/impl_initiateupdateinviteroles.go)
+  - add: call `validateInviteRoles` early
 
-- [x] add: global vars in [consts.go](../../../../../pkg/sys/invite/consts.go)
-  - `OnBeforeApplyInvitation func()` - before invite load and guard
-  - `OnAfterGuardApplyInvitation func()` - after guard passes, before side effects
-  - `OnBeforeApplyJoinWorkspace func()` - before invite load and guard
-  - `OnAfterGuardApplyJoinWorkspace func()` - after guard passes, before side effects
-- [x] update: [impl_applyinvitation.go](../../../../../pkg/sys/invite/impl_applyinvitation.go)
-  - add: call hooks at appropriate positions
-- [x] update: [impl_applyjoinworkspace.go](../../../../../pkg/sys/invite/impl_applyjoinworkspace.go)
-  - add: call hooks at appropriate positions
+### Tests
+
 - [x] update: [impl_invite_test.go](../../../../../pkg/sys/it/impl_invite_test.go)
-  - add: Layer 1 - block before guard, cancel from ToBeInvited, verify state stays Cancelled
-  - add: Layer 1 - block before guard, re-invite from ToBeJoined, verify state stays Invited
-- [x] add: TOCTOU - block ApplyInvitation after guard, cancel from ToBeInvited, verify state stays Cancelled
-- [x] add: TOCTOU - block ApplyJoinWorkspace after guard, cancel from ToBeJoined, verify state stays Cancelled
-- [x] run all TestProjectorStateGuards tests
+  - remove: `TestCompleteInvitation`, `TestCompleteJoinWorkspace`
+  - remove: `TestProjectorStateGuards`
+  - update: `TestInvite_BasicUsage` (states go directly to Invited/Joined, no `ToBe*`)
+  - add: projector idempotency test (stale events skipped)
+  - add: old `ToBe*` state handling test (migration compatibility)
+  - add: `TestInvite_RolesValidation` cases:
+    - malformed QName -> HTTP 400
+    - `sys.WorkspaceOwner` -> HTTP 400
+    - non-existent role (`app1pkg.NonExistentRole`) -> HTTP 400
+    - whitespace-only / leading comma / duplicate role -> HTTP 400
+- [x] update: [schemaTestApp1.vsql](../../../../../pkg/vit/schemaTestApp1.vsql)
+  - rename: `app1pkg.WorkspaceSubject` -> `app1pkg.InviteTestRole`
+- [x] update: [impl_deactivateworkspace_test.go](../../../../../pkg/sys/it/impl_deactivateworkspace_test.go)
+  - update: references to renamed test role
 
-### Dedicated command tests
-
-- [x] add: `TestCompleteInvitation` in [impl_invite_test.go](../../../../../pkg/sys/it/impl_invite_test.go)
-  - invite not exists -> 400 (referential integrity)
-  - wrong state (Invited) -> 409
-- [x] add: `TestCompleteJoinWorkspace` in [impl_invite_test.go](../../../../../pkg/sys/it/impl_invite_test.go)
-  - invite not exists -> 400 (referential integrity)
-  - wrong state (Invited) -> 409
+- [x] Review

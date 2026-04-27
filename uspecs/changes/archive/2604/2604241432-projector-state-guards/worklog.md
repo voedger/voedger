@@ -224,3 +224,18 @@ Design is now in [invites--td.md](../../../../specs/prod/auth/invites--td.md).
   - valid app role still passes via existing tests (`TestInvite_BasicUsage` uses `app1pkg.LimitedAccessRole`)
 
 - [x] verify after rename: `go test -run "TestValidateInviteRoles" ./pkg/sys/invite/...`, `TestInvite_RolesValidation`, `TestInvite_BasicUsage`, `TestBasicUsage_InitiateDeactivateWorkspace`, `TestDeactivateJoinedWorkspace` all pass
+
+## 2026-04-27 16:24 cleanup change request specs
+
+- change.md, how.md impl.md, analysis.md are irrelevant now
+- Before cleanup a917956fcaeeeb1ae5acdacabad2f83a316da9dc
+
+Decisions:
+
+- Sources for regeneration: worklog.md as primary; pre-cleanup commit `a917956fcaeeeb1ae5acdacabad2f83a316da9dc` as secondary to recover requirements/rationale not captured in worklog
+- Format: follow templates in `uspecs/u/actn-uchange.md`, `uspecs/u/actn-uimpl.md`, `uspecs/u/actn-uhow.md` strictly
+
+Done:
+
+- [x] recreate change.md, how.md, impl.md using worklog history
+- [x] Get rid of analysis.md
