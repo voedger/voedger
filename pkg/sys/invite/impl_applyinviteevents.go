@@ -41,26 +41,63 @@ func asyncProjectorApplyInviteEvents(time timeu.ITime, fed federation.IFederatio
 
 func applyInviteEvents(time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		switch event.QName() {
+		cmd := event.QName()
+		inviteID, err := inviteIDFromEvent(cmd, event, s)
+		if err != nil {
+			return err
+		}
+		if inviteID == istructs.NullRecordID {
+			return nil
+		}
+		svCDocInvite, err := loadInviteByID(s, inviteID)
+		if err != nil {
+			return err
+		}
+		if !projectorValidStates[cmd][State(svCDocInvite.AsInt32(Field_State))] {
+			return nil
+		}
+		switch cmd {
 		case qNameCmdInitiateInvitationByEMail:
-			return handleApplyInvitation(event, s, intents, time, fed, tokens, smtpCfg)
+			return handleApplyInvitation(event, s, intents, inviteID, time, fed, tokens, smtpCfg)
 		case qNameCmdInitiateJoinWorkspace:
-			return handleApplyJoinWorkspace(event, s, time, fed, tokens)
+			return handleApplyJoinWorkspace(event, s, svCDocInvite, inviteID, time, fed, tokens)
 		case qNameCmdInitiateUpdateInviteRoles:
-			return handleApplyUpdateInviteRoles(event, s, intents, time, fed, tokens, smtpCfg)
+			return handleApplyUpdateInviteRoles(event, s, intents, svCDocInvite, inviteID, time, fed, tokens, smtpCfg)
 		case qNameCmdInitiateCancelAcceptedInvite:
-			return handleApplyCancelAcceptedInvite(event, s, time, fed, tokens)
+			return handleApplyCancelAcceptedInvite(event, s, svCDocInvite, inviteID, time, fed, tokens)
 		case qNameCmdInitiateLeaveWorkspace:
-			return handleApplyLeaveWorkspace(event, s, time, fed, tokens)
+			return handleApplyLeaveWorkspace(event, s, svCDocInvite, inviteID, time, fed, tokens)
 		case qNameCmdCancelSentInvite:
-			return handleCancelSentInvite(event, s, time, fed, tokens)
+			return handleCancelSentInvite(event, s, inviteID, time, fed, tokens)
 		}
 		return nil
 	}
 }
 
-func isValidProjectorState(st int32, cmd appdef.QName) bool {
-	return projectorValidStates[cmd][State(st)]
+func inviteIDFromEvent(cmd appdef.QName, event istructs.IPLogEvent, s istructs.IState) (istructs.RecordID, error) {
+	switch cmd {
+	case qNameCmdInitiateInvitationByEMail:
+		skb, err := s.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
+		if err != nil {
+			return istructs.NullRecordID, err
+		}
+		skb.PutInt32(field_Dummy, value_Dummy_One)
+		skb.PutString(Field_Login, event.ArgumentObject().AsString(field_Email))
+		sv, err := s.MustExist(skb)
+		if err != nil {
+			return istructs.NullRecordID, err
+		}
+		return sv.AsRecordID(field_InviteID), nil
+	case qNameCmdInitiateLeaveWorkspace:
+		for rec := range event.CUDs {
+			if rec.QName() == QNameCDocInvite {
+				return rec.ID(), nil
+			}
+		}
+		return istructs.NullRecordID, nil
+	default:
+		return event.ArgumentObject().AsRecordID(field_InviteID), nil
+	}
 }
 
 func loadInviteByID(s istructs.IState, inviteID istructs.RecordID) (istructs.IStateValue, error) {
@@ -78,36 +115,38 @@ func getSystemToken(s istructs.IState, tokens itokens.ITokens) (string, appdef.A
 	return token, appQName, err
 }
 
+func cudURL(appQName appdef.AppQName, wsid istructs.WSID) string {
+	return fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, wsid)
+}
+
 func updateInviteViaCUD(fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, token string, inviteID istructs.RecordID, fields string) error {
 	_, err := fed.Func(
-		fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, wsid),
+		cudURL(appQName, wsid),
 		fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{%s}}]}`, inviteID, fields),
 		httpu.WithAuthorizeBy(token),
 		httpu.WithDiscardResponse())
 	return err
 }
 
-func handleApplyInvitation(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) error {
-	skbViewInviteIndex, err := s.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
+func deactivateSubjectAndJoinedWorkspace(fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, token string, svCDocInvite istructs.IStateValue) error {
+	subjectID := svCDocInvite.AsRecordID(field_SubjectID)
+	_, err := fed.Func(
+		cudURL(appQName, wsid),
+		fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, subjectID),
+		httpu.WithAuthorizeBy(token),
+		httpu.WithDiscardResponse())
 	if err != nil {
 		return err
 	}
-	skbViewInviteIndex.PutInt32(field_Dummy, value_Dummy_One)
-	skbViewInviteIndex.PutString(Field_Login, event.ArgumentObject().AsString(field_Email))
-	svViewInviteIndex, err := s.MustExist(skbViewInviteIndex)
-	if err != nil {
-		return err
-	}
+	_, err = fed.Func(
+		fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
+		fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, wsid),
+		httpu.WithAuthorizeBy(token),
+		httpu.WithDiscardResponse())
+	return err
+}
 
-	inviteID := svViewInviteIndex.AsRecordID(field_InviteID)
-	svCDocInvite, err := loadInviteByID(s, inviteID)
-	if err != nil {
-		return err
-	}
-	if !isValidProjectorState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateInvitationByEMail) {
-		return nil
-	}
-
+func handleApplyInvitation(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) error {
 	verificationCode := coreutils.EmailVerificationCode()
 	emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
@@ -167,16 +206,7 @@ func sendEmail(s istructs.IState, intents istructs.IIntents, smtpCfg smtp.Cfg, s
 	return err
 }
 
-func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
-	inviteID := event.ArgumentObject().AsRecordID(field_InviteID)
-	svCDocInvite, err := loadInviteByID(s, inviteID)
-	if err != nil {
-		return err
-	}
-	if !isValidProjectorState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateJoinWorkspace) {
-		return nil
-	}
-
+func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
 	login := svCDocInvite.AsString(field_ActualLogin)
 	existingSubjectID, isActive, err := SubjectExistsByLogin(login, s)
 	if err != nil {
@@ -218,7 +248,7 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, time
 	case !isActive:
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, existingSubjectID)
 		_, err = fed.Func(
-			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
+			cudURL(appQName, event.Workspace()),
 			body,
 			httpu.WithAuthorizeBy(token),
 			httpu.WithDiscardResponse())
@@ -229,32 +259,31 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, time
 	default:
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, existingSubjectID, svCDocInvite.AsString(Field_Roles))
 	}
-	resp, err := fed.Func(
-		fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
-		body,
-		httpu.WithAuthorizeBy(token))
-	if err != nil {
-		return err
-	}
-
 	subjectID := existingSubjectID
-	if subjectID == istructs.NullRecordID {
+	if existingSubjectID == istructs.NullRecordID {
+		resp, err := fed.Func(
+			cudURL(appQName, event.Workspace()),
+			body,
+			httpu.WithAuthorizeBy(token))
+		if err != nil {
+			return err
+		}
 		subjectID = resp.NewID()
+	} else {
+		_, err = fed.Func(
+			cudURL(appQName, event.Workspace()),
+			body,
+			httpu.WithAuthorizeBy(token),
+			httpu.WithDiscardResponse())
+		if err != nil {
+			return err
+		}
 	}
 	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
 		fmt.Sprintf(`"State":%d,"SubjectID":%d,"Updated":%d`, State_Joined, subjectID, time.Now().UnixMilli()))
 }
 
-func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) error {
-	inviteID := event.ArgumentObject().AsRecordID(field_InviteID)
-	svCDocInvite, err := loadInviteByID(s, inviteID)
-	if err != nil {
-		return err
-	}
-	if !isValidProjectorState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateUpdateInviteRoles) {
-		return nil
-	}
-
+func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) error {
 	token, appQName, err := getSystemToken(s, tokens)
 	if err != nil {
 		return err
@@ -262,7 +291,7 @@ func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, 
 
 	subjectID := svCDocInvite.AsRecordID(field_SubjectID)
 	_, err = fed.Func(
-		fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
+		cudURL(appQName, event.Workspace()),
 		fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, subjectID, event.ArgumentObject().AsString(Field_Roles)),
 		httpu.WithAuthorizeBy(token),
 		httpu.WithDiscardResponse())
@@ -293,102 +322,33 @@ func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, 
 		fmt.Sprintf(`"State":%d,"Updated":%d,"Roles":"%s"`, State_Joined, time.Now().UnixMilli(), event.ArgumentObject().AsString(Field_Roles)))
 }
 
-func handleApplyCancelAcceptedInvite(event istructs.IPLogEvent, s istructs.IState, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
-	inviteID := event.ArgumentObject().AsRecordID(field_InviteID)
-	svCDocInvite, err := loadInviteByID(s, inviteID)
-	if err != nil {
-		return err
-	}
-	if !isValidProjectorState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateCancelAcceptedInvite) {
-		return nil
-	}
-
+func handleApplyCancelAcceptedInvite(event istructs.IPLogEvent, s istructs.IState, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
 	token, appQName, err := getSystemToken(s, tokens)
 	if err != nil {
 		return err
 	}
 
-	subjectID := svCDocInvite.AsRecordID(field_SubjectID)
-	_, err = fed.Func(
-		fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
-		fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, subjectID),
-		httpu.WithAuthorizeBy(token),
-		httpu.WithDiscardResponse())
-	if err != nil {
+	if err = deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
 		return err
 	}
-
-	_, err = fed.Func(
-		fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
-		fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
-		httpu.WithAuthorizeBy(token),
-		httpu.WithDiscardResponse())
-	if err != nil {
-		return err
-	}
-
 	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
 		fmt.Sprintf(`"State":%d,"Updated":%d`, State_Cancelled, time.Now().UnixMilli()))
 }
 
-func handleApplyLeaveWorkspace(event istructs.IPLogEvent, s istructs.IState, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
-	var inviteID istructs.RecordID
-	for rec := range event.CUDs {
-		if rec.QName() == QNameCDocInvite {
-			inviteID = rec.ID()
-			break
-		}
-	}
-	if inviteID == istructs.NullRecordID {
-		return nil
-	}
-
-	svCDocInvite, err := loadInviteByID(s, inviteID)
-	if err != nil {
-		return err
-	}
-	if !isValidProjectorState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateLeaveWorkspace) {
-		return nil
-	}
-
+func handleApplyLeaveWorkspace(event istructs.IPLogEvent, s istructs.IState, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
 	token, appQName, err := getSystemToken(s, tokens)
 	if err != nil {
 		return err
 	}
 
-	subjectID := svCDocInvite.AsRecordID(field_SubjectID)
-	_, err = fed.Func(
-		fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
-		fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, subjectID),
-		httpu.WithAuthorizeBy(token),
-		httpu.WithDiscardResponse())
-	if err != nil {
+	if err = deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
 		return err
 	}
-
-	_, err = fed.Func(
-		fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
-		fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
-		httpu.WithAuthorizeBy(token),
-		httpu.WithDiscardResponse())
-	if err != nil {
-		return err
-	}
-
 	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
 		fmt.Sprintf(`"State":%d,"Updated":%d`, State_Left, time.Now().UnixMilli()))
 }
 
-func handleCancelSentInvite(event istructs.IPLogEvent, s istructs.IState, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
-	inviteID := event.ArgumentObject().AsRecordID(field_InviteID)
-	svCDocInvite, err := loadInviteByID(s, inviteID)
-	if err != nil {
-		return err
-	}
-	if !isValidProjectorState(svCDocInvite.AsInt32(Field_State), qNameCmdCancelSentInvite) {
-		return nil
-	}
-
+func handleCancelSentInvite(event istructs.IPLogEvent, s istructs.IState, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
 	token, appQName, err := getSystemToken(s, tokens)
 	if err != nil {
 		return err

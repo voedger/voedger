@@ -17,4 +17,10 @@ var (
 
 	// [~server.invites.invite/err.State~impl]
 	ErrReInviteNotAllowedForState = errors.New("re-invite not allowed for state")
+
+	ErrRoleInvalid   = errors.New("invalid role")
+	ErrRolesEmpty    = errors.New("roles must not be empty")
+	ErrSystemRole    = errors.New("system roles cannot be assigned via invite")
+	ErrRoleNotFound  = errors.New("role not found in workspace")
+	ErrRoleDuplicate = errors.New("duplicate role")
 )

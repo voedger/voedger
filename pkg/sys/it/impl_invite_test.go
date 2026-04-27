@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	initialRoles        = "initial.Roles"
-	newRoles            = "new.Roles"
+	initialRoles        = "app1pkg.LimitedAccessRole"
+	newRoles            = "app1pkg.SpecialAPITokenRole"
 	inviteEmailTemplate = "text:" + strings.Join([]string{
 		invite.EmailTemplatePlaceholder_VerificationCode,
 		invite.EmailTemplatePlaceholder_InviteID,
@@ -250,7 +250,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//TODO check InviteeProfile joined workspace
 
 	//Re-invite
-	newRoles := "new.roles"
+	newRoles := "app1pkg.LimitedAccessRole"
 	InitiateInvitationByEMail(vit, ws, expireDatetime, email2, newRoles, inviteEmailTemplate, inviteEmailSubject)
 	log.Println(vit.CaptureEmail().Body)
 	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeInvited, invite.State_Invited)
@@ -519,6 +519,68 @@ func TestRecoverFromStuckInviteStates(t *testing.T) {
 		// Cancel should succeed from State_ToBeJoined
 		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
 		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Cancelled)
+	})
+}
+
+func TestInvite_RolesValidation(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(it.SimpleWSParams("TestInvite_RolesValidation_ws"), prn)
+	expireDatetime := vit.Now().UnixMilli()
+
+	postInvite := func(roles string, opts ...httpu.ReqOptFunc) {
+		vit.T.Helper()
+		email := fmt.Sprintf("rolesvalid_%d@123.com", vit.NextNumber())
+		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			email, roles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
+		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, opts...)
+	}
+
+	t.Run("InitiateInvitationByEMail", func(t *testing.T) {
+		t.Run("whitespace-only roles -> 400", func(t *testing.T) {
+			postInvite("   ", it.Expect400("roles must not be empty"))
+		})
+		t.Run("leading comma -> 400", func(t *testing.T) {
+			postInvite(",app1pkg.LimitedAccessRole", it.Expect400("roles must not be empty"))
+		})
+		t.Run("malformed QName -> 400", func(t *testing.T) {
+			postInvite("not-a-qname", it.Expect400("invalid role"))
+		})
+		t.Run("system role -> 400", func(t *testing.T) {
+			postInvite("sys.WorkspaceOwner", it.Expect400("system roles cannot be assigned via invite"))
+		})
+		t.Run("non-existent role -> 400", func(t *testing.T) {
+			postInvite("app1pkg.NonExistentRole", it.Expect400("role not found in workspace"))
+		})
+		t.Run("duplicate role -> 400", func(t *testing.T) {
+			postInvite("app1pkg.LimitedAccessRole,app1pkg.LimitedAccessRole", it.Expect400("duplicate role"))
+		})
+	})
+
+	t.Run("InitiateUpdateInviteRoles", func(t *testing.T) {
+		email := fmt.Sprintf("rolesvalid_update_%d@123.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		postUpdate := func(roles string, opts ...httpu.ReqOptFunc) {
+			vit.T.Helper()
+			body := fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`,
+				inviteID, roles, inviteEmailTemplate, inviteEmailSubject)
+			vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", body, opts...)
+		}
+
+		t.Run("whitespace-only roles -> 400", func(t *testing.T) {
+			postUpdate("   ", it.Expect400("roles must not be empty"))
+		})
+		t.Run("system role -> 400", func(t *testing.T) {
+			postUpdate("sys.WorkspaceOwner", it.Expect400("system roles cannot be assigned via invite"))
+		})
+		t.Run("non-existent role -> 400", func(t *testing.T) {
+			postUpdate("app1pkg.NonExistentRole", it.Expect400("role not found in workspace"))
+		})
 	})
 }
 

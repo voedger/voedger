@@ -31,13 +31,11 @@ func Test_Race_SUsignUpIn(t *testing.T) {
 
 	wgUp := &sync.WaitGroup{}
 	logins := make(chan it.Login, loginCnt)
-	for i := 0; i < loginCnt; i++ {
-		wgUp.Add(1)
-		go func() {
-			defer wgUp.Done()
+	for range loginCnt {
+		wgUp.Go(func() {
 			login := vit.SignUp("login"+strconv.Itoa(vit.NextNumber()), "1", istructs.AppQName_test1_app1)
 			logins <- login
-		}()
+		})
 	}
 	wgUp.Wait()
 	close(logins)

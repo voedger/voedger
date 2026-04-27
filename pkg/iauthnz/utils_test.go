@@ -18,7 +18,11 @@ func TestIsSystemRole(t *testing.T) {
 	require.True(IsSystemRole(QNameRoleSystem))
 	require.True(IsSystemRole(QNameRoleWorkspaceAdmin))
 	require.True(IsSystemRole(QNameRoleWorkspaceDevice))
-	require.False(IsSystemRole(appdef.NewQName(appdef.SysPackage, "test")))
+	require.True(IsSystemRole(appdef.NewQName(appdef.SysPackage, "test")))
+	require.True(IsSystemRole(QNameRoleEveryone))
+	require.True(IsSystemRole(QNameRoleAnonymous))
+	require.True(IsSystemRole(QNameRoleAuthenticatedUser))
+	require.False(IsSystemRole(appdef.NewQName("test", "role")))
 }
 
 func TestRolesInheritance(t *testing.T) {

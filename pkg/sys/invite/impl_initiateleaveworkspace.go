@@ -22,7 +22,7 @@ func provideCmdInitiateLeaveWorkspace(sr istructsmem.IStatelessResources, time t
 	))
 }
 
-func execCmdInitiateLeaveWorkspace(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateLeaveWorkspace(_ timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbPrincipal, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 		if err != nil {

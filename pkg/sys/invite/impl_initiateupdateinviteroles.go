@@ -28,6 +28,10 @@ func execCmdInitiateUpdateInviteRoles(_ timeu.ITime) func(args istructs.ExecComm
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
+		if err := validateInviteRoles(args.ArgumentObject.AsString(Field_Roles), args.Workspace); err != nil {
+			return err
+		}
+
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return

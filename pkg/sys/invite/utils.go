@@ -6,11 +6,45 @@
 package invite
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 )
+
+func validateInviteRoles(rolesStr string, ws appdef.IWorkspace) error {
+	trimmed := strings.TrimSpace(rolesStr)
+	if len(trimmed) == 0 {
+		return coreutils.NewHTTPError(http.StatusBadRequest, ErrRolesEmpty)
+	}
+	seen := make(map[appdef.QName]struct{})
+	for role := range strings.SplitSeq(trimmed, ",") {
+		role = strings.TrimSpace(role)
+		if len(role) == 0 {
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrRolesEmpty)
+		}
+		qName, err := appdef.ParseQName(role)
+		if err != nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s: %w", ErrRoleInvalid, role, err))
+		}
+		if _, ok := seen[qName]; ok {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s", ErrRoleDuplicate, role))
+		}
+		seen[qName] = struct{}{}
+		if iauthnz.IsSystemRole(qName) {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s", ErrSystemRole, role))
+		}
+		if appdef.Role(ws.Type, qName) == nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s", ErrRoleNotFound, role))
+		}
+	}
+	return nil
+}
 
 func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istructs.IIntents, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValueBuilder, err error) {
 	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(sys.Storage_View, QNameViewJoinedWorkspaceIndex)

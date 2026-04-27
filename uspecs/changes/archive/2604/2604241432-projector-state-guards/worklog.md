@@ -98,3 +98,129 @@ Design is now in [invites--td.md](../../../../specs/prod/auth/invites--td.md).
 - Why this file exists https://github.com/voedger/voedger/blob/main/pkg/sys/it/testdata/apps/test2.app1/image/pkg/sys/sys.vsql?
 - Can it differ from the main sys.vsql? If not, should we remove it to avoid confusion?
 - //TODO Denis how to get WS by login? I want to check sys.JoinedWorkspace
+
+### 2026-04-27 12:10 validate roles
+
+- Currently roles are not validated
+
+#### sys.JoinedWorkspace scheme
+
+- TABLE JoinedWorkspace INHERITS sys.CDoc
+  - Roles varchar(1024) NOT NULL
+  - InvitingWorkspaceWSID int64 NOT NULL
+  - WSName varchar NOT NULL
+
+- Related types:
+  - CreateJoinedWorkspaceParams (Roles text, InvitingWorkspaceWSID int64, WSName text)
+  - UpdateJoinedWorkspaceRolesParams (Roles text, InvitingWorkspaceWSID int64)
+  - DeactivateJoinedWorkspaceParams (InvitingWorkspaceWSID int64)
+
+- Related view:
+  - JoinedWorkspaceIndexView (Dummy int32, InvitingWorkspaceWSID int64, JoinedWorkspaceID ref) PK((Dummy), InvitingWorkspaceWSID)
+
+- Commands: CreateJoinedWorkspace, UpdateJoinedWorkspaceRoles, DeactivateJoinedWorkspace, OnJoinedWorkspaceDeactivated
+- Projector: SYNC ProjectorJoinedWorkspaceIndex AFTER EXECUTE ON (CreateJoinedWorkspace)
+
+#### Field_Roles validation status
+
+- Field_Roles is never validated anywhere in the invite flow
+- It is read via AsString and stored directly into CDoc records (Invite, JoinedWorkspace, Subject)
+- No check that roles string contains valid/existing role QNames
+- No check that caller is authorized to grant specific roles
+- Only email is validated (coreutils.ValidateEMail) in InitiateInvitationByEMail
+
+#### ACL for granting roles
+
+- No ACL or authorization check validates which roles can be granted
+- Invite commands are tagged with WorkspaceOwnerFuncTag -- only workspace owner can execute them
+- But any workspace owner can assign any arbitrary string as Roles
+- The ACL engine (pkg/appdef/acl) handles operation-level permissions, not role-assignment permissions
+
+#### Roles per workspace
+
+- sys.Workspace (root, all workspaces inherit these):
+  - sys.Everyone -- assigned regardless of auth token
+  - sys.Anonymous -- assigned if no token
+  - sys.AuthenticatedUser -- assigned if valid token
+  - sys.System -- everything allowed, ACL skipped
+  - sys.ProfileOwner -- user/device works in its own profile
+  - sys.WorkspaceDevice -- device MAY work in a workspace owned by its profile
+  - sys.RoleWorkspaceOwner -- deprecated, use WorkspaceOwner
+  - sys.WorkspaceOwner -- user works in a workspace owned by their profile
+  - sys.ClusterAdmin -- not used yet
+  - sys.WorkspaceAdmin
+  - sys.BLOBUploader
+
+- Role inheritance (GRANTs):
+  - WorkspaceOwner -> ProfileOwner
+  - WorkspaceOwner -> WorkspaceDevice
+  - WorkspaceOwner -> RoleWorkspaceOwner (backward compat)
+  - Everyone -> Anonymous
+  - Everyone -> AuthenticatedUser
+  - BLOBUploader -> WorkspaceOwner
+
+- sys.AppWorkspaceWS: adds ClusterAdmin (via ALTER in pkg/cluster/appws.vsql)
+- sys.ProfileWS, sys.UserProfileWS, sys.DeviceProfileWS: no additional roles
+
+- Roles can be listed at runtime via appdef.Roles(workspace.Types()) or filtering workspace.Types() by TypeKind_Role
+
+#### bp3 app-level roles (air package)
+
+- air.BeneficiaryWS (abstract, inherits sys.Workspace):
+  - air.UntillPaymentsUser
+  - air.UntillPaymentsTerminal
+  - air.UntillPaymentsReseller (GRANT sys.WorkspaceAdmin TO UntillPaymentsReseller)
+  - air.SubscriptionReseller
+  - air.AirReseller -- deprecated, use SubscriptionReseller (GRANT SubscriptionReseller TO AirReseller)
+
+- air.RestaurantWS (inherits untill.unTillWS):
+  - air.BOReader
+  - air.SimpleRestaurantApi (PUBLISHED)
+
+- air.UntillPaymentsWS (inherits BeneficiaryWS): no additional roles
+
+- air.ResellerWS (inherits BeneficiaryWS): no additional roles
+
+- air.ResellersWS:
+  - air.ResellerPortalDashboardViewer
+  - air.ResellersAdmin (GRANT sys.WorkspaceAdmin TO ResellersAdmin)
+
+- ALTER sys.UserProfileWS (in air package):
+  - air.UntillChargebeeAgent
+  - air.UntillPaymentsManager
+
+#### Roles validation plan
+
+- [x] update pkg/iauthnz/utils.go: IsSystemRole to use prefix check (role.Pkg() == appdef.SysPackage) instead of slices.Contains(SysRoles)
+  - remove "slices" import, remove SysRoles usage from IsSystemRole
+  - SysRoles slice in authn-types.go stays (used by IssueAPIToken test)
+
+- [x] update pkg/iauthnzimpl/impl_test.go: IssueAPIToken test at line 448 uses appdef.NewQName(appdef.SysPackage, "test") as "allowed" case -- change to non-sys QName (e.g. appdef.NewQName("test", "role"))
+  - the sys role rejection loop at line 440 stays as-is
+
+- [x] add func ValidateInviteRoles in pkg/sys/invite/utils.go (or new file impl_validateroles.go):
+  - signature: func validateInviteRoles(rolesStr string, ws appdef.IWorkspace) error
+  - logic:
+    - strings.Split(rolesStr, ",") then strings.TrimSpace each
+    - appdef.ParseQName(role) -- reject malformed QNames
+    - iauthnz.IsSystemRole(qname) -- reject sys.* roles
+    - appdef.Role(ws.Type, qname) == nil -- reject roles not found in workspace
+  - return coreutils.NewHTTPError(http.StatusBadRequest, ...) with descriptive message
+
+- [x] add a very extensive unit test for validateInviteRoles in pkg/sys/invite/utils_test.go
+
+- [x] rename test role `app1pkg.WorkspaceSubject` -> `app1pkg.InviteTestRole` in pkg/vit/schemaTestApp1.vsql and pkg/sys/it/impl_deactivateworkspace_test.go (clearer name for the non-system role used as substitute for sys.WorkspaceOwner in invite tests)
+
+- [x] update pkg/sys/invite/impl_initiateinvitationbyemail.go: call validateInviteRoles(args.ArgumentObject.AsString(Field_Roles), args.Workspace) early in execCmdInitiateInvitationByEMail
+  - args.Workspace is appdef.IWorkspace, set by command processor in buildCommandArgs
+
+- [x] update pkg/sys/invite/impl_initiateupdateinviteroles.go: call validateInviteRoles(args.ArgumentObject.AsString(Field_Roles), args.Workspace) early in execCmdInitiateUpdateInviteRoles
+
+- [x] add integration tests `TestInvite_RolesValidation` in pkg/sys/it/impl_invite_test.go:
+  - malformed QName in Roles -> HTTP 400 (`not-a-qname`)
+  - sys.WorkspaceOwner in Roles -> HTTP 400
+  - non-existent role -> HTTP 400 (`app1pkg.NonExistentRole`)
+  - whitespace-only roles, leading comma, duplicate role -> HTTP 400
+  - valid app role still passes via existing tests (`TestInvite_BasicUsage` uses `app1pkg.LimitedAccessRole`)
+
+- [x] verify after rename: `go test -run "TestValidateInviteRoles" ./pkg/sys/invite/...`, `TestInvite_RolesValidation`, `TestInvite_BasicUsage`, `TestBasicUsage_InitiateDeactivateWorkspace`, `TestDeactivateJoinedWorkspace` all pass
