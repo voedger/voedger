@@ -92,3 +92,9 @@ Design is now in [invites--td.md](../../../../specs/prod/auth/invites--td.md).
   - update: TestInvite_BasicUsage (states go directly to Invited/Joined, no ToBe)
   - add: test projector idempotency (stale events skipped)
   - add: test old ToBe state handling (migration compatibility)
+
+### 2026-04-24 19:11 review
+
+- Why this file exists https://github.com/voedger/voedger/blob/main/pkg/sys/it/testdata/apps/test2.app1/image/pkg/sys/sys.vsql?
+- Can it differ from the main sys.vsql? If not, should we remove it to avoid confusion?
+- //TODO Denis how to get WS by login? I want to check sys.JoinedWorkspace
