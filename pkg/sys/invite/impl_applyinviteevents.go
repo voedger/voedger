@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2023-present unTill Pro, Ltd.
+ * Copyright (c) 2026-present unTill Software Development Group B.V.
+ * @author Maxim Geraskin
  */
 
 package invite
