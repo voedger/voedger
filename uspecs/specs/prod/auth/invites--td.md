@@ -6,9 +6,9 @@ Invite users/devices to workspaces
 
 - Invite to workspace
 - As a workspace owner I want to change invited user's roles
-- As a user, I want to see the list of my workspaces and roles, so that I know what am I available to work with
+- As a user, I want to see the list of my workspaces and roles, so that I know what I can work with
 - As a user, I want to be able to leave the workspace I'm invited to
-- As a workspace owner I want to ban user to he doesn't have access to my workspace anymore
+- As a workspace owner I want to ban a user so they no longer have access to my workspace
 
 ---
 
