@@ -207,6 +207,13 @@ func sendEmail(s istructs.IState, intents istructs.IIntents, smtpCfg smtp.Cfg, s
 	return err
 }
 
+// handleApplyJoinWorkspace finalizes c.sys.InitiateJoinWorkspace:
+//   - creates sys.JoinedWorkspace in the invitee's profile workspace (so the user can list workspaces they joined);
+//   - creates or re-activates sys.Subject in the inviting workspace (so the user can authorize there);
+//   - moves the invite to State_Joined.
+//
+// The Subject lookup has three cases: missing (first join), inactive (was Cancelled/Left previously - re-join),
+// active (idempotent retry). All paths must be safe to re-run because the projector is asynchronous.
 func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
 	login := svCDocInvite.AsString(field_ActualLogin)
 	existingSubjectID, isActive, err := SubjectExistsByLogin(login, s)
@@ -214,6 +221,7 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 		return err
 	}
 
+	// WSName is needed for the JoinedWorkspace record below.
 	skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		return err
@@ -229,6 +237,8 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 		return err
 	}
 
+	// Step 1: create JoinedWorkspace in the invitee's profile workspace.
+	// c.sys.CreateJoinedWorkspace is idempotent w.r.t. (InvitingWorkspaceWSID): a re-run updates the existing record.
 	_, err = fed.Func(
 		fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
 		fmt.Sprintf(`{"args":{"Roles":%q,"InvitingWorkspaceWSID":%d,"WSName":%q}}`,
@@ -240,13 +250,19 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 		return err
 	}
 
+	// Step 2: ensure sys.Subject exists in the inviting workspace and carries the invited Roles.
+	// `body` is the CUD that finalizes the Subject; in the inactive case we additionally pre-run an activation CUD
+	// because the platform forbids combining sys.IsActive with other fields in a single CUD (HTTP 403).
 	var body string
 	switch {
 	case existingSubjectID == istructs.NullRecordID:
+		// First join: insert a new Subject with all fields.
 		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":%q,"Roles":%q,"SubjectKind":%d,"ProfileWSID":%d}}]}`,
 			svCDocInvite.AsString(field_ActualLogin), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
 			svCDocInvite.AsInt64(Field_InviteeProfileWSID))
 	case !isActive:
+		// Re-join after Cancel/Leave: re-activate first, then update Roles in the second CUD below.
+		// Two separate CUDs are required: sys.IsActive cannot be updated together with other fields.
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, existingSubjectID)
 		_, err = fed.Func(
 			cudURL(appQName, event.Workspace()),
@@ -258,8 +274,10 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 		}
 		fallthrough
 	default:
+		// Active Subject (idempotent retry) or fallthrough from !isActive: refresh Roles.
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":%q}}]}`, existingSubjectID, svCDocInvite.AsString(Field_Roles))
 	}
+	// Insert path needs the new ID for the invite's SubjectID; update path can discard the response.
 	subjectID := existingSubjectID
 	if existingSubjectID == istructs.NullRecordID {
 		resp, err := fed.Func(
@@ -280,6 +298,7 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 			return err
 		}
 	}
+	// Step 3: mark the invite as Joined and remember the SubjectID for later Cancel/Leave/UpdateRoles handlers.
 	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
 		fmt.Sprintf(`"State":%d,"SubjectID":%d,"Updated":%d`, State_Joined, subjectID, time.Now().UnixMilli()))
 }
