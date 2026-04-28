@@ -31,8 +31,11 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
+		if err := validateInviteRoles(args.ArgumentObject.AsString(Field_Roles), args.Workspace); err != nil {
+			return err
+		}
+
 		cmdInitiateInvitation_ArgEmail := args.ArgumentObject.AsString(Field_Email)
-		
 		// do not check if the login from token exists in subjects, see https://github.com/voedger/voedger/issues/3698
 		// because login is Inviter here, not Invitee
 		_, subjectIsActive, err := SubjectExistsByLogin(cmdInitiateInvitation_ArgEmail, args.State)

@@ -32,6 +32,7 @@ var (
 	qNameAPApplyJoinWorkspace            = appdef.NewQName(appdef.SysPackage, "ApplyJoinWorkspace")
 	qNameAPApplyLeaveWorkspace           = appdef.NewQName(appdef.SysPackage, "ApplyLeaveWorkspace")
 	qNameAPApplyUpdateInviteRoles        = appdef.NewQName(appdef.SysPackage, "ApplyUpdateInviteRoles")
+	qNameAPApplyInviteEvents             = appdef.NewQName(appdef.SysPackage, "ApplyInviteEvents")
 	QNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
 	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
 	QNameViewSubjectsIdx                 = appdef.NewQName(appdef.SysPackage, "ViewSubjectsIdx")
@@ -96,37 +97,47 @@ const (
 var (
 	inviteValidStates = map[appdef.QName]map[State]bool{
 		qNameCmdInitiateInvitationByEMail: {
-			State_Cancelled:   true,
-			State_Left:        true,
-			State_Invited:     true,
-			State_ToBeInvited: true, // recovery from stuck state (projector failed before email sent)
-			State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
+			State_Cancelled:     true,
+			State_Left:          true,
+			State_Invited:       true,
+			State_ToBeInvited:   true,
+			State_ToBeJoined:    true, // dead: was Invited, join never completed
+			State_ToBeCancelled: true, // dead: was Joined, cancel never completed
+			State_ToBeLeft:      true, // dead: was Joined, leave never completed
+			State_ToUpdateRoles: true, // dead: was Joined, role update never completed
 		},
 		qNameCmdInitiateJoinWorkspace: {
-			State_Invited: true,
+			State_Invited:    true,
+			State_ToBeJoined: true, // dead: retry stuck join
 		},
 		qNameCmdInitiateUpdateInviteRoles: {
-			State_Joined: true,
+			State_Joined:        true,
+			State_ToUpdateRoles: true, // dead: retry stuck update
 		},
 		qNameCmdInitiateCancelAcceptedInvite: {
-			State_Joined: true,
+			State_Joined:        true,
+			State_ToBeCancelled: true, // dead: retry stuck cancel
+			State_ToUpdateRoles: true, // dead: was Joined
 		},
 		qNameCmdInitiateLeaveWorkspace: {
-			State_Joined: true,
+			State_Joined:        true,
+			State_ToBeLeft:      true, // dead: retry stuck leave
+			State_ToUpdateRoles: true, // dead: was Joined
 		},
 		qNameCmdCancelSentInvite: {
 			State_Invited:     true,
-			State_ToBeInvited: true, // recovery from stuck state (projector failed before email sent)
-			State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
+			State_ToBeInvited: true,
+			State_ToBeJoined:  true, // dead: cancel during stuck join
 		},
 	}
 	reInviteAllowedForState = map[State]bool{
-		State_Cancelled: true,
-		State_Left:      true,
-
-		// https://github.com/voedger/voedger/issues/3698
-		State_ToBeInvited: true,
-		State_Invited:     true,
-		State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
+		State_Cancelled:     true,
+		State_Left:          true,
+		State_ToBeInvited:   true,
+		State_Invited:       true,
+		State_ToBeJoined:    true, // dead: join never completed
+		State_ToBeCancelled: true, // dead: cancel never completed
+		State_ToBeLeft:      true, // dead: leave never completed
+		State_ToUpdateRoles: true, // dead: role update never completed
 	}
 )

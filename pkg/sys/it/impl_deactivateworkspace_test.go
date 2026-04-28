@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/invite"
@@ -83,15 +82,15 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 
 	// join login TestEmail2 to ws1
 	expireDatetime := vit.Now().UnixMilli()
-	roleOwner := iauthnz.QNameRoleWorkspaceOwner.String()
+	roleOwner := "app1pkg.InviteTestRole"
 	updateRolesEmailSubject := "your roles are updated"
 	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, inviteEmailTemplate, updateRolesEmailSubject)
 	email := vit.CaptureEmail()
 	verificationCode := email.Body[:6]
-	WaitForInviteState(vit, newWS, inviteID, invite.State_ToBeJoined, invite.State_Invited)
+	WaitForInviteState(vit, newWS, inviteID, invite.State_ToBeInvited, invite.State_Invited)
 	testEmail2Prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
 	InitiateJoinWorkspace(vit, newWS, inviteID, testEmail2Prn, verificationCode)
-	WaitForInviteState(vit, newWS, inviteID, invite.State_ToBeJoined, invite.State_Joined)
+	WaitForInviteState(vit, newWS, inviteID, invite.State_Invited, invite.State_Joined)
 
 	// check prn2 could work in ws1
 	body = `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
