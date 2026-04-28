@@ -8,11 +8,10 @@ package iauthnz
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"slices"
 )
 
 func IsSystemRole(role appdef.QName) bool {
-	return slices.Contains(SysRoles, role)
+	return role.Pkg() == appdef.SysPackage
 }
 
 // returns NullQName if missing

@@ -32,6 +32,7 @@ var (
 	qNameAPApplyJoinWorkspace            = appdef.NewQName(appdef.SysPackage, "ApplyJoinWorkspace")
 	qNameAPApplyLeaveWorkspace           = appdef.NewQName(appdef.SysPackage, "ApplyLeaveWorkspace")
 	qNameAPApplyUpdateInviteRoles        = appdef.NewQName(appdef.SysPackage, "ApplyUpdateInviteRoles")
+	qNameAPApplyInviteEvents             = appdef.NewQName(appdef.SysPackage, "ApplyInviteEvents")
 	QNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
 	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
 	QNameViewSubjectsIdx                 = appdef.NewQName(appdef.SysPackage, "ViewSubjectsIdx")
@@ -99,34 +100,51 @@ var (
 			State_Cancelled:   true,
 			State_Left:        true,
 			State_Invited:     true,
-			State_ToBeInvited: true, // recovery from stuck state (projector failed before email sent)
-			State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
+			State_ToBeInvited: true,
+			// legacy ToBe* states: allow re-invite on stuck records from old data
+			State_ToBeJoined:    true,
+			State_ToBeCancelled: true,
+			State_ToBeLeft:      true,
+			State_ToUpdateRoles: true,
 		},
 		qNameCmdInitiateJoinWorkspace: {
 			State_Invited: true,
+			// legacy: retry join on stuck record from old data
+			State_ToBeJoined: true,
 		},
 		qNameCmdInitiateUpdateInviteRoles: {
 			State_Joined: true,
+			// legacy: retry role update on stuck record from old data
+			State_ToUpdateRoles: true,
 		},
 		qNameCmdInitiateCancelAcceptedInvite: {
 			State_Joined: true,
+			// legacy ToBe*/ToUpdateRoles states: cancel stuck records from old data
+			State_ToBeCancelled: true,
+			State_ToUpdateRoles: true,
 		},
 		qNameCmdInitiateLeaveWorkspace: {
 			State_Joined: true,
+			// legacy ToBe*/ToUpdateRoles states: leave stuck records from old data
+			State_ToBeLeft:      true,
+			State_ToUpdateRoles: true,
 		},
 		qNameCmdCancelSentInvite: {
 			State_Invited:     true,
-			State_ToBeInvited: true, // recovery from stuck state (projector failed before email sent)
-			State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
+			State_ToBeInvited: true,
+			// legacy: cancel stuck record from old data
+			State_ToBeJoined: true,
 		},
 	}
 	reInviteAllowedForState = map[State]bool{
-		State_Cancelled: true,
-		State_Left:      true,
-
-		// https://github.com/voedger/voedger/issues/3698
+		State_Cancelled:   true,
+		State_Left:        true,
 		State_ToBeInvited: true,
 		State_Invited:     true,
-		State_ToBeJoined:  true, // recovery from stuck state (projector failed during join)
+		// legacy ToBe* states: allow re-invite on stuck records from old data
+		State_ToBeJoined:    true,
+		State_ToBeCancelled: true,
+		State_ToBeLeft:      true,
+		State_ToUpdateRoles: true,
 	}
 )
