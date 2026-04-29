@@ -42,6 +42,13 @@ func execCmdCancelSentInvite(_ timeu.ITime) func(args istructs.ExecCommandArgs) 
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
+		// no-op CUD: marks this as a post-refactor event (ap.sys.ApplyInviteEvents skips Version==0)
+		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
+		if err != nil {
+			return err
+		}
+		svbCDocInvite.PutInt32(Field_Version, 1)
+
 		return nil
 	}
 }

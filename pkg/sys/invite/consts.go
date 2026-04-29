@@ -61,6 +61,7 @@ const (
 	Field_SubjectID             = "SubjectID"
 	Field_LoginHash             = "LoginHash"
 	field_ActualLogin           = "ActualLogin"
+	Field_Version               = "Version"
 )
 
 //go:generate stringer -type=State -output=stringer_state.go

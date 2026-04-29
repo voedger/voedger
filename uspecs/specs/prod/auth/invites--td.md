@@ -170,6 +170,8 @@ It triggers on all 6 invite commands and handles each event type:
 
 If actual state does not match the expected source state for the event, the projector skips the event (stale).
 
+Pre-refactor events are filtered out at dispatch time via a CUD-side `Version` discriminator -- see Versioning section below.
+
 Projector gets InviteID from:
 
 - `event.ArgumentObject().AsRecordID(field_InviteID)` for commands that have InviteID param
@@ -190,6 +192,43 @@ Legacy deprecated projectors (`ap.sys.ApplyInvitation`, `ap.sys.ApplyJoinWorkspa
 
 ---
 
+### Versioning
+
+`ap.sys.ApplyInviteEvents` is registered against all six invite commands and, on registration, replays the entire PLog from offset 0. Pre-refactor events (before AIR-3704) were already fully processed by the deprecated per-command projectors; replaying them through `ap.sys.ApplyInviteEvents` would re-execute side effects (emails, federation calls). A CUD-side `Version` field on `cdoc.sys.Invite` discriminates post-refactor events from pre-refactor ones.
+
+All six current commands write a CUD on `cdoc.sys.Invite` carrying `Version = 1`. Three of them (`InitiateUpdateInviteRoles`, `InitiateCancelAcceptedInvite`, `CancelSentInvite`) carry a no-op CUD on `cdoc.sys.Invite` for that purpose, mirroring the existing `InitiateLeaveWorkspace` pattern. The projector reads `Version` from the event's `cdoc.sys.Invite` CUD via `event.CUDs` and skips events with `Version == 0`.
+
+Why the discriminator lives on the CUD, not on the merged record:
+
+- `event.CUDs` yields per-CUD changes only (`cudType.enumRecs` returns
+  `&rec.changes`), not the merged record. A field a command never `Put*`-d reads
+  back as the type's zero value through the dynobuffer's set/unset encoding,
+  even after a PLog round-trip. So pre-refactor events naturally read
+  `Version == 0` while post-refactor events (where the command writes
+  `Version = 1`) read `1`.
+- The decision is event-scoped, not state-scoped: it is made from the immutable
+  event payload, so re-invites and re-joins on the current cdoc do not affect
+  whether a historical event is replayed.
+- A single dispatch-level filter protects all side-effecting handlers
+  (`handleApplyInvitation`, `handleApplyJoinWorkspace`,
+  `handleApplyUpdateInviteRoles`, `handleApplyCancelAcceptedInvite`,
+  `handleApplyLeaveWorkspace`) without per-handler patches against missing or
+  emptied fields (`ActualLogin`, `SubjectID`).
+- The cmd argument schemas are unchanged, so external clients are unaffected.
+
+Considered and rejected:
+
+- Per-field guard (e.g. `if ActualLogin == "" return nil`): patches one symptom
+  only, reads from current cdoc state instead of the immutable event, leaves
+  analogous replay risks in cancel/leave handlers, and does not stop unwanted
+  emails or role-update HTTP calls.
+- CUD-shape filter (presence of legacy `State_*` values): brittle to future
+  refactors and depends on auditing which `State_*` values still appear in
+  current commands.
+- Version on the command argument: would break external clients.
+
+---
+
 ### Documents
 
 #### cdoc.sys.Invite
@@ -206,6 +245,7 @@ Legacy deprecated projectors (`ap.sys.ApplyInvitation`, `ap.sys.ApplyJoinWorkspa
 - SubjectID ref // set by ap.sys.ApplyInviteEvents
 - InviteeProfileWSID int64 // set by c.sys.InitiateJoinWorkspace
 - ActualLogin varchar // invitee's login from token, set by c.sys.InitiateJoinWorkspace
+- Version int32 // command-side discriminator; current commands write 1, pre-refactor events have 0 and are skipped by ap.sys.ApplyInviteEvents
 - UNIQUEFIELD Email
 
 #### cdoc.sys.Subject
@@ -241,9 +281,11 @@ order -- serialized, no races.
 `InitiateInvitationByEMail` writes transient State=ToBeInvited because the CDoc
 must have a State on creation (and on re-invite, to signal the projector).
 `InitiateJoinWorkspace` writes data fields from the auth token (InviteeProfileWSID,
-SubjectKind, ActualLogin) but does not write State. `InitiateLeaveWorkspace`
-keeps a no-op CUD to pass InviteID to the projector (no InviteID param, no auth
-token in projector). All other commands do no CUD.
+SubjectKind, ActualLogin) but does not write State. `InitiateLeaveWorkspace`,
+`InitiateUpdateInviteRoles`, `InitiateCancelAcceptedInvite`, and `CancelSentInvite`
+keep a no-op CUD on cdoc.sys.Invite (only writing `Version = 1`) so the projector
+can discover the InviteID from `event.CUDs` and so the Version discriminator is
+present on every post-refactor event.
 
 ### Stale event handling
 
