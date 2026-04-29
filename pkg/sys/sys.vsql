@@ -95,6 +95,8 @@ ABSTRACT WORKSPACE Workspace (
 		-- Currently always equals Login because InitiateJoinWorkspace validates they match
 		-- Used for cdoc.sys.Subject.Login field
 		ActualLogin varchar,
+		-- Version: command-side discriminator; current commands write 1, pre-refactor events have 0 and are skipped by ap.sys.ApplyInviteEvents
+		Version int32,
 		UNIQUEFIELD Email
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
