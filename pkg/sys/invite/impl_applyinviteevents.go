@@ -43,7 +43,14 @@ func asyncProjectorApplyInviteEvents(time timeu.ITime, fed federation.IFederatio
 func applyInviteEvents(time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		cmd := event.QName()
-		inviteID, err := inviteIDFromEvent(cmd, event, s)
+		// Pre-refactor events (before AIR-3704) did not carry a Version on the cdoc.sys.Invite CUD
+		// and were already fully processed by the deprecated per-command projectors. Replaying them
+		// here would re-execute side effects (emails, federation calls). Skip them.
+		inviteCUD := findInviteCUD(event)
+		if inviteCUD == nil || inviteCUD.AsInt32(Field_Version) == 0 {
+			return nil
+		}
+		inviteID, err := inviteIDFromEvent(cmd, event, s, inviteCUD)
 		if err != nil {
 			return err
 		}
@@ -75,7 +82,19 @@ func applyInviteEvents(time timeu.ITime, fed federation.IFederation, tokens itok
 	}
 }
 
-func inviteIDFromEvent(cmd appdef.QName, event istructs.IPLogEvent, s istructs.IState) (istructs.RecordID, error) {
+func findInviteCUD(event istructs.IPLogEvent) istructs.ICUDRow {
+	var inviteCUD istructs.ICUDRow
+	event.CUDs(func(rec istructs.ICUDRow) bool {
+		if rec.QName() == QNameCDocInvite {
+			inviteCUD = rec
+			return false
+		}
+		return true
+	})
+	return inviteCUD
+}
+
+func inviteIDFromEvent(cmd appdef.QName, event istructs.IPLogEvent, s istructs.IState, inviteCUD istructs.ICUDRow) (istructs.RecordID, error) {
 	switch cmd {
 	case qNameCmdInitiateInvitationByEMail:
 		skb, err := s.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
@@ -90,12 +109,7 @@ func inviteIDFromEvent(cmd appdef.QName, event istructs.IPLogEvent, s istructs.I
 		}
 		return sv.AsRecordID(field_InviteID), nil
 	case qNameCmdInitiateLeaveWorkspace:
-		for rec := range event.CUDs {
-			if rec.QName() == QNameCDocInvite {
-				return rec.ID(), nil
-			}
-		}
-		return istructs.NullRecordID, nil
+		return inviteCUD.ID(), nil
 	default:
 		return event.ArgumentObject().AsRecordID(field_InviteID), nil
 	}
