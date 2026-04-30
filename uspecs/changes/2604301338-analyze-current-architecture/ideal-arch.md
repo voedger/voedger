@@ -2,12 +2,10 @@
 
 ## Components
 
-## Software components
+## Core software components
 
 Core:
 
-- `httpadapter`: sends http(s) requests to voedger
-- `router`: routes requests to appropriate processors
 - `procs`: manage processors
 
 Processors:
@@ -25,11 +23,18 @@ Processors:
   - query/create/deactive workspaces
   - Used by other processors
 
-## Hardware components
+## Federation
+
+### Physical layer
 
 - federation
+  - main cluster
+    - Primary place to deploy registry app
+  - one or more app clusters
+    - registry app
+  - worker cluster
 - cluster
-- One or more nodes
+  - One or more nodes
 
 ## Scenarios
 
