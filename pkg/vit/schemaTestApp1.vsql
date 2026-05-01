@@ -797,7 +797,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
 		PROJECTOR ProjDummyQName AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(ViewWithQName)); -- does nothing, only to define view.app1pkg.ViewQName
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx), sys.View(CategoryIdxDenied));
-		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
+		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx), sys.View(DailyIdxSmall));
 		PROJECTOR ApplyClient AFTER INSERT ON (Client) INTENTS(sys.View(Clients));
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);

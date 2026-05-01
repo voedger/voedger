@@ -405,6 +405,35 @@ func TestSqlQuery_view_records(t *testing.T) {
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 		require.NotEmpty(resp.Sections[0].Elements)
 	})
+
+	// AIR-3801: WHERE clause on view keys of int8 / int16 kinds
+	t.Run("Should read view filtered by int8 and int16 key fields", func(t *testing.T) {
+		body = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":2025,"Month":3,"Day":7,"StringValue":"2025-03-07"}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		t.Run("filter by int16 partition key", func(t *testing.T) {
+			require := require.New(t)
+			body = `{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = 2025"},"elements":[{"fields":["Result"]}]}`
+			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+			require.Len(resp.Sections[0].Elements, 1)
+			require.Contains(resp.SectionRow(0)[0].(string), `"StringValue":"2025-03-07"`)
+		})
+
+		t.Run("filter by int16 and int8 keys", func(t *testing.T) {
+			require := require.New(t)
+			body = `{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = 2025 and Month = 3 and Day = 7"},"elements":[{"fields":["Result"]}]}`
+			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+			require.Len(resp.Sections[0].Elements, 1)
+			require.Contains(resp.SectionRow(0)[0].(string), `"StringValue":"2025-03-07"`)
+		})
+
+		t.Run("no rows when key value does not match", func(t *testing.T) {
+			require := require.New(t)
+			body = `{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = 1999"},"elements":[{"fields":["Result"]}]}`
+			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+			require.Empty(resp.Sections)
+		})
+	})
 }
 
 func TestSqlQuery(t *testing.T) {
@@ -802,38 +831,4 @@ func TestBlobFunctionsErrors(t *testing.T) {
 			vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400(c.err)).Println()
 		})
 	}
-}
-
-// AIR-3801: WHERE clause on view keys of int8 / int16 kinds
-func TestSqlQuery_view_records_smallInts(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
-	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":2025,"Month":3,"Day":7,"StringValue":"2025-03-07"}}]}`
-	vit.PostWS(ws, "c.sys.CUD", body)
-
-	t.Run("filter by int16 partition key", func(t *testing.T) {
-		require := require.New(t)
-		body := `{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = 2025"},"elements":[{"fields":["Result"]}]}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
-		require.Len(resp.Sections[0].Elements, 1)
-		require.Contains(resp.SectionRow(0)[0].(string), `"StringValue":"2025-03-07"`)
-	})
-
-	t.Run("filter by int16 and int8 keys", func(t *testing.T) {
-		require := require.New(t)
-		body := `{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = 2025 and Month = 3 and Day = 7"},"elements":[{"fields":["Result"]}]}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
-		require.Len(resp.Sections[0].Elements, 1)
-		require.Contains(resp.SectionRow(0)[0].(string), `"StringValue":"2025-03-07"`)
-	})
-
-	t.Run("no rows when key value does not match", func(t *testing.T) {
-		require := require.New(t)
-		body := `{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = 1999"},"elements":[{"fields":["Result"]}]}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
-		require.Empty(resp.Sections)
-	})
 }
