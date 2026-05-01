@@ -87,6 +87,10 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 		}
 
 		switch f.DataKind() {
+		case appdef.DataKind_int8:
+			fallthrough
+		case appdef.DataKind_int16:
+			fallthrough
 		case appdef.DataKind_int32:
 			fallthrough
 		case appdef.DataKind_int64:

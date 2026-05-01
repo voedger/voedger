@@ -574,6 +574,15 @@ ALTERABLE WORKSPACE test_wsWS (
     	PRIMARY KEY ((Year), Month, Day)
     ) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
 
+	VIEW DailyIdxSmall (
+		Year int16,
+		Month int8,
+		Day int8,
+		StringValue text,
+		offs int64,
+		PRIMARY KEY ((Year), Month, Day)
+	) AS RESULT OF ApplyDailyIdx WITH Tags =(WorkspaceOwnerTableTag);
+
     TABLE Daily INHERITS sys.CDoc (
     	Year int32,
     	Month int32,
@@ -852,7 +861,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
-	
+
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO InviteTestRole;
 
