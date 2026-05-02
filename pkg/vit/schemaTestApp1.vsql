@@ -581,7 +581,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		StringValue text,
 		offs int64,
 		PRIMARY KEY ((Year), Month, Day)
-	) AS RESULT OF ApplyDailyIdx WITH Tags =(WorkspaceOwnerTableTag);
+	) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
 
     TABLE Daily INHERITS sys.CDoc (
     	Year int32,
@@ -873,6 +873,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	GRANT SELECT ON VIEW CategoryIdx TO sys.WorkspaceOwner;
 	GRANT SELECT ON VIEW DailyIdx TO sys.WorkspaceOwner;
+	GRANT SELECT ON VIEW DailyIdxSmall TO sys.WorkspaceOwner;
 	GRANT SELECT ON VIEW Clients TO sys.WorkspaceOwner;
 	GRANT SELECT(Year, Month, Day, offs) ON VIEW DailyIdx TO LimitedAccessRole;
 
