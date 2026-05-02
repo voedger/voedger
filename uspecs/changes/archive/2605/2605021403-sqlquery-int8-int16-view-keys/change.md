@@ -3,6 +3,7 @@ registered_at: 2026-05-01T14:57:02Z
 change_id: 2605011457-sqlquery-int8-int16-view-keys
 baseline: 4f210eb8ab63962037c3dc2e58456093f27056a2
 issue_url: https://untill.atlassian.net/browse/AIR-3801
+archived_at: 2026-05-02T14:03:34Z
 ---
 
 # Change request: Support int8 and int16 in sqlquery view WHERE clauses
