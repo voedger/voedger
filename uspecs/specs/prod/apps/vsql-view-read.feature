@@ -12,7 +12,7 @@ Feature: VSQL view reading
       | air.FdmLog       | Month | int8  | Year=2025 and Month=1 and Day=1                    |
       | air.FdmLog       | Year  | int16 | Year=2025 and Month=1 and Day=1                    |
       | app1pkg.DailyIdx | Year  | int32 | Year=2025                                          |
-      | sys.plog         | Offset| int64 | Offset >= 0                                        |
+      | sys.plog         | Offset| int64 | Offset >= 1                                        |
 
   Rule: Edge cases
 

@@ -398,9 +398,9 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					if err != nil {
 						return err
 					}
-					skbViewDailyIdxSmall.PutInt16(Field_Year, int16(year))
-					skbViewDailyIdxSmall.PutInt8(Field_Month, int8(month))
-					skbViewDailyIdxSmall.PutInt8(Field_Day, int8(day))
+					skbViewDailyIdxSmall.PutInt16(Field_Year, int16(year)) //nolint G115
+					skbViewDailyIdxSmall.PutInt8(Field_Month, int8(month)) //nolint G115
+					skbViewDailyIdxSmall.PutInt8(Field_Day, int8(day))     //nolint G115
 					svbViewDailyIdxSmall, err := intents.NewValue(skbViewDailyIdxSmall)
 					if err != nil {
 						return err

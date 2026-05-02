@@ -1,4 +1,4 @@
-# AIR-3801: sqlquery: support int16 to make possible to read from view.air.FdmLog
+# AIR-3801: sqlquery: support int8 and int16 to make possible to read from view.air.FdmLog
 
 - Key: AIR-3801
 - Type: Task
