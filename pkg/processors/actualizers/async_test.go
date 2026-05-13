@@ -1218,17 +1218,24 @@ func Test_AsynchronousActualizer_ChannelCleanupPanicReproduction(t *testing.T) {
 	tick := time.NewTicker(time.Millisecond)
 	defer tick.Stop()
 	deadline := time.After(5 * time.Second)
-	for {
+	recovered := false
+	for !recovered {
 		select {
 		case p := <-panicCh:
 			t.Fatalf("asyncActualizer panicked due to stale channelCleanup:\n%s", p)
 		case <-deadline:
 			t.Fatal("actualizer did not recover from injected failures")
 		case <-tick.C:
-			if flaky.appDefCalls.Load() >= 3 && flaky.waitForBorrowCalls.Load() >= 3 {
-				return
-			}
+			recovered = flaky.appDefCalls.Load() >= 3 && flaky.waitForBorrowCalls.Load() >= 3
 		}
+	}
+
+	vvmCancel()
+	<-done
+	select {
+	case p := <-panicCh:
+		t.Fatalf("asyncActualizer panicked during shutdown:\n%s", p)
+	default:
 	}
 }
 
