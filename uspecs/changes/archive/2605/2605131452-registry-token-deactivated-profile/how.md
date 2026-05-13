@@ -16,11 +16,11 @@
 
 References:
 
-- [pkg/registry/impl_issueprincipaltoken.go](../../../pkg/registry/impl_issueprincipaltoken.go)
-- [pkg/registry/utils.go](../../../pkg/registry/utils.go)
-- [pkg/registry/impl_resetpassword.go](../../../pkg/registry/impl_resetpassword.go)
-- [pkg/registry/impl_changepassword.go](../../../pkg/registry/impl_changepassword.go)
-- [pkg/registry/consts.go](../../../pkg/registry/consts.go)
-- [pkg/registry/appws.vsql](../../../pkg/registry/appws.vsql)
-- [pkg/sys/workspace/impl_deactivate.go](../../../pkg/sys/workspace/impl_deactivate.go)
-- [pkg/processors/errors.go](../../../pkg/processors/errors.go)
+- [pkg/registry/impl_issueprincipaltoken.go](../../../../../pkg/registry/impl_issueprincipaltoken.go)
+- [pkg/registry/utils.go](../../../../../pkg/registry/utils.go)
+- [pkg/registry/impl_resetpassword.go](../../../../../pkg/registry/impl_resetpassword.go)
+- [pkg/registry/impl_changepassword.go](../../../../../pkg/registry/impl_changepassword.go)
+- [pkg/registry/consts.go](../../../../../pkg/registry/consts.go)
+- [pkg/registry/appws.vsql](../../../../../pkg/registry/appws.vsql)
+- [pkg/sys/workspace/impl_deactivate.go](../../../../../pkg/sys/workspace/impl_deactivate.go)
+- [pkg/processors/errors.go](../../../../../pkg/processors/errors.go)

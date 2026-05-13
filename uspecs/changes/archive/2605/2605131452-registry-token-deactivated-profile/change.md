@@ -3,6 +3,7 @@ registered_at: 2026-05-12T14:34:28Z
 change_id: 2605121434-registry-token-deactivated-profile
 baseline: 4f210eb8ab63962037c3dc2e58456093f27056a2
 issue_url: https://untill.atlassian.net/browse/AIR-3892
+archived_at: 2026-05-13T14:52:03Z
 ---
 
 # Change request: registry — treat deactivated profile as missing login on IssuePrincipalToken
