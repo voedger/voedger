@@ -55,3 +55,16 @@ Alternatives:
   - Makes `finit` idempotent through better encapsulation, but diverges from the existing convention in this file where post-`finit` resets live in the caller
 - Make `cleanupChannel` idempotent in the broker (confidence: low)
   - Would mask the contract violation broker-wide and hide future regressions in other callers
+
+## Reproduction strategy in unit test
+
+Drive `asyncActualizer.Run` through its natural retry loop with a `flakyAppParts` decorator over `IAppPartitions`, failing `WaitForBorrow` #2 then `AppDef` #2 (confidence: high).
+
+Rationale: exercises the exact production code path (`init` → `keepReading` → `finit` → `init` again) without invasively double-calling `finit()`, mirroring the real-world cause (transient app-part availability during VIT reset).
+
+Alternatives:
+
+- Inject a failing projector function to fail `keepReading` (confidence: medium)
+  - Projector errors are caught by `asyncErrorHandler` and do not propagate as `RetryNoResult` op errors, so iter 2 init-time failure cannot be triggered
+- Cancel `readCtx` from outside via reflection (confidence: low)
+  - Invasive, brittle, couples test to internal field names

@@ -16,3 +16,4 @@ issue_url: https://untill.atlassian.net/browse/AIR-3888
 Prevent stale `channelCleanup` reuse across retry iterations of `asyncActualizer.Run`:
 
 - Reset `a.channelCleanup` to `nil` after `finit()` in the retry loop, alongside the existing `a.pipeline = nil` reset
+- Add a regression test that drives the retry loop through the production failure path via a flaky `IAppPartitions` decorator
