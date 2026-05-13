@@ -7,12 +7,12 @@
 
 ## Why
 
-if a user profile (login, not cdoc.registry.Login) is deactivated via c.sys.InitiateDeactivateWorkspace then IssuePrincipalToken now returns 410 gone status code with message workspace status is not active. That is wrong according to GDPR requirements
+If a user profile (the login, not `cdoc.registry.Login`) is deactivated via `c.sys.InitiateDeactivateWorkspace`, `IssuePrincipalToken` currently returns status code `410 Gone` with the message `workspace status is not active`. This is incorrect according to GDPR requirements.
 
 ## What
 
-check on q.registry.IssuePrincipalToken: if the profile has been deactivated then return login does not exists like if it it is missing
+Update `q.registry.IssuePrincipalToken` so that if the profile has been deactivated, it returns the same result as when the login does not exist, as if it were missing.
 
 ## How
 
-if the profile has been deactivated then cdoc.registry.Login.IsActive set to false (already done)
+If the profile has been deactivated, `cdoc.registry.Login.IsActive` is set to `false` (already done).
