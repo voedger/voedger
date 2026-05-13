@@ -113,6 +113,7 @@ func (a *asyncActualizer) Run(vvmCtx context.Context) {
 			// i.e. 2nd finit will panic if an error is returned from 2nd init before the place where the pipeline is re-created
 			// see https://untill.atlassian.net/browse/AIR-2302
 			a.pipeline = nil
+			a.channelCleanup = nil
 			return err
 		})
 	}
