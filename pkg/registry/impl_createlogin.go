@@ -66,11 +66,13 @@ func createLogin(args istructs.ExecCommandArgs, login string) (err error) {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", login)
 	}
 
-	cdocLoginID, err := GetCDocLoginID(args.State, args.WSID, appName, login)
+	// deactivated cdoc.registry.Login is treated as missing by GetCDocLogin so the same login name can be registered again;
+	// projectorLoginIdx then rewrites view.registry.LoginIdx by primary key (AppWSID, AppIDLoginHash)
+	_, loginExists, err := GetCDocLogin(login, args.State, args.WSID, appName)
 	if err != nil {
 		return err
 	}
-	if cdocLoginID > 0 {
+	if loginExists {
 		return coreutils.NewHTTPErrorf(http.StatusConflict, "login already exists")
 	}
 

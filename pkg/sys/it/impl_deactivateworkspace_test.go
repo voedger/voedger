@@ -213,4 +213,19 @@ func TestDeactivateUserProfile(t *testing.T) {
 			it.Expect401(fmt.Sprintf("login %s does not exist", loginName))).Println()
 		expectVerboseLine()
 	})
+
+	t.Run("recreate the deactivated login", func(t *testing.T) {
+		require := require.New(t)
+
+		// sign up the same loginName again -> a new bare cdoc.registry.Login with the same name
+		newLogin := vit.SignUp(loginName, pwd, istructs.AppQName_test1_app1)
+
+		// view.registry.LoginIdx is rewritten by projectorLoginIdx (PK = AppWSID + AppIDLoginHash) to point at the new CDocLogin
+		newCDocLoginID := vit.GetCDocLoginID(newLogin)
+		require.NotEqual(cdocLoginID, newCDocLoginID, "view.registry.LoginIdx must be rewritten to a new CDoc<Login>")
+
+		// q.registry.IssuePrincipalToken authenticates the recreated login and resolves a fresh ProfileWSID
+		newPrn := vit.SignIn(newLogin)
+		require.NotEqual(prn.ProfileWSID, newPrn.ProfileWSID, "recreated login must resolve to a new profile workspace")
+	})
 }
