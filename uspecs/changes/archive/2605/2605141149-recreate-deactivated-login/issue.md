@@ -1,4 +1,4 @@
-# AIR-3915: voedger: make possible to create login again if it was deactivated
+# AIR-3915: voedger: make it possible to create a login again after it was deactivated
 
 - **Key**: AIR-3915
 - **Type**: Sub-task
