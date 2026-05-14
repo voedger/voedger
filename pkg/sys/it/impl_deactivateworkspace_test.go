@@ -213,19 +213,30 @@ func TestDeactivateUserProfile(t *testing.T) {
 			it.Expect401(fmt.Sprintf("login %s does not exist", loginName))).Println()
 		expectVerboseLine()
 	})
+}
 
-	t.Run("recreate the deactivated login", func(t *testing.T) {
-		require := require.New(t)
+func TestRecreateDeactivatedLogin(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
 
-		// sign up the same loginName again -> a new bare cdoc.registry.Login with the same name
-		newLogin := vit.SignUp(loginName, pwd, istructs.AppQName_test1_app1)
+	loginName := vit.NextName() + "@123.com"
+	pwd := "1"
 
-		// view.registry.LoginIdx is rewritten by projectorLoginIdx (PK = AppWSID + AppIDLoginHash) to point at the new CDocLogin
-		newCDocLoginID := vit.GetCDocLoginID(newLogin)
-		require.NotEqual(cdocLoginID, newCDocLoginID, "view.registry.LoginIdx must be rewritten to a new CDoc<Login>")
+	// create
+	login := vit.SignUp(loginName, pwd, istructs.AppQName_test1_app1)
+	prn := vit.SignIn(login)
+	cdocLoginID := vit.GetCDocLoginID(login)
 
-		// q.registry.IssuePrincipalToken authenticates the recreated login and resolves a fresh ProfileWSID
-		newPrn := vit.SignIn(newLogin)
-		require.NotEqual(prn.ProfileWSID, newPrn.ProfileWSID, "recreated login must resolve to a new profile workspace")
-	})
+	// deactivate
+	vit.PostProfile(prn, "c.sys.InitiateDeactivateWorkspace", "{}")
+	waitForDeactivate(vit, prn.AppQName, prn.ProfileWSID, loginName)
+
+	// create again with the same name
+	newLogin := vit.SignUp(loginName, pwd, istructs.AppQName_test1_app1)
+	newPrn := vit.SignIn(newLogin)
+	newCDocLoginID := vit.GetCDocLoginID(newLogin)
+
+	require.NotEqual(cdocLoginID, newCDocLoginID, "view.registry.LoginIdx must be rewritten to a new CDoc<Login>")
+	require.NotEqual(prn.ProfileWSID, newPrn.ProfileWSID, "recreated login must resolve to a new profile workspace")
 }
