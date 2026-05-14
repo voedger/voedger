@@ -242,12 +242,22 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 			return err
 		}
 
-		// currentApp/ApplicationWS/c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName)
+		// c.sys.OnWorkspaceDeactivated targets the app and pseudoWSID where cdoc.sys.WorkspaceID actually lives:
+		//   child workspace (ownerApp == projectorApp): ownerApp at pseudoWSID(ownerWSID, wsName)
+		//   login profile (ownerApp != projectorApp):   projectorApp (= targetApp) at pseudoWSID(NullWSID, wsName)
+		//                                                per pkg/registry/impl_invokecreateworkspaceid.go
 		wsName := wsDesc.AsString(authnz.Field_WSName)
 		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":%q}}`, ownerWSID, wsName)
+		cdocWorkspaceIDApp := ownerApp
+		cdocWorkspaceIDAppToken := ownerAppToken
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID()) // nolint G115
-		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, cdocWorkspaceIDWSID), body,
-			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(ownerAppToken)); err != nil {
+		if ownerAppQName != projectorAppQName {
+			cdocWorkspaceIDApp = projectorAppQName.String()
+			cdocWorkspaceIDAppToken = projectorAppToken
+			cdocWorkspaceIDWSID = coreutils.GetPseudoWSID(istructs.NullWSID, wsName, event.Workspace().ClusterID())
+		}
+		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", cdocWorkspaceIDApp, cdocWorkspaceIDWSID), body,
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(cdocWorkspaceIDAppToken)); err != nil {
 			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)
 		}
 

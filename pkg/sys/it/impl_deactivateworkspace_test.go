@@ -214,3 +214,29 @@ func TestDeactivateUserProfile(t *testing.T) {
 		expectVerboseLine()
 	})
 }
+
+func TestRecreateDeactivatedLogin(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	loginName := vit.NextName() + "@123.com"
+	pwd := "1"
+
+	// create
+	login := vit.SignUp(loginName, pwd, istructs.AppQName_test1_app1)
+	prn := vit.SignIn(login)
+	cdocLoginID := vit.GetCDocLoginID(login)
+
+	// deactivate
+	vit.PostProfile(prn, "c.sys.InitiateDeactivateWorkspace", "{}")
+	waitForDeactivate(vit, prn.AppQName, prn.ProfileWSID, loginName)
+
+	// create again with the same name
+	newLogin := vit.SignUp(loginName, pwd, istructs.AppQName_test1_app1)
+	newPrn := vit.SignIn(newLogin)
+	newCDocLoginID := vit.GetCDocLoginID(newLogin)
+
+	require.NotEqual(cdocLoginID, newCDocLoginID, "view.registry.LoginIdx must be rewritten to a new CDoc<Login>")
+	require.NotEqual(prn.ProfileWSID, newPrn.ProfileWSID, "recreated login must resolve to a new profile workspace")
+}

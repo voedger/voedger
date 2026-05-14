@@ -111,12 +111,28 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	}
 	kb.PutInt64(Field_OwnerWSID, ownerWSID)
 	kb.PutString(authnz.Field_WSName, wsName)
-	_, ok, err := args.State.CanExist(kb)
+	viewRec, ok, err := args.State.CanExist(kb)
 	if err != nil {
 		return err
 	}
 	if ok {
-		return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID))
+		// the existing index entry must be honored only while its cdoc.sys.WorkspaceID is active;
+		// if the previous workspace was deactivated (cmdOnWorkspaceDeactivatedExec sets sys.IsActive=false on cdoc.sys.WorkspaceID),
+		// re-creation under the same (OwnerWSID, WSName) is allowed and workspaceIDIdxProjector overwrites the index entry
+		recKB, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocWorkspaceID)
+		if err != nil {
+			// notest
+			return err
+		}
+		recKB.PutRecordID(sys.Storage_Record_Field_ID, viewRec.AsRecordID(field_IDOfCDocWorkspaceID))
+		cdocWorkspaceID, err := args.State.MustExist(recKB)
+		if err != nil {
+			// notest
+			return err
+		}
+		if cdocWorkspaceID.AsBool(appdef.SystemField_IsActive) {
+			return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID))
+		}
 	}
 
 	// Get new WSID from View<NextBaseWSID>
