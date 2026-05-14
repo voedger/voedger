@@ -17,7 +17,7 @@ When a user profile is deactivated via `c.sys.InitiateDeactivateWorkspace`, `q.r
 Adjust `q.registry.IssuePrincipalToken` behavior for deactivated profiles:
 
 - Detect deactivated profile workspace status during token issuance
-- Return the same `login does not exist` error as for a missing login instead of propagating the 410 Gone status
+- Return 401 status code and the same `login does not exist` error as for a missing login instead of propagating the 410 Gone status
 
 Check if `cdoc.registry.Login.IsActive` becomes false
 Check other places where `view.registry.LoginIdx` or `cdoc.registry.Login` are touched: if corresponding `cdoc.registry.Login.IsActive` is false then consider the login is missing
