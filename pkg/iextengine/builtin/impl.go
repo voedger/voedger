@@ -51,3 +51,7 @@ func (f extensionEngineFactory) New(_ context.Context, app appdef.AppQName, _ []
 	}
 	return
 }
+
+func (f extensionEngineFactory) AppFuncs() iextengine.BuiltInAppExtFuncs { return f.funcs }
+
+func (f extensionEngineFactory) StatelessFuncs() iextengine.BuiltInExtFuncs { return f.statelessFuncs }
