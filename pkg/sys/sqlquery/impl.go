@@ -402,57 +402,28 @@ func collectWhereFields(expr sqlparser.Expr, withFields appdef.IWithFields, dst 
 	if expr == nil {
 		return
 	}
-	add := func(name string) {
+	err := sqlparser.Walk(func(node sqlparser.SQLNode) (bool, error) {
+		col, ok := node.(*sqlparser.ColName)
+		if !ok {
+			return true, nil
+		}
+		name := col.Name.String()
+		if !col.Qualifier.Name.IsEmpty() {
+			name = fmt.Sprintf("%s.%s", col.Qualifier.Name, col.Name)
+		}
 		if withFields != nil {
 			recovered := recoverFieldName(withFields, name)
 			if withFields.Field(recovered) == nil {
-				return
+				return true, nil
 			}
 			name = recovered
 		}
 		dst[name] = true
-	}
-	switch e := expr.(type) {
-	case *sqlparser.ColName:
-		if !e.Qualifier.Name.IsEmpty() {
-			add(fmt.Sprintf("%s.%s", e.Qualifier.Name, e.Name))
-		} else {
-			add(e.Name.String())
-		}
-	case *sqlparser.AndExpr:
-		collectWhereFields(e.Left, withFields, dst)
-		collectWhereFields(e.Right, withFields, dst)
-	case *sqlparser.OrExpr:
-		collectWhereFields(e.Left, withFields, dst)
-		collectWhereFields(e.Right, withFields, dst)
-	case *sqlparser.NotExpr:
-		collectWhereFields(e.Expr, withFields, dst)
-	case *sqlparser.ParenExpr:
-		collectWhereFields(e.Expr, withFields, dst)
-	case *sqlparser.ComparisonExpr:
-		collectWhereFields(e.Left, withFields, dst)
-		collectWhereFields(e.Right, withFields, dst)
-	case *sqlparser.RangeCond:
-		collectWhereFields(e.Left, withFields, dst)
-		collectWhereFields(e.From, withFields, dst)
-		collectWhereFields(e.To, withFields, dst)
-	case *sqlparser.IsExpr:
-		collectWhereFields(e.Expr, withFields, dst)
-	case *sqlparser.BinaryExpr:
-		collectWhereFields(e.Left, withFields, dst)
-		collectWhereFields(e.Right, withFields, dst)
-	case *sqlparser.UnaryExpr:
-		collectWhereFields(e.Expr, withFields, dst)
-	case sqlparser.ValTuple:
-		for _, v := range e {
-			collectWhereFields(v, withFields, dst)
-		}
-	case *sqlparser.FuncExpr:
-		for _, se := range e.Exprs {
-			if ae, ok := se.(*sqlparser.AliasedExpr); ok {
-				collectWhereFields(ae.Expr, withFields, dst)
-			}
-		}
+		return true, nil
+	}, expr)
+	if err != nil {
+		// notest
+		panic(err)
 	}
 }
 
