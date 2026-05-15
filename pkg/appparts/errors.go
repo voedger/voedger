@@ -15,6 +15,26 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
+// ErrDeployment is returned when application deployment fails because of a
+// validation or extension-engine initialization error.
+var ErrDeployment = errors.New("deployment error")
+
+func errExtensionInVSQLNotInCode(app appdef.AppQName, ext appdef.IExtension, fqn appdef.FullQName) error {
+	return fmt.Errorf("%w: app %v: %s %v (%v): in vsql, not in code", ErrDeployment, app, ext.Kind().TrimString(), ext.QName(), fqn)
+}
+
+func errExtensionInCodeNotInVSQL(app appdef.AppQName, fqn appdef.FullQName) error {
+	return fmt.Errorf("%w: app %v: %v: in code, not in vsql", ErrDeployment, app, fqn)
+}
+
+func errExtensionUnknownPackage(app appdef.AppQName, ext appdef.IExtension) error {
+	return fmt.Errorf("%w: app %v: %s %v: package «%s» full path is unknown", ErrDeployment, app, ext.Kind().TrimString(), ext.QName(), ext.QName().Pkg())
+}
+
+func errExtensionEngineDeploy(app appdef.AppQName, kind appdef.ExtensionEngineKind, err error) error {
+	return fmt.Errorf("%w: app %v: extension engine %s: %w", ErrDeployment, app, kind, err)
+}
+
 var (
 	ErrNotAvailableEngines                            = errors.New("no available engines")
 	errNotAvailableEngines [ProcessorKind_Count]error = [ProcessorKind_Count]error{

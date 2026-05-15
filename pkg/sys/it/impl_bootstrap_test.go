@@ -7,6 +7,7 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"testing"
 	"testing/fstest"
 
@@ -235,4 +236,68 @@ func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Asse
 			require.Equal(appdef.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
 		}
 	}
+}
+
+func TestVVMLaunch_VSQLCodeMismatch(t *testing.T) {
+	launchAndRecover := func(t *testing.T, vsql string, registerExtraCmd bool) (panicErr error) {
+		t.Helper()
+		cfg := getMismatchVITCfg(vsql, registerExtraCmd)
+		defer func() {
+			if r := recover(); r != nil {
+				panicErr, _ = r.(error)
+			}
+		}()
+		vit := it.NewVIT(t, &cfg)
+		vit.TearDown()
+		return nil
+	}
+
+	t.Run("in vsql, not in code", func(t *testing.T) {
+		require := require.New(t)
+		vsql := `APPLICATION app1();
+			ALTERABLE WORKSPACE test_wsWS (
+				DESCRIPTOR test_ws (IntFld int32 NOT NULL);
+				EXTENSION ENGINE BUILTIN (COMMAND missingCmd());
+			);`
+		err := launchAndRecover(t, vsql, false)
+		require.ErrorIs(err, appparts.ErrDeployment, err)
+		require.ErrorContains(err, "in vsql, not in code")
+		require.ErrorContains(err, "missingCmd")
+		log.Println(err)
+	})
+
+	t.Run("in code, not in vsql", func(t *testing.T) {
+		require := require.New(t)
+		vsql := `APPLICATION app1();
+			ALTERABLE WORKSPACE test_wsWS (
+				DESCRIPTOR test_ws (IntFld int32 NOT NULL);
+			);`
+		err := launchAndRecover(t, vsql, true)
+		require.ErrorIs(err, appparts.ErrDeployment, err)
+		require.ErrorContains(err, "in code, not in vsql")
+		require.ErrorContains(err, "extraCmd")
+		log.Println(err)
+	})
+}
+
+func getMismatchVITCfg(vsql string, registerExtraCmd bool) it.VITConfig {
+	const extraCmdName = "extraCmd"
+	app1PackageFS := parser.PackageFS{
+		Path: it.App1PkgPath,
+		FS:   fstest.MapFS{"app.vsql": &fstest.MapFile{Data: []byte(vsql)}},
+	}
+	return it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, func(_ builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
+			sysPkg := sysprovide.Provide(cfg)
+			if registerExtraCmd {
+				cfg.Resources.Add(istructsmem.NewCommandFunction(
+					appdef.NewQName("app1pkg", extraCmdName), istructsmem.NullCommandExec))
+			}
+			return builtinapps.Def{
+				AppDeploymentDescriptor: it.TestAppDeploymentDescriptor,
+				AppQName:                istructs.AppQName_test1_app1,
+				Packages:                []parser.PackageFS{sysPkg, app1PackageFS},
+			}
+		}),
+	)
 }
