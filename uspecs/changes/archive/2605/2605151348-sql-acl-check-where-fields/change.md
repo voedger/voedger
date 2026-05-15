@@ -31,9 +31,12 @@ Authorize every field referenced in a VSQL SELECT statement, including fields us
   - add: subtest verifying SELECT with denied field in `WHERE` combined via `AND` and via `OR` returns `403 Forbidden`
   - add: subtest verifying SELECT with denied field in nested `WHERE` expression returns `403 Forbidden`
   - add: subtest verifying SELECT succeeds when every projected and `WHERE`-referenced field is allowed
+  - add: subtests verifying SELECT with denied field on the left of `IN`, inside an `IN` value tuple and on the left of `NOT IN` returns `403 Forbidden`
+  - add: subtest verifying SELECT with denied field qualified by the source table name (e.g. `where TestCDocWithDeniedFields.DeniedFld2 = 1`) returns `403 Forbidden`
   - dropped (out of scope for this entrypoint): view subtest — VSQL view reading only supports key-field filters in `WHERE`, and the existing test schema grants every key field of `app1pkg.DailyIdx` to `LimitedAccessRole`; the same security guarantee for views is covered by the unified projection+`WHERE` ACL union in `sys/sqlquery/impl.go`
 
 - [x] update: [sys/sqlquery/impl.go](../../../../../pkg/sys/sqlquery/impl.go)
-  - add: `collectWhereFields` helper that walks a `sqlparser.Expr` and collects every `*sqlparser.ColName` field name referenced in the `WHERE` clause, recovering the original case via `recoverFieldName` and ignoring identifiers that are not real fields of the source type (e.g. the `id` pseudo-column used by record-by-id lookup)
+  - add: `collectWhereFields` helper that traverses a `sqlparser.Expr` via `sqlparser.Walk`, collecting every `*sqlparser.ColName` referenced in the `WHERE` clause, recovering the original case via `recoverFieldName` and ignoring identifiers that are not real fields of the source type (e.g. the `id` pseudo-column used by record-by-id lookup)
   - update: ACL check block to pass the union of projection fields and `WHERE` fields to `apppart.IsOperationAllowed`, so that any field denied by `SELECT` ACL causes a `403 Forbidden`
   - update: behavior so that when the projection is `*` (`f.acceptAll`), the ACL check still runs against the `WHERE` field set even if no explicit projection fields were collected
+  - update: `collectWhereFields` strips any column qualifier (e.g. `tbl.fld`) before the schema/ACL lookup, since VSQL is single-table and schema field names are unqualified — preventing qualified column references from silently bypassing the ACL set

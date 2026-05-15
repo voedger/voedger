@@ -29,6 +29,22 @@ Feature: VSQL SELECT ACL on projected and WHERE fields
       When VADeveloper executes "select Id from air.Orders where (Total > 0 and (CustomerId = 123 or Id = 1))"
       Then response status is "403 Forbidden"
 
+    Scenario: Denied field on the left of IN
+      When VADeveloper executes "select Id from air.Orders where CustomerId in (1, 2)"
+      Then response status is "403 Forbidden"
+
+    Scenario: Denied field inside IN value tuple
+      When VADeveloper executes "select Id from air.Orders where Total in (CustomerId, 2)"
+      Then response status is "403 Forbidden"
+
+    Scenario: Denied field on the left of NOT IN
+      When VADeveloper executes "select Id from air.Orders where CustomerId not in (1, 2)"
+      Then response status is "403 Forbidden"
+
+    Scenario: Denied field qualified by source table name
+      When VADeveloper executes "select Id from air.Orders where Orders.CustomerId = 123"
+      Then response status is "403 Forbidden"
+
     Scenario: Denied field in projection
       When VADeveloper executes "select CustomerId from air.Orders where Id = 1"
       Then response status is "403 Forbidden"
