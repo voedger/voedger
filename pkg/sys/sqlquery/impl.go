@@ -408,9 +408,6 @@ func collectWhereFields(expr sqlparser.Expr, withFields appdef.IWithFields, dst 
 			return true, nil
 		}
 		name := col.Name.String()
-		if !col.Qualifier.Name.IsEmpty() {
-			name = fmt.Sprintf("%s.%s", col.Qualifier.Name, col.Name)
-		}
 		if withFields != nil {
 			recovered := recoverFieldName(withFields, name)
 			if withFields.Field(recovered) == nil {

@@ -651,6 +651,9 @@ func TestAuthnz(t *testing.T) {
 			{
 				"denied field on the left of NOT IN",
 				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where DeniedFld2 not in (1, 2)"},
+			{
+				"denied field qualified by table name",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where TestCDocWithDeniedFields.DeniedFld2 = 1"},
 		}
 		for _, c := range cases {
 			t.Run(c.name, func(t *testing.T) {
