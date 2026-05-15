@@ -642,6 +642,15 @@ func TestAuthnz(t *testing.T) {
 				"denied field in nested WHERE expression",
 				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where (Fld1 = 1 and (DeniedFld2 = 2 or Fld1 = 3))",
 			},
+			{
+				"denied field on the left of IN",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where DeniedFld2 in (1, 2)"},
+			{
+				"denied field inside IN value tuple",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where Fld1 in (DeniedFld2, 2)"},
+			{
+				"denied field on the left of NOT IN",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where DeniedFld2 not in (1, 2)"},
 		}
 		for _, c := range cases {
 			t.Run(c.name, func(t *testing.T) {
