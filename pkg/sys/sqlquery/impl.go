@@ -179,9 +179,20 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			switch kind {
 			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord,
 				appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-				fields := make([]string, 0, len(f.fields))
-				for f := range f.fields {
-					fields = append(fields, f)
+				aclFields := make(map[string]bool, len(f.fields))
+				for fld := range f.fields {
+					aclFields[fld] = true
+				}
+				if whereExpr != nil {
+					var withFields appdef.IWithFields
+					if wf, ok := sourceTableType.(appdef.IWithFields); ok {
+						withFields = wf
+					}
+					collectWhereFields(whereExpr, withFields, aclFields)
+				}
+				fields := make([]string, 0, len(aclFields))
+				for fld := range aclFields {
+					fields = append(fields, fld)
 				}
 				wp := args.Workpiece.(processors.IProcessorWorkpiece)
 				apppart := wp.AppPartition()
@@ -385,6 +396,64 @@ func recoverFieldName(withFields appdef.IWithFields, name string) string {
 		}
 	}
 	return name
+}
+
+func collectWhereFields(expr sqlparser.Expr, withFields appdef.IWithFields, dst map[string]bool) {
+	if expr == nil {
+		return
+	}
+	add := func(name string) {
+		if withFields != nil {
+			recovered := recoverFieldName(withFields, name)
+			if withFields.Field(recovered) == nil {
+				return
+			}
+			name = recovered
+		}
+		dst[name] = true
+	}
+	switch e := expr.(type) {
+	case *sqlparser.ColName:
+		if !e.Qualifier.Name.IsEmpty() {
+			add(fmt.Sprintf("%s.%s", e.Qualifier.Name, e.Name))
+		} else {
+			add(e.Name.String())
+		}
+	case *sqlparser.AndExpr:
+		collectWhereFields(e.Left, withFields, dst)
+		collectWhereFields(e.Right, withFields, dst)
+	case *sqlparser.OrExpr:
+		collectWhereFields(e.Left, withFields, dst)
+		collectWhereFields(e.Right, withFields, dst)
+	case *sqlparser.NotExpr:
+		collectWhereFields(e.Expr, withFields, dst)
+	case *sqlparser.ParenExpr:
+		collectWhereFields(e.Expr, withFields, dst)
+	case *sqlparser.ComparisonExpr:
+		collectWhereFields(e.Left, withFields, dst)
+		collectWhereFields(e.Right, withFields, dst)
+	case *sqlparser.RangeCond:
+		collectWhereFields(e.Left, withFields, dst)
+		collectWhereFields(e.From, withFields, dst)
+		collectWhereFields(e.To, withFields, dst)
+	case *sqlparser.IsExpr:
+		collectWhereFields(e.Expr, withFields, dst)
+	case *sqlparser.BinaryExpr:
+		collectWhereFields(e.Left, withFields, dst)
+		collectWhereFields(e.Right, withFields, dst)
+	case *sqlparser.UnaryExpr:
+		collectWhereFields(e.Expr, withFields, dst)
+	case sqlparser.ValTuple:
+		for _, v := range e {
+			collectWhereFields(v, withFields, dst)
+		}
+	case *sqlparser.FuncExpr:
+		for _, se := range e.Exprs {
+			if ae, ok := se.(*sqlparser.AliasedExpr); ok {
+				collectWhereFields(ae.Expr, withFields, dst)
+			}
+		}
+	}
 }
 
 func getFilter(f func(string) bool) coreutils.MapperOpt {

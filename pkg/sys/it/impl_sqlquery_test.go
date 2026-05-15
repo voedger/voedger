@@ -623,6 +623,33 @@ func TestAuthnz(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.orecord1.%d"},"elements":[{"fields":["Result"]}]}`, orecordID)
 		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
 	})
+
+	t.Run("WHERE field ACL", func(t *testing.T) {
+		cases := []struct {
+			name  string
+			query string
+		}{
+			{
+				"denied field in WHERE with allowed projection",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where DeniedFld2 = 1"},
+			{
+				"denied field in WHERE combined via AND",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where Fld1 = 1 and DeniedFld2 = 2"},
+			{
+				"denied field in WHERE combined via OR",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where Fld1 = 1 or DeniedFld2 = 2"},
+			{
+				"denied field in nested WHERE expression",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where (Fld1 = 1 and (DeniedFld2 = 2 or Fld1 = 3))",
+			},
+		}
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, c.query)
+				vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403()).Println()
+			})
+		}
+	})
 }
 
 func TestReadODocs(t *testing.T) {
