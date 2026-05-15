@@ -22,7 +22,7 @@
 - [x] update: [pkg/istructsmem/appstruct-types.go](../../../pkg/istructsmem/appstruct-types.go)
   - remove: `validateResources()` and `validateJobs()` together with their two call sites in `AppConfigType.prepare()`
 - [x] update: [pkg/processors/actualizers/provide.go](../../../pkg/processors/actualizers/provide.go)
-  - note: the unguarded `appdef.Projector(appStructs.AppDef().Type, projector.Name).Sync()` becomes unreachable for missing entries because deployment now fails first; no code change required, but verify the call site stays correct after the validator lands
+  - filter `statelessResources.Projectors` by `appStructs.AppDef().PackageLocalName(path) != ""` before the `appdef.Projector(...).Sync()` lookup; mirrors the validator's per-app filter so the call is safe by construction for projectors registered for other apps in the same VVM
 
 ### Tests
 
