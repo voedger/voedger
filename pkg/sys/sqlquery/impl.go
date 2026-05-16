@@ -174,40 +174,45 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 		}
 
 		kind := appStructs.AppDef().Type(sourceTableName).Kind()
-		if _, ok := appStructs.AppDef().Type(sourceTableName).(appdef.IStructure); ok {
-			// is a structure -> check ACL
-			switch kind {
-			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord,
-				appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-				aclFields := make(map[string]bool, len(f.fields))
+		switch kind {
+		case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord,
+			appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
+			aclFields := make(map[string]bool, len(f.fields))
+			if f.acceptAll {
+				if wf, ok := sourceTableType.(appdef.IWithFields); ok {
+					for _, fld := range wf.UserFields() {
+						aclFields[fld.Name()] = true
+					}
+				}
+			} else {
 				for fld := range f.fields {
 					aclFields[fld] = true
 				}
-				if whereExpr != nil {
-					var withFields appdef.IWithFields
-					if wf, ok := sourceTableType.(appdef.IWithFields); ok {
-						withFields = wf
-					}
-					collectWhereFields(whereExpr, withFields, aclFields)
+			}
+			if whereExpr != nil {
+				var withFields appdef.IWithFields
+				if wf, ok := sourceTableType.(appdef.IWithFields); ok {
+					withFields = wf
 				}
-				fields := make([]string, 0, len(aclFields))
-				for fld := range aclFields {
-					fields = append(fields, fld)
+				collectWhereFields(whereExpr, withFields, aclFields)
+			}
+			fields := make([]string, 0, len(aclFields))
+			for fld := range aclFields {
+				fields = append(fields, fld)
+			}
+			wp := args.Workpiece.(processors.IProcessorWorkpiece)
+			apppart := wp.AppPartition()
+			roles := wp.Roles()
+			ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, sourceTableName, fields, roles)
+			if err != nil {
+				// notest
+				if errors.Is(err, appdef.ErrNotFoundError) {
+					return coreutils.WrapSysError(err, http.StatusBadRequest)
 				}
-				wp := args.Workpiece.(processors.IProcessorWorkpiece)
-				apppart := wp.AppPartition()
-				roles := wp.Roles()
-				ok, err := apppart.IsOperationAllowed(args.Workspace, appdef.OperationKind_Select, sourceTableName, fields, roles)
-				if err != nil {
-					// notest
-					if errors.Is(err, appdef.ErrNotFoundError) {
-						return coreutils.WrapSysError(err, http.StatusBadRequest)
-					}
-					return err
-				}
-				if !ok {
-					return coreutils.NewHTTPErrorf(http.StatusForbidden)
-				}
+				return err
+			}
+			if !ok {
+				return coreutils.NewHTTPErrorf(http.StatusForbidden)
 			}
 		}
 		switch kind {
