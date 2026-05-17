@@ -286,12 +286,12 @@ func DoNotFailOnTimeout() ISignInOpt {
 	})
 }
 
-func (vit *VIT) SignIn(login Login, optFuncs ...ISignInOpt) (prn *Principal) {
+func (vit *VIT) SignIn(login Login, options ...ISignInOpt) (prn *Principal) {
 	vit.T.Helper()
 	opts := &signInOpts{
 		failOnTimeout: true,
 	}
-	for _, opt := range optFuncs {
+	for _, opt := range options {
 		opt.applySignInOpt(opts)
 	}
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
