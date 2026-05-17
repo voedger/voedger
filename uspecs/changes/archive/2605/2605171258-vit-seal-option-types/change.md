@@ -17,7 +17,7 @@ Exported option constructors in `pkg/vit` (e.g. `DoNotFailOnTimeout`, `WithClust
 Adopt the canonical sealed functional-options pattern in `pkg/vit`:
 
 - Introduce an exported interface per option family (`ISignInOpt`, `ISignUpOpt`, `IVITOpt`) with a single unexported `apply` method
-- Keep the underlying option structs (`signInOpts`, `signUpOpts`) and the func types (`signInOptFunc`, `signUpOptFunc`, `vitOptFunc`) unexported; have the func types implement the sealed interfaces
+- Keep the underlying option structs (`signInOpts`, `signUpOpts`) and the func carriers (`signInOptFunc`, `signUpOptFunc`) unexported; have the func types implement the sealed interfaces
 - Change exported option constructors to return the new interface types
 - Update the consuming methods/constructors (`(*VIT).SignIn`, `(*VIT).SignUp`, `(*VIT).SignUpDevice`, `NewVIT`, `NewVITLocalCassandra`) to accept the interfaces as variadic arguments
 
@@ -25,7 +25,8 @@ Adopt the canonical sealed functional-options pattern in `pkg/vit`:
 
 - [x] update: [vit/types.go](../../../../../pkg/vit/types.go)
   - add: exported sealed interfaces `ISignInOpt`, `ISignUpOpt`, `IVITOpt`, each with a single unexported `apply…` method
-  - update: keep `signInOptFunc`, `signUpOptFunc`, `vitOptFunc` unexported; add `apply…` methods so they implement the corresponding sealed interface
+  - update: keep `signInOptFunc`, `signUpOptFunc` unexported; add `apply…` methods so they implement the corresponding sealed interface
+  - remove: unused `vitOptFunc` func type (no constructor produces it; future `IVITOpt` carriers can reintroduce a typed func when needed)
 
 - [x] update: [vit/utils.go](../../../../../pkg/vit/utils.go)
   - update: `DoNotFailOnTimeout` to return `ISignInOpt`
