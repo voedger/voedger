@@ -641,6 +641,26 @@ func TestAuthnz(t *testing.T) {
 		vit.PostWS(ws, "q.sys.SqlQuery", body)
 	})
 
+	t.Run("REVOKE SELECT on a system field", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestCDocSysIDRevoked","Fld1":42}}]}`
+		docID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		t.Run("explicit projection of revoked sys field is 403", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select sys.ID from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+		})
+
+		t.Run("star projection is 403 because sys.ID is revoked", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+		})
+
+		t.Run("explicit projection of granted user field succeeds", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select Fld1 from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body)
+		})
+	})
+
 	t.Run("WHERE field ACL", func(t *testing.T) {
 		cases := []struct {
 			name  string

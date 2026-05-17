@@ -624,6 +624,10 @@ ALTERABLE WORKSPACE test_wsWS (
 		DeniedFld2 int32 -- denied field, no grants
 	);
 
+	TABLE TestCDocSysIDRevoked INHERITS sys.CDoc (
+		Fld1 int32
+	);
+
 	TABLE DocActivateDenied INHERITS sys.CDoc (
 		Fld1 int32
 	);
@@ -861,7 +865,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT EXECUTE ON COMMAND CmdAny TO ApiRole;
 	GRANT SELECT ON VIEW Clients TO ApiRole;
 
-	GRANT SELECT, UPDATE, INSERT ON TABLE Root TO sys.WorkspaceOwner;
+	GRANT SELECT, UPDATE, INSERT ON TABLE Root sys.WorkspaceOwner;
 	GRANT SELECT, UPDATE, INSERT ON TABLE Nested TO sys.WorkspaceOwner;
 	GRANT SELECT, UPDATE, INSERT ON TABLE Third TO sys.WorkspaceOwner;
 
@@ -880,6 +884,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT EXECUTE ON COMMAND sys.CUD TO InviteTestRole;
 
 	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
+	GRANT SELECT ON TABLE TestCDocSysIDRevoked TO sys.WorkspaceOwner;
 	GRANT SELECT(Year, Month, AllowedFld) ON VIEW TestViewWithDeniedFields TO sys.WorkspaceOwner;
 
 	GRANT SELECT ON VIEW CategoryIdx TO sys.WorkspaceOwner;
@@ -906,4 +911,5 @@ ALTERABLE WORKSPACE test_wsWS (
 	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 
 	REVOKE SELECT(BlobReadDenied) ON TABLE DocWithBLOB FROM sys.WorkspaceOwner;
+	REVOKE SELECT(sys.ID) ON TABLE TestCDocSysIDRevoked FROM sys.WorkspaceOwner;
 );
