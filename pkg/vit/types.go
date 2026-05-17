@@ -58,10 +58,19 @@ type vitPreConfig struct {
 
 type VITConfigOptFunc func(*vitPreConfig)
 type AppOptFunc func(app *app, cfg *vvm.VVMConfig)
+type PostConstructFunc func(intf interface{})
+
+type IVITOpt interface{ applyVITOpt(vit *VIT) }
+type ISignInOpt interface{ applySignInOpt(opts *signInOpts) }
+type ISignUpOpt interface{ applySignUpOpt(opts *signUpOpts) }
+
 type vitOptFunc func(vit *VIT)
 type signInOptFunc func(opts *signInOpts)
 type signUpOptFunc func(opts *signUpOpts)
-type PostConstructFunc func(intf interface{})
+
+func (f vitOptFunc) applyVITOpt(vit *VIT)            { f(vit) }
+func (f signInOptFunc) applySignInOpt(o *signInOpts) { f(o) }
+func (f signUpOptFunc) applySignUpOpt(o *signUpOpts) { f(o) }
 
 type Login struct {
 	Name, Pwd         string
