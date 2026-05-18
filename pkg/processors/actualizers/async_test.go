@@ -1258,3 +1258,61 @@ func (f *flakyAppParts) WaitForBorrow(ctx context.Context, app appdef.AppQName, 
 	}
 	return f.IAppPartitions.WaitForBorrow(ctx, app, partID, kind)
 }
+
+// Verifies AIR-3956: when the retrier's OnError fires for an error that did
+// not originate inside the projector pipeline (e.g. WaitForBorrow failure
+// during readPlogToTheEnd), the resulting log line is tagged with
+// "ap.error.nonprojector" and includes the cancel cause stored in readCtx.
+func Test_AsynchronousActualizer_NonProjectorErrorLogsCause(t *testing.T) {
+	require := require.New(t)
+	logCap := logger.StartCapture(t, logger.LogLevelError)
+
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1)
+
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels: 10, ChannelsPerSubject: 10, Subscriptions: 10, SubscriptionsPerSubject: 10,
+	}, timeu.NewITime())
+	defer bCleanup()
+
+	actCfg := &BasicAsyncActualizerConfig{Broker: broker}
+	appParts, _, stop := deployTestApp(appName, 1, false, testWorkspace, testWorkspaceDescriptor,
+		func(wsb appdef.IWorkspaceBuilder) {
+			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
+			wsb.AddCommand(testQName)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(testQName))
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(testIncrementor)
+		},
+		actCfg)
+	defer stop()
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
+
+	flaky := &flakyAppParts{IAppPartitions: appParts}
+	act := &asyncActualizer{
+		projectorQName: incrementorName,
+		conf: AsyncActualizerConf{
+			BasicAsyncActualizerConfig: *actCfg, AppQName: appName, PartitionID: partitionNr,
+		},
+		appParts:   flaky,
+		retrierCfg: retrier.NewConfig(time.Millisecond, 5*time.Millisecond),
+	}
+	vvmCtx, vvmCancel := context.WithCancel(context.Background())
+	act.Prepare(vvmCtx)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		act.Run(vvmCtx)
+	}()
+	defer func() { vvmCancel(); <-done }()
+
+	logCap.EventuallyHasLine("stage=ap.error.nonprojector",
+		"flaky WaitForBorrow failure",
+		"cause: flaky WaitForBorrow failure",
+	)
+
+	require.GreaterOrEqual(flaky.waitForBorrowCalls.Load(), int32(2))
+}

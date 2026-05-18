@@ -93,7 +93,11 @@ func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
 				return true, nil
 			}
 		}
-		logger.ErrorCtx(a.readCtx.vvmCtx, a.name, opErr)
+		errArgs := []interface{}{opErr}
+		if causeErr := a.readCtx.error(); causeErr != nil {
+			errArgs = append(errArgs, fmt.Sprintf(", cause: %s", causeErr.Error()))
+		}
+		logger.ErrorCtx(a.readCtx.vvmCtx, "ap.error.nonprojector", errArgs...)
 		return true, nil
 	}
 }
