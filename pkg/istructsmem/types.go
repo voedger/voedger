@@ -503,7 +503,7 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value any, err
 	payload := payloads.VerifiedValuePayload{}
 	tokens := row.appCfg.app.AppTokens()
 	if _, err = tokens.ValidateToken(token, &payload); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("verification token for %s.%s is invalid: %w", row.QName(), fld.Name(), err)
 	}
 
 	// if payload.AppQName != row.appCfg.Name { … } // redundant check, must be check by IAppToken.ValidateToken()
