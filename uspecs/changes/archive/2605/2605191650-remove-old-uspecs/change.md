@@ -17,6 +17,5 @@ The uspecs framework is now delivered via the `uspecs-dev` plugin, which provide
 Remove the legacy in-repo uspecs framework while keeping the working data (changes, version):
 
 - Delete the `uspecs/u/` directory (action docs, concepts, conf, examples, prompts, scripts, templates, uspecs.yml)
-- Update `AGENTS.md` and `CLAUDE.md` to drop references to `uspecs/u/` files
-- Preserve `uspecs/changes/` and `uspecs/version.txt`
+- Delete `AGENTS.md` and `CLAUDE.md`, they are not needed for the plugin-based framework
 - Fix the name for the prod domain file
