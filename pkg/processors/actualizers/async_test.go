@@ -1262,7 +1262,7 @@ func (f *flakyAppParts) WaitForBorrow(ctx context.Context, app appdef.AppQName, 
 // Verifies AIR-3956: when the retrier's OnError fires for an error that did
 // not originate inside the projector pipeline (e.g. WaitForBorrow failure
 // during readPlogToTheEnd), the resulting log line is tagged with
-// "ap.error.nonprojector" and includes the cancel cause stored in readCtx.
+// "stage=actualizer.error" and includes the cancel cause stored in readCtx.
 func Test_AsycActualizerErrorCause(t *testing.T) {
 	require := require.New(t)
 	logCap := logger.StartCapture(t, logger.LogLevelError)
