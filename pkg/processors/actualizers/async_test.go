@@ -1263,7 +1263,7 @@ func (f *flakyAppParts) WaitForBorrow(ctx context.Context, app appdef.AppQName, 
 // not originate inside the projector pipeline (e.g. WaitForBorrow failure
 // during readPlogToTheEnd), the resulting log line is tagged with
 // "ap.error.nonprojector" and includes the cancel cause stored in readCtx.
-func Test_AsynchronousActualizer_NonProjectorErrorLogsCause(t *testing.T) {
+func Test_AsycActualierErrorCause(t *testing.T) {
 	require := require.New(t)
 	logCap := logger.StartCapture(t, logger.LogLevelError)
 
@@ -1309,7 +1309,8 @@ func Test_AsynchronousActualizer_NonProjectorErrorLogsCause(t *testing.T) {
 	}()
 	defer func() { vvmCancel(); <-done }()
 
-	logCap.EventuallyHasLine("stage=ap.error.nonprojector",
+	logCap.EventuallyHasLine("extension=sys._Actualizer",
+		"stage=actualizer.error",
 		"flaky WaitForBorrow failure",
 		"cause: flaky WaitForBorrow failure",
 	)
