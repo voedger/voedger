@@ -43,11 +43,12 @@ func InitiateEmailVerificationFunc(vit *it.VIT, f func() *federation.FuncRespons
 
 func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, offset istructs.Offset) {
 	deadline := time.Now().Add(time.Second)
+	now := vit.Now().UTC()
 	body := fmt.Sprintf(`
 	{
 		"args":{"Query":"select LastOffset from %s where Year = %d and DayOfYear = %d"},
 		"elements":[{"fields":["Result"]}]
-	}`, index, vit.Now().Year(), vit.Now().YearDay())
+	}`, index, now.Year(), now.YearDay())
 	type entity struct {
 		LastOffset istructs.Offset
 	}

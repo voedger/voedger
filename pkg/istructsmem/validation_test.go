@@ -858,6 +858,16 @@ func Test_VerifiedFields(t *testing.T) {
 			require.ErrorIs(err, itokens.ErrInvalidToken)
 		})
 
+		t.Run("error if malformed token clarifies entity and field", func(t *testing.T) {
+
+			row := makeObject(cfg, objName, nil)
+			row.PutInt32("int32", 1)
+			row.PutString("email", "this-is-not-a-jwt")
+
+			_, err := row.Build()
+			require.Error(err, require.Is(itokens.ErrInvalidToken), require.HasAll(objName, "email", "verification token"))
+		})
+
 		t.Run("error if unexpected token kind", func(t *testing.T) {
 			ukToken := func() string {
 				p := payloads.VerifiedValuePayload{

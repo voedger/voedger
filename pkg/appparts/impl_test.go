@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"net/url"
 	"testing"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
+	"github.com/voedger/voedger/pkg/iextengine"
+	iextenginebuiltin "github.com/voedger/voedger/pkg/iextengine/builtin"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -274,5 +277,165 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		for len(whatsRun()) > 0 {
 			time.Sleep(time.Millisecond)
 		}
+	})
+}
+
+type errorExtensionEngineFactory struct{ err error }
+
+func (f errorExtensionEngineFactory) New(context.Context, appdef.AppQName, []iextengine.ExtensionModule, *iextengine.ExtEngineConfig, uint) ([]iextengine.IExtensionEngine, error) {
+	return nil, f.err
+}
+
+func TestDeployApp_ValidateExtensions_MatchVSQLAndCode(t *testing.T) {
+	const pkgLocal = "test"
+	const pkgPath = "test.com/test"
+	appName := istructs.AppQName_test1_app1
+
+	cmdName := appdef.NewQName(pkgLocal, "cmd")
+	qryName := appdef.NewQName(pkgLocal, "qry")
+	prjName := appdef.NewQName(pkgLocal, "prj")
+	jobName := appdef.NewQName(pkgLocal, "job")
+
+	cmdFQN := appdef.NewFullQName(pkgPath, "cmd")
+	qryFQN := appdef.NewFullQName(pkgPath, "qry")
+	prjFQN := appdef.NewFullQName(pkgPath, "prj")
+	jobFQN := appdef.NewFullQName(pkgPath, "job")
+
+	buildAppDef := func() appdef.IAppDef {
+		adb := builder.New()
+		adb.AddPackage(pkgLocal, pkgPath)
+		wsName := appdef.NewQName(pkgLocal, "workspace")
+		wsb := adb.AddWorkspace(wsName)
+		wsb.AddCDoc(appdef.NewQName(pkgLocal, "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName(pkgLocal, "WSDesc"))
+		wsb.AddCommand(cmdName)
+		wsb.AddQuery(qryName)
+		prj := wsb.AddProjector(prjName)
+		prj.Events().Add([]appdef.OperationKind{appdef.OperationKind_Execute},
+			filter.WSTypes(wsName, appdef.TypeKind_Command))
+		wsb.AddJob(jobName).SetCronSchedule("@every 1s")
+		return adb.MustBuild()
+	}
+
+	noopExt := func(context.Context, iextengine.IExtensionIO) error { return nil }
+
+	deploy := func(t *testing.T, def appdef.IAppDef, eef iextengine.ExtensionEngineFactories, extModuleURLs map[string]*url.URL) (panicErr error) {
+		t.Helper()
+		appConfigs := istructsmem.AppConfigsType{}
+		appConfigs.AddBuiltInAppConfig(appName, builder.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+		appStructs := istructsmem.Provide(
+			appConfigs,
+			payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
+			provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
+		ctx, cancel := context.WithCancel(context.Background())
+		appParts, cleanup, err := appparts.New2(ctx, appStructs,
+			appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
+			eef, iratesce.TestBucketsFactory)
+		require.New(t).NoError(err)
+		defer func() {
+			cancel()
+			cleanup()
+		}()
+		defer func() {
+			if r := recover(); r != nil {
+				panicErr, _ = r.(error)
+			}
+		}()
+		appParts.DeployApp(appName, extModuleURLs, def, 1, appparts.PoolSize(1, 1, 1, 1), istructs.DefaultNumAppWorkspaces)
+		return nil
+	}
+
+	makeEEF := func(funcs iextengine.BuiltInAppExtFuncs, stateless iextengine.BuiltInExtFuncs) iextengine.ExtensionEngineFactories {
+		return iextengine.ExtensionEngineFactories{
+			appdef.ExtensionEngineKind_BuiltIn: iextenginebuiltin.ProvideExtensionEngineFactory(funcs, stateless),
+			appdef.ExtensionEngineKind_WASM:    iextengine.NullExtensionEngineFactory,
+		}
+	}
+
+	t.Run("aligned set: per-app builtin funcs match vsql", func(t *testing.T) {
+		require := require.New(t)
+		err := deploy(t, buildAppDef(), makeEEF(
+			iextengine.BuiltInAppExtFuncs{appName: {cmdFQN: noopExt, qryFQN: noopExt, prjFQN: noopExt, jobFQN: noopExt}},
+			nil), nil)
+		require.NoError(err)
+	})
+
+	t.Run("aligned set: stateless funcs match vsql", func(t *testing.T) {
+		require := require.New(t)
+		err := deploy(t, buildAppDef(), makeEEF(
+			nil,
+			iextengine.BuiltInExtFuncs{cmdFQN: noopExt, qryFQN: noopExt, prjFQN: noopExt, jobFQN: noopExt}), nil)
+		require.NoError(err)
+	})
+
+	t.Run("missing per-app builtin code", func(t *testing.T) {
+		require := require.New(t)
+		err := deploy(t, buildAppDef(), makeEEF(
+			iextengine.BuiltInAppExtFuncs{appName: {cmdFQN: noopExt, qryFQN: noopExt, prjFQN: noopExt}},
+			nil), nil)
+		require.ErrorIs(err, appparts.ErrDeployment)
+		require.ErrorContains(err, "in vsql, not in code")
+		require.ErrorContains(err, jobName.String())
+	})
+
+	t.Run("missing stateless code", func(t *testing.T) {
+		require := require.New(t)
+		err := deploy(t, buildAppDef(), makeEEF(
+			nil,
+			iextengine.BuiltInExtFuncs{cmdFQN: noopExt, qryFQN: noopExt, prjFQN: noopExt}), nil)
+		require.ErrorIs(err, appparts.ErrDeployment)
+		require.ErrorContains(err, jobName.String())
+	})
+
+	t.Run("extra per-app code not in vsql", func(t *testing.T) {
+		require := require.New(t)
+		extraFQN := appdef.NewFullQName(pkgPath, "extra")
+		err := deploy(t, buildAppDef(), makeEEF(
+			iextengine.BuiltInAppExtFuncs{appName: {cmdFQN: noopExt, qryFQN: noopExt, prjFQN: noopExt, jobFQN: noopExt, extraFQN: noopExt}},
+			nil), nil)
+		require.ErrorIs(err, appparts.ErrDeployment)
+		require.ErrorContains(err, "in code, not in vsql")
+		require.ErrorContains(err, extraFQN.String())
+	})
+
+	t.Run("extra stateless in known package fails", func(t *testing.T) {
+		require := require.New(t)
+		extraFQN := appdef.NewFullQName(pkgPath, "extra")
+		err := deploy(t, buildAppDef(), makeEEF(
+			iextengine.BuiltInAppExtFuncs{appName: {cmdFQN: noopExt, qryFQN: noopExt, prjFQN: noopExt, jobFQN: noopExt}},
+			iextengine.BuiltInExtFuncs{extraFQN: noopExt}), nil)
+		require.ErrorIs(err, appparts.ErrDeployment)
+		require.ErrorContains(err, "in code, not in vsql")
+	})
+
+	t.Run("extra stateless in unknown package is allowed", func(t *testing.T) {
+		require := require.New(t)
+		err := deploy(t, buildAppDef(), makeEEF(
+			iextengine.BuiltInAppExtFuncs{appName: {cmdFQN: noopExt, qryFQN: noopExt, prjFQN: noopExt, jobFQN: noopExt}},
+			iextengine.BuiltInExtFuncs{appdef.NewFullQName("other.com/pkg", "ext"): noopExt}), nil)
+		require.NoError(err)
+	})
+
+	t.Run("WASM-engine factory error wrapped as ErrDeployment", func(t *testing.T) {
+		require := require.New(t)
+		const wasmPkg = "wasmpkg"
+		const wasmPath = "test.com/wasm"
+		wasmCmdName := appdef.NewQName(wasmPkg, "wasmcmd")
+		adb := builder.New()
+		adb.AddPackage(wasmPkg, wasmPath)
+		wsName := appdef.NewQName(wasmPkg, "ws")
+		wsb := adb.AddWorkspace(wsName)
+		wsb.AddCDoc(appdef.NewQName(wasmPkg, "WSDesc"))
+		wsb.SetDescriptor(appdef.NewQName(wasmPkg, "WSDesc"))
+		wsb.AddCommand(wasmCmdName).SetEngine(appdef.ExtensionEngineKind_WASM)
+		def := adb.MustBuild()
+		moduleURL, _ := url.Parse("file:///fake.wasm")
+		eef := iextengine.ExtensionEngineFactories{
+			appdef.ExtensionEngineKind_BuiltIn: iextenginebuiltin.ProvideExtensionEngineFactory(nil, nil),
+			appdef.ExtensionEngineKind_WASM:    errorExtensionEngineFactory{err: errors.New("wasm boom")},
+		}
+		err := deploy(t, def, eef, map[string]*url.URL{wasmPath: moduleURL})
+		require.ErrorIs(err, appparts.ErrDeployment)
+		require.ErrorContains(err, "wasm boom")
 	})
 }

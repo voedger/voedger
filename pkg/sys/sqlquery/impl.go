@@ -179,9 +179,20 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			switch kind {
 			case appdef.TypeKind_ViewRecord, appdef.TypeKind_CDoc, appdef.TypeKind_CRecord,
 				appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-				fields := make([]string, 0, len(f.fields))
-				for f := range f.fields {
-					fields = append(fields, f)
+				aclFields := make(map[string]bool, len(f.fields))
+				for fld := range f.fields {
+					aclFields[fld] = true
+				}
+				if whereExpr != nil {
+					var withFields appdef.IWithFields
+					if wf, ok := sourceTableType.(appdef.IWithFields); ok {
+						withFields = wf
+					}
+					collectWhereFields(whereExpr, withFields, aclFields)
+				}
+				fields := make([]string, 0, len(aclFields))
+				for fld := range aclFields {
+					fields = append(fields, fld)
 				}
 				wp := args.Workpiece.(processors.IProcessorWorkpiece)
 				apppart := wp.AppPartition()
@@ -385,6 +396,32 @@ func recoverFieldName(withFields appdef.IWithFields, name string) string {
 		}
 	}
 	return name
+}
+
+func collectWhereFields(expr sqlparser.Expr, withFields appdef.IWithFields, dst map[string]bool) {
+	if expr == nil {
+		return
+	}
+	err := sqlparser.Walk(func(node sqlparser.SQLNode) (bool, error) {
+		col, ok := node.(*sqlparser.ColName)
+		if !ok {
+			return true, nil
+		}
+		name := col.Name.String()
+		if withFields != nil {
+			recovered := recoverFieldName(withFields, name)
+			if withFields.Field(recovered) == nil {
+				return true, nil
+			}
+			name = recovered
+		}
+		dst[name] = true
+		return true, nil
+	}, expr)
+	if err != nil {
+		// notest
+		panic(err)
+	}
 }
 
 func getFilter(f func(string) bool) coreutils.MapperOpt {

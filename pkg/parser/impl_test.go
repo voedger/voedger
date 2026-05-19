@@ -3176,7 +3176,10 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	require.NoError(err)
 	appQName := appdef.NewAppQName("pkg", "test")
 	cfgs := istructsmem.AppConfigsType{}
-	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	cfg := cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(appdef.SysPackage, "CreateLogin"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(appdef.SysPackage, "UpdateSubscription"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(appdef.SysPackage, "UPTerminalWebhook"), istructsmem.NullQueryExec))
 	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)
@@ -3235,7 +3238,11 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	require.NoError(err)
 	appQName := appdef.NewAppQName("pkg", "test")
 	cfgs := istructsmem.AppConfigsType{}
-	cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	cfg := cfgs.AddAppConfig(appQName, 1, appDef, 1)
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName("pkg", "Cmd1"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(appdef.SysPackage, "CreateLogin"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(appdef.SysPackage, "UpdateSubscription"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(appdef.SysPackage, "UPTerminalWebhook"), istructsmem.NullQueryExec))
 	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
 		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)

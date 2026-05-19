@@ -161,14 +161,6 @@ func (cfg *AppConfigType) prepare(appStorage istorage.IAppStorage) error {
 		return err
 	}
 
-	if err := cfg.validateResources(); err != nil {
-		return err
-	}
-
-	if err := cfg.validateJobs(); err != nil {
-		return err
-	}
-
 	if cfg.numAppWorkspaces <= 0 {
 		return ErrNumAppWorkspacesNotSet(cfg.Name)
 	}
@@ -187,36 +179,6 @@ func (cfg *AppConfigType) prepare(appStorage istorage.IAppStorage) error {
 	}
 
 	cfg.prepared = true
-	return nil
-}
-
-func (cfg *AppConfigType) validateJobs() error {
-	for _, job := range cfg.jobs {
-		if cfg.AppDef.Type(job.Name).Kind() == appdef.TypeKind_null {
-			return fmt.Errorf("exec of job %s is defined but the job is not defined in SQL", job.Name)
-		}
-	}
-	return nil
-}
-
-func (cfg *AppConfigType) validateResources() error {
-
-	for qName := range cfg.Resources.Resources {
-		if appdef.Extension(cfg.AppDef.Type, qName) == nil {
-			return fmt.Errorf("exec of func %s is defined but the func is not defined in SQL", qName)
-		}
-	}
-
-	for _, prj := range cfg.syncProjectors {
-		if appdef.Projector(cfg.AppDef.Type, prj.Name) == nil {
-			return fmt.Errorf("exec of sync projector %s is defined but the projector is not defined in SQL", prj.Name)
-		}
-	}
-	for _, prj := range cfg.asyncProjectors {
-		if appdef.Projector(cfg.AppDef.Type, prj.Name) == nil {
-			return fmt.Errorf("exec of async projector %s is defined but the projector is not defined in SQL", prj.Name)
-		}
-	}
 	return nil
 }
 
