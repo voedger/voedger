@@ -180,11 +180,8 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			aclFields := map[string]bool{}
 			if f.acceptAll {
 				if wf, ok := sourceTableType.(appdef.IWithFields); ok {
-					for _, fld := range wf.UserFields() {
+					for _, fld := range wf.Fields() {
 						aclFields[fld.Name()] = true
-					}
-					for sysFld := range collectACLSystemFields(args.Workspace, sourceTableType) {
-						aclFields[sysFld] = true
 					}
 				}
 			} else {
@@ -404,37 +401,6 @@ func recoverFieldName(withFields appdef.IWithFields, name string) string {
 		}
 	}
 	return name
-}
-
-// collectACLSystemFields returns system field names referenced in any SELECT
-// ACL rule in ws (recursively over ancestors) whose filter matches t. Used to
-// seed the star-projection ACL check so that REVOKE SELECT(<sys-field>) is
-// honored on `select *`.
-func collectACLSystemFields(ws appdef.IWorkspace, t appdef.IType) map[string]bool {
-	out := map[string]bool{}
-	visited := map[appdef.QName]bool{}
-	var walk func(w appdef.IWorkspace)
-	walk = func(w appdef.IWorkspace) {
-		if w == nil || visited[w.QName()] {
-			return
-		}
-		visited[w.QName()] = true
-		for _, anc := range w.Ancestors() {
-			walk(anc)
-		}
-		for _, rule := range w.ACL() {
-			if !rule.Op(appdef.OperationKind_Select) || !rule.Filter().Match(t) {
-				continue
-			}
-			for _, f := range rule.Filter().Fields() {
-				if appdef.IsSysField(f) {
-					out[f] = true
-				}
-			}
-		}
-	}
-	walk(ws)
-	return out
 }
 
 func collectWhereFields(expr sqlparser.Expr, withFields appdef.IWithFields, dst map[string]bool) {

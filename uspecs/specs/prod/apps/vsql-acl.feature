@@ -74,6 +74,65 @@ Feature: VSQL SELECT ACL on projected and WHERE fields
       When VADeveloper executes "select * from air.Orders.1"
       Then matching records are returned
 
+  Rule: System fields SELECT follows the table grant implicitly
+
+    System fields (`sys.ID`, `sys.QName`, `sys.IsActive`, ...) are allowed
+    whenever the caller has any SELECT grant on the type, regardless of the
+    grant's field list. Only an explicit REVOKE SELECT on a system field
+    removes that field from the allowed set.
+
+    Scenario: Partial field grant allows every system field implicitly
+      Given role "PartialReader"
+      And grant "GRANT SELECT(Id) ON TABLE air.Orders TO PartialReader"
+      And VADeveloper is authenticated with role "PartialReader"
+      When VADeveloper executes "select sys.ID, sys.QName from air.Orders.1"
+      Then matching records are returned
+
+    Scenario: Partial field grant still denies non-granted user fields
+      Given role "PartialReader"
+      And grant "GRANT SELECT(Id) ON TABLE air.Orders TO PartialReader"
+      And VADeveloper is authenticated with role "PartialReader"
+      When VADeveloper executes "select CustomerId from air.Orders.1"
+      Then response status is "403 Forbidden"
+
+    Scenario: Full table grant allows every system field
+      Given role "FullReader"
+      And grant "GRANT SELECT ON TABLE air.Orders TO FullReader"
+      And VADeveloper is authenticated with role "FullReader"
+      When VADeveloper executes "select sys.ID, sys.QName from air.Orders.1"
+      Then matching records are returned
+
+    Scenario: Full grant with a user-field revoke keeps system fields allowed
+      Given role "AlmostFull"
+      And grant "GRANT SELECT ON TABLE air.Orders TO AlmostFull"
+      And revoke "REVOKE SELECT(CustomerId) ON TABLE air.Orders FROM AlmostFull"
+      And VADeveloper is authenticated with role "AlmostFull"
+      When VADeveloper executes "select sys.ID, Total from air.Orders.1"
+      Then matching records are returned
+
+    Scenario: Explicit revoke of a system field denies that field
+      Given role "NoSysID"
+      And grant "GRANT SELECT ON TABLE air.Orders TO NoSysID"
+      And revoke "REVOKE SELECT(sys.ID) ON TABLE air.Orders FROM NoSysID"
+      And VADeveloper is authenticated with role "NoSysID"
+      When VADeveloper executes "select sys.ID from air.Orders.1"
+      Then response status is "403 Forbidden"
+
+    Scenario: Star projection denied because an explicitly revoked system field is implicitly selected
+      Given role "NoSysID"
+      And grant "GRANT SELECT ON TABLE air.Orders TO NoSysID"
+      And revoke "REVOKE SELECT(sys.ID) ON TABLE air.Orders FROM NoSysID"
+      And VADeveloper is authenticated with role "NoSysID"
+      When VADeveloper executes "select * from air.Orders.1"
+      Then response status is "403 Forbidden"
+
+    Scenario: Star projection on a partial-grant table is denied because non-granted user fields are implicitly selected
+      Given role "PartialReader"
+      And grant "GRANT SELECT(Id) ON TABLE air.Orders TO PartialReader"
+      And VADeveloper is authenticated with role "PartialReader"
+      When VADeveloper executes "select * from air.Orders.1"
+      Then response status is "403 Forbidden"
+
   Rule: ACL on WHERE fields applies to views
 
     Scenario: Denied view key field in WHERE
