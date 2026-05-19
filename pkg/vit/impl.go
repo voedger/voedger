@@ -51,7 +51,7 @@ import (
 // caches schemas for apps that are not test apps (i.e., not test1_app1, test1_app2, test2_app1, or test2_app2)
 var nonTestAppsSchemasCache = &implISchemasCache_nonTestApps{schemas: map[appdef.AppQName]*parser.AppSchemaAST{}}
 
-func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
 		vit = newVit(t, vitCfg, useCas, false)
@@ -69,7 +69,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	}
 
 	for _, opt := range opts {
-		opt(vit)
+		opt.applyVITOpt(vit)
 	}
 
 	vit.emailCaptor.checkEmpty(t)
@@ -298,10 +298,10 @@ func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.
 	}
 }
 
-func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	vit = newVit(tb, vitCfg, true, false)
 	for _, opt := range opts {
-		opt(vit)
+		opt.applyVITOpt(vit)
 	}
 
 	return vit
