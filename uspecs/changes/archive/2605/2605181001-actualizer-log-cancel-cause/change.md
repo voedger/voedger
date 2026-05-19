@@ -20,6 +20,7 @@ Include the stored `readCtx` error in the actualizer retrier error log so the ro
 
 - [x] update: [actualizers/async.go](../../../../../pkg/processors/actualizers/async.go)
   - update: `retrierCfg.OnError` to append `a.readCtx.error()` to the error logged at line 96 when it is non-nil, so the original cancel cause is visible together with `opErr`
-  - update: change the log stage from `a.name` to `"ap.error.nonprojector"` to distinguish from the in-projector `"ap.error"` branch and make it obvious that the error did not originate inside the projector function
+  - update: change the log stage from `a.name` to a fixed identifier to distinguish from the in-projector `"ap.error"` branch and make it obvious that the error did not originate inside the projector function
+  - update: final stage name is `"actualizer.error"`, and the log context is decorated with `logger.LogAttr_Extension = "sys._Actualizer"` via `logger.WithContextAttrs`, so the line is grouped under a synthetic extension consistent with other actualizer-emitted logs
 - [x] update: [actualizers/async_test.go](../../../../../pkg/processors/actualizers/async_test.go)
-  - add: `Test_AsynchronousActualizer_NonProjectorErrorLogsCause` exercising the new branch via the existing `flakyAppParts` decorator (failing `WaitForBorrow` on the 2nd call), asserting the log line is tagged `stage=ap.error.nonprojector` and contains `cause: flaky WaitForBorrow failure`
+  - add: `Test_AsycActualierErrorCause` exercising the new branch via the existing `flakyAppParts` decorator (failing `WaitForBorrow` on the 2nd call), asserting the log line carries `extension=sys._Actualizer`, `stage=actualizer.error` and contains `cause: flaky WaitForBorrow failure`
