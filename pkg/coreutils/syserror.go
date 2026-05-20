@@ -91,7 +91,7 @@ func (he SysError) ToJSON_APIV1() string {
 	b := bytes.NewBuffer(nil)
 	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%s`, he.HTTPStatus, msg)
 	if he.QName != appdef.NullQName {
-		fmt.Fprintf(b, `,"QName":"%s"`, he.QName.String())
+		fmt.Fprintf(b, `,"QName":%q`, he.QName)
 	}
 	if len(he.Data) > 0 {
 		data, err := json.Marshal(he.Data)
