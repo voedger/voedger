@@ -6,7 +6,7 @@ if you embed string data into a larger string using `fmt.Sprintf`, `fmt.Fprintf`
 
 ## Decision by embedding context
 
-- JSON value (request body, response body, payload field): do not interpolate with `"%s"`; build the structure with `json.Marshal` of a typed struct or `map[string]any`. If a string template must be kept and the operand may contain arbitrary bytes or vertical-tab / non-printable / invalid-UTF-8 characters, pre-marshal each string with `json.Marshal` and interpolate the result with `%s` (the marshaled value is already wrapped in JSON-correct double quotes). `%q` is a practical fallback ONLY when the operand is known to be plain ASCII or valid UTF-8 without `\v` -- e.g. `appdef.QName.String()`, identifiers, fixed enum strings -- because `%q` uses Go-string escaping (`\v`, `\xNN`) which JSON parsers reject; never use `"%s"`
+- JSON value (request body, response body, payload field): do not interpolate with `"%s"`; build the structure with `json.Marshal` of a typed struct or `map[string]any`. If a string template must be kept and the operand may contain control characters (`\v`, NUL, ...) or non-ASCII UTF-8, pre-marshal each string with `json.Marshal` and interpolate the result with `%s` (the marshaled value is already wrapped in JSON-correct double quotes; control chars become `\u00XX`). Note: `json.Marshal` of a Go `string` coerces it to valid UTF-8, silently replacing invalid bytes with U+FFFD (`\ufffd`); to preserve arbitrary binary bytes verbatim, marshal a `[]byte` (encoded as base64) instead of a `string`. `%q` is a practical fallback ONLY when the operand is known to be plain ASCII or valid UTF-8 without `\v` -- e.g. `appdef.QName.String()`, identifiers, fixed enum strings -- because `%q` uses Go-string escaping (`\v`, `\xNN`) which JSON parsers reject; never use `"%s"`
 - URL path segment containing user data: `%s` with `url.PathEscape(seg)`
 - URL query parameter value: `%s` with `url.QueryEscape(val)`
 - URL host:port: do not build with `fmt.Sprintf("%s:%d", ...)` for user-supplied hosts; use `net.JoinHostPort` (also satisfies `nosprintfhostport`)
@@ -47,7 +47,7 @@ acceptable -- `%q` when the operand is plain ASCII or safe UTF-8 (no `\v`, no in
 body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d}}`, app.Name, app.NumParts)
 ```
 
-good -- pre-marshal each string with `json.Marshal` and interpolate with `%s`; works for any byte sequence:
+good -- pre-marshal each string with `json.Marshal` and interpolate with `%s`; preserves any valid-UTF-8 string (control chars become `\u00XX`); invalid-UTF-8 bytes inside a Go `string` are silently replaced by U+FFFD, so for arbitrary binary data marshal a `[]byte` (which `encoding/json` encodes as base64):
 
 ```go
 name, _ := json.Marshal(app.Name)
