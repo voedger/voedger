@@ -113,7 +113,7 @@ func (he SysError) ToJSON_APIV2() string {
 	}
 	b := bytes.NewBufferString(fmt.Sprintf(`{"status":%d,"message":%s`, he.HTTPStatus, msg))
 	if he.QName != appdef.NullQName {
-		fmt.Fprintf(b, `,"qname":"%s"`, he.QName.String())
+		fmt.Fprintf(b, `,"qname":%q`, he.QName.String())
 	}
 	if len(he.Data) > 0 {
 		data, err := json.Marshal(he.Data)
