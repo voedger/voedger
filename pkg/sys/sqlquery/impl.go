@@ -6,6 +6,7 @@ package sqlquery
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -89,7 +90,15 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				}
 			}
 			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
-			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
+			bodyBytes, err := json.Marshal(map[string]any{
+				"args":     map[string]any{"Query": op.VSQLWithoutAppAndWSID},
+				"elements": []any{map[string]any{"fields": []any{"Result"}}},
+			})
+			if err != nil {
+				// notest
+				return err
+			}
+			body := string(bodyBytes)
 			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
 				body, httpu.WithAuthorizeBy(tokenForTargetApp))
 			if err != nil {

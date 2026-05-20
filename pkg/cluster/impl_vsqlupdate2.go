@@ -7,6 +7,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -80,7 +81,12 @@ func logVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, w
 		// notest
 		return 0, err
 	}
-	body := fmt.Sprintf(`{"args":{%q:%q}}`, field_Query, query)
+	bodyBytes, err := json.Marshal(map[string]any{"args": map[string]any{field_Query: query}})
+	if err != nil {
+		// notest
+		return 0, err
+	}
+	body := string(bodyBytes)
 	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/c.cluster.LogVSqlUpdate", istructs.AppQName_sys_cluster, wsid), body,
 		httpu.WithAuthorizeBy(sysToken))
 	if err != nil {

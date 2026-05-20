@@ -7,6 +7,7 @@ package router
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -48,7 +49,12 @@ func ReplyJSON(w http.ResponseWriter, data string, code int) {
 }
 
 func writeCommonError_V2(w http.ResponseWriter, err error, code int) bool {
-	return writeResponse(w, fmt.Sprintf(`{"status":%d,"message":%q}`, code, err.Error()))
+	bodyBytes, marshalErr := json.Marshal(map[string]any{"status": code, "message": err.Error()})
+	if marshalErr != nil {
+		// notest
+		panic(marshalErr)
+	}
+	return writeResponse(w, string(bodyBytes))
 }
 
 func writeCommonError_V1(w http.ResponseWriter, err error, code int) bool {

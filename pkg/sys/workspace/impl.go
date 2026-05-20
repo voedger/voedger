@@ -70,8 +70,22 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederationWithRetry, ap
 	wsKindInitializationData := ownerDoc.AsString(authnz.Field_WSKindInitializationData)
 	createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
 	logger.Info("aproj.sys.InvokeCreateWorkspaceID: request to " + createWSIDCmdURL)
-	body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":%q,"OwnerID":%d,"OwnerApp":%q,"WSName":%q,"WSKind":%q,"WSKindInitializationData":%q,"TemplateName":%q,"TemplateParams":%q}}`,
-		ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
+	bodyBytes, err := json.Marshal(map[string]any{"args": map[string]any{
+		"OwnerWSID":                ownerWSID,
+		"OwnerQName2":              ownerQName.String(),
+		"OwnerID":                  ownerID,
+		"OwnerApp":                 ownerApp,
+		"WSName":                   wsName,
+		"WSKind":                   wsKind.String(),
+		"WSKindInitializationData": wsKindInitializationData,
+		"TemplateName":             templateName,
+		"TemplateParams":           templateParams,
+	}})
+	if err != nil {
+		// notest
+		return err
+	}
+	body := string(bodyBytes)
 	targetAppQName, err := appdef.ParseAppQName(targetApp)
 	if err != nil {
 		// parsed already by c.registry.CreateLogin
@@ -215,8 +229,22 @@ func invokeCreateWorkspaceProjector(federation federation.IFederationWithRetry, 
 			ownerID := rec.AsInt64(Field_OwnerID)
 			ownerApp := rec.AsString(Field_OwnerApp)
 			templateParams := rec.AsString(Field_TemplateParams)
-			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":%q,"OwnerID":%d,"OwnerApp":%q,"WSName":%q,"WSKind":%q,"WSKindInitializationData":%q,"TemplateName":%q,"TemplateParams":%q}}`,
-				ownerWSID, ownerQName, ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
+			bodyBytes, err := json.Marshal(map[string]any{"args": map[string]any{
+				"OwnerWSID":                ownerWSID,
+				"OwnerQName2":              ownerQName,
+				"OwnerID":                  ownerID,
+				"OwnerApp":                 ownerApp,
+				"WSName":                   wsName,
+				"WSKind":                   wsKind.String(),
+				"WSKindInitializationData": wsKindInitializationData,
+				"TemplateName":             templateName,
+				"TemplateParams":           templateParams,
+			}})
+			if err != nil {
+				// notest
+				return err
+			}
+			body := string(bodyBytes)
 			appQName := s.App()
 			createWSCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspace", appQName.String(), newWSID)
 			logger.Info("aproj.sys.InvokeCreateWorkspace: request to " + createWSCmdURL)
@@ -403,8 +431,19 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				if wsError != nil {
 					wsErrStr = wsError.Error()
 				}
-				body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":%q,%q:%q,%q:%d}}]}`,
-					wsDescr.ID(), appdef.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, time.Now().UnixMilli())
+				bodyBytes, marshalErr := json.Marshal(map[string]any{"cuds": []any{map[string]any{
+					"sys.ID": wsDescr.ID(),
+					"fields": map[string]any{
+						"sys.QName":             appdef.QNameCDocWorkspaceDescriptor.String(),
+						Field_InitError:         wsErrStr,
+						Field_InitCompletedAtMs: time.Now().UnixMilli(),
+					},
+				}}})
+				if marshalErr != nil {
+					// notest
+					return marshalErr
+				}
+				body = string(bodyBytes)
 				if _, err = federation.Func(updateWSDescrURL, body, httpu.WithAuthorizeBy(systemPrincipalToken_TargetApp), httpu.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					continue
@@ -412,8 +451,18 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 			} else if wsDescr.AsInt64(Field_InitCompletedAtMs) == 0 {
 				info("initCompletedAtMs = 0. WS data init was interrupted")
 				wsError = errors.New("workspace data initialization was interrupted")
-				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.QName":%q,%q:%q,%q:%d}}]}`,
-					appdef.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, time.Now().UnixMilli())
+				bodyBytes, marshalErr := json.Marshal(map[string]any{"cuds": []any{map[string]any{
+					"fields": map[string]any{
+						"sys.QName":             appdef.QNameCDocWorkspaceDescriptor.String(),
+						Field_InitError:         wsError.Error(),
+						Field_InitCompletedAtMs: time.Now().UnixMilli(),
+					},
+				}}})
+				if marshalErr != nil {
+					// notest
+					return marshalErr
+				}
+				body := string(bodyBytes)
 				if _, err = federation.Func(updateWSDescrURL, body, httpu.WithAuthorizeBy(systemPrincipalToken_TargetApp), httpu.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					continue
@@ -459,8 +508,18 @@ func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp st
 	updateOwnerURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", ownerApp, ownerWSID)
 	logger.Info(fmt.Sprintf("updating owner %s/%d/%s.%d: NewWSID=%d, WSError='%s'", ownerAppQName, ownerWSID, ownerQNameStr,
 		ownerID, newWSID, errStr))
-	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{%q:%d,%q:%q}}]}`,
-		ownerID, authnz.Field_WSID, newWSID, authnz.Field_WSError, errStr)
+	bodyBytes, err := json.Marshal(map[string]any{"cuds": []any{map[string]any{
+		"sys.ID": ownerID,
+		"fields": map[string]any{
+			authnz.Field_WSID:    newWSID,
+			authnz.Field_WSError: errStr,
+		},
+	}}})
+	if err != nil {
+		// notest
+		return err
+	}
+	body := string(bodyBytes)
 	_, err = federation.Func(updateOwnerURL, body, httpu.WithAuthorizeBy(ownerAppToken), httpu.WithDiscardResponse())
 	return err
 }

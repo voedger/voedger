@@ -6,6 +6,7 @@
 package workspace
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -247,7 +248,15 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 		//   login profile (ownerApp != projectorApp):   projectorApp (= targetApp) at pseudoWSID(NullWSID, wsName)
 		//                                                per pkg/registry/impl_invokecreateworkspaceid.go
 		wsName := wsDesc.AsString(authnz.Field_WSName)
-		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":%q}}`, ownerWSID, wsName)
+		bodyBytes, err := json.Marshal(map[string]any{"args": map[string]any{
+			"OwnerWSID": ownerWSID,
+			"WSName":    wsName,
+		}})
+		if err != nil {
+			// notest
+			return err
+		}
+		body := string(bodyBytes)
 		cdocWorkspaceIDApp := ownerApp
 		cdocWorkspaceIDAppToken := ownerAppToken
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID()) // nolint G115

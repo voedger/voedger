@@ -6,6 +6,7 @@ package coreutils
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -82,25 +83,45 @@ func (he SysError) Is(target error) bool {
 }
 
 func (he SysError) ToJSON_APIV1() string {
+	msg, err := json.Marshal(he.Message)
+	if err != nil {
+		// notest
+		panic(err)
+	}
 	b := bytes.NewBuffer(nil)
-	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message)
+	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%s`, he.HTTPStatus, msg)
 	if he.QName != appdef.NullQName {
 		fmt.Fprintf(b, `,"QName":"%s"`, he.QName.String())
 	}
 	if len(he.Data) > 0 {
-		fmt.Fprintf(b, `,"Data":%q`, he.Data)
+		data, err := json.Marshal(he.Data)
+		if err != nil {
+			// notest
+			panic(err)
+		}
+		fmt.Fprintf(b, `,"Data":%s`, data)
 	}
 	b.WriteString("}}")
 	return b.String()
 }
 
 func (he SysError) ToJSON_APIV2() string {
-	b := bytes.NewBufferString(fmt.Sprintf(`{"status":%d,"message":%q`, he.HTTPStatus, he.Message))
+	msg, err := json.Marshal(he.Message)
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	b := bytes.NewBufferString(fmt.Sprintf(`{"status":%d,"message":%s`, he.HTTPStatus, msg))
 	if he.QName != appdef.NullQName {
 		fmt.Fprintf(b, `,"qname":"%s"`, he.QName.String())
 	}
 	if len(he.Data) > 0 {
-		fmt.Fprintf(b, `,"data":%q`, he.Data)
+		data, err := json.Marshal(he.Data)
+		if err != nil {
+			// notest
+			panic(err)
+		}
+		fmt.Fprintf(b, `,"data":%s`, data)
 	}
 	b.WriteString("}")
 	return b.String()

@@ -6,7 +6,7 @@ if you embed string data into a larger string using `fmt.Sprintf`, `fmt.Fprintf`
 
 ## Decision by embedding context
 
-- JSON value (request body, response body, payload field): do not interpolate with `"%s"`; build the structure with `json.Marshal` of a typed struct or `map[string]any`. If a string template must be kept, every string value MUST use `%q` (never `"%s"`)
+- JSON value (request body, response body, payload field): do not interpolate with `"%s"`; build the structure with `json.Marshal` of a typed struct or `map[string]any`. If a string template must be kept and the operand may contain arbitrary bytes or vertical-tab / non-printable / invalid-UTF-8 characters, pre-marshal each string with `json.Marshal` and interpolate the result with `%s` (the marshaled value is already wrapped in JSON-correct double quotes). `%q` is a practical fallback ONLY when the operand is known to be plain ASCII or valid UTF-8 without `\v` -- e.g. `appdef.QName.String()`, identifiers, fixed enum strings -- because `%q` uses Go-string escaping (`\v`, `\xNN`) which JSON parsers reject; never use `"%s"`
 - URL path segment containing user data: `%s` with `url.PathEscape(seg)`
 - URL query parameter value: `%s` with `url.QueryEscape(val)`
 - URL host:port: do not build with `fmt.Sprintf("%s:%d", ...)` for user-supplied hosts; use `net.JoinHostPort` (also satisfies `nosprintfhostport`)
@@ -21,7 +21,7 @@ if you embed string data into a larger string using `fmt.Sprintf`, `fmt.Fprintf`
 ## Rules
 
 - classify the embedding context first (see "Decision by embedding context"); the `%s` / `%q` choice is context-dependent and the rules below apply only inside their stated context
-- in JSON values and Go-quoted literals: never wrap `%s` in double quotes in a format string (`"%s"`); the gocritic check `sprintfQuotedString` enforces this -- use `%q` instead, which adds the quotes and escapes the content per Go-string rules
+- in JSON values and Go-quoted literals: never wrap `%s` in double quotes in a format string (`"%s"`); the gocritic check `sprintfQuotedString` enforces this. For Go-quoted literals use `%q`. For JSON values use `%q` only when the operand is plain ASCII / safe UTF-8 (see decision table); for arbitrary-byte operands pre-marshal with `json.Marshal` and interpolate with `%s`, because `%q` emits Go-only escapes (`\v`, `\xNN`) that JSON parsers reject
 - in HTML attributes and text nodes: `%q` is WRONG (Go-string escaping, not HTML escaping); keep the literal double quotes around the attribute and use `"%s"` with `html.EscapeString(...)` -- silencing `sprintfQuotedString` here means switching escaper, not switching verb
 - never wrap `%s` in single quotes in a format string (`'%s'`) for human messages; use `%q` instead
 - when the operand is already a `string` or a `Stringer` whose `String()` is known to be safe (e.g. `appdef.QName.String()`, `appdef.AppQName.String()`, integer-derived ids), `%s` without escaping is allowed for JSON / human-message / Go-quoted contexts; HTML and URL contexts still require the context-appropriate escaper even for safe Stringers, because the issue there is structural (which characters terminate the attribute / path segment), not value sanitization
@@ -41,13 +41,20 @@ bad -- JSON body with raw `"%s"` (breaks on quotes, backslashes, newlines in the
 body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d}}`, app.Name, app.NumParts)
 ```
 
-good -- `%q` produces a properly escaped JSON string:
+acceptable -- `%q` when the operand is plain ASCII or safe UTF-8 (no `\v`, no invalid bytes) such as an `appdef.AppQName.String()`; note that `%q` uses Go-string escaping and is NOT strictly JSON-compliant (`\v` and `\xNN` are rejected by JSON parsers):
 
 ```go
 body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d}}`, app.Name, app.NumParts)
 ```
 
-better -- `json.Marshal` of a typed value:
+good -- pre-marshal each string with `json.Marshal` and interpolate with `%s`; works for any byte sequence:
+
+```go
+name, _ := json.Marshal(app.Name)
+body := fmt.Sprintf(`{"args":{"AppQName":%s,"NumPartitions":%d}}`, name, app.NumParts)
+```
+
+best -- `json.Marshal` of a typed value:
 
 ```go
 b, _ := json.Marshal(map[string]any{"args": map[string]any{"AppQName": app.Name, "NumPartitions": app.NumParts}})

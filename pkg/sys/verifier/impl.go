@@ -6,6 +6,7 @@ package verifier
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -73,8 +74,17 @@ func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, 
 		}
 
 		// c.sys.SendEmailVerificationCode
-		body := fmt.Sprintf(`{"args":{"VerificationCode":%q,"Email":%q,"Reason":%q,"Language":%q}}`, verificationCode, email, verifyEmailReason, lng)
-		if _, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", as.AppQName(), args.WSID), body,
+		bodyBytes, err := json.Marshal(map[string]any{"args": map[string]any{
+			"VerificationCode": verificationCode,
+			"Email":            email,
+			"Reason":           verifyEmailReason,
+			"Language":         lng,
+		}})
+		if err != nil {
+			// notest
+			return err
+		}
+		if _, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", as.AppQName(), args.WSID), string(bodyBytes),
 			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(systemPrincipalToken)); err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
 		}
