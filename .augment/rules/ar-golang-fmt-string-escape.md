@@ -29,6 +29,9 @@ if you embed string data into a larger string using `fmt.Sprintf`, `fmt.Fprintf`
 - `fmt.Sprintf("%d", i)` where `i` is `int` / `int64` -- use `strconv.Itoa(i)` / `strconv.FormatInt(i, 10)` (perfsprint `integer-format`)
 - string concatenation in a loop (`s += x`) -- use `strings.Builder` (perfsprint `concat-loop`)
 - when an existing call site builds a JSON body via `fmt.Sprintf` template, prefer rewriting to `json.Marshal`; if the rewrite is out of scope of the current change, at minimum replace every `"%s"` with `%q`
+- a JSON `fmt.Sprintf` template MUST produce a self-balanced JSON value: an object starts with `{` and ends with `}` in the same template, an array starts with `[` and ends with `]` in the same template; never leave the surrounding braces / brackets to a separate `Write`/`Fprintf`/`writeResponse` call that lives in a different branch of the surrounding control flow -- doing so produces fragments like `"status":500,"errorDescription":"..."` (no braces) whenever one branch forgets to emit the brace
+- if a JSON object MUST be streamed across multiple writes (e.g. partial flushes of a large response), make exactly one piece of code own the opening `{` and the matching closing `}`, and have it emit BOTH on every reachable path (success, error, empty); do not let separate code paths "decide" whether to emit them
+- for ad-hoc error / status responses (`{"status":N,"errorDescription":"..."}`), do not build them piecemeal -- emit the whole object in one `writeResponse`/`Write` of either a `json.Marshal`ed struct or a fully `{...}`-wrapped `fmt.Sprintf` template
 
 ## Anti-patterns
 
