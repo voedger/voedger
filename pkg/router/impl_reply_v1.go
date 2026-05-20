@@ -152,7 +152,11 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			writeHeaderOnce()
-			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":%q`, http.StatusInternalServerError, *responseErr))
+			errFragment := fmt.Sprintf(`"status":%d,"errorDescription":%q`, http.StatusInternalServerError, *responseErr)
+			if elemsCount == 0 {
+				errFragment = "{" + errFragment + "}"
+			}
+			sendSuccess = writeResponse(w, errFragment)
 		}
 	}
 	writeHeaderOnce()
