@@ -152,7 +152,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			writeHeaderOnce()
-			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, *responseErr))
+			sendSuccess = writeResponse(w, fmt.Sprintf(`"status":%d,"errorDescription":%q`, http.StatusInternalServerError, *responseErr))
 		}
 	}
 	writeHeaderOnce()

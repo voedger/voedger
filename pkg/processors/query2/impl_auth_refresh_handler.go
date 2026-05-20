@@ -45,7 +45,7 @@ func authRefreshHandler() apiPathHandler {
 				return err
 			}
 			expiresInSeconds := gp.Duration.Seconds()
-			json := fmt.Sprintf(`{"%s": "%s", "%s": %d, "%s": %d}`, fieldPrincipalToken, newToken, fieldExpiresInSeconds, int(expiresInSeconds), fieldProfileWSID, qw.profileWSID)
+			json := fmt.Sprintf(`{%q: %q, %q: %d, %q: %d}`, fieldPrincipalToken, newToken, fieldExpiresInSeconds, int(expiresInSeconds), fieldProfileWSID, qw.profileWSID)
 			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
 
 		},

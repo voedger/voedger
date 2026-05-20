@@ -74,7 +74,7 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 		if err != nil {
 			return err
 		}
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d,"ForRegistry":true,"Language":"%s"},"elements":[{"fields":["VerificationToken"]}]}`,
+		body := fmt.Sprintf(`{"args":{"Entity":%q,"Field":%q,"Email":%q,"TargetWSID":%d,"ForRegistry":true,"Language":%q},"elements":[{"fields":["VerificationToken"]}]}`,
 			QNameCommandResetPasswordByEmailUnloggedParams, field_Email, email, profileWSID, language) // targetWSID - is the workspace we're going to use the verified value at
 		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.InitiateEmailVerification", loginAppQName, profileWSID), body, httpu.WithAuthorizeBy(sysToken))
 		if err != nil {
@@ -105,7 +105,7 @@ func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens,
 			return err
 		}
 
-		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ForRegistry":true},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
+		body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ForRegistry":true},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.IssueVerifiedValueToken", loginAppQName, profileWSID), body, httpu.WithAuthorizeBy(sysToken))
 		if err != nil {
 			return err

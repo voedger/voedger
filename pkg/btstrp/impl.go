@@ -101,7 +101,7 @@ func deployAppPartitions(ctx context.Context, stage string, appparts appparts.IA
 
 func callDeployApp(federation federation.IFederation, sysToken string, app appparts.BuiltInApp) {
 	// Use Admin Endpoint to send requests
-	body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
+	body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
 	_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 		httpu.WithDiscardResponse(),
 		httpu.WithAuthorizeBy(sysToken),
