@@ -7,7 +7,6 @@
 package actualizers
 
 import (
-	"context"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -15,17 +14,24 @@ import (
 )
 
 type asyncActualizerContextState struct {
-	lock   sync.Mutex
-	err    error
-	vvmCtx context.Context
-	cancel func()
+	lock        sync.Mutex
+	err         error
+	cancelWatch func()
 }
 
 func (s *asyncActualizerContextState) cancelWithError(err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.err = err
-	s.cancel()
+	if s.cancelWatch != nil {
+		s.cancelWatch()
+	}
+}
+
+func (s *asyncActualizerContextState) setCancelWatch(cancel func()) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.cancelWatch = cancel
 }
 
 // @ConcurrentAccess

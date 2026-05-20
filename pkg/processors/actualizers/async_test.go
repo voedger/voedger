@@ -1239,6 +1239,47 @@ func Test_AsynchronousActualizer_ChannelCleanupPanicReproduction(t *testing.T) {
 	}
 }
 
+func Test_AsynchronousActualizer_CancelWithErrorBreaksLocalWatchChannelContext(t *testing.T) {
+	require := require.New(t)
+
+	broker, cleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels: 1, ChannelsPerSubject: 1, Subscriptions: 1, SubscriptionsPerSubject: 1,
+	}, timeu.NewITime())
+	defer cleanup()
+
+	channelID, channelCleanup, err := broker.NewChannel("test", time.Minute)
+	require.NoError(err)
+	defer channelCleanup()
+
+	parentCtx, parentCancel := context.WithCancel(context.Background())
+	defer parentCancel()
+	watchCtx, cancelWatch := context.WithCancel(parentCtx)
+
+	readCtx := &asyncActualizerContextState{}
+	readCtx.setCancelWatch(cancelWatch)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		broker.WatchChannel(watchCtx, channelID, func(in10n.ProjectionKey, istructs.Offset) {})
+	}()
+
+	expectedErr := errors.New("test watch break")
+	readCtx.cancelWithError(expectedErr)
+
+	require.Eventually(func() bool {
+		select {
+		case <-done:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, time.Millisecond)
+	require.ErrorIs(readCtx.error(), expectedErr)
+	require.ErrorIs(watchCtx.Err(), context.Canceled)
+	require.NoError(parentCtx.Err())
+}
+
 type flakyAppParts struct {
 	appparts.IAppPartitions
 	appDefCalls        atomic.Int32
