@@ -251,10 +251,14 @@ func (a *asyncActualizer) keepReading(ctx context.Context) error {
 			}
 		}
 	})
-	if ctx.Err() != nil {
-		return nil
+	// returns n10nWatchCtxCause of cancellation injected via cancelN10NWatchChannelCtx;
+	// suppresses parent-propagated cancellation so graceful shutdown doesn't
+	// trigger retrier.OnError logging
+	n10nWatchCtxCause := context.Cause(a.n10nWatchChannelCtx)
+	if !errors.Is(n10nWatchCtxCause, context.Cause(ctx)) {
+		return n10nWatchCtxCause
 	}
-	return context.Cause(a.n10nWatchChannelCtx)
+	return nil
 }
 
 func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
