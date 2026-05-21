@@ -13,9 +13,12 @@ import (
 )
 
 // Jprintf works like fmt.Sprintf but JSON-escapes string-like arguments:
-// string, named ~string types, and values implementing fmt.Stringer. All
-// other arguments are forwarded to fmt.Sprintf unchanged, so verbs such as
-// %d, %t, %g work as usual.
+// string, named ~string types, values implementing fmt.Stringer, and values
+// implementing the error interface. All other arguments are forwarded to
+// fmt.Sprintf unchanged, so verbs such as %d, %t, %g work as usual.
+//
+// When a type implements both error and fmt.Stringer, Error() is preferred
+// (mirroring fmt.Sprintf precedence).
 //
 // Verbs for string-like arguments:
 //
@@ -50,6 +53,8 @@ func jprintfArg(arg any) any {
 	switch v := arg.(type) {
 	case string:
 		return jsonString(v)
+	case error:
+		return jsonError{v}
 	case fmt.Stringer:
 		return jsonStringer{v}
 	case nil:
@@ -64,8 +69,6 @@ func jprintfArg(arg any) any {
 	return arg
 }
 
-type jsonString string
-
 func (s jsonString) Format(state fmt.State, verb rune) {
 	if verb == 's' || verb == 'v' || verb == 'q' {
 		formatJSONString(state, verb, string(s))
@@ -74,16 +77,20 @@ func (s jsonString) Format(state fmt.State, verb rune) {
 	fmt.Fprintf(state, fmtStateFormat(state, verb), string(s))
 }
 
-type jsonStringer struct {
-	fmt.Stringer
-}
-
 func (s jsonStringer) Format(state fmt.State, verb rune) {
 	if verb == 's' || verb == 'v' || verb == 'q' {
 		formatJSONString(state, verb, s.String())
 		return
 	}
 	fmt.Fprintf(state, fmtStateFormat(state, verb), s.Stringer)
+}
+
+func (e jsonError) Format(state fmt.State, verb rune) {
+	if verb == 's' || verb == 'v' || verb == 'q' {
+		formatJSONString(state, verb, e.Error())
+		return
+	}
+	fmt.Fprintf(state, fmtStateFormat(state, verb), e.error)
 }
 
 func formatJSONString(state fmt.State, verb rune, s string) {

@@ -6,26 +6,21 @@ package jsonu
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
-type testStringer struct {
-	value string
-}
+func TestJprintf_BasicUsage(t *testing.T) {
+	require := require.New(t)
+	name := "He said \"hi\"\v"
+	err := errors.New("disk\tfull")
 
-func (s testStringer) String() string {
-	return s.value
-}
+	body := Jprintf(`{"name":%q,"err":%q,"count":%d}`, name, err, 3)
 
-type testString string
-
-type testIntStringer int32
-
-func (s testIntStringer) String() string {
-	return "testIntStringer"
+	require.JSONEq(`{"name":"He said \"hi\"\u000b","err":"disk\tfull","count":3}`, body)
 }
 
 func TestJprintf(t *testing.T) {
@@ -59,6 +54,50 @@ func TestJprintf(t *testing.T) {
 		got := Jprintf(`{"value":%q}`, testStringer{value: `a"b`})
 
 		require.JSONEq(`{"value":"a\"b"}`, got)
+	})
+
+	t.Run("escapes error args using Error result", func(t *testing.T) {
+		got := Jprintf(`{"err":"%s"}`, errors.New(`bad "quote" and \slash`))
+
+		require.JSONEq(`{"err":"bad \"quote\" and \\slash"}`, got)
+	})
+
+	t.Run("escapes error args with v verb", func(t *testing.T) {
+		got := Jprintf(`{"err":"%v"}`, errors.New("line\vbreak"))
+
+		require.JSONEq(`{"err":"line\u000bbreak"}`, got)
+	})
+
+	t.Run("emits complete JSON string literal for error args with q verb", func(t *testing.T) {
+		got := Jprintf(`{"err":%q}`, errors.New(`a"b`))
+
+		require.JSONEq(`{"err":"a\"b"}`, got)
+	})
+
+	t.Run("escapes wrapped error from fmt.Errorf", func(t *testing.T) {
+		wrapped := fmt.Errorf("outer: %w", errors.New(`inner "msg"`))
+		got := Jprintf(`{"err":%q}`, wrapped)
+
+		require.JSONEq(`{"err":"outer: inner \"msg\""}`, got)
+	})
+
+	t.Run("custom error type with special chars", func(t *testing.T) {
+		got := Jprintf(`{"err":%q}`, testError{value: "tab:\t,nl:\n,vt:\v"})
+
+		require.JSONEq(`{"err":"tab:\t,nl:\n,vt:\u000b"}`, got)
+	})
+
+	t.Run("error takes precedence over Stringer when type implements both", func(t *testing.T) {
+		// mirrors fmt's precedence: Error() wins over String() for %s/%v/%q
+		arg := testStringerError{stringResult: "from-String", errorResult: `from-"Error"`}
+		got := Jprintf(`{"v":%q}`, arg)
+
+		require.JSONEq(`{"v":"from-\"Error\""}`, got)
+	})
+
+	t.Run("non-string verb on error arg passes through to fmt", func(t *testing.T) {
+		err := errors.New("x")
+		require.Equal(fmt.Sprintf(`%d`, err), Jprintf(`%d`, err))
 	})
 
 	t.Run("escapes named string args", func(t *testing.T) {
@@ -187,3 +226,35 @@ func TestJprintf(t *testing.T) {
 		require.Contains(got, "nil *testStringer pointer")
 	})
 }
+
+type testStringer struct {
+	value string
+}
+
+func (s testStringer) String() string {
+	return s.value
+}
+
+type testString string
+
+type testIntStringer int32
+
+func (s testIntStringer) String() string {
+	return "testIntStringer"
+}
+
+type testError struct {
+	value string
+}
+
+func (e testError) Error() string {
+	return e.value
+}
+
+type testStringerError struct {
+	stringResult string
+	errorResult  string
+}
+
+func (e testStringerError) String() string { return e.stringResult }
+func (e testStringerError) Error() string  { return e.errorResult }

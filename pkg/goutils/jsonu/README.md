@@ -1,15 +1,14 @@
 # Package jsonu
 
-Package jsonu formats JSON snippets that still use fmt-style
-templates. It JSON-escapes string-like arguments (`string`, named
-`~string` types, and `fmt.Stringer` implementations) while leaving
-other values to normal fmt formatting.
+Package jsonu provides Jprintf, a JSON-safe fmt.Sprintf variant that
+JSON-escapes string, ~string, fmt.Stringer and error arguments so
+callers can build small JSON snippets from readable templates.
 
 ## Problem
 
-JSON string values need JSON escaping, but fmt `%q` uses Go string
-escaping and can emit sequences JSON parsers reject. This package keeps
-small JSON templates readable while avoiding malformed output.
+fmt.Sprintf with %q emits Go-quoted strings that are not always valid
+JSON (e.g. \v, \xNN), and json.Marshal forces per-value boilerplate to
+extract the escaped content from the marshaled bytes.
 
 <details>
 <summary>Without jsonu</summary>
@@ -19,34 +18,27 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
 func main() {
-	verticalTab := "line\vbreak"
-	badVTab := fmt.Sprintf(`{"name":%q}`, verticalTab)
-	fmt.Println(json.Valid([]byte(badVTab)))
-	// false: Go \v escape is not valid JSON
+	name := "He said \"hi\"\v"
+	err := errors.New("disk\tfull")
 
-	invalidUTF8 := string([]byte{0xff})
-	badByte := fmt.Sprintf(`{"name":%q}`, invalidUTF8)
-	fmt.Println(json.Valid([]byte(badByte)))
-	// false: Go \xNN escape is not valid JSON
+	// pitfall: %q emits \v which is not valid JSON
+	bad := fmt.Sprintf(`{"name":%q}`, name)
+	fmt.Println(json.Valid([]byte(bad))) // false
 
-	name := "line\vwith \"quotes\""
-	nameJSON, err := json.Marshal(name)
-	if err != nil {
-		panic(err)
-	}
-
-	// boilerplate for every string inserted into the template
-	nameEscaped := string(nameJSON[1 : len(nameJSON)-1])
+	// boilerplate: marshal each value and strip the outer quotes
+	nb, _ := json.Marshal(name)
+	eb, _ := json.Marshal(err.Error())
 	body := fmt.Sprintf(
-		`{"name":"%s","count":%d}`,
-		nameEscaped,
+		`{"name":"%s","err":"%s","count":%d}`,
+		string(nb[1:len(nb)-1]),
+		string(eb[1:len(eb)-1]),
 		3,
 	)
-
 	fmt.Println(body)
 }
 ```
@@ -60,21 +52,17 @@ func main() {
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/goutils/jsonu"
 )
 
-type qName string
-
-func (q qName) String() string { return string(q) }
-
 func main() {
+	name := "He said \"hi\"\v"
+	err := errors.New("disk\tfull")
 	body := jsonu.Jprintf(
-		`{"qname":%q,"name":%q,"count":%d}`,
-		qName(`app.Doc`),
-		"line\vwith \"quotes\"",
-		3,
+		`{"name":%q,"err":%q,"count":%d}`, name, err, 3,
 	)
 	fmt.Println(body)
 }
@@ -84,23 +72,8 @@ func main() {
 
 ## Features
 
-- **[Jprintf](impl.go)** - Formats JSON string templates safely
-  - Escapes `string`, named `~string` types, and `fmt.Stringer` arguments
-  - Forwards all other arguments to `fmt.Sprintf` unchanged (`%d`, `%t`, `%g`, ...)
-  - `%s` and `%v` emit escaped content; the caller supplies the surrounding
-    quotes in the template
-  - `%q` emits a complete JSON string literal (escaped content wrapped in
-    double quotes); no quotes are needed in the template
-  - Honors flags and width on string-like arguments (e.g. `%-10.3s`, `%10q`)
+- **[Jprintf](impl.go#L44)** - JSON-safe fmt.Sprintf for JSON templates
 
 ## Use
 
-```go
-name := "line\vwith \"quotes\""
-
-// %s: provide the quotes in the template
-body := jsonu.Jprintf(`{"name":"%s","count":%d}`, name, 3)
-
-// %q: equivalent, quotes are produced by Jprintf
-body = jsonu.Jprintf(`{"name":%q,"count":%d}`, name, 3)
-```
+See [basic usage test](impl_test.go)
