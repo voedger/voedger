@@ -6,12 +6,12 @@ package coreutils
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 )
 
 type SysError struct {
@@ -83,45 +83,24 @@ func (he SysError) Is(target error) bool {
 }
 
 func (he SysError) ToJSON_APIV1() string {
-	msg, err := json.Marshal(he.Message)
-	if err != nil {
-		// notest
-		panic(err)
-	}
-	b := bytes.NewBuffer(nil)
-	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%s`, he.HTTPStatus, msg)
+	b := bytes.NewBufferString(jsonu.Jprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":"%s"`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
-		fmt.Fprintf(b, `,"QName":%q`, he.QName)
+		b.WriteString(jsonu.Jprintf(`,"QName":"%s"`, he.QName))
 	}
 	if len(he.Data) > 0 {
-		data, err := json.Marshal(he.Data)
-		if err != nil {
-			// notest
-			panic(err)
-		}
-		fmt.Fprintf(b, `,"Data":%s`, data)
+		b.WriteString(jsonu.Jprintf(`,"Data":"%s"`, he.Data))
 	}
 	b.WriteString("}}")
 	return b.String()
 }
 
 func (he SysError) ToJSON_APIV2() string {
-	msg, err := json.Marshal(he.Message)
-	if err != nil {
-		// notest
-		panic(err)
-	}
-	b := bytes.NewBufferString(fmt.Sprintf(`{"status":%d,"message":%s`, he.HTTPStatus, msg))
+	b := bytes.NewBufferString(jsonu.Jprintf(`{"status":%d,"message":"%s"`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
-		fmt.Fprintf(b, `,"qname":%q`, he.QName)
+		b.WriteString(jsonu.Jprintf(`,"qname":"%s"`, he.QName))
 	}
 	if len(he.Data) > 0 {
-		data, err := json.Marshal(he.Data)
-		if err != nil {
-			// notest
-			panic(err)
-		}
-		fmt.Fprintf(b, `,"data":%s`, data)
+		b.WriteString(jsonu.Jprintf(`,"data":"%s"`, he.Data))
 	}
 	b.WriteString("}")
 	return b.String()

@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
@@ -152,12 +152,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			writeHeaderOnce()
-			errDesc, err := json.Marshal((*responseErr).Error())
-			if err != nil {
-				// notest
-				panic(err)
-			}
-			errFragment := fmt.Sprintf(`"status":%d,"errorDescription":%s`, http.StatusInternalServerError, errDesc)
+			errFragment := jsonu.Jprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, (*responseErr).Error())
 			if elemsCount == 0 {
 				errFragment = "{" + errFragment + "}"
 			}

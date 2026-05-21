@@ -6,7 +6,6 @@ package sqlquery
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -21,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -90,15 +90,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				}
 			}
 			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
-			bodyBytes, err := json.Marshal(map[string]any{
-				"args":     map[string]any{"Query": op.VSQLWithoutAppAndWSID},
-				"elements": []any{map[string]any{"fields": []any{"Result"}}},
-			})
-			if err != nil {
-				// notest
-				return err
-			}
-			body := string(bodyBytes)
+			body := jsonu.Jprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
 			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
 				body, httpu.WithAuthorizeBy(tokenForTargetApp))
 			if err != nil {

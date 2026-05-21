@@ -6,7 +6,6 @@
 package invite
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -135,18 +135,10 @@ func cudURL(appQName appdef.AppQName, wsid istructs.WSID) string {
 	return fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, wsid)
 }
 
-func updateInviteViaCUD(fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, token string, inviteID istructs.RecordID, fields map[string]any) error {
-	bodyBytes, err := json.Marshal(map[string]any{"cuds": []any{map[string]any{
-		"sys.ID": inviteID,
-		"fields": fields,
-	}}})
-	if err != nil {
-		// notest
-		return err
-	}
-	_, err = fed.Func(
+func updateInviteViaCUD(fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, token string, inviteID istructs.RecordID, fields string) error {
+	_, err := fed.Func(
 		cudURL(appQName, wsid),
-		string(bodyBytes),
+		fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{%s}}]}`, inviteID, fields),
 		httpu.WithAuthorizeBy(token),
 		httpu.WithDiscardResponse())
 	return err
@@ -203,11 +195,8 @@ func handleApplyInvitation(event istructs.IPLogEvent, s istructs.IState, intents
 	if err != nil {
 		return err
 	}
-	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID, map[string]any{
-		"State":            State_Invited,
-		"VerificationCode": verificationCode,
-		"Updated":          time.Now().UnixMilli(),
-	})
+	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
+		jsonu.Jprintf(`"State":%d,"VerificationCode":"%s","Updated":%d`, State_Invited, verificationCode, time.Now().UnixMilli()))
 }
 
 func sendEmail(s istructs.IState, intents istructs.IIntents, smtpCfg smtp.Cfg, subject, to, body string) error {
@@ -265,18 +254,10 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 
 	// Step 1: create JoinedWorkspace in the invitee's profile workspace.
 	// c.sys.CreateJoinedWorkspace is idempotent w.r.t. (InvitingWorkspaceWSID): a re-run updates the existing record.
-	createJoinedWSBody, err := json.Marshal(map[string]any{"args": map[string]any{
-		"Roles":                 svCDocInvite.AsString(Field_Roles),
-		"InvitingWorkspaceWSID": event.Workspace(),
-		"WSName":                svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName),
-	}})
-	if err != nil {
-		// notest
-		return err
-	}
 	_, err = fed.Func(
 		fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
-		string(createJoinedWSBody),
+		jsonu.Jprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":"%s"}}`,
+			svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
 		httpu.WithAuthorizeBy(token),
 		httpu.WithDiscardResponse(),
 	)
@@ -291,19 +272,9 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 	switch {
 	case existingSubjectID == istructs.NullRecordID:
 		// First join: insert a new Subject with all fields.
-		insertBytes, err := json.Marshal(map[string]any{"cuds": []any{map[string]any{"fields": map[string]any{
-			"sys.ID":      1,
-			"sys.QName":   "sys.Subject",
-			"Login":       svCDocInvite.AsString(field_ActualLogin),
-			"Roles":       svCDocInvite.AsString(Field_Roles),
-			"SubjectKind": svCDocInvite.AsInt32(authnz.Field_SubjectKind),
-			"ProfileWSID": svCDocInvite.AsInt64(Field_InviteeProfileWSID),
-		}}}})
-		if err != nil {
-			// notest
-			return err
-		}
-		body = string(insertBytes)
+		body = jsonu.Jprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+			svCDocInvite.AsString(field_ActualLogin), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
+			svCDocInvite.AsInt64(Field_InviteeProfileWSID))
 	case !isActive:
 		// Re-join after Cancel/Leave: re-activate first, then update Roles in the second CUD below.
 		// Two separate CUDs are required: sys.IsActive cannot be updated together with other fields.
@@ -319,15 +290,7 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 		fallthrough
 	default:
 		// Active Subject (idempotent retry) or fallthrough from !isActive: refresh Roles.
-		updateBytes, err := json.Marshal(map[string]any{"cuds": []any{map[string]any{
-			"sys.ID": existingSubjectID,
-			"fields": map[string]any{"Roles": svCDocInvite.AsString(Field_Roles)},
-		}}})
-		if err != nil {
-			// notest
-			return err
-		}
-		body = string(updateBytes)
+		body = jsonu.Jprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, existingSubjectID, svCDocInvite.AsString(Field_Roles))
 	}
 	// Insert path needs the new ID for the invite's SubjectID; update path can discard the response.
 	subjectID := existingSubjectID
@@ -351,11 +314,8 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 		}
 	}
 	// Step 3: mark the invite as Joined and remember the SubjectID for later Cancel/Leave/UpdateRoles handlers.
-	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID, map[string]any{
-		"State":     State_Joined,
-		"SubjectID": subjectID,
-		"Updated":   time.Now().UnixMilli(),
-	})
+	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
+		jsonu.Jprintf(`"State":%d,"SubjectID":%d,"Updated":%d`, State_Joined, subjectID, time.Now().UnixMilli()))
 }
 
 func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) error {
@@ -365,34 +325,18 @@ func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, 
 	}
 
 	subjectID := svCDocInvite.AsRecordID(field_SubjectID)
-	rolesCUDBytes, err := json.Marshal(map[string]any{"cuds": []any{map[string]any{
-		"sys.ID": subjectID,
-		"fields": map[string]any{"Roles": event.ArgumentObject().AsString(Field_Roles)},
-	}}})
-	if err != nil {
-		// notest
-		return err
-	}
 	_, err = fed.Func(
 		cudURL(appQName, event.Workspace()),
-		string(rolesCUDBytes),
+		jsonu.Jprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, subjectID, event.ArgumentObject().AsString(Field_Roles)),
 		httpu.WithAuthorizeBy(token),
 		httpu.WithDiscardResponse())
 	if err != nil {
 		return err
 	}
 
-	updateRolesBytes, err := json.Marshal(map[string]any{"args": map[string]any{
-		"Roles":                 event.ArgumentObject().AsString(Field_Roles),
-		"InvitingWorkspaceWSID": event.Workspace(),
-	}})
-	if err != nil {
-		// notest
-		return err
-	}
 	_, err = fed.Func(
 		fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(Field_InviteeProfileWSID)),
-		string(updateRolesBytes),
+		jsonu.Jprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d}}`, event.ArgumentObject().AsString(Field_Roles), event.Workspace()),
 		httpu.WithAuthorizeBy(token),
 		httpu.WithDiscardResponse())
 	if err != nil {
@@ -409,11 +353,8 @@ func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, 
 		return err
 	}
 
-	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID, map[string]any{
-		"State":   State_Joined,
-		"Updated": time.Now().UnixMilli(),
-		"Roles":   event.ArgumentObject().AsString(Field_Roles),
-	})
+	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
+		jsonu.Jprintf(`"State":%d,"Updated":%d,"Roles":"%s"`, State_Joined, time.Now().UnixMilli(), event.ArgumentObject().AsString(Field_Roles)))
 }
 
 func handleApplyCancelAcceptedInvite(event istructs.IPLogEvent, s istructs.IState, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
@@ -425,10 +366,8 @@ func handleApplyCancelAcceptedInvite(event istructs.IPLogEvent, s istructs.IStat
 	if err = deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
 		return err
 	}
-	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID, map[string]any{
-		"State":   State_Cancelled,
-		"Updated": time.Now().UnixMilli(),
-	})
+	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
+		jsonu.Jprintf(`"State":%d,"Updated":%d`, State_Cancelled, time.Now().UnixMilli()))
 }
 
 func handleApplyLeaveWorkspace(event istructs.IPLogEvent, s istructs.IState, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
@@ -440,10 +379,8 @@ func handleApplyLeaveWorkspace(event istructs.IPLogEvent, s istructs.IState, svC
 	if err = deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
 		return err
 	}
-	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID, map[string]any{
-		"State":   State_Left,
-		"Updated": time.Now().UnixMilli(),
-	})
+	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
+		jsonu.Jprintf(`"State":%d,"Updated":%d`, State_Left, time.Now().UnixMilli()))
 }
 
 func handleCancelSentInvite(event istructs.IPLogEvent, s istructs.IState, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
@@ -452,8 +389,6 @@ func handleCancelSentInvite(event istructs.IPLogEvent, s istructs.IState, invite
 		return err
 	}
 
-	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID, map[string]any{
-		"State":   State_Cancelled,
-		"Updated": time.Now().UnixMilli(),
-	})
+	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
+		jsonu.Jprintf(`"State":%d,"Updated":%d`, State_Cancelled, time.Now().UnixMilli()))
 }

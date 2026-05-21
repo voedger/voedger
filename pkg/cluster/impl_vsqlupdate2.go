@@ -7,7 +7,6 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -81,12 +81,7 @@ func logVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, w
 		// notest
 		return 0, err
 	}
-	bodyBytes, err := json.Marshal(map[string]any{"args": map[string]any{field_Query: query}})
-	if err != nil {
-		// notest
-		return 0, err
-	}
-	body := string(bodyBytes)
+	body := jsonu.Jprintf(`{"args":{"%s":"%s"}}`, field_Query, query)
 	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/c.cluster.LogVSqlUpdate", istructs.AppQName_sys_cluster, wsid), body,
 		httpu.WithAuthorizeBy(sysToken))
 	if err != nil {

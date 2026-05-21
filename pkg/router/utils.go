@@ -7,7 +7,6 @@ package router
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -22,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -49,12 +49,7 @@ func ReplyJSON(w http.ResponseWriter, data string, code int) {
 }
 
 func writeCommonError_V2(w http.ResponseWriter, err error, code int) bool {
-	bodyBytes, marshalErr := json.Marshal(map[string]any{"status": code, "message": err.Error()})
-	if marshalErr != nil {
-		// notest
-		panic(marshalErr)
-	}
-	return writeResponse(w, string(bodyBytes))
+	return writeResponse(w, jsonu.Jprintf(`{"status":%d,"message":"%s"}`, code, err.Error()))
 }
 
 func writeCommonError_V1(w http.ResponseWriter, err error, code int) bool {

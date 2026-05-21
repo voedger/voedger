@@ -6,7 +6,6 @@ package registry
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -76,22 +76,9 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 			return err
 		}
 		// targetWSID - is the workspace we're going to use the verified value at
-		bodyBytes, err := json.Marshal(map[string]any{
-			"args": map[string]any{
-				"Entity":      QNameCommandResetPasswordByEmailUnloggedParams.String(),
-				"Field":       field_Email,
-				"Email":       email,
-				"TargetWSID":  profileWSID,
-				"ForRegistry": true,
-				"Language":    language,
-			},
-			"elements": []any{map[string]any{"fields": []any{"VerificationToken"}}},
-		})
-		if err != nil {
-			// notest
-			return err
-		}
-		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.InitiateEmailVerification", loginAppQName, profileWSID), string(bodyBytes), httpu.WithAuthorizeBy(sysToken))
+		body := jsonu.Jprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d,"ForRegistry":true,"Language":"%s"},"elements":[{"fields":["VerificationToken"]}]}`,
+			QNameCommandResetPasswordByEmailUnloggedParams, field_Email, email, profileWSID, language)
+		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.InitiateEmailVerification", loginAppQName, profileWSID), body, httpu.WithAuthorizeBy(sysToken))
 		if err != nil {
 			return fmt.Errorf("q.sys.InitiateEmailVerification failed: %w", err)
 		}
@@ -120,19 +107,8 @@ func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens,
 			return err
 		}
 
-		bodyBytes, err := json.Marshal(map[string]any{
-			"args": map[string]any{
-				"VerificationToken": token,
-				"VerificationCode":  code,
-				"ForRegistry":       true,
-			},
-			"elements": []any{map[string]any{"fields": []any{"VerifiedValueToken"}}},
-		})
-		if err != nil {
-			// notest
-			return err
-		}
-		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.IssueVerifiedValueToken", loginAppQName, profileWSID), string(bodyBytes), httpu.WithAuthorizeBy(sysToken))
+		body := jsonu.Jprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ForRegistry":true},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
+		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.IssueVerifiedValueToken", loginAppQName, profileWSID), body, httpu.WithAuthorizeBy(sysToken))
 		if err != nil {
 			return err
 		}
