@@ -36,7 +36,6 @@ Fix the regexp so the hyphen is treated as a literal character, and align tests 
 
 - [x] update: [it/impl_signupin_test.go](../../../../../pkg/sys/it/impl_signupin_test.go)
   - add: `","` (and `"test,foo@test.com"`) to the `wrongLogins` list in `TestSignUpErrors/subject name constraint violation` to assert `,` is rejected after the fix
-  - add: positive sub-test verifying logins containing `+`, `-`, `/` (e.g. `a+b@x.com`, `a-b@x.com`, `a/b@x.com`) succeed via `vit.SignUp`
 
 - [x] update: [registry/consts.go](../../../../../pkg/registry/consts.go)
   - fix: escape `-` in `validLoginRegexp` (`+-\/` -> `+\-\/`) so the hyphen is a literal character instead of forming a range with `+` and `/`
