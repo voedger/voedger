@@ -33,10 +33,12 @@ A code style guide that prescribes the correct formatting verb and escaping help
   - Short checklist phrased so it is directly usable by AI coding agents
   - Initially authored as always-apply rule `.augment/rules/ar-golang-fmt-string-escape.md`; converted to an on-demand Claude Code Skill (auto-loaded via `description` matching on `fmt.Sprintf`/JSON/URL/HTML keywords). Original rule file deleted; `.gitignore` updated with `!/.claude` so the skill directory is tracked
 
-- [x] create: [pkg/goutils/jsonu/impl.go](../../../../../pkg/goutils/jsonu/impl.go) + [impl_test.go](../../../../../pkg/goutils/jsonu/impl_test.go) + [README.md](../../../../../pkg/goutils/jsonu/README.md)
-  - `Jprintf(format, args...)` — drop-in replacement for `fmt.Sprintf` that JSON-escapes `string`, `fmt.Stringer`, and `~string` arguments via `json.Marshal` (handles control chars, invalid UTF-8 → `\ufffd`, U+2028/U+2029); keeps non-string args unchanged
-  - readable JSON templates with `"%s"` placeholders without the `%q` pitfalls (Go-only escapes `\v`, `\xNN` that JSON parsers reject) and without per-call `json.Marshal` boilerplate
-  - subtests cover: control chars, HTML-sensitive chars, line/paragraph separators, invalid UTF-8, named string types, Stringer args, `%q` double-escape pitfall, nil-typed-pointer Stringer panic
+- [x] create: [pkg/goutils/jsonu/impl.go](../../../../../pkg/goutils/jsonu/impl.go) + [types.go](../../../../../pkg/goutils/jsonu/types.go) + [impl_test.go](../../../../../pkg/goutils/jsonu/impl_test.go) + [README.md](../../../../../pkg/goutils/jsonu/README.md)
+  - `Jprintf(format, args...)` — drop-in replacement for `fmt.Sprintf` that JSON-escapes `string`, `~string`, `fmt.Stringer`, and `error` arguments via `json.Marshal` (handles control chars, invalid UTF-8 → `\ufffd`, U+2028/U+2029); keeps non-string args unchanged
+  - `error` arg support: values implementing `error` are escaped via `Error()`; when a type implements both `error` and `fmt.Stringer`, `Error()` wins (mirrors `fmt.Sprintf` precedence)
+  - verb semantics: `%s`/`%v` emit JSON-escaped content without quotes (caller supplies quotes in the template); `%q` emits a complete JSON string literal (escaped content wrapped in `"..."`) so templates can stay compact; flags, width and precision are honored via lazy `fmt.Formatter` wrappers in [types.go](../../../../../pkg/goutils/jsonu/types.go) (`jsonString`, `jsonStringer`, `jsonError`)
+  - readable JSON templates without the raw-`fmt` `%q` pitfalls (Go-only escapes `\v`, `\xNN` that JSON parsers reject) and without per-call `json.Marshal` boilerplate
+  - subtests cover: control chars, HTML-sensitive chars, line/paragraph separators, invalid UTF-8, named string types, Stringer args, error args (plain, `fmt.Errorf`-wrapped, custom types, error-vs-Stringer precedence), `%q` round-trip + width padding, nil-typed-pointer Stringer panic; plus `TestJprintf_BasicUsage` end-to-end example
 
 - [x] update: violating `fmt.Sprintf`/`fmt.Errorf` call sites found by the audit to conform to the new guide
   - audit: ran `golangci-lint` with gocritic `sprintfQuotedString`, `redundantSprint`, `stringConcatSimplify`, `dynamicFmtString` + `perfsprint` across `./...`; found 153 `sprintfQuotedString` violations (most in `pkg/sys/it/*_test.go`)
