@@ -225,6 +225,41 @@ func TestJprintf(t *testing.T) {
 		require.Contains(got, "%!s(PANIC=")
 		require.Contains(got, "nil *testStringer pointer")
 	})
+
+	t.Run("forwards every Go fmt flag to string-like args", func(t *testing.T) {
+		for _, flag := range []rune{'#', '+', '-', '0', ' '} {
+			probe := &flagProbe{}
+			Jprintf(`%`+string(flag)+`10v`, probe)
+			require.True(probe.seenFlag[flag], "flag %q not forwarded", flag)
+		}
+	})
+
+	t.Run("apostrophe is not a Go fmt flag", func(t *testing.T) {
+		format := buildFormat('\'', 'v')
+		probe := &flagProbe{}
+		Jprintf(format, probe)
+		require.False(probe.seenFlag['\''], "Go fmt unexpectedly recognizes ' as a flag")
+		require.Contains(fmt.Sprintf(format, "abc"), "%!'(", "Go fmt itself treats ' as an unknown verb, not a flag")
+	})
+}
+
+type flagProbe struct {
+	seenFlag map[rune]bool
+}
+
+func (p *flagProbe) Format(state fmt.State, _ rune) {
+	if p.seenFlag == nil {
+		p.seenFlag = map[rune]bool{}
+	}
+	for _, r := range "'#+-0 " {
+		if state.Flag(int(r)) {
+			p.seenFlag[r] = true
+		}
+	}
+}
+
+func buildFormat(flag, verb rune) string {
+	return string([]rune{'%', flag, verb})
 }
 
 type testStringer struct {
