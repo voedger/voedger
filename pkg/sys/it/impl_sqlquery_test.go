@@ -397,7 +397,7 @@ func TestSqlQuery_view_records(t *testing.T) {
 	})
 	t.Run("Should return error when field does not exist in value def", func(t *testing.T) {
 		body = `{"args":{"Query":"select abracadabra from sys.CollectionView where PartKey = 1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("field 'abracadabra' does not exist in 'sys.CollectionView' value def"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("not found: field «abracadabra» in ViewRecord «sys.CollectionView»"))
 	})
 	t.Run("Should recover lowercased table and field names", func(t *testing.T) {
 		require := require.New(t)
@@ -622,6 +622,43 @@ func TestAuthnz(t *testing.T) {
 	t.Run("403 on deny to read orecord", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.orecord1.%d"},"elements":[{"fields":["Result"]}]}`, orecordID)
 		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
+	})
+
+	t.Run("star projection denied when any field is denied (record)", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+	})
+
+	t.Run("star projection denied when any field is denied (view)", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from app1pkg.TestViewWithDeniedFields where Year = 2025"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+	})
+
+	t.Run("star projection allowed when every field is granted", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.payments","name":"EFT","guid":"guidEFT"}}]}`
+		paymentID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments.%d"},"elements":[{"fields":["Result"]}]}`, paymentID)
+		vit.PostWS(ws, "q.sys.SqlQuery", body)
+	})
+
+	t.Run("REVOKE SELECT on a system field", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestCDocSysIDRevoked","Fld1":42}}]}`
+		docID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		t.Run("explicit projection of revoked sys field is 403", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select sys.ID from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+		})
+
+		t.Run("star projection is 403 because sys.ID is revoked", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+		})
+
+		t.Run("explicit projection of granted user field succeeds", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select Fld1 from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body)
+		})
 	})
 
 	t.Run("WHERE field ACL", func(t *testing.T) {

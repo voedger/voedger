@@ -1285,3 +1285,112 @@ func TestPublishedTypesWSInheritances(t *testing.T) {
 		}
 	})
 }
+
+func TestIsOperationAllowed_SystemFieldsFollowGrant(t *testing.T) {
+	require := require.New(t)
+
+	wsName := appdef.NewQName("test", "ws")
+	docName := appdef.NewQName("test", "doc")
+
+	partialReader := appdef.NewQName("test", "partialReader")
+	fullReader := appdef.NewQName("test", "fullReader")
+	almostFull := appdef.NewQName("test", "almostFull")
+	noSysID := appdef.NewQName("test", "noSysID")
+
+	adb := builder.New()
+	adb.AddPackage("test", "test.com/test")
+	wsb := adb.AddWorkspace(wsName)
+
+	doc := wsb.AddCDoc(docName)
+	doc.
+		AddField("fld1", appdef.DataKind_string, false).
+		AddField("fld2", appdef.DataKind_int32, false)
+
+	_ = wsb.AddRole(partialReader)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(docName),
+		[]appdef.FieldName{"fld1"},
+		partialReader,
+		"grant select(fld1) on doc to partialReader")
+
+	_ = wsb.AddRole(fullReader)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(docName),
+		nil,
+		fullReader,
+		"grant select on doc to fullReader")
+
+	_ = wsb.AddRole(almostFull)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(docName),
+		nil,
+		almostFull,
+		"grant select on doc to almostFull")
+	wsb.Revoke(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(docName),
+		[]appdef.FieldName{"fld1"},
+		almostFull,
+		"revoke select(fld1) on doc from almostFull")
+
+	_ = wsb.AddRole(noSysID)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(docName),
+		nil,
+		noSysID,
+		"grant select on doc to noSysID")
+	wsb.Revoke(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(docName),
+		[]appdef.FieldName{appdef.SystemField_ID},
+		noSysID,
+		"revoke select(sys.ID) on doc from noSysID")
+
+	app, err := adb.Build()
+	require.NoError(err)
+	ws := app.Workspace(wsName)
+
+	check := func(t *testing.T, role appdef.QName, fields []appdef.FieldName, want bool) {
+		t.Helper()
+		got, err := acl.IsOperationAllowed(ws, appdef.OperationKind_Select, docName, fields, []appdef.QName{role})
+		require.NoError(err)
+		require.Equal(want, got)
+	}
+
+	t.Run("partial field grant: fld1 allowed, fld2 denied, sys fields allowed", func(t *testing.T) {
+		check(t, partialReader, []appdef.FieldName{"fld1"}, true)
+		check(t, partialReader, []appdef.FieldName{"fld2"}, false)
+		check(t, partialReader, []appdef.FieldName{appdef.SystemField_ID}, true)
+		check(t, partialReader, []appdef.FieldName{appdef.SystemField_QName}, true)
+		check(t, partialReader, []appdef.FieldName{appdef.SystemField_IsActive}, true)
+		check(t, partialReader, []appdef.FieldName{"fld1", appdef.SystemField_ID, appdef.SystemField_QName}, true)
+		check(t, partialReader, []appdef.FieldName{"fld1", "fld2"}, false)
+	})
+
+	t.Run("full grant: every field including sys allowed", func(t *testing.T) {
+		check(t, fullReader, []appdef.FieldName{"fld1", "fld2"}, true)
+		check(t, fullReader, []appdef.FieldName{appdef.SystemField_ID}, true)
+		check(t, fullReader, []appdef.FieldName{"fld1", "fld2", appdef.SystemField_ID, appdef.SystemField_QName}, true)
+	})
+
+	t.Run("full grant + user-field revoke: fld2 and sys fields allowed, fld1 denied", func(t *testing.T) {
+		check(t, almostFull, []appdef.FieldName{"fld2"}, true)
+		check(t, almostFull, []appdef.FieldName{"fld1"}, false)
+		check(t, almostFull, []appdef.FieldName{appdef.SystemField_ID}, true)
+		check(t, almostFull, []appdef.FieldName{appdef.SystemField_QName}, true)
+		check(t, almostFull, []appdef.FieldName{"fld2", appdef.SystemField_ID}, true)
+	})
+
+	t.Run("full grant + sys field revoke: every field allowed except sys.ID", func(t *testing.T) {
+		check(t, noSysID, []appdef.FieldName{"fld1"}, true)
+		check(t, noSysID, []appdef.FieldName{"fld2"}, true)
+		check(t, noSysID, []appdef.FieldName{appdef.SystemField_QName}, true)
+		check(t, noSysID, []appdef.FieldName{appdef.SystemField_IsActive}, true)
+		check(t, noSysID, []appdef.FieldName{appdef.SystemField_ID}, false)
+		check(t, noSysID, []appdef.FieldName{"fld1", appdef.SystemField_ID}, false)
+	})
+}
