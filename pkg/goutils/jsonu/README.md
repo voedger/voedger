@@ -71,7 +71,7 @@ func (q qName) String() string { return string(q) }
 
 func main() {
 	body := jsonu.Jprintf(
-		`{"qname":"%s","name":"%s","count":%d}`,
+		`{"qname":%q,"name":%q,"count":%d}`,
 		qName(`app.Doc`),
 		"line\vwith \"quotes\"",
 		3,
@@ -87,22 +87,20 @@ func main() {
 - **[Jprintf](impl.go)** - Formats JSON string templates safely
   - Escapes `string`, named `~string` types, and `fmt.Stringer` arguments
   - Forwards all other arguments to `fmt.Sprintf` unchanged (`%d`, `%t`, `%g`, ...)
-  - Honors flags, width and precision on `fmt.Stringer` arguments (e.g. `%-10.3s`)
+  - `%s` and `%v` emit escaped content; the caller supplies the surrounding
+    quotes in the template
+  - `%q` emits a complete JSON string literal (escaped content wrapped in
+    double quotes); no quotes are needed in the template
+  - Honors flags and width on string-like arguments (e.g. `%-10.3s`, `%10q`)
 
 ## Use
 
-Use `%s` (or `%v`) for JSON string positions and supply the surrounding
-double quotes in the template yourself:
-
 ```go
 name := "line\vwith \"quotes\""
-body := jsonu.Jprintf(
-	`{"name":"%s","count":%d}`,
-	name,
-	3,
-)
-```
 
-Do **not** use `%q` on string-like arguments: the content is already
-JSON-escaped, so Go-quoting it again produces double-escaped, corrupted
-output.
+// %s: provide the quotes in the template
+body := jsonu.Jprintf(`{"name":"%s","count":%d}`, name, 3)
+
+// %q: equivalent, quotes are produced by Jprintf
+body = jsonu.Jprintf(`{"name":%q,"count":%d}`, name, 3)
+```

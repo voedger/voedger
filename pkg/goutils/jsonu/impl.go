@@ -17,17 +17,22 @@ import (
 // other arguments are forwarded to fmt.Sprintf unchanged, so verbs such as
 // %d, %t, %g work as usual.
 //
-// Use %s (or %v) for JSON string positions, and provide the surrounding
-// double quotes in the format string yourself, for example:
+// Verbs for string-like arguments:
 //
-//	Jprintf(`{"name":"%s"}`, name)
+//   - %s and %v emit the JSON-escaped content without surrounding quotes.
+//     The caller is expected to provide the quotes in the template:
 //
-// The escaped content is emitted without surrounding quotes. Do NOT use %q
-// on string-like arguments: the content is already JSON-escaped, so Go-quoting
-// it again produces double-escaped, corrupted output.
+//     Jprintf(`{"name":"%s"}`, name)
 //
-// fmt.Stringer arguments are formatted lazily, so flags, width and precision
-// (for example %-10.3s) are honored.
+//   - %q emits a complete JSON string literal (escaped content wrapped in
+//     double quotes). No surrounding quotes are needed in the template:
+//
+//     Jprintf(`{"name":%q}`, name)
+//
+// String-like arguments are formatted lazily, so flags and width are honored
+// (for example %-10.3s on a Stringer, or %10q which pads the whole quoted
+// output to width 10). Precision on %q is byte-counted over the quoted
+// result, which differs from fmt.Sprintf's character-counted precision.
 //
 // This is stricter than fmt.Sprintf with %q. Go quoting can emit escapes that
 // are invalid inside JSON strings, for example \v for a vertical tab and \xNN
@@ -44,7 +49,7 @@ func Jprintf(format string, args ...any) string {
 func jprintfArg(arg any) any {
 	switch v := arg.(type) {
 	case string:
-		return jsonEscapedStringContent(v)
+		return jsonString(v)
 	case fmt.Stringer:
 		return jsonStringer{v}
 	case nil:
@@ -54,9 +59,19 @@ func jprintfArg(arg any) any {
 	value := reflect.ValueOf(arg)
 	if value.Kind() == reflect.String {
 		// named string type (~string) without a String() method
-		return jsonEscapedStringContent(value.String())
+		return jsonString(value.String())
 	}
 	return arg
+}
+
+type jsonString string
+
+func (s jsonString) Format(state fmt.State, verb rune) {
+	if verb == 's' || verb == 'v' || verb == 'q' {
+		formatJSONString(state, verb, string(s))
+		return
+	}
+	fmt.Fprintf(state, fmtStateFormat(state, verb), string(s))
 }
 
 type jsonStringer struct {
@@ -64,11 +79,20 @@ type jsonStringer struct {
 }
 
 func (s jsonStringer) Format(state fmt.State, verb rune) {
-	arg := any(s.Stringer)
-	if verb == 's' || verb == 'q' || verb == 'v' {
-		arg = jsonEscapedStringContent(s.String())
+	if verb == 's' || verb == 'v' || verb == 'q' {
+		formatJSONString(state, verb, s.String())
+		return
 	}
-	fmt.Fprintf(state, fmtStateFormat(state, verb), arg)
+	fmt.Fprintf(state, fmtStateFormat(state, verb), s.Stringer)
+}
+
+func formatJSONString(state fmt.State, verb rune, s string) {
+	escaped := jsonEscapedStringContent(s)
+	if verb == 'q' {
+		fmt.Fprintf(state, fmtStateFormat(state, 's'), `"`+escaped+`"`)
+		return
+	}
+	fmt.Fprintf(state, fmtStateFormat(state, verb), escaped)
 }
 
 func fmtStateFormat(state fmt.State, verb rune) string {

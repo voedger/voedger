@@ -55,10 +55,10 @@ func TestJprintf(t *testing.T) {
 		require.JSONEq(`{"value":"a\"b"}`, got)
 	})
 
-	t.Run("escapes stringer args with q verb", func(t *testing.T) {
+	t.Run("emits complete JSON string literal for stringer args with q verb", func(t *testing.T) {
 		got := Jprintf(`{"value":%q}`, testStringer{value: `a"b`})
 
-		require.JSONEq(`{"value":"a\\\"b"}`, got)
+		require.JSONEq(`{"value":"a\"b"}`, got)
 	})
 
 	t.Run("escapes named string args", func(t *testing.T) {
@@ -127,14 +127,14 @@ func TestJprintf(t *testing.T) {
 		require.JSONEq(`{"v":"static"}`, Jprintf(`{"v":"static"}`))
 	})
 
-	t.Run("%q double-escapes already-escaped string content", func(t *testing.T) {
+	t.Run("%q on string emits a complete JSON string literal", func(t *testing.T) {
 		got := Jprintf(`{"v":%q}`, `a"b`)
-		require.JSONEq(`{"v":"a\\\"b"}`, got)
+		require.JSONEq(`{"v":"a\"b"}`, got)
 		var decoded struct {
 			V string `json:"v"`
 		}
 		require.NoError(json.Unmarshal([]byte(got), &decoded))
-		require.Equal(`a\"b`, decoded.V)
+		require.Equal(`a"b`, decoded.V)
 	})
 
 	t.Run("%q on non-string arg matches fmt.Sprintf", func(t *testing.T) {
@@ -143,6 +143,41 @@ func TestJprintf(t *testing.T) {
 
 	t.Run("respects width, precision and flags on Stringer args", func(t *testing.T) {
 		require.JSONEq(`{"v":"abc       "}`, Jprintf(`{"v":"%-10.3s"}`, testStringer{value: "abcdef"}))
+	})
+
+	t.Run("non-string verb on string arg passes through to fmt", func(t *testing.T) {
+		require.Equal(fmt.Sprintf(`{"v":%x}`, "ab"), Jprintf(`{"v":%x}`, "ab"))
+	})
+
+	t.Run("%q honors width by padding the quoted output", func(t *testing.T) {
+		require.Equal(`     "abc"`, Jprintf(`%10q`, "abc"))
+		require.Equal(`"abc"     `, Jprintf(`%-10q`, testStringer{value: "abc"}))
+	})
+
+	qname := testStringer{value: "app.Doc"}
+	name := "line\vwith \"quotes\""
+	type readmePayload struct {
+		QName string `json:"qname"`
+		Name  string `json:"name"`
+		Count int    `json:"count"`
+	}
+
+	t.Run("%q in README example round-trips correctly", func(t *testing.T) {
+		got := Jprintf(`{"qname":%q,"name":%q,"count":%d}`, qname, name, 3)
+		var decoded readmePayload
+		require.NoError(json.Unmarshal([]byte(got), &decoded))
+		require.Equal("app.Doc", decoded.QName)
+		require.Equal(name, decoded.Name)
+		require.Equal(3, decoded.Count)
+	})
+
+	t.Run("%s in README example round-trips correctly", func(t *testing.T) {
+		got := Jprintf(`{"qname":"%s","name":"%s","count":%d}`, qname, name, 3)
+		var decoded readmePayload
+		require.NoError(json.Unmarshal([]byte(got), &decoded))
+		require.Equal("app.Doc", decoded.QName)
+		require.Equal(name, decoded.Name)
+		require.Equal(3, decoded.Count)
 	})
 
 	t.Run("nil-typed pointer Stringer yields fmt PANIC placeholder", func(t *testing.T) {
