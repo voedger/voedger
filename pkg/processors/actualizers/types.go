@@ -7,33 +7,9 @@
 package actualizers
 
 import (
-	"context"
-	"sync"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
-
-type asyncActualizerContextState struct {
-	lock   sync.Mutex
-	err    error
-	vvmCtx context.Context
-	cancel func()
-}
-
-func (s *asyncActualizerContextState) cancelWithError(err error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.err = err
-	s.cancel()
-}
-
-// @ConcurrentAccess
-func (s *asyncActualizerContextState) error() error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return s.err
-}
 
 // Returns is projector triggered by event
 func ProjectorEvent(prj appdef.IProjector, event istructs.IPLogEvent) (triggeredBy appdef.QName) {

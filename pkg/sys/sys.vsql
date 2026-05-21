@@ -496,6 +496,7 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT BLOBUploader TO WorkspaceOwner;
 
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
 
 	GRANT SELECT ON TABLE ChildWorkspace TO WorkspaceOwner;
 

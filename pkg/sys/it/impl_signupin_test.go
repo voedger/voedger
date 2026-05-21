@@ -162,6 +162,8 @@ func TestCreateLoginErrors(t *testing.T) {
 			"-test@test.com",
 			"-test@test.com-",
 			"sys.test@test.com",
+			",",
+			"test,foo@test.com",
 		}
 		for _, wrongLogin := range wrongLogins {
 			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.CurrentClusterID())
@@ -169,6 +171,18 @@ func TestCreateLoginErrors(t *testing.T) {
 				wrongLogin, istructs.AppQName_test1_app1.String(), istructs.SubjectKind_User, istructs.CurrentClusterID(), "1")
 			vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body,
 				it.Expect400("incorrect login format"))
+		}
+	})
+
+	t.Run("allowed special chars in login", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip()
+		}
+		allowedSpecialChars := []string{"!", "#", "$", "%", "&", "'", "*", "+", "-", "/", "=", ".", "?", "^", "_", "{", "|", "}", "~", "@"}
+		for _, c := range allowedSpecialChars {
+			goodLogin := vit.NextName() + c + "x"
+			login := vit.SignUp(goodLogin, "1", istructs.AppQName_test1_app1)
+			vit.SignIn(login)
 		}
 	})
 }
