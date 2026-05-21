@@ -162,6 +162,8 @@ func TestCreateLoginErrors(t *testing.T) {
 			"-test@test.com",
 			"-test@test.com-",
 			"sys.test@test.com",
+			",",
+			"test,foo@test.com",
 		}
 		for _, wrongLogin := range wrongLogins {
 			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.CurrentClusterID())
