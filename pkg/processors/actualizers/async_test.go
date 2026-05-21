@@ -1265,6 +1265,7 @@ func (f *flakyAppParts) WaitForBorrow(ctx context.Context, app appdef.AppQName, 
 func Test_AsynchronousActualizer_KeepReadingPropagatesReadPLogErrorAsCause(t *testing.T) {
 	require := require.New(t)
 	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1)
+	logCap := logger.StartCapture(t, logger.LogLevelError)
 
 	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
 		Channels: 10, ChannelsPerSubject: 10, Subscriptions: 10, SubscriptionsPerSubject: 10,
@@ -1332,6 +1333,11 @@ func Test_AsynchronousActualizer_KeepReadingPropagatesReadPLogErrorAsCause(t *te
 	require.ErrorIs(err, injectedErr)
 	require.Same(injectedErr, context.Cause(act.n10nWatchChannelCtx))
 	require.Same(err, context.Cause(act.n10nWatchChannelCtx))
+
+	retry, abortErr := act.retrierCfg.OnError(1, time.Millisecond, err)
+	require.True(retry)
+	require.NoError(abortErr)
+	logCap.HasLine("stage=actualizer.error", "extension=sys._Actualizer", injectedErr.Error())
 }
 
 type ctxFailingAppParts struct {

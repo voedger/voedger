@@ -94,7 +94,10 @@ func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
 				return true, nil
 			}
 		}
-		logger.ErrorCtx(vvmCtx, a.name, opErr)
+		logCtx := logger.WithContextAttrs(vvmCtx, map[string]any{
+			logger.LogAttr_Extension: "sys._Actualizer",
+		})
+		logger.ErrorCtx(logCtx, "actualizer.error", opErr)
 		return true, nil
 	}
 }
