@@ -1,116 +1,113 @@
 ---
 name: golang-fmt-string-escape
-description: Use this skill when writing or reviewing any `fmt.Sprintf`, `fmt.Errorf`, `fmt.Fprintf`, `fmt.Printf` (or other `fmt.*` formatter) call in Go code that embeds string data into a JSON value, URL path/query, host:port, file path, shell argument, SQL literal, HTML attribute/text, Go-quoted literal, or human-readable log/error message. Picks the correct verb (`%s` / `%q`) and escaping helper (`json.Marshal`, `url.PathEscape`, `url.QueryEscape`, `net.JoinHostPort`, `filepath.Join`, `html.EscapeString`, parameterized SQL). JSON-string escaping rules do not apply to `_test.go` files.
+description: Use this skill when writing or reviewing any `fmt.Sprintf`, `fmt.Errorf`, `fmt.Fprintf`, `fmt.Printf` (or other `fmt.*` formatter) call in Go code that embeds string data into a JSON value, URL path/query, host:port, file path, shell argument, SQL literal, HTML attribute/text, Go-quoted literal, or human-readable log/error message. Picks the correct verb (`%s` / `%q`) and escaping helper (`jsonu.Jprintf`, `json.Marshal`, `url.PathEscape`, `url.QueryEscape`, `net.JoinHostPort`, `filepath.Join`, `html.EscapeString`, parameterized SQL). JSON-string escaping rules do not apply to `_test.go` files.
 user-invocable: false
 ---
 
 ## Decision by embedding context
 
-- JSON value (request body, response body, payload field) outside `_test.go`: do not interpolate with `"%s"`; build the structure with `json.Marshal` of a typed struct or `map[string]any`. If a string template must be kept and the operand may contain control characters (`\v`, NUL, ...) or non-ASCII UTF-8, pre-marshal each string with `json.Marshal` and interpolate the result with `%s` (the marshaled value is already wrapped in JSON-correct double quotes; control chars become `\u00XX`). Note: `json.Marshal` of a Go `string` coerces it to valid UTF-8, silently replacing invalid bytes with U+FFFD (`\ufffd`); to preserve arbitrary binary bytes verbatim, marshal a `[]byte` (encoded as base64) instead of a `string`. `%q` is a practical fallback ONLY when the operand is known to be plain ASCII or valid UTF-8 without `\v` -- e.g. `appdef.QName.String()`, identifiers, fixed enum strings -- because `%q` uses Go-string escaping (`\v`, `\xNN`) which JSON parsers reject; never use `"%s"` outside the `_test.go` exception
-- URL path segment containing user data: `%s` with `url.PathEscape(seg)`
-- URL query parameter value: `%s` with `url.QueryEscape(val)`
-- URL host:port: do not build with `fmt.Sprintf("%s:%d", ...)` for user-supplied hosts; use `net.JoinHostPort` (also satisfies `nosprintfhostport`)
-- File path: `filepath.Join`, never `fmt.Sprintf("%s/%s", ...)`
-- Shell argument: do not interpolate; pass each argument separately to `exec.Command(name, arg1, arg2, ...)`
-- SQL literal: do not interpolate; use parameterized queries / placeholders
-- HTML attribute or text node: `html.EscapeString(s)` then `"%s"`, never raw `%s`, and never `%q` (Go-quoting `\"`, `\n` is not interpreted by HTML parsers and a quote in the operand can still break out of the attribute)
-- URL embedded into an HTML attribute (e.g. `href`, `src`): URL-escape the user-controlled parts first (`url.PathEscape` / `url.QueryEscape`), then `html.EscapeString` the whole URL, then `"%s"`
-- Go-quoted literal embedded into a larger string (single line that should show surrounding quotes): `%q`, never `"%s"`
-- Human-readable log / error message where the operand is a free-form string (name, path, error, user input): `%q` over `'%s'` so empty strings and embedded quotes remain visible
+| Context                                   | How to interpolate                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JSON value (non-test)                     | `jsonu.Jprintf` with `"%s"` (content, caller quotes) or `%q` (full JSON literal) -- default. `json.Marshal` of a typed value only when there is no template at all. `fmt.Sprintf` with `%q` only for safe-ASCII operands (`appdef.QName.String()`, identifiers, fixed enums) -- Go's `%q` emits `\v` / `\xNN` that JSON parsers reject. Never raw `"%s"` |
+| URL path segment                          | `%s` with `url.PathEscape(seg)`                                                                                                                                                                                                                                                                                                                          |
+| URL query value                           | `%s` with `url.QueryEscape(val)`                                                                                                                                                                                                                                                                                                                         |
+| URL host:port                             | `net.JoinHostPort` (also satisfies `nosprintfhostport`); never `fmt.Sprintf("%s:%d", ...)`                                                                                                                                                                                                                                                               |
+| File path                                 | `filepath.Join`; never `fmt.Sprintf("%s/%s", ...)`                                                                                                                                                                                                                                                                                                       |
+| Shell argument                            | pass each arg to `exec.Command(name, arg1, arg2, ...)`; never interpolate                                                                                                                                                                                                                                                                                |
+| SQL literal                               | parameterized queries / placeholders; never interpolate                                                                                                                                                                                                                                                                                                  |
+| HTML attribute or text node               | `"%s"` with `html.EscapeString(s)`; never raw `%s`, never `%q` (Go-quoting is not HTML escaping; an embedded `"` still breaks out of the attribute)                                                                                                                                                                                                      |
+| URL inside HTML attribute (`href`, `src`) | URL-escape the user parts first (`url.PathEscape` / `url.QueryEscape`), then `html.EscapeString` the whole URL, then `"%s"`                                                                                                                                                                                                                              |
+| Go-quoted literal inside a larger string  | `%q`; never `"%s"`                                                                                                                                                                                                                                                                                                                                       |
+| Human log / error message                 | `%q` over `'%s'` so empty strings and embedded quotes stay visible                                                                                                                                                                                                                                                                                       |
+
+`_test.go` exception: in test-only JSON fixtures / request bodies / expected snippets, plain `fmt.Sprintf` with `"%s"` or literal quoted strings is allowed. All other contexts still apply.
 
 ## Rules
 
-- classify the embedding context first (see "Decision by embedding context"); the `%s` / `%q` choice is context-dependent and the rules below apply only inside their stated context
-- `_test.go` exception: do not enforce the JSON-value `json.Marshal` / `%q` requirements for strings used only to construct test fixtures, request bodies, or expected JSON snippets. In tests, it is acceptable to keep simple `fmt.Sprintf` templates with `"%s"` or literal quoted strings when readability is more valuable than production-grade escaping. This exception does not apply to non-test Go files
-- in JSON values outside the `_test.go` exception, and in all Go-quoted literals: never wrap `%s` in double quotes in a format string (`"%s"`); the gocritic check `sprintfQuotedString` enforces this. For Go-quoted literals use `%q`. For JSON values use `%q` only when the operand is plain ASCII / safe UTF-8 (see decision table); for arbitrary-byte operands pre-marshal with `json.Marshal` and interpolate with `%s`, because `%q` emits Go-only escapes (`\v`, `\xNN`) that JSON parsers reject
-- in HTML attributes and text nodes: `%q` is WRONG (Go-string escaping, not HTML escaping); keep the literal double quotes around the attribute and use `"%s"` with `html.EscapeString(...)` -- silencing `sprintfQuotedString` here means switching escaper, not switching verb
-- never wrap `%s` in single quotes in a format string (`'%s'`) for human messages; use `%q` instead
-- when the operand is already a `string` or a `Stringer` whose `String()` is known to be safe (e.g. `appdef.QName.String()`, `appdef.AppQName.String()`, integer-derived ids), raw `%s` without additional escaping is allowed for human-message contexts; for JSON, raw `%s` is allowed ONLY when the operand is already a pre-marshaled JSON fragment (for example `json.Marshal` output), not for ordinary strings/Stringers (a string value in JSON must be wrapped in double quotes -- use `%q` for safe-ASCII operands, or pre-marshal with `json.Marshal` and interpolate the resulting fragment with `%s`); for Go-quoted literals use `%q`. HTML and URL contexts still require the context-appropriate escaper even for safe Stringers, because the issue there is structural (which characters terminate the attribute / path segment), not value sanitization
-- `fmt.Sprintf("%s", x.String())` and `fmt.Sprint(stringer)` are redundant -- use `x.String()` directly (gocritic `redundantSprint`)
-- `fmt.Sprintf("%d", i)` where `i` is `int` / `int64` -- use `strconv.Itoa(i)` / `strconv.FormatInt(i, 10)` (perfsprint `integer-format`)
-- string concatenation in a loop (`s += x`) -- use `strings.Builder` (perfsprint `concat-loop`)
-- when an existing non-test call site builds a JSON body via `fmt.Sprintf` template, prefer rewriting to `json.Marshal`; if the rewrite is out of scope of the current change, at minimum replace every `"%s"` with `%q`
-- a JSON `fmt.Sprintf` template MUST produce a self-balanced JSON value: an object starts with `{` and ends with `}` in the same template, an array starts with `[` and ends with `]` in the same template; never leave the surrounding braces / brackets to a separate `Write`/`Fprintf`/`writeResponse` call that lives in a different branch of the surrounding control flow -- doing so produces fragments like `"status":500,"errorDescription":"..."` (no braces) whenever one branch forgets to emit the brace
-- if a JSON object MUST be streamed across multiple writes (e.g. partial flushes of a large response), make exactly one piece of code own the opening `{` and the matching closing `}`, and have it emit BOTH on every reachable path (success, error, empty); do not let separate code paths "decide" whether to emit them
-- for ad-hoc error / status responses (`{"status":N,"errorDescription":"..."}`), do not build them piecemeal -- emit the whole object in one `writeResponse`/`Write` of either a `json.Marshal`ed struct or a fully `{...}`-wrapped `fmt.Sprintf` template
+- never wrap `%s` in double quotes (`"%s"`) in a raw `fmt.Sprintf` outside the `_test.go` JSON exception; the gocritic `sprintfQuotedString` enforces it. For JSON use `jsonu.Jprintf` (keeps `"%s"`) or `%q`; for Go-quoted literals use `%q`; for HTML keep `"%s"` AND switch escaper to `html.EscapeString`
+- never wrap `%s` in single quotes (`'%s'`) in a human message; use `%q`
+- never `json.Marshal` an individual string just to embed it in a larger JSON template -- use `jsonu.Jprintf` instead
+- safe `Stringer` operand (e.g. `appdef.QName.String()`, integer-derived ids): raw `%s` without extra escaping is allowed only for human messages; JSON, HTML and URL still require their context escaper (the risk there is structural, not value sanitization)
+- `jsonu.Jprintf` / `json.Marshal` of a Go `string` coerces invalid UTF-8 to U+FFFD; for arbitrary binary bytes marshal a `[]byte` (encoded as base64)
+- `fmt.Sprintf("%s", x.String())` / `fmt.Sprint(stringer)` -- use `x.String()` (gocritic `redundantSprint`)
+- `fmt.Sprintf("%d", i)` for `int` / `int64` -- use `strconv.Itoa` / `strconv.FormatInt` (perfsprint `integer-format`)
+- string concatenation in a loop -- use `strings.Builder` (perfsprint `concat-loop`)
+- a JSON template (`fmt.Sprintf` or `jsonu.Jprintf`) MUST be self-balanced: `{...}` and `[...]` in the same template; never split the closing brace into a different branch / write
+- if a JSON object MUST be streamed across multiple writes, exactly one piece of code owns the opening `{` and its matching `}` and emits both on every reachable path (success, error, empty)
+- ad-hoc error / status responses (`{"status":N,"errorDescription":"..."}`): emit the whole object in one `Write` -- a `jsonu.Jprintf` template (default), a `json.Marshal`ed struct (typed schema), or a `fmt.Sprintf` template with `%q` (safe-ASCII operands)
+- when an existing non-test JSON `fmt.Sprintf` site is being touched, rewrite to `jsonu.Jprintf`; if a rewrite is out of scope, at minimum replace every `"%s"` with `%q`
 
 ## Anti-patterns
 
-bad -- JSON body with raw `"%s"` (breaks on quotes, backslashes, newlines in the value):
+bad -- raw `"%s"` in JSON (breaks on quotes, backslashes, newlines):
 
 ```go
 body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d}}`, app.Name, app.NumParts)
 ```
 
-acceptable -- `%q` when the operand is plain ASCII or safe UTF-8 (no `\v`, no invalid bytes) such as an `appdef.AppQName.String()`; note that `%q` uses Go-string escaping and is NOT strictly JSON-compliant (`\v` and `\xNN` are rejected by JSON parsers):
-
-```go
-body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d}}`, app.Name, app.NumParts)
-```
-
-good -- pre-marshal each string with `json.Marshal` and interpolate with `%s`; preserves any valid-UTF-8 string (control chars become `\u00XX`); invalid-UTF-8 bytes inside a Go `string` are silently replaced by U+FFFD, so for arbitrary binary data marshal a `[]byte` (which `encoding/json` encodes as base64):
+bad -- `json.Marshal` an individual string to embed it (verbose, throwaway var, ignored error):
 
 ```go
 name, _ := json.Marshal(app.Name)
 body := fmt.Sprintf(`{"args":{"AppQName":%s,"NumPartitions":%d}}`, name, app.NumParts)
 ```
 
-best -- `json.Marshal` of a typed value:
+good -- `jsonu.Jprintf` (default for JSON construction):
+
+```go
+body := jsonu.Jprintf(`{"args":{"AppQName":"%s","NumPartitions":%d}}`, app.Name, app.NumParts)
+```
+
+acceptable -- `fmt.Sprintf` with `%q` for safe-ASCII operands only:
+
+```go
+body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d}}`, app.Name, app.NumParts)
+```
+
+acceptable -- `json.Marshal` of a typed value when there is no template:
 
 ```go
 b, _ := json.Marshal(map[string]any{"args": map[string]any{"AppQName": app.Name, "NumPartitions": app.NumParts}})
 body := string(b)
 ```
 
-bad -- URL with raw user-supplied query value:
+bad / good -- URL query value:
 
 ```go
-url := fmt.Sprintf("/search?q=%s", q)
+url := fmt.Sprintf("/search?q=%s", q)     // bad
+url := "/search?q=" + url.QueryEscape(q)  // good
 ```
 
-good:
-
-```go
-url := "/search?q=" + url.QueryEscape(q)
-```
-
-bad -- HTML attribute with `%q` (Go-string escaping, NOT HTML escaping; embedded `"` still breaks out of the attribute):
+bad -- HTML attribute with `%q` (Go-quoting is not HTML escaping):
 
 ```go
 html := fmt.Sprintf(`<a href=%q>%s</a>`, ref, text)
 ```
 
-good -- `"%s"` with `html.EscapeString` for both the attribute value and the text node:
+good -- `"%s"` with `html.EscapeString` for both attribute and text:
 
 ```go
 html := fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(ref), html.EscapeString(text))
 ```
 
-good -- URL embedded in `href`: URL-escape the user parts first, then HTML-escape the whole URL:
+good -- URL inside `href`: URL-escape the user parts first, then HTML-escape the whole URL:
 
 ```go
 ref := "/items/" + url.PathEscape(itemID) + "?q=" + url.QueryEscape(query)
 html := fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(ref), html.EscapeString(text))
 ```
 
-bad -- redundant `Sprint` of a `Stringer`:
+bad / good -- redundant `Sprint` of a `Stringer`:
 
 ```go
-s := fmt.Sprint(qname)
+s := fmt.Sprint(qname)  // bad
+s := qname.String()     // good
 ```
 
-good:
+## Checklist before writing any `fmt.Sprintf` / `fmt.Errorf` / `fmt.Fprintf`
 
-```go
-s := qname.String()
-```
-
-## Checklist for an AI agent before writing any `fmt.Sprintf`/`fmt.Errorf`/`fmt.Fprintf`
-
-1. Classify the embedding context first (JSON, URL path, URL query, host:port, file path, shell, SQL, HTML attribute, HTML text node, URL inside HTML attribute, human message, Go-quoted literal); never skip this step
-2. If the file ends with `_test.go` and the context is a test-only JSON fixture / request body / expected snippet, allow simple quoted strings and `fmt.Sprintf` with `"%s"`; skip the JSON `json.Marshal` / `%q` requirement
-3. Pick the verb and helper from "Decision by embedding context" above for that exact context
-4. Verify the verb/escaper combination matches the chosen context: in JSON / Go-quoted contexts the format string must contain no `"%s"` (use `%q` instead, except for the `_test.go` JSON exception above); in HTML contexts the format string must keep `"%s"` AND wrap the operand in `html.EscapeString(...)` (using `%q` here is a bug); in URL contexts the operand must go through `url.PathEscape` / `url.QueryEscape`; in human messages the format string must contain no `'%s'` (use `%q` instead)
-5. If a `sprintfQuotedString` linter hit is in an HTML context, fix it by switching the escaper to `html.EscapeString` and keeping `"%s"`; do NOT "fix" it by switching `"%s"` to `%q`
-6. If you wrote `fmt.Sprintf("%s", x)` or `fmt.Sprint(x)`, drop the wrapper
-7. If the operand is an `int*`, use `strconv` instead of `fmt.Sprintf("%d", ...)`
+1. Classify the embedding context (see table above)
+2. `_test.go` JSON fixtures: plain `"%s"` allowed; all other contexts still apply
+3. Pick the verb and escaper from the table for that exact context
+4. On a `sprintfQuotedString` linter hit -- in JSON switch to `jsonu.Jprintf` (keep `"%s"`) or `%q` (safe-ASCII only); in HTML switch the escaper to `html.EscapeString` and keep `"%s"` (do NOT switch to `%q`)
+5. Drop `fmt.Sprintf("%s", x)` / `fmt.Sprint(x)`; use `strconv` instead of `fmt.Sprintf("%d", ...)`
