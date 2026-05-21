@@ -318,6 +318,10 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) (err error) { return nil },
 		},
 		istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ProjDummyTestView"),
+			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) (err error) { return nil },
+		},
+		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ApplyClient"),
 			Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 				for cud := range event.CUDs {
