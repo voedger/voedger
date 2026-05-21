@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // Jprintf works like fmt.Sprintf, but JSON-escapes string and fmt.Stringer arguments.
@@ -32,7 +34,7 @@ func jprintfArg(arg any) any {
 	case string:
 		return jsonEscapedStringContent(v)
 	case fmt.Stringer:
-		return jsonEscapedStringContent(v.String())
+		return jsonStringer{v}
 	case nil:
 		return arg
 	}
@@ -43,6 +45,37 @@ func jprintfArg(arg any) any {
 		return jsonEscapedStringContent(value.String())
 	}
 	return arg
+}
+
+type jsonStringer struct {
+	fmt.Stringer
+}
+
+func (s jsonStringer) Format(state fmt.State, verb rune) {
+	arg := any(s.Stringer)
+	if verb == 's' || verb == 'q' || verb == 'v' {
+		arg = jsonEscapedStringContent(s.String())
+	}
+	fmt.Fprintf(state, fmtStateFormat(state, verb), arg)
+}
+
+func fmtStateFormat(state fmt.State, verb rune) string {
+	var b strings.Builder
+	b.WriteByte('%')
+	for _, flag := range "#+-0 " {
+		if state.Flag(int(flag)) {
+			b.WriteRune(flag)
+		}
+	}
+	if width, ok := state.Width(); ok {
+		b.WriteString(strconv.Itoa(width))
+	}
+	if precision, ok := state.Precision(); ok {
+		b.WriteByte('.')
+		b.WriteString(strconv.Itoa(precision))
+	}
+	b.WriteRune(verb)
+	return b.String()
 }
 
 func jsonEscapedStringContent(s string) string {

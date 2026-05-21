@@ -22,6 +22,12 @@ func (s testStringer) String() string {
 
 type testString string
 
+type testIntStringer int32
+
+func (s testIntStringer) String() string {
+	return "testIntStringer"
+}
+
 func TestJprintf(t *testing.T) {
 	require := require.New(t)
 
@@ -43,6 +49,18 @@ func TestJprintf(t *testing.T) {
 		require.JSONEq(`{"value":"a\"b\\c"}`, got)
 	})
 
+	t.Run("escapes stringer args with v verb", func(t *testing.T) {
+		got := Jprintf(`{"value":"%v"}`, testStringer{value: `a"b`})
+
+		require.JSONEq(`{"value":"a\"b"}`, got)
+	})
+
+	t.Run("escapes stringer args with q verb", func(t *testing.T) {
+		got := Jprintf(`{"value":%q}`, testStringer{value: `a"b`})
+
+		require.JSONEq(`{"value":"a\\\"b"}`, got)
+	})
+
 	t.Run("escapes named string args", func(t *testing.T) {
 		got := Jprintf(`{"value":"%s"}`, testString(`a"b`))
 
@@ -53,6 +71,12 @@ func TestJprintf(t *testing.T) {
 		got := Jprintf(`{"count":%d,"ok":%t,"nil":%v}`, 10, true, nil)
 
 		require.Equal(fmt.Sprintf(`{"count":%d,"ok":%t,"nil":%v}`, 10, true, nil), got)
+	})
+
+	t.Run("keeps stringer args compatible with non-string verbs", func(t *testing.T) {
+		got := Jprintf(`{"state":%d,"name":"%s"}`, testIntStringer(2), testStringer{value: `a"b`})
+
+		require.JSONEq(`{"state":2,"name":"a\"b"}`, got)
 	})
 
 	t.Run("empty string produces empty content", func(t *testing.T) {
@@ -89,6 +113,16 @@ func TestJprintf(t *testing.T) {
 			Jprintf(`{"s":"%s","n":%d,"b":%t,"f":%g}`, `a"b`, 42, true, 1.5))
 	})
 
+	t.Run("escapes explicitly indexed args", func(t *testing.T) {
+		require.JSONEq(`{"name":"a\"1","state":2}`,
+			Jprintf(`{"name":"%[2]s","state":%[1]d}`, testIntStringer(2), testStringer{value: `a"1`}))
+	})
+
+	t.Run("escapes explicitly indexed args with star width", func(t *testing.T) {
+		require.JSONEq(`{"name":" a\"1","state":2}`,
+			Jprintf(`{"name":"%[3]*[2]s","state":%[1]d}`, testIntStringer(2), testStringer{value: `a"1`}, 5))
+	})
+
 	t.Run("no args and no placeholders", func(t *testing.T) {
 		require.JSONEq(`{"v":"static"}`, Jprintf(`{"v":"static"}`))
 	})
@@ -107,10 +141,14 @@ func TestJprintf(t *testing.T) {
 		require.Equal(fmt.Sprintf(`{"v":%q}`, 'A'), Jprintf(`{"v":%q}`, 'A'))
 	})
 
-	t.Run("panics on nil-typed pointer Stringer", func(t *testing.T) {
+	t.Run("respects width, precision and flags on Stringer args", func(t *testing.T) {
+		require.Equal(`{"v":"abc       "}`, Jprintf(`{"v":"%-10.3s"}`, testStringer{value: "abcdef"}))
+	})
+
+	t.Run("nil-typed pointer Stringer yields fmt PANIC placeholder", func(t *testing.T) {
 		var s *testStringer
-		require.Panics(func() {
-			Jprintf(`{"v":"%s"}`, s)
-		})
+		got := Jprintf(`{"v":"%s"}`, s)
+		require.Contains(got, "%!s(PANIC=")
+		require.Contains(got, "nil *testStringer pointer")
 	})
 }
