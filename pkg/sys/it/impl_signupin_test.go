@@ -173,6 +173,18 @@ func TestCreateLoginErrors(t *testing.T) {
 				it.Expect400("incorrect login format"))
 		}
 	})
+
+	t.Run("allowed special chars in login", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip()
+		}
+		allowedSpecialChars := []string{"!", "#", "$", "%", "&", "'", "*", "+", "-", "/", "=", ".", "?", "^", "_", "{", "|", "}", "~", "@"}
+		for _, c := range allowedSpecialChars {
+			goodLogin := vit.NextName() + c + "x"
+			login := vit.SignUp(goodLogin, "1", istructs.AppQName_test1_app1)
+			vit.SignIn(login)
+		}
+	})
 }
 
 func TestSignInErrors(t *testing.T) {
