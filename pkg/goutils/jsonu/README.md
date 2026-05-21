@@ -1,8 +1,9 @@
 # Package jsonu
 
 Package jsonu formats JSON snippets that still use fmt-style
-templates. It JSON-escapes string-like arguments while leaving other
-values to normal fmt formatting.
+templates. It JSON-escapes string-like arguments (`string`, named
+`~string` types, and `fmt.Stringer` implementations) while leaving
+other values to normal fmt formatting.
 
 ## Problem
 
@@ -70,7 +71,7 @@ func (q qName) String() string { return string(q) }
 
 func main() {
 	body := jsonu.Jprintf(
-		`{"qname":%q,"name":%q,"count":%d}`,
+		`{"qname":"%s","name":"%s","count":%d}`,
 		qName(`app.Doc`),
 		"line\vwith \"quotes\"",
 		3,
@@ -83,15 +84,25 @@ func main() {
 
 ## Features
 
-- **[Jprintf](impl.go#L22)** - Formats JSON string templates safely
+- **[Jprintf](impl.go)** - Formats JSON string templates safely
+  - Escapes `string`, named `~string` types, and `fmt.Stringer` arguments
+  - Forwards all other arguments to `fmt.Sprintf` unchanged (`%d`, `%t`, `%g`, ...)
+  - Honors flags, width and precision on `fmt.Stringer` arguments (e.g. `%-10.3s`)
 
 ## Use
+
+Use `%s` (or `%v`) for JSON string positions and supply the surrounding
+double quotes in the template yourself:
 
 ```go
 name := "line\vwith \"quotes\""
 body := jsonu.Jprintf(
-	`{"name":"%s","count":%d}`, // %q could be used as well
+	`{"name":"%s","count":%d}`,
 	name,
 	3,
 )
 ```
+
+Do **not** use `%q` on string-like arguments: the content is already
+JSON-escaped, so Go-quoting it again produces double-escaped, corrupted
+output.

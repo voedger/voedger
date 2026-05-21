@@ -142,7 +142,7 @@ func TestJprintf(t *testing.T) {
 	})
 
 	t.Run("respects width, precision and flags on Stringer args", func(t *testing.T) {
-		require.Equal(`{"v":"abc       "}`, Jprintf(`{"v":"%-10.3s"}`, testStringer{value: "abcdef"}))
+		require.JSONEq(`{"v":"abc       "}`, Jprintf(`{"v":"%-10.3s"}`, testStringer{value: "abcdef"}))
 	})
 
 	t.Run("nil-typed pointer Stringer yields fmt PANIC placeholder", func(t *testing.T) {
