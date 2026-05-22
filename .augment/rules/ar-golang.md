@@ -12,3 +12,4 @@ if you you are writting a program on golang then follow these rules:
 - in unit tests if the test consists of few parts that do not impact on others then implement subtests with t.Run(description, func(t *testing.T){}) instead of setting description as a comment
 - write as short a code as possible
 - avoid comments. Produce the code so that it is clear without comments what it does
+- never assign a Go error to `_` (no `res, _ := json.Marshal(x)`). Always bind it: `res, err := json.Marshal(x); if err != nil { ... }`. For calls infallible by construction (e.g. `json.Marshal` over a fully-controlled struct, `bytes.Buffer.Write`), use `// notest` on the error branch and either `panic(err)` or `return err`. In all other cases, use `return err` to propagate.
