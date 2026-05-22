@@ -152,7 +152,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 			sendSuccess = writeResponse(w, jsonErr)
 		} else {
 			writeHeaderOnce()
-			errFragment := jsonu.Jprintf(`"status":%d,"errorDescription":"%s"`, http.StatusInternalServerError, (*responseErr).Error())
+			errFragment := jsonu.Jprintf(`"status":%d,"errorDescription":%q`, http.StatusInternalServerError, (*responseErr).Error())
 			if elemsCount == 0 {
 				errFragment = "{" + errFragment + "}"
 			}

@@ -90,7 +90,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				}
 			}
 			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
-			body := jsonu.Jprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
+			body := jsonu.Jprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
 			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
 				body, httpu.WithAuthorizeBy(tokenForTargetApp))
 			if err != nil {

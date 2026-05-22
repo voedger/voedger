@@ -5,9 +5,11 @@
 package jsonu
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -242,6 +244,59 @@ func TestJprintf(t *testing.T) {
 		require.Contains(fmt.Sprintf(format, "abc"), "%!'(", "Go fmt itself treats ' as an unknown verb, not a flag")
 	})
 }
+
+func TestJfprintf(t *testing.T) {
+	t.Run("writes to *bytes.Buffer", func(t *testing.T) {
+		require := require.New(t)
+		var b bytes.Buffer
+		n, err := Jfprintf(&b, `{"name":%q}`, `He said "hi"`+"\v")
+		require.NoError(err)
+		require.Equal(b.Len(), n)
+		require.JSONEq(`{"name":"He said \"hi\"\u000b"}`, b.String())
+	})
+
+	t.Run("writes to http.ResponseWriter via httptest.NewRecorder", func(t *testing.T) {
+		require := require.New(t)
+		rec := httptest.NewRecorder()
+		n, err := Jfprintf(rec, `{"err":%q}`, errors.New("disk\tfull"))
+		require.NoError(err)
+		require.Equal(rec.Body.Len(), n)
+		require.JSONEq(`{"err":"disk\tfull"}`, rec.Body.String())
+	})
+
+	t.Run("escapes JSON-unsafe inputs", func(t *testing.T) {
+		require := require.New(t)
+		var b bytes.Buffer
+		_, err := Jfprintf(&b, `{"vtab":%q,"invalidUTF8":%q,"backslash":"%s"}`, "\v", "\xff\xfe", `\`)
+		require.NoError(err)
+		var decoded map[string]string
+		require.NoError(json.Unmarshal(b.Bytes(), &decoded))
+		require.Equal("\v", decoded["vtab"])
+		require.Equal("\ufffd\ufffd", decoded["invalidUTF8"])
+		require.Equal(`\`, decoded["backslash"])
+	})
+
+	t.Run("returns byte count on success", func(t *testing.T) {
+		require := require.New(t)
+		var b bytes.Buffer
+		n, err := Jfprintf(&b, `count=%d`, 42)
+		require.NoError(err)
+		require.Equal(len("count=42"), n)
+		require.Equal(b.Len(), n)
+	})
+
+	t.Run("propagates writer error", func(t *testing.T) {
+		require := require.New(t)
+		boom := errors.New("boom")
+		n, err := Jfprintf(&failingWriter{err: boom}, `%s`, "anything")
+		require.ErrorIs(err, boom)
+		require.Zero(n)
+	})
+}
+
+type failingWriter struct{ err error }
+
+func (f *failingWriter) Write([]byte) (int, error) { return 0, f.err }
 
 type flagProbe struct {
 	seenFlag map[rune]bool

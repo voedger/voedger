@@ -49,7 +49,7 @@ func ReplyJSON(w http.ResponseWriter, data string, code int) {
 }
 
 func writeCommonError_V2(w http.ResponseWriter, err error, code int) bool {
-	return writeResponse(w, jsonu.Jprintf(`{"status":%d,"message":"%s"}`, code, err.Error()))
+	return writeResponse(w, jsonu.Jprintf(`{"status":%d,"message":%q}`, code, err.Error()))
 }
 
 func writeCommonError_V1(w http.ResponseWriter, err error, code int) bool {

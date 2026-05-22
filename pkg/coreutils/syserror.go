@@ -83,24 +83,24 @@ func (he SysError) Is(target error) bool {
 }
 
 func (he SysError) ToJSON_APIV1() string {
-	b := bytes.NewBufferString(jsonu.Jprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":"%s"`, he.HTTPStatus, he.Message))
+	b := bytes.NewBufferString(jsonu.Jprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
-		b.WriteString(jsonu.Jprintf(`,"QName":"%s"`, he.QName))
+		jsonu.Jfprintf(b, `,"QName":%q`, he.QName)
 	}
 	if len(he.Data) > 0 {
-		b.WriteString(jsonu.Jprintf(`,"Data":"%s"`, he.Data))
+		jsonu.Jfprintf(b, `,"Data":%q`, he.Data)
 	}
 	b.WriteString("}}")
 	return b.String()
 }
 
 func (he SysError) ToJSON_APIV2() string {
-	b := bytes.NewBufferString(jsonu.Jprintf(`{"status":%d,"message":"%s"`, he.HTTPStatus, he.Message))
+	b := bytes.NewBufferString(jsonu.Jprintf(`{"status":%d,"message":%q`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
-		b.WriteString(jsonu.Jprintf(`,"qname":"%s"`, he.QName))
+		jsonu.Jfprintf(b, `,"qname":%q`, he.QName)
 	}
 	if len(he.Data) > 0 {
-		b.WriteString(jsonu.Jprintf(`,"data":"%s"`, he.Data))
+		jsonu.Jfprintf(b, `,"data":%q`, he.Data)
 	}
 	b.WriteString("}")
 	return b.String()

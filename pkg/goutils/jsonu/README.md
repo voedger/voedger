@@ -1,8 +1,8 @@
 # Package jsonu
 
-Package jsonu provides Jprintf, a JSON-safe fmt.Sprintf variant that
-JSON-escapes string, ~string, fmt.Stringer and error arguments so
-callers can build small JSON snippets from readable templates.
+Package jsonu provides JSON-safe fmt.Sprintf and fmt.Fprintf variants
+that JSON-escape string, ~string, fmt.Stringer and error arguments so
+callers can build JSON snippets from readable templates.
 
 ## Problem
 
@@ -72,7 +72,8 @@ func main() {
 
 ## Features
 
-- **[Jprintf](impl.go#L44)** - JSON-safe fmt.Sprintf for JSON templates
+- **[Jprintf](impl.go#L45)** - JSON-safe fmt.Sprintf for JSON templates
+- **[Jfprintf](impl.go#L50)** - JSON-safe fmt.Fprintf writing to an io.Writer
 
 ## Use
 

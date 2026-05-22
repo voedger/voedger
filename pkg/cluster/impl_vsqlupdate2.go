@@ -81,7 +81,7 @@ func logVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, w
 		// notest
 		return 0, err
 	}
-	body := jsonu.Jprintf(`{"args":{"%s":"%s"}}`, field_Query, query)
+	body := jsonu.Jprintf(`{"args":{%q:%q}}`, field_Query, query)
 	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/c.cluster.LogVSqlUpdate", istructs.AppQName_sys_cluster, wsid), body,
 		httpu.WithAuthorizeBy(sysToken))
 	if err != nil {

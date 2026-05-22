@@ -7,6 +7,7 @@ package jsonu
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -42,11 +43,20 @@ import (
 // for invalid UTF-8 bytes. json.Marshal emits JSON-compatible escapes such as
 // \u000b and coerces invalid UTF-8 to \ufffd.
 func Jprintf(format string, args ...any) string {
+	return fmt.Sprintf(format, jprintfArgs(args)...)
+}
+
+// Jfprintf writes the Jprintf result to w. Same verbs and escaping rules as Jprintf.
+func Jfprintf(w io.Writer, format string, args ...any) (n int, err error) {
+	return fmt.Fprintf(w, format, jprintfArgs(args)...)
+}
+
+func jprintfArgs(args []any) []any {
 	jargs := make([]any, len(args))
 	for i, arg := range args {
 		jargs[i] = jprintfArg(arg)
 	}
-	return fmt.Sprintf(format, jargs...)
+	return jargs
 }
 
 func jprintfArg(arg any) any {
