@@ -186,7 +186,7 @@ func TestCompileErrors(t *testing.T) {
 	var tempDir string
 	if logger.IsVerbose() {
 		var err error
-		tempDir, err = os.MkdirTemp("", "test_compile")
+		tempDir, err = os.MkdirTemp("", "test_compile") //nolint:usetesting // verbose mode keeps the dir for post-test inspection; t.TempDir() auto-removes
 		require.NoError(err)
 	} else {
 		tempDir = t.TempDir()
@@ -250,15 +250,10 @@ func TestPkgRegistryCompile(t *testing.T) {
 	require := require.New(t)
 
 	wd, err := os.Getwd()
+	require.NoError(err)
 	pkgDirLocalPath := wd[:strings.LastIndex(wd, filepath.FromSlash("/cmd/vpm"))] + filepath.FromSlash("/wasm")
 
-	require.NoError(err)
-	defer func() {
-		_ = os.Chdir(wd)
-	}()
-
-	err = os.Chdir(pkgDirLocalPath)
-	require.NoError(err)
+	t.Chdir(pkgDirLocalPath)
 
 	err = execRootCmd([]string{"vpm", "compile", "-C", "registry"}, "1.0.0")
 	require.NoError(err)
@@ -278,7 +273,7 @@ func TestOrmBasicUsage(t *testing.T) {
 	var err error
 	var tempDir string
 	if logger.IsVerbose() {
-		tempDir, err = os.MkdirTemp("", "test_genorm")
+		tempDir, err = os.MkdirTemp("", "test_genorm") //nolint:usetesting // verbose mode keeps the dir for post-test inspection; t.TempDir() auto-removes
 		require.NoError(err)
 	} else {
 		tempDir = t.TempDir()
@@ -395,7 +390,7 @@ func TestTidyBasicUsage(t *testing.T) {
 	var err error
 	var tempDir string
 	if logger.IsVerbose() {
-		tempDir, err = os.MkdirTemp("", "test_genorm")
+		tempDir, err = os.MkdirTemp("", "test_genorm") //nolint:usetesting // verbose mode keeps the dir for post-test inspection; t.TempDir() auto-removes
 		require.NoError(err)
 	} else {
 		tempDir = t.TempDir()
@@ -446,7 +441,7 @@ func TestBuildBasicUsage(t *testing.T) {
 	var tempDir string
 	if logger.IsVerbose() {
 		var err error
-		tempDir, err = os.MkdirTemp("", "test_build")
+		tempDir, err = os.MkdirTemp("", "test_build") //nolint:usetesting // verbose mode keeps the dir for post-test inspection; t.TempDir() auto-removes
 		require.NoError(err)
 	} else {
 		tempDir = t.TempDir()
@@ -526,7 +521,7 @@ func TestGenOrmTestItAndBuildApp(t *testing.T) {
 	var tempDir string
 	if logger.IsVerbose() {
 		var err error
-		tempDir, err = os.MkdirTemp("", "test_build")
+		tempDir, err = os.MkdirTemp("", "test_build") //nolint:usetesting // verbose mode keeps the dir for post-test inspection; t.TempDir() auto-removes
 		require.NoError(err)
 	} else {
 		tempDir = t.TempDir()

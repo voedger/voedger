@@ -16,13 +16,8 @@ import (
 
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
-	dir, err := os.MkdirTemp("", "isecretsimpl")
-	require.NoError(err)
-	require.NoError(os.Setenv(SecretRootEnv, dir))
-	defer func() {
-		require.NoError(os.RemoveAll(dir))
-		require.NoError(os.Unsetenv(SecretRootEnv))
-	}()
+	dir := t.TempDir()
+	t.Setenv(SecretRootEnv, dir)
 	secret := "secret.json"
 	require.NoError(os.WriteFile(filepath.Join(dir, secret), []byte(`{"secret":"key"}`), fs.ModePerm))
 	sr := ProvideSecretReader()
