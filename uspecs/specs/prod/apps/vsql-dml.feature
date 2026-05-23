@@ -217,7 +217,7 @@ Feature: VSQL DML
       And result contains the LoginHash of "<login>"
 
     Scenario: Foreign-app read without the system token is forbidden
-      When VADeveloper executes "select * from sys.registry.apWSNumber>.registry.Login where id = <loginID>"
+      When VADeveloper executes "select * from sys.registry.a<appWSNumber>.registry.Login where id = <loginID>"
       Then response status is "403 Forbidden"
 
     Scenario: Read from a non-initialised workspace is forbidden
