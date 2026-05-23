@@ -15,11 +15,18 @@ Invalid `select` queries against `sys.plog` and `sys.wlog` (malformed limit, non
 ## What
 
 - Map log query parameter validation failures from `500 Internal Server Error` to `400 Bad Request`
+- Replace unchecked type assertions in `lim()` and `offs()` with ok-form checks so invalid expression shapes also return `400 Bad Request` instead of panicking
 
 ## Construction
 
 - [x] update: [it/impl_sqlquery_test.go](../../../../../pkg/sys/it/impl_sqlquery_test.go)
   - update: `TestSqlQuery_readLogParams` subtests - replace `it.Expect500(...)` with `it.Expect400(...)` for all seven cases
+  - add: `TestSqlQuery_readLogParams` subtest - `limit sin(5)` expects 400 and `"unsupported limit value expression:"`
+  - add: `TestSqlQuery_readLogParams` subtest - `where 5 = 1` expects 400 and `"unsupported column reference expression:"`
+  - add: `TestSqlQuery_readLogParams` subtest - `where Offset >= sin(5)` expects 400 and `"unsupported offset value expression:"`
 
 - [x] update: [sqlquery/impl.go](../../../../../pkg/sys/sqlquery/impl.go)
   - update: `params()` call site in `provideExecQrySQLQuery` - wrap the returned error with `coreutils.WrapSysError(e, http.StatusBadRequest)`
+  - update: `lim()` - convert `limit.Rowcount.(*sqlparser.SQLVal)` to ok-form; return `"unsupported limit value expression: %T"` on failure
+  - update: `offs()` - convert `r.Left.(*sqlparser.ColName)` to ok-form; return `"unsupported column reference expression: %T"` on failure
+  - update: `offs()` - convert `r.Right.(*sqlparser.SQLVal)` to ok-form; return `"unsupported offset value expression: %T"` on failure
