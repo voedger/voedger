@@ -422,14 +422,14 @@ Feature: VSQL DML
       Given wlog event at offset "<wlogOffset>" exists in workspace "<wsid>" of app "test1/app1"
       When VAOperator executes "update corrupted test1.app1.<wsid>.sys.WLog.<wlogOffset>"
       Then response status is "200 OK"
-      And subsequent "select * from sys.wlog where Offset = <wlogOffset>" returns a record with empty ArgumentObject, empty CUDs and Error="ErrCorruptedData"
+      And subsequent "select * from sys.wlog where Offset = <wlogOffset>" returns a record with empty ArgumentObject, empty CUDs and Error.ErrStr="corrupted data", Error.QNameFromParams="sys.Corrupted", Error.ValidEvent=false
       And the matching plog event is not modified
 
     Scenario: Mark a plog event as corrupted
       Given plog event at offset "<plogOffset>" exists in partition "<partitionID>" of app "test1/app1"
       When VAOperator executes "update corrupted test1.app1.<partitionID>.sys.PLog.<plogOffset>"
       Then response status is "200 OK"
-      And subsequent "select * from sys.plog where Offset = <plogOffset>" returns a record with empty ArgumentObject, empty CUDs and Error="ErrCorruptedData"
+      And subsequent "select * from sys.plog where Offset = <plogOffset>" returns a record with empty ArgumentObject, empty CUDs and Error.ErrStr="corrupted data", Error.QNameFromParams="sys.Corrupted", Error.ValidEvent=false
       And the matching wlog event is not modified
 
   Rule: UPDATE query syntax and semantic validation
