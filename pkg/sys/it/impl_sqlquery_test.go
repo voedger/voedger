@@ -290,6 +290,19 @@ func TestSqlQuery_readLogParams(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.wlog where Offset >= 1 and something >= 5"}}`
 		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported expression: *sqlparser.AndExpr"))
 	})
+
+	t.Run("Should return error when limit value is not a literal", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from sys.wlog limit sin(5)"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported limit value expression:"))
+	})
+	t.Run("Should return error when comparison left side is not a column reference", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from sys.plog where 5 = 1"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported column reference expression:"))
+	})
+	t.Run("Should return error when offset value is not a literal", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from sys.plog where Offset >= sin(5)"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported offset value expression:"))
+	})
 }
 
 func TestSqlQuery_records(t *testing.T) {

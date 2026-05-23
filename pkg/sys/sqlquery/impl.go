@@ -323,7 +323,11 @@ func lim(limit *sqlparser.Limit) (int, error) {
 	if limit == nil {
 		return DefaultLimit, nil
 	}
-	v, err := strconvu.ParseInt64(string(limit.Rowcount.(*sqlparser.SQLVal).Val))
+	rowCount, ok := limit.Rowcount.(*sqlparser.SQLVal)
+	if !ok {
+		return 0, fmt.Errorf("unsupported limit value expression: %T", limit.Rowcount)
+	}
+	v, err := strconvu.ParseInt64(string(rowCount.Val))
 	if err != nil {
 		return 0, err
 	}
@@ -341,13 +345,21 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 	eq := false
 	switch r := expr.(type) {
 	case *sqlparser.ComparisonExpr:
-		if r.Left.(*sqlparser.ColName).Name.String() != "offset" {
-			return 0, false, fmt.Errorf("unsupported column name: %s", r.Left.(*sqlparser.ColName).Name.String())
+		colName, ok := r.Left.(*sqlparser.ColName)
+		if !ok {
+			return 0, false, fmt.Errorf("unsupported column reference expression: %T", r.Left)
+		}
+		if colName.Name.String() != "offset" {
+			return 0, false, fmt.Errorf("unsupported column name: %s", colName.Name.String())
 		}
 		if simpleOffset > 0 {
 			return 0, false, errors.New("both .Offset and 'where offset ...' clause can not be provided in one query")
 		}
-		v, e := strconvu.ParseUint64(string(r.Right.(*sqlparser.SQLVal).Val))
+		offsetVal, ok := r.Right.(*sqlparser.SQLVal)
+		if !ok {
+			return 0, false, fmt.Errorf("unsupported offset value expression: %T", r.Right)
+		}
+		v, e := strconvu.ParseUint64(string(offsetVal.Val))
 		if e != nil {
 			return 0, false, e
 		}
