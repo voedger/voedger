@@ -220,10 +220,10 @@ Feature: VSQL DML
       When VADeveloper executes "select * from sys.registry.a<appWSNumber>.registry.Login where id = <loginID>"
       Then response status is "403 Forbidden"
 
-    Scenario: Read from a non-initialised workspace is forbidden
+    Scenario: Read from a non-initialized workspace is forbidden
       When VADeveloper executes "select * from <nonExistingWSID>.sys.wlog"
       Then response status is "403 Forbidden"
-      And error message is "workspace is not initialised"
+      And error message is "workspace is not initialized"
 
     Scenario: Unsupported data source
       When VADeveloper executes "select * from git.hub"
