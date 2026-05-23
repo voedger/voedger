@@ -238,7 +238,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			}
 			limit, offset, e := params(whereExpr, s.Limit, istructs.Offset(op.EntityID))
 			if e != nil {
-				return e
+				return coreutils.WrapSysError(e, http.StatusBadRequest)
 			}
 			appParts := args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
 			if sourceTableName == plog {

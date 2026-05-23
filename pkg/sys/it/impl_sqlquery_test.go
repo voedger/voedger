@@ -264,31 +264,31 @@ func TestSqlQuery_readLogParams(t *testing.T) {
 
 	t.Run("Should return error when limit value not parsable", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog limit 7.1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500(`strconv.ParseInt: parsing "7.1": invalid syntax`))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400(`strconv.ParseInt: parsing "7.1": invalid syntax`))
 	})
 	t.Run("Should return error when limit value invalid", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog limit -3"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("limit must be greater than -2"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("limit must be greater than -2"))
 	})
 	t.Run("Should return error when Offset value not parsable", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 2.1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500(`strconv.ParseUint: parsing "2.1": invalid syntax`))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400(`strconv.ParseUint: parsing "2.1": invalid syntax`))
 	})
 	t.Run("Should return error when Offset value invalid", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 0"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("offset must be greater than zero"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("offset must be greater than zero"))
 	})
 	t.Run("Should return error when Offset operation not supported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset < 2"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported operation: <"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported operation: <"))
 	})
 	t.Run("Should return error when column name not supported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where something >= 1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported column name: something"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported column name: something"))
 	})
 	t.Run("Should return error when expression not supported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.wlog where Offset >= 1 and something >= 5"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported expression: *sqlparser.AndExpr"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported expression: *sqlparser.AndExpr"))
 	})
 }
 
