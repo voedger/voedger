@@ -18,3 +18,4 @@ Vulnerability GO-2026-5026 affects `golang.org/x/net@v0.54.0`, currently used by
 Upgrade the affected dependency to a version that contains the patch:
 
 - Bump `golang.org/x/net` to `v0.55.0` or later
+- Bump `golang.org/x/sys` to `v0.45.0` or later
