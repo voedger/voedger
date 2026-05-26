@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -80,7 +81,7 @@ func logVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, w
 		// notest
 		return 0, err
 	}
-	body := fmt.Sprintf(`{"args":{%q:%q}}`, field_Query, query)
+	body := jsonu.Jprintf(`{"args":{%q:%q}}`, field_Query, query)
 	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/c.cluster.LogVSqlUpdate", istructs.AppQName_sys_cluster, wsid), body,
 		httpu.WithAuthorizeBy(sysToken))
 	if err != nil {

@@ -7,6 +7,7 @@ package query2
 import (
 	"context"
 	"fmt"
+	"html"
 	"net/http"
 	"sort"
 
@@ -77,7 +78,7 @@ func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 			generatedHTML += "<ul>"
 			for _, role := range roles {
 				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles/%s", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), workspace.QName().String(), role.QName().String())
-				generatedHTML += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, ref, role.QName().String())
+				generatedHTML += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, html.EscapeString(ref), html.EscapeString(role.QName().String()))
 			}
 			generatedHTML += "</ul>"
 		}

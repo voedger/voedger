@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -89,7 +90,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				}
 			}
 			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
-			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
+			body := jsonu.Jprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
 			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
 				body, httpu.WithAuthorizeBy(tokenForTargetApp))
 			if err != nil {

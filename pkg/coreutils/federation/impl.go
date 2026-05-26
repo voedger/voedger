@@ -162,7 +162,7 @@ func (f *implIFederation) readBLOB(url string, optFuncs ...httpu.ReqOptFunc) (re
 }
 
 func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...httpu.ReqOptFunc) error {
-	body := fmt.Sprintf(`{"App": "%s","Projection": "%s","WS": %d}`, key.App, key.Projection, key.WS)
+	body := fmt.Sprintf(`{"App": %q,"Projection": %q,"WS": %d}`, key.App, key.Projection, key.WS)
 	optFuncs = append(optFuncs, httpu.WithDiscardResponse())
 	_, err := f.post(fmt.Sprintf("n10n/update/%d", val), body, optFuncs...)
 	return err

@@ -632,3 +632,45 @@ func TestSubscribeAndWatch_NoSuperfluousWriteHeader(t *testing.T) {
 	// Verify that no duplicate WriteHeader call was logged by the HTTP server internals
 	logCap.NotContains("http: superfluous response.WriteHeader call")
 }
+
+func TestApiV1_PlainErrorOnStreamClose(t *testing.T) {
+	require := require.New(t)
+	cases := []struct {
+		name         string
+		objs         []any
+		expectedBody string
+	}{
+		{
+			name:         "no elements",
+			expectedBody: `{"status":500,"errorDescription":"test error"}`,
+		},
+		{
+			name:         "one element",
+			objs:         []any{testObject{IntField: 42, StrField: "str"}},
+			expectedBody: `{"sections":[{"type":"","elements":[{"IntField":42,"StrField":"str"}]}],"status":500,"errorDescription":"test error"}`,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+				go func() {
+					respWriter := responder.StreamJSON(http.StatusOK)
+					for _, obj := range c.objs {
+						require.NoError(respWriter.Write(obj))
+					}
+					respWriter.Close(errors.New("test error"))
+				}()
+			})
+			defer tearDown(router)
+
+			resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/q.somefunc_PlainErr", router.port(), testWSID), httpu.ContentType_ApplicationJSON, http.NoBody)
+			require.NoError(err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(err)
+			require.Equal(c.expectedBody, string(body))
+			require.Equal(http.StatusOK, resp.StatusCode)
+		})
+	}
+}

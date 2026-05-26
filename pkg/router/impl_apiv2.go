@@ -327,14 +327,14 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 		login, pwd := coreutils.DeviceRandomLoginPwd()
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":%q}}`,
 			login, busRequest.AppQName, istructs.SubjectKind_Device, istructs.CurrentClusterID(), pwd)
 		_, err := federation.Func(url, body, httpu.WithMethod(http.MethodPost))
 		if err != nil {
 			replyErr(rw, err)
 			return
 		}
-		result := fmt.Sprintf(`{"%s":"%s","%s":"%s"}`, fieldLogin, login, fieldPassword, pwd)
+		result := fmt.Sprintf(`{%q:%q,%q:%q}`, fieldLogin, login, fieldPassword, pwd)
 		ReplyJSON(rw, result, http.StatusCreated)
 	})
 }

@@ -117,7 +117,7 @@ func provideRequestHandler(appParts appparts.IAppPartitions, procbus iprocbus.IP
 					replyCommandBusy(requestCtx, responder, partitionID, busyLogMode)
 				}
 			default:
-				bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
+				bus.ReplyBadRequest(responder, fmt.Sprintf(`wrong function mark %q for function %s`, request.Resource[:1], funcQName))
 			}
 		}
 	}
