@@ -7,6 +7,7 @@ package filter
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -44,21 +45,15 @@ func (f typesFilter) Match(t appdef.IType) bool {
 }
 
 func (f typesFilter) String() string {
-	var s string
 	if t, ok := typesStringDecorators[string(f.typeSet.AsBytes())]; ok {
-		s = t
-	} else {
-		// TYPES(…) FROM …)
-		s = "TYPES("
-		for i, t := range f.types {
-			if i > 0 {
-				s += ", "
-			}
-			s += t.TrimString()
-		}
-		s += ")"
+		return t
 	}
-	return s
+	// TYPES(…) FROM …)
+	parts := make([]string, len(f.types))
+	for i, t := range f.types {
+		parts[i] = t.TrimString()
+	}
+	return "TYPES(" + strings.Join(parts, ", ") + ")"
 }
 
 func (f typesFilter) Types() []appdef.TypeKind { return f.types }

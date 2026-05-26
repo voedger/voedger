@@ -24,10 +24,13 @@ func enrichError(err error, argOrMsg any, args ...any) error {
 	if msg, ok := argOrMsg.(string); ok && len(args) > 0 && strings.Contains(msg, "%") {
 		enrich = fmt.Sprintf(msg, args...)
 	} else {
-		enrich = fmt.Sprint(argOrMsg)
+		var sb strings.Builder
+		fmt.Fprint(&sb, argOrMsg)
 		for i := range args {
-			enrich += " " + fmt.Sprint(args[i])
+			sb.WriteByte(' ')
+			fmt.Fprint(&sb, args[i])
 		}
+		enrich = sb.String()
 	}
 	return fmt.Errorf("%w: %s", err, enrich)
 }
