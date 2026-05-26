@@ -27,7 +27,8 @@ func enrichError(err error, argOrMsg any, args ...any) error {
 		var sb strings.Builder
 		fmt.Fprint(&sb, argOrMsg)
 		for i := range args {
-			fmt.Fprint(&sb, " ", args[i])
+			sb.WriteByte(' ')
+			fmt.Fprint(&sb, args[i])
 		}
 		enrich = sb.String()
 	}

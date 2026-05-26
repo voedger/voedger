@@ -59,7 +59,8 @@ func (p *logPrinter) getFormattedMsg(msgType string, funcName string, line int, 
 	if len(args) > 0 {
 		var sb strings.Builder
 		for _, arg := range args {
-			fmt.Fprint(&sb, " ", arg)
+			sb.WriteByte(' ')
+			fmt.Fprint(&sb, arg)
 		}
 		out += sb.String()
 	}

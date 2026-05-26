@@ -40,9 +40,11 @@ func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 		rolesTitle = "published roles"
 	}
 
+	appStr := qw.msg.AppQName().String()
+	wsStr := wsQname.String()
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "<html><head><title>App %s: workspace %s %s</title></head><body>", qw.msg.AppQName().String(), wsQname.String(), rolesTitle)
-	fmt.Fprintf(&sb, "<h1>App %s</h1><h2>Workspace %s %s</h2>", qw.msg.AppQName().String(), wsQname.String(), rolesTitle)
+	fmt.Fprintf(&sb, "<html><head><title>App %s: workspace %s %s</title></head><body>", appStr, wsStr, rolesTitle)
+	fmt.Fprintf(&sb, "<h1>App %s</h1><h2>Workspace %s %s</h2>", appStr, wsStr, rolesTitle)
 	packages := make(map[string][]appdef.IRole)
 	for _, typ := range workspace.Types() {
 		if typ.Kind() == appdef.TypeKind_Role {
@@ -78,8 +80,10 @@ func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 
 			fmt.Fprintf(&sb, "<h2>Package %s</h2>", pkg)
 			sb.WriteString("<ul>")
+			appOwnerStr := qw.msg.AppQName().Owner()
+			appNameStr := qw.msg.AppQName().Name()
 			for _, role := range roles {
-				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles/%s", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), workspace.QName().String(), role.QName().String())
+				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles/%s", appOwnerStr, appNameStr, workspace.QName().String(), role.QName().String())
 				fmt.Fprintf(&sb, `<li><a href="%s">%s</a></li>`, html.EscapeString(ref), html.EscapeString(role.QName().String()))
 			}
 			sb.WriteString("</ul>")

@@ -25,8 +25,9 @@ func schemasHandler() apiPathHandler {
 
 func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "<html><head><title>App %s schema</title></head><body>", qw.msg.AppQName().String())
-	fmt.Fprintf(&sb, "<h1>App %s schema</h1>", qw.msg.AppQName().String())
+	appStr := qw.msg.AppQName().String()
+	fmt.Fprintf(&sb, "<html><head><title>App %s schema</title></head><body>", appStr)
+	fmt.Fprintf(&sb, "<h1>App %s schema</h1>", appStr)
 
 	packages := make(map[string][]appdef.IWorkspace)
 	developer := qw.isDeveloper()
@@ -76,8 +77,10 @@ func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 				return workspaces[i].QName().String() < workspaces[j].QName().String()
 			})
 
+			appOwnerStr := qw.msg.AppQName().Owner()
+			appNameStr := qw.msg.AppQName().Name()
 			for _, ws := range workspaces {
-				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), ws.QName().String())
+				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles", appOwnerStr, appNameStr, ws.QName().String())
 				fmt.Fprintf(&sb, `<li><a href="%s">%s</a></li>`, html.EscapeString(ref), html.EscapeString(ws.QName().String()))
 			}
 			sb.WriteString("</ul>")
