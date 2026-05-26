@@ -153,7 +153,7 @@ func ErrorWith(t assert.TestingT, e error, c ...Constraint) bool {
 
 func errorWith(t assert.TestingT, e error, c []Constraint, msgAndArgs ...interface{}) bool {
 	if e == nil {
-		return assert.Fail(t, "error expected", msgAndArgs)
+		return assert.Fail(t, "error expected", msgAndArgs...)
 	}
 
 	for _, constraint := range c {
