@@ -49,8 +49,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			"dir2/content",
 		}
 		for _, res := range resources {
-			dir, fileName := makeTmpContent(require, res)
-			defer os.RemoveAll(dir)
+			dir, fileName := makeTmpContent(t, res)
 			dirFS := os.DirFS(dir)
 			testApp.processor.DeployStaticContent(res, dirFS)
 
@@ -471,15 +470,11 @@ func (ta *testApp) post(resource string, contentType string, requestText string,
 	return body
 }
 
-func makeTmpContent(require *require.Assertions, pattern string) (dir string, fileName string) {
-	dir, err := os.MkdirTemp("", "."+filepath.Base(pattern))
-	require.NoError(err)
-
+func makeTmpContent(t *testing.T, pattern string) (dir string, fileName string) {
+	t.Helper()
+	dir = t.TempDir()
 	fileName = "tmpcontext.txt"
-
-	err = os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), filesu.FileMode_DefaultForFile)
-	require.NoError(err)
-
+	require.NoError(t, os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), filesu.FileMode_DefaultForFile))
 	return dir, fileName
 }
 

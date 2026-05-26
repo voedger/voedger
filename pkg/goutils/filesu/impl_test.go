@@ -80,13 +80,8 @@ func TestCopy_BasicUsage(t *testing.T) {
 
 	t.Run("CopyFile src file without path", func(t *testing.T) {
 		tempDirDst := t.TempDir()
-		initialWD, err := os.Getwd()
-		require.NoError(err)
 		file1SrcPath, file1SrcName := filepath.Split(file1)
-		require.NoError(os.Chdir(file1SrcPath))
-		defer func() {
-			require.NoError(os.Chdir(initialWD))
-		}()
+		t.Chdir(file1SrcPath)
 
 		require.NoError(CopyFile(file1SrcName, tempDirDst))
 		file1Dst := filepath.Join(tempDirDst, file1SrcName)
