@@ -57,11 +57,11 @@ func (p *logPrinter) getFormattedMsg(msgType string, funcName string, line int, 
 	out += ": " + msgType
 	out += fmt.Sprintf(": [%v:%v]:", funcName, line)
 	if len(args) > 0 {
-		var s string
+		var sb strings.Builder
 		for _, arg := range args {
-			s += fmt.Sprint(" ", arg)
+			fmt.Fprint(&sb, " ", arg)
 		}
-		out += s
+		out += sb.String()
 	}
 	return out
 }

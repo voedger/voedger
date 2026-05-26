@@ -7,6 +7,7 @@ package filter
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -41,14 +42,11 @@ func (f tagsFilter) Match(t appdef.IType) bool {
 
 func (f tagsFilter) String() string {
 	// TAGS(…)
-	s := "TAGS("
+	parts := make([]string, len(f.tags))
 	for i, c := range f.tags {
-		if i > 0 {
-			s += ", "
-		}
-		s += fmt.Sprint(c)
+		parts[i] = fmt.Sprint(c)
 	}
-	return s + ")"
+	return "TAGS(" + strings.Join(parts, ", ") + ")"
 }
 
 func (f tagsFilter) Tags() []appdef.QName { return f.tags }
