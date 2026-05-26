@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -169,5 +170,54 @@ func TestErrorWith(t *testing.T) {
 				t.Errorf("ErrorWith() returns %v, want %v", r, tt.want)
 			}
 		})
+	}
+}
+
+// Demonstrates that msgAndArgs are passed correctly when ErrorWith fails on a
+// nil error. Two bug sites stack on the (*Require).Error path:
+//   - constraint.go:156 — assert.Fail(t, "error expected", msgAndArgs) wraps
+//     msgAndArgs once (variadic boxing).
+//   - require.go:135 — errorWith(r.t, err, cc, msgAndArgs) wraps it a second
+//     time before constraint.go:156 wraps it a third.
+// See https://untill.atlassian.net/browse/AIR-4058
+func TestErrorWith_NilErrorMsgAndArgs_FormatsCorrectly(t *testing.T) {
+	t.Run("errorWith direct (single wrap site)", func(t *testing.T) {
+		mockT := &captureT{}
+		_ = errorWith(mockT, nil, []Constraint{}, "ctx=%s id=%d", "myCase", 42)
+		assertFormattedMessage(t, mockT)
+	})
+
+	t.Run("(*Require).Error (two wrap sites stacked)", func(t *testing.T) {
+		mockT := &captureT{}
+		r := New(mockT)
+		func() {
+			defer func() { _ = recover() }()
+			r.Error(nil, Has("never-matches"), "ctx=%s id=%d", "myCase", 42)
+		}()
+		assertFormattedMessage(t, mockT)
+	})
+}
+
+type captureT struct {
+	fails []string
+}
+
+func (c *captureT) Errorf(format string, args ...any) {
+	c.fails = append(c.fails, fmt.Sprintf(format, args...))
+}
+
+func (c *captureT) FailNow() { panic("captureT.FailNow") }
+
+func assertFormattedMessage(t *testing.T, mockT *captureT) {
+	t.Helper()
+	if len(mockT.fails) == 0 {
+		t.Fatal("expected captured failure message, got none")
+	}
+	msg := mockT.fails[0]
+	if !strings.Contains(msg, "ctx=myCase id=42") {
+		t.Errorf("expected formatted message to contain %q, got: %q", "ctx=myCase id=42", msg)
+	}
+	if strings.Contains(msg, "%s") || strings.Contains(msg, "%d") {
+		t.Errorf("expected format verbs to be applied, but they appear verbatim in: %q", msg)
 	}
 }
