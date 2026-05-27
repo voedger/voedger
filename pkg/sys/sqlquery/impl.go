@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -89,7 +90,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 				}
 			}
 			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
-			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
+			body := jsonu.Jprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
 			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
 				body, httpu.WithAuthorizeBy(tokenForTargetApp))
 			if err != nil {
@@ -238,7 +239,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			}
 			limit, offset, e := params(whereExpr, s.Limit, istructs.Offset(op.EntityID))
 			if e != nil {
-				return e
+				return coreutils.WrapSysError(e, http.StatusBadRequest)
 			}
 			appParts := args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
 			if sourceTableName == plog {
@@ -323,7 +324,11 @@ func lim(limit *sqlparser.Limit) (int, error) {
 	if limit == nil {
 		return DefaultLimit, nil
 	}
-	v, err := strconvu.ParseInt64(string(limit.Rowcount.(*sqlparser.SQLVal).Val))
+	rowCount, ok := limit.Rowcount.(*sqlparser.SQLVal)
+	if !ok {
+		return 0, fmt.Errorf("unsupported limit value expression: %T", limit.Rowcount)
+	}
+	v, err := strconvu.ParseInt64(string(rowCount.Val))
 	if err != nil {
 		return 0, err
 	}
@@ -341,13 +346,21 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 	eq := false
 	switch r := expr.(type) {
 	case *sqlparser.ComparisonExpr:
-		if r.Left.(*sqlparser.ColName).Name.String() != "offset" {
-			return 0, false, fmt.Errorf("unsupported column name: %s", r.Left.(*sqlparser.ColName).Name.String())
+		colName, ok := r.Left.(*sqlparser.ColName)
+		if !ok {
+			return 0, false, fmt.Errorf("unsupported column reference expression: %T", r.Left)
+		}
+		if colName.Name.String() != "offset" {
+			return 0, false, fmt.Errorf("unsupported column name: %s", colName.Name.String())
 		}
 		if simpleOffset > 0 {
 			return 0, false, errors.New("both .Offset and 'where offset ...' clause can not be provided in one query")
 		}
-		v, e := strconvu.ParseUint64(string(r.Right.(*sqlparser.SQLVal).Val))
+		offsetVal, ok := r.Right.(*sqlparser.SQLVal)
+		if !ok {
+			return 0, false, fmt.Errorf("unsupported offset value expression: %T", r.Right)
+		}
+		v, e := strconvu.ParseUint64(string(offsetVal.Val))
 		if e != nil {
 			return 0, false, e
 		}

@@ -8,6 +8,7 @@ package filter
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -45,16 +46,13 @@ func (f orFilter) Or() []appdef.IFilter { return f.children }
 func (f orFilter) String() string {
 	// QNAMES(…) OR TAGS(…)
 	// (QNAMES(…) AND TYPES(…)) OR NOT TAGS(…)
-	s := ""
+	parts := make([]string, len(f.children))
 	for i, c := range f.children {
 		cStr := fmt.Sprint(c)
 		if (c.Kind() == appdef.FilterKind_Or) || (c.Kind() == appdef.FilterKind_And) {
 			cStr = fmt.Sprintf("(%s)", cStr)
 		}
-		if i > 0 {
-			s += " OR "
-		}
-		s += cStr
+		parts[i] = cStr
 	}
-	return s
+	return strings.Join(parts, " OR ")
 }

@@ -7,8 +7,10 @@ package query2
 import (
 	"context"
 	"fmt"
+	"html"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
@@ -22,8 +24,10 @@ func schemasHandler() apiPathHandler {
 }
 
 func schemasExec(ctx context.Context, qw *queryWork) (err error) {
-	generatedHTML := fmt.Sprintf("<html><head><title>App %s schema</title></head><body>", qw.msg.AppQName().String())
-	generatedHTML += fmt.Sprintf("<h1>App %s schema</h1>", qw.msg.AppQName().String())
+	var sb strings.Builder
+	appStr := qw.msg.AppQName().String()
+	fmt.Fprintf(&sb, "<html><head><title>App %s schema</title></head><body>", appStr)
+	fmt.Fprintf(&sb, "<h1>App %s schema</h1>", appStr)
 
 	packages := make(map[string][]appdef.IWorkspace)
 	developer := qw.isDeveloper()
@@ -51,9 +55,9 @@ func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 
 	if len(packages) == 0 {
 		if !developer {
-			generatedHTML += "<p>No workspaces with published roles found</p>"
+			sb.WriteString("<p>No workspaces with published roles found</p>")
 		} else {
-			generatedHTML += "<p>No workspaces found</p>"
+			sb.WriteString("<p>No workspaces found</p>")
 		}
 	} else {
 		// Sort packages alphabetically
@@ -64,8 +68,8 @@ func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 		sort.Strings(pkgNames)
 
 		for _, pkg := range pkgNames {
-			generatedHTML += fmt.Sprintf("<h2>Package %s</h2>", pkg)
-			generatedHTML += "<ul>"
+			fmt.Fprintf(&sb, "<h2>Package %s</h2>", pkg)
+			sb.WriteString("<ul>")
 
 			// Sort workspaces by QName for consistent ordering
 			workspaces := packages[pkg]
@@ -73,14 +77,16 @@ func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 				return workspaces[i].QName().String() < workspaces[j].QName().String()
 			})
 
+			appOwnerStr := qw.msg.AppQName().Owner()
+			appNameStr := qw.msg.AppQName().Name()
 			for _, ws := range workspaces {
-				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(), ws.QName().String())
-				generatedHTML += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, ref, ws.QName().String())
+				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles", appOwnerStr, appNameStr, ws.QName().String())
+				fmt.Fprintf(&sb, `<li><a href="%s">%s</a></li>`, html.EscapeString(ref), html.EscapeString(ws.QName().String()))
 			}
-			generatedHTML += "</ul>"
+			sb.WriteString("</ul>")
 		}
 	}
-	generatedHTML += "</body></html>"
+	sb.WriteString("</body></html>")
 
-	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_TextHTML, StatusCode: http.StatusOK}, generatedHTML)
+	return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_TextHTML, StatusCode: http.StatusOK}, sb.String())
 }

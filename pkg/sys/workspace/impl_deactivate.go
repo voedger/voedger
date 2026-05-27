@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -247,7 +248,7 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 		//   login profile (ownerApp != projectorApp):   projectorApp (= targetApp) at pseudoWSID(NullWSID, wsName)
 		//                                                per pkg/registry/impl_invokecreateworkspaceid.go
 		wsName := wsDesc.AsString(authnz.Field_WSName)
-		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":%q}}`, ownerWSID, wsName)
+		body := jsonu.Jprintf(`{"args":{"OwnerWSID":%d,"WSName":%q}}`, ownerWSID, wsName)
 		cdocWorkspaceIDApp := ownerApp
 		cdocWorkspaceIDAppToken := ownerAppToken
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID()) // nolint G115

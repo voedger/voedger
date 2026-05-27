@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
-	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
@@ -529,69 +528,4 @@ func Test_TypeKind_Limitables(t *testing.T) {
 	require.Panics(func() {
 		appdef.TypeKind_Limitables.ClearAll()
 	}, "should be read-only")
-}
-
-func TestTypeKind_MarshalText(t *testing.T) {
-	tests := []struct {
-		name string
-		k    appdef.TypeKind
-		want string
-	}{
-		{name: `0 —> "appdef.TypeKind_null"`,
-			k:    appdef.TypeKind_null,
-			want: `TypeKind_null`,
-		},
-		{name: `2 —> "TypeKind_Data"`,
-			k:    appdef.TypeKind_Data,
-			want: `TypeKind_Data`,
-		},
-		{name: `3 —> "appdef.TypeKind_GDoc"`,
-			k:    appdef.TypeKind_GDoc,
-			want: `TypeKind_GDoc`,
-		},
-		{name: `TypeKind_FakeLast —> <number>`,
-			k:    appdef.TypeKind_count,
-			want: strconvu.UintToString(appdef.TypeKind_count),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.k.MarshalText()
-			if err != nil {
-				t.Errorf("appdef.TypeKind.MarshalText() unexpected error %v", err)
-				return
-			}
-			if string(got) != tt.want {
-				t.Errorf("appdef.TypeKind.MarshalText() = %s, want %v", got, tt.want)
-			}
-		})
-	}
-
-	t.Run("100% cover appdef.TypeKind.String()", func(t *testing.T) {
-		const tested = appdef.TypeKind_count + 1
-		want := "TypeKind(" + strconvu.UintToString(tested) + ")"
-		got := tested.String()
-		if got != want {
-			t.Errorf("(TypeKind_FakeLast + 1).String() = %v, want %v", got, want)
-		}
-	})
-}
-
-func TestTypeKindTrimString(t *testing.T) {
-	tests := []struct {
-		name string
-		k    appdef.TypeKind
-		want string
-	}{
-		{name: "null", k: appdef.TypeKind_null, want: "null"},
-		{name: "basic", k: appdef.TypeKind_CDoc, want: "CDoc"},
-		{name: "out of range", k: appdef.TypeKind_count + 1, want: (appdef.TypeKind_count + 1).String()},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.k.TrimString(); got != tt.want {
-				t.Errorf("%v.(appdef.TypeKind).TrimString() = %v, want %v", tt.k, got, tt.want)
-			}
-		})
-	}
 }
