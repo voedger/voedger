@@ -40,6 +40,8 @@ Systems:
 
 ## Concepts
 
+### Platform
+
 - `Application`
   - A Voedger application defined by VSQL schemas and WASM extensions
 
@@ -60,6 +62,35 @@ Systems:
 
 - `CQRS`
   - Separation of write side (commands) from read side (queries and projections)
+
+### Authentication
+
+- `Subject`
+  - An entity that can make a request to Voedger, such as a user or device
+
+- `User`
+  - A human subject that authenticates with a login and credentials
+
+- `Device`
+  - A non-human subject that authenticates with generated device credentials
+
+- `Login`
+  - A registry identity used to authenticate a subject for an application
+
+- `Credential`
+  - Evidence presented by a subject during authentication, such as a password or verified value token
+
+- `Principal`
+  - An authenticated identity representation for a subject
+
+- `Principal Token`
+  - A bearer token issued after authentication that carries authn identity fields such as login, subject kind, and profile workspace
+
+- `Verified Value Token`
+  - A token proving that a verification flow, such as email verification, has succeeded for a specific value
+
+- `Profile Workspace`
+  - A workspace associated with a login that stores the subject profile and must be ready before sign-in succeeds
 
 ---
 
