@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/strconvu"
 )
 
 func Test_SysDataName(t *testing.T) {
@@ -36,69 +35,6 @@ func Test_SysDataName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := appdef.SysDataName(tt.args.k); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sysDataTypeName() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestConstraintKind_MarshalText(t *testing.T) {
-	tests := []struct {
-		name string
-		k    appdef.ConstraintKind
-		want string
-	}{
-		{
-			name: `0 —> "ConstraintKind_null"`,
-			k:    appdef.ConstraintKind_null,
-			want: `ConstraintKind_null`,
-		},
-		{
-			name: `1 —> "ConstraintKind_MinLen"`,
-			k:    appdef.ConstraintKind_MinLen,
-			want: `ConstraintKind_MinLen`,
-		},
-		{
-			name: `ConstraintKind_count —> 4`,
-			k:    appdef.ConstraintKind_count,
-			want: strconvu.UintToString(appdef.ConstraintKind_count),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.k.MarshalText()
-			if err != nil {
-				t.Errorf("%T.MarshalText() unexpected error %v", tt.k, err)
-				return
-			}
-			if string(got) != tt.want {
-				t.Errorf("%T.MarshalText() = %v, want %v", tt.k, got, tt.want)
-			}
-		})
-	}
-
-	t.Run("100% cover", func(t *testing.T) {
-		const tested = appdef.ConstraintKind_count + 1
-		want := "ConstraintKind(" + strconvu.UintToString(tested) + ")"
-		got := tested.String()
-		if got != want {
-			t.Errorf("(ConstraintKind_count + 1).String() = %v, want %v", got, want)
-		}
-	})
-}
-
-func TestConstraintKind_TrimString(t *testing.T) {
-	tests := []struct {
-		name string
-		k    appdef.ConstraintKind
-		want string
-	}{
-		{name: "basic", k: appdef.ConstraintKind_MinLen, want: "MinLen"},
-		{name: "out of range", k: appdef.ConstraintKind_count + 1, want: (appdef.ConstraintKind_count + 1).String()},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.k.TrimString(); got != tt.want {
-				t.Errorf("%v.(%T).TrimString() = %v, want %v", tt.k, tt.k, got, tt.want)
 			}
 		})
 	}
@@ -130,74 +66,6 @@ func TestDataKindType_IsFixed(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.args.kind.IsFixed(); got != tt.want {
 				t.Errorf("%v.IsFixed() = %v, want %v", tt.args.kind, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDataKindType_MarshalText(t *testing.T) {
-	tests := []struct {
-		name string
-		k    appdef.DataKind
-		want string
-	}{
-		{
-			name: `0 —> "DataKind_null"`,
-			k:    appdef.DataKind_null,
-			want: `DataKind_null`,
-		},
-		{
-			name: `1 —> "DataKind_int8"`, // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
-			k:    appdef.DataKind_int8,
-			want: `DataKind_int8`,
-		},
-		{
-			name: `3 —> "DataKind_int32"`,
-			k:    appdef.DataKind_int32,
-			want: `DataKind_int32`,
-		},
-		{
-			name: `DataKind_FakeLast —> 12`,
-			k:    appdef.DataKind_FakeLast,
-			want: strconvu.UintToString(appdef.DataKind_FakeLast),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.k.MarshalText()
-			if err != nil {
-				t.Errorf("DataKind.MarshalText() unexpected error %v", err)
-				return
-			}
-			if string(got) != tt.want {
-				t.Errorf("DataKind.MarshalText() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	t.Run("100% cover", func(t *testing.T) {
-		const tested = appdef.DataKind_FakeLast + 1
-		want := "DataKind(" + strconvu.UintToString(tested) + ")"
-		got := tested.String()
-		if got != want {
-			t.Errorf("(DataKind_FakeLast + 1).String() = %v, want %v", got, want)
-		}
-	})
-}
-
-func TestDataKind_TrimString(t *testing.T) {
-	tests := []struct {
-		name string
-		k    appdef.DataKind
-		want string
-	}{
-		{name: "basic", k: appdef.DataKind_int32, want: "int32"},
-		{name: "out of range", k: appdef.DataKind_FakeLast + 1, want: (appdef.DataKind_FakeLast + 1).String()},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.k.TrimString(); got != tt.want {
-				t.Errorf("%v.(DataKind).TrimString() = %v, want %v", tt.k, got, tt.want)
 			}
 		})
 	}

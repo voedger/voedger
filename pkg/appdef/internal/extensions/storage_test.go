@@ -168,34 +168,28 @@ func Test_Storages(t *testing.T) {
 	})
 
 	t.Run("should be panics", func(t *testing.T) {
-		t.Run("if invalid states", func(t *testing.T) {
-			adb := builder.New()
-			adb.AddPackage("test", "test.com/test")
-			wsb := adb.AddWorkspace(wsName)
-			prj := wsb.AddProjector(prjName)
-			require.Panics(func() { prj.States().Add(appdef.NullQName) },
-				require.Is(appdef.ErrMissedError))
-			require.Panics(func() { prj.States().Add(appdef.NewQName("appdef.naked", "🔫")) },
-				require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
-			require.Panics(func() { prj.States().Add(sysRecords, appdef.NewQName("naked", "🔫")) },
-				require.Is(appdef.ErrInvalidError), require.Has("🔫"))
-			require.Panics(func() { prj.States().SetComment(appdef.NewQName("unknown", "storage"), "comment") },
-				require.Is(appdef.ErrNotFoundError), require.Has("unknown.storage"))
-		})
-
-		t.Run("if invalid intents", func(t *testing.T) {
-			adb := builder.New()
-			adb.AddPackage("test", "test.com/test")
-			wsb := adb.AddWorkspace(wsName)
-			prj := wsb.AddProjector(prjName)
-			require.Panics(func() { prj.Intents().Add(appdef.NullQName) },
-				require.Is(appdef.ErrMissedError))
-			require.Panics(func() { prj.Intents().Add(appdef.NewQName("appdef.naked", "🔫")) },
-				require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
-			require.Panics(func() { prj.Intents().Add(sysRecords, appdef.NewQName("naked", "🔫")) },
-				require.Is(appdef.ErrInvalidError), require.Has("🔫"))
-			require.Panics(func() { prj.Intents().SetComment(appdef.NewQName("unknown", "storage"), "comment") },
-				require.Is(appdef.ErrNotFoundError), require.Has("unknown.storage"))
-		})
+		cases := []struct {
+			name string
+			pick func(appdef.IProjectorBuilder) appdef.IStoragesBuilder
+		}{
+			{"if invalid states", func(p appdef.IProjectorBuilder) appdef.IStoragesBuilder { return p.States() }},
+			{"if invalid intents", func(p appdef.IProjectorBuilder) appdef.IStoragesBuilder { return p.Intents() }},
+		}
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				adb := builder.New()
+				adb.AddPackage("test", "test.com/test")
+				wsb := adb.AddWorkspace(wsName)
+				s := c.pick(wsb.AddProjector(prjName))
+				require.Panics(func() { s.Add(appdef.NullQName) },
+					require.Is(appdef.ErrMissedError))
+				require.Panics(func() { s.Add(appdef.NewQName("appdef.naked", "🔫")) },
+					require.Is(appdef.ErrInvalidError), require.Has("naked.🔫"))
+				require.Panics(func() { s.Add(sysRecords, appdef.NewQName("naked", "🔫")) },
+					require.Is(appdef.ErrInvalidError), require.Has("🔫"))
+				require.Panics(func() { s.SetComment(appdef.NewQName("unknown", "storage"), "comment") },
+					require.Is(appdef.ErrNotFoundError), require.Has("unknown.storage"))
+			})
+		}
 	})
 }

@@ -20,6 +20,175 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
+type aclFieldsNames struct {
+	ws, cDoc, oDoc, view, query, cmd, tag     appdef.QName
+	everyone, reader, writer, admin, intruder appdef.QName
+}
+
+func buildAppWithFieldACL(t *testing.T, n aclFieldsNames) appdef.IAppDef {
+	require := require.New(t)
+
+	adb := builder.New()
+	adb.AddPackage("test", "test.com/test")
+
+	wsb := adb.AddWorkspace(n.ws)
+	wsb.AddTag(n.tag)
+
+	cDoc := wsb.AddCDoc(n.cDoc)
+	cDoc.
+		AddField("field1", appdef.DataKind_int32, true).
+		AddField("hiddenField", appdef.DataKind_int32, false).
+		AddField("field3", appdef.DataKind_int32, false)
+	cDoc.SetTag(n.tag)
+
+	oDoc := wsb.AddODoc(n.oDoc)
+	oDoc.AddField("field1", appdef.DataKind_int32, true)
+	oDoc.SetTag(n.tag)
+
+	view := wsb.AddView(n.view)
+	view.Key().PartKey().AddField("field1", appdef.DataKind_int32)
+	view.Key().ClustCols().AddField("field2", appdef.DataKind_int32)
+	view.Value().AddField("field3", appdef.DataKind_int32, false)
+
+	qry := wsb.AddQuery(n.query)
+	qry.SetResult(n.cDoc)
+
+	cmd := wsb.AddCommand(n.cmd)
+	cmd.SetParam(appdef.QNameANY)
+
+	_ = wsb.AddRole(n.everyone)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(n.view),
+		nil,
+		n.everyone,
+		"grant select view to everyone")
+
+	_ = wsb.AddRole(n.reader)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Inherits},
+		filter.QNames(n.everyone),
+		nil,
+		n.reader,
+		"grant inherits everyone to reader")
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.And(filter.WSTypes(n.ws, appdef.TypeKind_CDoc), filter.Tags(n.tag)),
+		nil,
+		n.reader,
+		"grant select any CDoc with tag to reader")
+	wsb.Revoke(
+		[]appdef.OperationKind{appdef.OperationKind_Select},
+		filter.QNames(n.cDoc),
+		[]appdef.FieldName{"hiddenField"},
+		n.reader,
+		"revoke select doc.hiddenField from reader")
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Execute},
+		filter.QNames(n.query),
+		nil,
+		n.reader,
+		"grant execute query to reader")
+
+	_ = wsb.AddRole(n.writer)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Inherits},
+		filter.QNames(n.everyone),
+		nil,
+		n.writer,
+		"grant inherits everyone to writer")
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Insert},
+		filter.And(filter.WSTypes(n.ws, appdef.TypeKind_CDoc), filter.Tags(n.tag)),
+		nil,
+		n.writer,
+		"grant insert any CDoc with tag to writer")
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Update},
+		filter.QNames(n.cDoc),
+		[]appdef.FieldName{"field1", "hiddenField", "field3"},
+		n.writer,
+		"grant update doc.field[1,hidden,3] to writer")
+	wsb.Revoke(
+		[]appdef.OperationKind{appdef.OperationKind_Update},
+		filter.QNames(n.cDoc),
+		[]appdef.FieldName{"hiddenField"},
+		n.writer,
+		"revoke update doc.hiddenField from writer")
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Execute},
+		filter.AllWSFunctions(n.ws),
+		nil,
+		n.writer,
+		"grant execute all commands and queries to writer")
+
+	_ = wsb.AddRole(n.admin)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Inherits},
+		filter.QNames(n.everyone),
+		nil,
+		n.admin,
+		"grant inherits everyone to admin")
+	wsb.GrantAll(filter.AllWSTables(n.ws), n.admin)
+	wsb.GrantAll(filter.AllWSFunctions(n.ws), n.admin)
+
+	_ = wsb.AddRole(n.intruder)
+	wsb.Grant(
+		[]appdef.OperationKind{appdef.OperationKind_Inherits},
+		filter.QNames(n.everyone),
+		nil,
+		n.intruder,
+		"grant inherits everyone to intruder")
+	wsb.RevokeAll(
+		filter.WSTypes(n.ws, appdef.TypeKind_CDoc),
+		n.intruder,
+		"revoke all access to CDocs from intruder")
+	wsb.RevokeAll(
+		filter.AllWSFunctions(n.ws),
+		n.intruder,
+		"revoke all access to functions from intruder")
+
+	app, err := adb.Build()
+	require.NoError(err)
+	require.NotNil(app)
+	return app
+}
+
+type aclAncestorsNames struct {
+	aws, ws1, ws2, ws3, role, r2, doc1, doc2 appdef.QName
+}
+
+func buildAppWithAncestors(t *testing.T, n aclAncestorsNames) appdef.IAppDef {
+	require := require.New(t)
+
+	adb := builder.New()
+	adb.AddPackage("test", "test.com/test")
+
+	aws := adb.AddWorkspace(n.aws)
+	_ = aws.AddCDoc(n.doc1)
+	_ = aws.AddCDoc(n.doc2)
+	_ = aws.AddRole(n.role)
+	aws.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.AllWSTables(n.aws), nil, n.role, "grant select all tables to role")
+
+	ws1 := adb.AddWorkspace(n.ws1)
+	ws1.SetAncestors(n.aws)
+	ws1.GrantAll(filter.QNames(n.doc1), n.role, "grant all on doc1 to role")
+
+	ws2 := adb.AddWorkspace(n.ws2)
+	ws2.SetAncestors(n.aws)
+	_ = ws2.AddRole(n.r2)
+	ws2.GrantAll(filter.QNames(n.doc2), n.r2, "grant all on doc2 to r2")
+	ws2.GrantAll(filter.WSTypes(n.ws2, appdef.TypeKind_Role), n.role, "grant {ALL WS ROLES} to role") // #3127
+
+	ws3 := adb.AddWorkspace(n.ws3)
+	ws3.SetAncestors(n.aws)
+	ws3.RevokeAll(filter.QNames(n.doc1, n.doc2), n.role, "revoke all on doc1, doc2 from role")
+
+	a, err := adb.Build()
+	require.NoError(err)
+	return a
+}
+
 func TestRecursiveRoleAncestors(t *testing.T) {
 	require := require.New(t)
 
@@ -177,131 +346,12 @@ func TestIsOperationAllowed(t *testing.T) {
 	intruder := appdef.NewQName("test", "intruder")
 
 	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
-		adb := builder.New()
-		adb.AddPackage("test", "test.com/test")
-
-		wsb := adb.AddWorkspace(wsName)
-
-		wsb.AddTag(tagName)
-
-		cDoc := wsb.AddCDoc(cDocName)
-		cDoc.
-			AddField("field1", appdef.DataKind_int32, true).
-			AddField("hiddenField", appdef.DataKind_int32, false).
-			AddField("field3", appdef.DataKind_int32, false)
-		cDoc.SetTag(tagName)
-
-		oDoc := wsb.AddODoc(oDocName)
-		oDoc.AddField("field1", appdef.DataKind_int32, true)
-		oDoc.SetTag(tagName)
-
-		view := wsb.AddView(viewName)
-		view.Key().PartKey().AddField("field1", appdef.DataKind_int32)
-		view.Key().ClustCols().AddField("field2", appdef.DataKind_int32)
-		view.Value().AddField("field3", appdef.DataKind_int32, false)
-
-		qry := wsb.AddQuery(queryName)
-		qry.SetResult(cDocName)
-
-		cmd := wsb.AddCommand(cmdName)
-		cmd.SetParam(appdef.QNameANY)
-
-		_ = wsb.AddRole(everyone)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.QNames(viewName),
-			nil,
-			everyone,
-			"grant select view to everyone")
-
-		_ = wsb.AddRole(reader)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			reader,
-			"grant inherits everyone to reader")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
-			nil,
-			reader,
-			"grant select any CDoc with tag to reader")
-		wsb.Revoke(
-			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.QNames(cDocName),
-			[]appdef.FieldName{"hiddenField"},
-			reader,
-			"revoke select doc.field1 from reader")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.QNames(queryName),
-			nil,
-			reader,
-			"grant execute query to reader")
-
-		_ = wsb.AddRole(writer)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			writer,
-			"grant inherits everyone to writer")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Insert},
-			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
-			nil,
-			writer,
-			"grant insert any CDoc with tag to writer")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Update},
-			filter.QNames(cDocName),
-			[]appdef.FieldName{"field1", "hiddenField", "field3"},
-			writer,
-			"grant update doc.field[1,hidden,3] to writer")
-		wsb.Revoke(
-			[]appdef.OperationKind{appdef.OperationKind_Update},
-			filter.QNames(cDocName),
-			[]appdef.FieldName{"hiddenField"},
-			writer,
-			"revoke update doc.hiddenField from writer")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.AllWSFunctions(wsName),
-			nil,
-			writer,
-			"grant execute all commands and queries to writer")
-
-		_ = wsb.AddRole(admin)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			admin,
-			"grant inherits everyone to admin")
-		wsb.GrantAll(filter.AllWSTables(wsName), admin)
-		wsb.GrantAll(filter.AllWSFunctions(wsName), admin)
-
-		_ = wsb.AddRole(intruder)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			intruder,
-			"grant inherits everyone to intruder")
-		wsb.RevokeAll(
-			filter.WSTypes(wsName, appdef.TypeKind_CDoc),
-			intruder,
-			"revoke all access to CDocs from intruder")
-		wsb.RevokeAll(
-			filter.AllWSFunctions(wsName),
-			intruder,
-			"revoke all access to functions from intruder")
-
-		var err error
-		app, err = adb.Build()
-		require.NoError(err)
-		require.NotNil(app)
+		app = buildAppWithFieldACL(t, aclFieldsNames{
+			ws: wsName, cDoc: cDocName, oDoc: oDocName, view: viewName,
+			query: queryName, cmd: cmdName, tag: tagName,
+			everyone: everyone, reader: reader, writer: writer,
+			admin: admin, intruder: intruder,
+		})
 	})
 
 	t.Run("test IsOperationAllowed", func(t *testing.T) {
@@ -769,33 +819,10 @@ func TestIsOperationAllowedWSInheritances(t *testing.T) {
 	docs := []appdef.QName{doc1Name, doc2Name}
 
 	t.Run("should be ok to build application", func(t *testing.T) {
-		adb := builder.New()
-		adb.AddPackage("test", "test.com/test")
-
-		aws := adb.AddWorkspace(awsName)
-		_ = aws.AddCDoc(doc1Name)
-		_ = aws.AddCDoc(doc2Name)
-		_ = aws.AddRole(roleName)
-		aws.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.AllWSTables(awsName), nil, roleName, "grant select all tables to role")
-
-		ws1 := adb.AddWorkspace(ws1Name)
-		ws1.SetAncestors(awsName)
-		ws1.GrantAll(filter.QNames(doc1Name), roleName, "grant all on doc1 to role")
-
-		ws2 := adb.AddWorkspace(ws2Name)
-		ws2.SetAncestors(awsName)
-		_ = ws2.AddRole(r2Name)
-		ws2.GrantAll(filter.QNames(doc2Name), r2Name, "grant all on doc2 to r2")
-		ws2.GrantAll(filter.WSTypes(ws2Name, appdef.TypeKind_Role), roleName, "grant {ALL WS ROLES} to role") // #3127
-
-		ws3 := adb.AddWorkspace(ws3Name)
-		ws3.SetAncestors(awsName)
-		ws3.RevokeAll(filter.QNames(doc1Name, doc2Name), roleName, "revoke all on doc1, doc2 from role")
-
-		a, err := adb.Build()
-		require.NoError(err)
-
-		app = a
+		app = buildAppWithAncestors(t, aclAncestorsNames{
+			aws: awsName, ws1: ws1Name, ws2: ws2Name, ws3: ws3Name,
+			role: roleName, r2: r2Name, doc1: doc1Name, doc2: doc2Name,
+		})
 	})
 
 	require.NotNil(app)
@@ -869,131 +896,12 @@ func TestPublishedTypes(t *testing.T) {
 	intruder := appdef.NewQName("test", "intruder") // everyone - all access to all tables and functions
 
 	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
-		adb := builder.New()
-		adb.AddPackage("test", "test.com/test")
-
-		wsb := adb.AddWorkspace(wsName)
-
-		wsb.AddTag(tagName)
-
-		cDoc := wsb.AddCDoc(cDocName)
-		cDoc.
-			AddField("field1", appdef.DataKind_int32, true).
-			AddField("hiddenField", appdef.DataKind_int32, false).
-			AddField("field3", appdef.DataKind_int32, false)
-		cDoc.SetTag(tagName)
-
-		oDoc := wsb.AddODoc(oDocName)
-		oDoc.AddField("field1", appdef.DataKind_int32, true)
-		oDoc.SetTag(tagName)
-
-		view := wsb.AddView(viewName)
-		view.Key().PartKey().AddField("field1", appdef.DataKind_int32)
-		view.Key().ClustCols().AddField("field2", appdef.DataKind_int32)
-		view.Value().AddField("field3", appdef.DataKind_int32, false)
-
-		qry := wsb.AddQuery(queryName)
-		qry.SetResult(cDocName)
-
-		cmd := wsb.AddCommand(cmdName)
-		cmd.SetParam(appdef.QNameANY)
-
-		_ = wsb.AddRole(everyone)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.QNames(viewName),
-			nil,
-			everyone,
-			"grant select view to everyone")
-
-		_ = wsb.AddRole(reader)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			reader,
-			"grant inherits everyone to reader")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
-			nil,
-			reader,
-			"grant select any CDoc with tag to reader")
-		wsb.Revoke(
-			[]appdef.OperationKind{appdef.OperationKind_Select},
-			filter.QNames(cDocName),
-			[]appdef.FieldName{"hiddenField"},
-			reader,
-			"revoke select doc.field1 from reader")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.QNames(queryName),
-			nil,
-			reader,
-			"grant execute query to reader")
-
-		_ = wsb.AddRole(writer)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			writer,
-			"grant inherits everyone to writer")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Insert},
-			filter.And(filter.WSTypes(wsName, appdef.TypeKind_CDoc), filter.Tags(tagName)),
-			nil,
-			writer,
-			"grant insert any CDoc with tag to writer")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Update},
-			filter.QNames(cDocName),
-			[]appdef.FieldName{"field1", "hiddenField", "field3"},
-			writer,
-			"grant update doc.field[1,hidden,3] to writer")
-		wsb.Revoke(
-			[]appdef.OperationKind{appdef.OperationKind_Update},
-			filter.QNames(cDocName),
-			[]appdef.FieldName{"hiddenField"},
-			writer,
-			"revoke update doc.hiddenField from writer")
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Execute},
-			filter.AllWSFunctions(wsName),
-			nil,
-			writer,
-			"grant execute all commands and queries to writer")
-
-		_ = wsb.AddRole(admin)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			admin,
-			"grant inherits everyone to admin")
-		wsb.GrantAll(filter.AllWSTables(wsName), admin)
-		wsb.GrantAll(filter.AllWSFunctions(wsName), admin)
-
-		_ = wsb.AddRole(intruder)
-		wsb.Grant(
-			[]appdef.OperationKind{appdef.OperationKind_Inherits},
-			filter.QNames(everyone),
-			nil,
-			intruder,
-			"grant inherits everyone to intruder")
-		wsb.RevokeAll(
-			filter.WSTypes(wsName, appdef.TypeKind_CDoc),
-			intruder,
-			"revoke all access to CDocs from intruder")
-		wsb.RevokeAll(
-			filter.AllWSFunctions(wsName),
-			intruder,
-			"revoke all access to functions from intruder")
-
-		var err error
-		app, err = adb.Build()
-		require.NoError(err)
-		require.NotNil(app)
+		app = buildAppWithFieldACL(t, aclFieldsNames{
+			ws: wsName, cDoc: cDocName, oDoc: oDocName, view: viewName,
+			query: queryName, cmd: cmdName, tag: tagName,
+			everyone: everyone, reader: reader, writer: writer,
+			admin: admin, intruder: intruder,
+		})
 	})
 
 	t.Run("test PublishedTypes", func(t *testing.T) {
@@ -1188,33 +1096,10 @@ func TestPublishedTypesWSInheritances(t *testing.T) {
 	doc2Name := appdef.NewQName("test", "doc2")
 
 	t.Run("should be ok to build application", func(t *testing.T) {
-		adb := builder.New()
-		adb.AddPackage("test", "test.com/test")
-
-		aws := adb.AddWorkspace(awsName)
-		_ = aws.AddCDoc(doc1Name)
-		_ = aws.AddCDoc(doc2Name)
-		_ = aws.AddRole(roleName)
-		aws.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, filter.AllWSTables(awsName), nil, roleName, "grant select all tables to role")
-
-		ws1 := adb.AddWorkspace(ws1Name)
-		ws1.SetAncestors(awsName)
-		ws1.GrantAll(filter.QNames(doc1Name), roleName, "grant all on doc1 to role")
-
-		ws2 := adb.AddWorkspace(ws2Name)
-		ws2.SetAncestors(awsName)
-		_ = ws2.AddRole(r2Name)
-		ws2.GrantAll(filter.QNames(doc2Name), r2Name, "grant all on doc2 to r2")
-		ws2.GrantAll(filter.WSTypes(ws2Name, appdef.TypeKind_Role), roleName, "grant {ALL WS ROLES} to role") // #3127
-
-		ws3 := adb.AddWorkspace(ws3Name)
-		ws3.SetAncestors(awsName)
-		ws3.RevokeAll(filter.QNames(doc1Name, doc2Name), roleName, "revoke all on doc1, doc2 from role")
-
-		a, err := adb.Build()
-		require.NoError(err)
-
-		app = a
+		app = buildAppWithAncestors(t, aclAncestorsNames{
+			aws: awsName, ws1: ws1Name, ws2: ws2Name, ws3: ws3Name,
+			role: roleName, r2: r2Name, doc1: doc1Name, doc2: doc2Name,
+		})
 	})
 
 	require.NotNil(app)
