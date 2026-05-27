@@ -82,7 +82,7 @@ func buildAppWithFieldACL(t *testing.T, n aclFieldsNames) appdef.IAppDef {
 		filter.QNames(n.cDoc),
 		[]appdef.FieldName{"hiddenField"},
 		n.reader,
-		"revoke select doc.field1 from reader")
+		"revoke select doc.hiddenField from reader")
 	wsb.Grant(
 		[]appdef.OperationKind{appdef.OperationKind_Execute},
 		filter.QNames(n.query),

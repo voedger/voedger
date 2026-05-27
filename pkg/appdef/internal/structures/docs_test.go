@@ -29,22 +29,18 @@ type docFixture struct {
 }
 
 func seqAsDoc[T appdef.IDoc](s iter.Seq[T]) iter.Seq[appdef.IDoc] {
-	return func(visit func(appdef.IDoc) bool) {
-		for v := range s {
-			if !visit(v) {
-				return
-			}
-		}
+	return func(yield func(appdef.IDoc) bool) {
+		s(func(v T) bool {
+			return yield(v)
+		})
 	}
 }
 
 func seqAsRec[T appdef.IRecord](s iter.Seq[T]) iter.Seq[appdef.IRecord] {
-	return func(visit func(appdef.IRecord) bool) {
-		for v := range s {
-			if !visit(v) {
-				return
-			}
-		}
+	return func(yield func(appdef.IRecord) bool) {
+		s(func(v T) bool {
+			return yield(v)
+		})
 	}
 }
 
@@ -88,9 +84,9 @@ var docFixtures = []docFixture{
 }
 
 func Test_Docs(t *testing.T) {
+	require := require.New(t)
 	for _, fx := range docFixtures {
 		t.Run(fx.name, func(t *testing.T) {
-			require := require.New(t)
 
 			wsName := appdef.NewQName("test", "workspace")
 			docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")

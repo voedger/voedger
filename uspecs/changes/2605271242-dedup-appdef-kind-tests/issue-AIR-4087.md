@@ -16,7 +16,9 @@ Four test files ( cdoc_test.go,gdoc_test.go,odoc_test.go,wdoc_test.go) are 83-li
 Consequences:
 Adding a new enum kind or doc kind requires copy-pasting an entire file and renaming symbols, with no compile-time guarantee that the new kind gets the same coverage as existing ones
 Fixing a defect in the shared logic requires N identical edits, with high risk of forgetting one
-~580 LOC of repetition obscures the actual test intent and inflates review surface for every kind-related changeWhat
+~580 LOC of repetition obscures the actual test intent and inflates review surface for every kind-related change
+
+What
 Consolidate the duplicated tests into two fixture-driven scenarios under pkg/appdef:
 One unified scenario for enum kinds (MarshalText and TrimString) parameterised by the enum type, covering all ~uint8 kinds currently tested individually
 One unified scenario for doc kinds (CDoc, GDoc, ODoc, WDoc) parameterised by builder + lookup + enumerator callbacks, covering build, find-by-name, container-kind, nil-on-unknown, and enumeration
