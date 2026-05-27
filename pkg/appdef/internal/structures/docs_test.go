@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2025-present Sigma-Soft, Ltd.
- * @author: Nikolay Nikitin
+ * Copyright (c) 2026-present unTill Software Development Group B.V.
+ * @author Denis Gribanov
  */
 
 package structures_test
