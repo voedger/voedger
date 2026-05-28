@@ -1,82 +1,13 @@
 # Feature technical design: authn
 
-Technical design for user and device authentication, principal token issue and
-refresh, profile workspace readiness, and password lifecycle.
+Technical design for the authentication feature: login creation, sign-in, principal token issue and refresh, profile workspace readiness, and password lifecycle flows.
 
 ## External actors
 
 Roles:
 
 - `@Client`
-  - External application or caller using Voedger HTTP APIs.
-
-## Scenarios overview
-
-- **`Client creates a user login from a verified email token`**
-  - Validates a verified email token and creates a user login in the registry.
-
-- **`Client creates a device login`**
-  - Generates device credentials and creates a device login in the registry.
-
-- **`Login creation rejects duplicate login`**
-  - Registry rejects active duplicate login records.
-
-- **`User login creation rejects malformed request`**
-  - Public user creation handler rejects missing required fields.
-
-- **`Device login creation rejects request body`**
-  - Public device creation handler rejects bodies because credentials are generated server-side.
-
-- **`Subject signs in after profile workspace is ready`**
-  - Registry validates credentials and returns a principal token for ready profiles.
-
-- **`Sign-in reports profile workspace not ready`**
-  - Sign-in returns conflict while profile workspace creation has not finished.
-
-- **`Sign-in reports profile workspace creation error`**
-  - Sign-in surfaces profile workspace creation failure.
-
-- **`Principal token carries authn identity fields`**
-  - Principal token payload contains login, subject kind, and profile workspace ID.
-
-- **`Principal token uses default TTL when no custom TTL is requested`**
-  - Token issue applies default principal token expiration.
-
-- **`Principal token rejects TTL above the maximum`**
-  - Registry rejects token TTL requests above the configured maximum.
-
-- **`Client refreshes a principal token`**
-  - Refresh validates an existing token and issues a replacement with the same authn identity payload.
-
-- **`Client changes user password`**
-  - Registry validates the current password and writes a new password hash.
-
-- **`Password change rejects malformed request`**
-  - Public password change handler rejects missing or non-string fields.
-
-- **`Password change rejects unknown login or wrong current password`**
-  - Registry rejects password changes without valid current credentials.
-
-- **`Client resets password by verified email`**
-  - Client initiates email verification, converts code to verified value token, and resets the password.
-
-- **`Password reset initiation rejects unknown login`**
-  - Registry rejects reset initiation for missing login.
-
-- **`Password reset verification rejects wrong verification code`**
-  - Verification rejects invalid reset codes.
-
-- **`User login creation rejects an invalid verified email token`**
-  - User creation rejects a token that cannot be validated as a verified email token.
-
-- **`Login creation rejects an invalid login name`**
-  - Registry rejects login names outside the accepted format.
-
-- **`Sign-in rejects unknown login or wrong password`**
-  - Registry rejects sign-in without valid credentials.
-
-- **`Principal token refresh requires an existing token`**
-  - Refresh rejects requests without a bearer token.
+  - External caller that uses Voedger HTTP APIs or registry-backed authn calls.
 
 ## Components
 
@@ -88,25 +19,47 @@ External callers
     +-- @Client
     |
     v
-HTTP API
+Public API endpoints
+    |
+    +-- [/POST /api/v2/apps/{owner}/{app}/users/]
+    +-- [/POST /api/v2/apps/{owner}/{app}/devices/]
+    +-- [/POST /api/v2/apps/{owner}/{app}/users/change-password/]
+    +-- [/POST /api/v2/apps/{owner}/{app}/auth/login/]
+    +-- [/POST /api/v2/apps/{owner}/{app}/auth/refresh/]
+    |
+    v
+Router and API dispatch
     |
     +-- [API v2 auth routes]
     |
     v
-Authn handlers
+Authn request handlers
     |
+    +-- [User login handler]
+    +-- [Device login handler]
+    +-- [Password handler]
     +-- [Auth login handler]
     +-- [Auth refresh handler]
     +-- [Device credential generator]
     |
     v
-Registry and tokens
+Registry operations
     |
-    +-- [Registry login commands]
-    +-- [Registry principal token query]
-    +-- [Registry password commands]
-    +-- [Registry reset password flow]
+    +-- [/c.registry.CreateEmailLogin/]
+    +-- [/c.registry.CreateLogin/]
+    +-- [/q.registry.IssuePrincipalToken/]
+    +-- [/c.registry.ChangePassword/]
+    +-- [/q.registry.InitiateResetPasswordByEmail/]
+    +-- [/q.registry.IssueVerifiedValueTokenForResetPassword/]
+    +-- [/c.registry.ResetPasswordByEmail/]
+    |
+    v
+Token and verification operations
+    |
     +-- [Token service]
+    +-- [/q.sys.RefreshPrincipalToken/]
+    +-- [/q.sys.InitiateEmailVerification/]
+    +-- [/q.sys.IssueVerifiedValueToken/]
     |
     v
 State and workspace lifecycle
@@ -114,277 +67,433 @@ State and workspace lifecycle
     +-- [(registry.Login)]
     +-- [(registry.LoginIdx)]
     +-- [[Profile workspace lifecycle]]
+    |     |
+    |     +-- [/c.sys.CreateWorkspaceID/]
 ```
 
-### HTTP API
+### Public API endpoints
+
+- `[/POST /api/v2/apps/{owner}/{app}/users/]`
+  - Public user login creation endpoint. It accepts a verified email token, display name, and password.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_create_user](../../../../pkg/router/impl_apiv2.go)
+
+- `[/POST /api/v2/apps/{owner}/{app}/devices/]`
+  - Public device login creation endpoint. It rejects request bodies and returns generated device credentials.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_create_device](../../../../pkg/router/impl_apiv2.go)
+
+- `[/POST /api/v2/apps/{owner}/{app}/users/change-password/]`
+  - Public password change endpoint for existing user logins.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_changePassword](../../../../pkg/router/impl_apiv2.go)
+
+- `[/POST /api/v2/apps/{owner}/{app}/auth/login/]`
+  - Public sign-in endpoint. It forwards login/password arguments to query processing through `APIPath_Auth_Login`.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_auth_login](../../../../pkg/router/impl_apiv2.go)
+
+- `[/POST /api/v2/apps/{owner}/{app}/auth/refresh/]`
+  - Public principal token refresh endpoint. It forwards bearer-token refresh requests through `APIPath_Auth_Refresh`.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_auth_refresh](../../../../pkg/router/impl_apiv2.go)
+
+### Router and API dispatch
 
 - `[API v2 auth routes]`
-  - Handles `/users`, `/devices`, `/users/change-password`, `/auth/login`, and `/auth/refresh`.
-  - Path to file: [pkg/router/impl_apiv2.go](../../../../pkg/router/impl_apiv2.go)
+  - Registers the public authn routes and assigns API path identifiers for the query processor.
+  - decl: [pkg/processors/consts.go#APIPath_Auth_Login](../../../../pkg/processors/consts.go)
+  - impl: [pkg/router/impl_apiv2.go#registerHandlersV2](../../../../pkg/router/impl_apiv2.go)
 
-### Authn handlers
+### Authn request handlers
+
+- `[User login handler]`
+  - Parses user login creation input, validates the verified email token, and
+    forwards `registry.CreateEmailLogin` to the registry app.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_create_user](../../../../pkg/router/impl_apiv2.go)
+
+- `[Device login handler]`
+  - Rejects non-empty device creation bodies, generates device credentials, and forwards `registry.CreateLogin` with device subject kind.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_create_device](../../../../pkg/router/impl_apiv2.go)
+
+- `[Password handler]`
+  - Parses public password-change input and forwards `registry.ChangePassword` with logged and unlogged arguments.
+  - impl: [pkg/router/impl_apiv2.go#requestHandlerV2_changePassword](../../../../pkg/router/impl_apiv2.go)
 
 - `[Auth login handler]`
-  - Reads login/password args, calls the registry principal token query, and maps profile readiness responses.
-  - Path to file: [pkg/processors/query2/impl_auth_login_handler.go](../../../../pkg/processors/query2/impl_auth_login_handler.go)
+  - Converts public sign-in input into `registry.IssuePrincipalToken`, maps profile workspace readiness to public responses, and formats authn output.
+  - decl: [pkg/processors/consts.go#APIPath_Auth_Login](../../../../pkg/processors/consts.go)
+  - impl: [pkg/processors/query2/impl_auth_login_handler.go#authLoginHandler](../../../../pkg/processors/query2/impl_auth_login_handler.go)
 
 - `[Auth refresh handler]`
-  - Requires a principal token, calls the app refresh query, validates the returned token, and formats the API response.
-  - Path to file: [pkg/processors/query2/impl_auth_refresh_handler.go](../../../../pkg/processors/query2/impl_auth_refresh_handler.go)
+  - Requires an existing bearer token, invokes `sys.RefreshPrincipalToken`, validates the new token, and formats authn output.
+  - decl: [pkg/processors/consts.go#APIPath_Auth_Refresh](../../../../pkg/processors/consts.go)
+  - impl: [pkg/processors/query2/impl_auth_refresh_handler.go#authRefreshHandler](../../../../pkg/processors/query2/impl_auth_refresh_handler.go)
 
 - `[Device credential generator]`
-  - Generates device login and password values for device login creation.
-  - Path to file: [pkg/coreutils/random.go](../../../../pkg/coreutils/random.go)
+  - Generates device login and password values used by device login creation.
+  - impl: [pkg/coreutils/random.go#DeviceRandomLoginPwd](../../../../pkg/coreutils/random.go)
 
-### Registry and tokens
+### Registry operations
 
-- `[Registry login commands]`
-  - Validate login placement, target app, subject kind, login format, and duplicates, then create `[(registry.Login)]`.
-  - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
+- `[/c.registry.CreateEmailLogin/]`
+  - Creates a user `[(registry.Login)]` record from a verified email value and starts profile workspace creation.
+  - decl: [pkg/registry/appws.vsql#CreateEmailLogin](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_createlogin.go#execCmdCreateEmailLogin](../../../../pkg/registry/impl_createlogin.go)
 
-- `[Registry principal token query]`
-  - Validates login/password, checks profile readiness fields, applies TTL policy, and issues principal tokens.
-  - Path to file: [pkg/registry/impl_issueprincipaltoken.go](../../../../pkg/registry/impl_issueprincipaltoken.go)
+- `[/c.registry.CreateLogin/]`
+  - Creates a non-email login record, including device logins, after app, login format, duplicate, and profile-cluster validation.
+  - decl: [pkg/registry/appws.vsql#CreateLogin](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_createlogin.go#execCmdCreateLogin](../../../../pkg/registry/impl_createlogin.go)
 
-- `[Registry password commands]`
-  - Validates old password and updates the password hash.
-  - Path to file: [pkg/registry/impl_changepassword.go](../../../../pkg/registry/impl_changepassword.go)
+- `[/q.registry.IssuePrincipalToken/]`
+  - Resolves login state, validates password and profile readiness, applies TTL policy, and issues principal tokens.
+  - decl: [pkg/registry/appws.vsql#IssuePrincipalToken](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_issueprincipaltoken.go#provideIssuePrincipalTokenExec](../../../../pkg/registry/impl_issueprincipaltoken.go)
 
-- `[Registry reset password flow]`
-  - Initiates reset verification, exchanges code for a verified value token, and resets the password.
-  - Path to file: [pkg/registry/impl_resetpassword.go](../../../../pkg/registry/impl_resetpassword.go)
+- `[/c.registry.ChangePassword/]`
+  - Validates current password and writes the new password hash.
+  - decl: [pkg/registry/appws.vsql#ChangePassword](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_changepassword.go#cmdChangePasswordExec](../../../../pkg/registry/impl_changepassword.go)
+
+- `[/q.registry.InitiateResetPasswordByEmail/]`
+  - Finds a ready login profile and starts email verification for password reset.
+  - decl: [pkg/registry/appws.vsql#InitiateResetPasswordByEmail](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_resetpassword.go#provideQryInitiateResetPasswordByEmailExec](../../../../pkg/registry/impl_resetpassword.go)
+
+- `[/q.registry.IssueVerifiedValueTokenForResetPassword/]`
+  - Exchanges a reset verification code for a verified value token.
+  - decl: [pkg/registry/appws.vsql#IssueVerifiedValueTokenForResetPassword](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_resetpassword.go#provideIssueVerifiedValueTokenForResetPasswordExec](../../../../pkg/registry/impl_resetpassword.go)
+
+- `[/c.registry.ResetPasswordByEmail/]`
+  - Applies a password reset after verified value token validation.
+  - decl: [pkg/registry/appws.vsql#ResetPasswordByEmail](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_resetpassword.go#cmdResetPasswordByEmailExec](../../../../pkg/registry/impl_resetpassword.go)
+
+### Token and verification operations
 
 - `[Token service]`
-  - Validates verified value tokens and issues principal tokens with authn identity payload fields.
-  - Path to file: [pkg/itokens-payloads/types.go](../../../../pkg/itokens-payloads/types.go)
+  - Issues and validates app-scoped principal, verification, and verified value tokens.
+  - decl: [pkg/itokens-payloads/types.go#PrincipalPayload](../../../../pkg/itokens-payloads/types.go)
+  - impl: [pkg/itokens-payloads/utils.go#GetPayload](../../../../pkg/itokens-payloads/utils.go)
+
+- `[/q.sys.RefreshPrincipalToken/]`
+  - Issues a replacement principal token from the existing principal token payload and duration.
+  - decl: [pkg/sys/sys.vsql#RefreshPrincipalToken](../../../../pkg/sys/sys.vsql)
+  - impl: [pkg/sys/authnz/impl_refreshprincipaltoken.go#provideRefreshPrincipalTokenExec](../../../../pkg/sys/authnz/impl_refreshprincipaltoken.go)
+
+- `[/q.sys.InitiateEmailVerification/]`
+  - Starts email verification and returns a verification token used by password reset.
+  - decl: [pkg/sys/sys.vsql#InitiateEmailVerification](../../../../pkg/sys/sys.vsql)
+  - impl: [pkg/sys/verifier/impl.go#provideQryInitiateEmailVerification](../../../../pkg/sys/verifier/impl.go)
+
+- `[/q.sys.IssueVerifiedValueToken/]`
+  - Validates a verification code and returns a verified value token.
+  - decl: [pkg/sys/sys.vsql#IssueVerifiedValueToken](../../../../pkg/sys/sys.vsql)
+  - impl: [pkg/sys/verifier/impl.go#provideQryIssueVerifiedValueToken](../../../../pkg/sys/verifier/impl.go)
 
 ### State and workspace lifecycle
 
 - `[(registry.Login)]`
-  - Stores app name, subject kind, login hash, password hash, profile cluster, profile workspace ID, workspace error, and initialization data.
-  - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
+  - Registry CDoc that stores login app, subject kind, login hash, password hash, profile workspace fields, workspace error, and initialization data.
+  - decl: [pkg/registry/appws.vsql#Login](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_createlogin.go#createLogin](../../../../pkg/registry/impl_createlogin.go)
 
 - `[(registry.LoginIdx)]`
-  - Resolves active login records by app workspace and login hash.
-  - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
+  - Registry view that resolves active login records by application workspace and login hash.
+  - decl: [pkg/registry/appws.vsql#LoginIdx](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_createlogin.go#projectorLoginIdx](../../../../pkg/registry/impl_createlogin.go)
 
 - `[[Profile workspace lifecycle]]`
-  - Creates the profile workspace asynchronously and updates login readiness fields.
-  - Path to file: [pkg/sys/workspace/impl.go](../../../../pkg/sys/workspace/impl.go)
+  - Asynchronous profile workspace creation path triggered by login records and reflected back into `[(registry.Login)]` readiness fields.
+  - decl: [pkg/registry/appws.vsql#InvokeCreateWorkspaceID_registry](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/sys/workspace/impl.go#ApplyInvokeCreateWorkspaceID](../../../../pkg/sys/workspace/impl.go)
+
+- `[/c.sys.CreateWorkspaceID/]`
+  - Creates the target profile workspace ID for a login-driven profile workspace.
+  - decl: [pkg/sys/sys.vsql#CreateWorkspaceID](../../../../pkg/sys/sys.vsql)
+  - impl: [pkg/sys/workspace/impl.go#execCmdCreateWorkspaceID](../../../../pkg/sys/workspace/impl.go)
 
 ## Scenarios
 
-### Client creates a user login from a verified email token
+### Login creation
+
+#### Client creates a user login from a verified email token
 
 ```text
 @Client
-  -> [API v2 auth routes]: verifiedEmailToken, displayName, password
+  -> [/POST /api/v2/apps/{owner}/{app}/users/]: verifiedEmailToken, displayName, password
+  -> [API v2 auth routes]
+  -> [User login handler]
   -> [Token service]: validate verified email token
-  -> [Registry login commands]: CreateEmailLogin
-  -> [(registry.Login)] and [(registry.LoginIdx)]
+  -> [/c.registry.CreateEmailLogin/]
+  -> [(registry.Login)]
+  -> [(registry.LoginIdx)]
   -> [[Profile workspace lifecycle]]
+  -> [/c.sys.CreateWorkspaceID/]
+  -> @Client: 201 Created
 ```
 
-### Client creates a device login
+#### Client creates a device login
 
 ```text
 @Client
+  -> [/POST /api/v2/apps/{owner}/{app}/devices/]
   -> [API v2 auth routes]
+  -> [Device login handler]
   -> [Device credential generator]
-  -> [Registry login commands]: CreateLogin with subject kind Device
-  -> [(registry.Login)] and [(registry.LoginIdx)]
+  -> [/c.registry.CreateLogin/]: subject kind Device
+  -> [(registry.Login)]
+  -> [(registry.LoginIdx)]
+  -> [[Profile workspace lifecycle]]
   -> @Client: generated login and password
 ```
 
-### Login creation rejects duplicate login
+#### Login creation rejects duplicate login
 
 ```text
-[Registry login commands]
-  -> [(registry.LoginIdx)]: resolve existing active login
+@Client
+  -> [User login handler]
+  -> [/c.registry.CreateEmailLogin/]
+  -> [(registry.LoginIdx)]: active login already exists
   -> @Client: 409 Conflict
 ```
 
-### User login creation rejects malformed request
+#### User login creation rejects malformed request
 
 ```text
 @Client
-  -> [API v2 auth routes]: missing verifiedEmailToken, displayName, or password
+  -> [/POST /api/v2/apps/{owner}/{app}/users/]: missing verifiedEmailToken, displayName, or password
+  -> [User login handler]
   -> @Client: 400 Bad Request
 ```
 
-### Device login creation rejects request body
+#### Device login creation rejects request body
 
 ```text
 @Client
-  -> [API v2 auth routes]: non-empty device creation body
+  -> [/POST /api/v2/apps/{owner}/{app}/devices/]: non-empty body
+  -> [Device login handler]
   -> @Client: 400 Bad Request
 ```
 
-### Subject signs in after profile workspace is ready
+### Sign-in and profile readiness
+
+#### Subject signs in after profile workspace is ready
 
 ```text
 @Client
-  -> [Auth login handler]: login, password
-  -> [Registry principal token query]
+  -> [/POST /api/v2/apps/{owner}/{app}/auth/login/]: login, password
+  -> [API v2 auth routes]
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]
+  -> [(registry.LoginIdx)]
   -> [(registry.Login)]: password hash matches and profileWSID is non-zero
   -> [Token service]: issue principal token
   -> @Client: principalToken, expiresInSeconds, profileWSID
 ```
 
-### Sign-in reports profile workspace not ready
+#### Sign-in reports profile workspace not ready
 
 ```text
-[Registry principal token query]
-  -> [(registry.Login)]: profileWSID is zero and workspace error is empty
+@Client
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]
+  -> [(registry.Login)]: profileWSID is zero and WSError is empty
   -> [Auth login handler]
   -> @Client: 409 Conflict
 ```
 
-### Sign-in reports profile workspace creation error
+#### Sign-in reports profile workspace creation error
 
 ```text
-[Registry principal token query]
-  -> [(registry.Login)]: workspace error is non-empty
+@Client
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]
+  -> [(registry.Login)]: WSError is non-empty
   -> [Auth login handler]
   -> @Client: profile workspace creation error
 ```
 
-### Principal token carries authn identity fields
+### Principal token contract
+
+#### Principal token carries authn identity fields
 
 ```text
-[Registry principal token query]
+@Client
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]
   -> [(registry.Login)]: login, subject kind, profileWSID
   -> [Token service]: PrincipalPayload(Login, SubjectKind, ProfileWSID)
   -> @Client: principalToken
 ```
 
-### Principal token uses default TTL when no custom TTL is requested
+#### Principal token uses default TTL when no custom TTL is requested
 
 ```text
-[Registry principal token query]
+@Client
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]: TTLHours omitted or zero
   -> [Token service]: issue token with DefaultPrincipalTokenExpiration
   -> @Client: expiresInSeconds
 ```
 
-### Principal token rejects TTL above the maximum
-
-```text
-[Registry principal token query]
-  -> [Token service]: requested TTL exceeds max token TTL
-  -> @Client: 400 Bad Request
-```
-
-### Client refreshes a principal token
+#### Principal token rejects TTL above the maximum
 
 ```text
 @Client
-  -> [Auth refresh handler]: existing bearer token
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]: TTLHours above maxTokenTTLHours
+  -> @Client: 400 Bad Request
+```
+
+#### Client refreshes a principal token
+
+```text
+@Client
+  -> [/POST /api/v2/apps/{owner}/{app}/auth/refresh/]: existing bearer token
+  -> [API v2 auth routes]
+  -> [Auth refresh handler]
+  -> [/q.sys.RefreshPrincipalToken/]
   -> [Token service]: validate existing token and issue replacement
+  -> [Auth refresh handler]
   -> @Client: new principalToken, expiresInSeconds, profileWSID
 ```
 
-### Client changes user password
+### Password lifecycle
+
+#### Client changes user password
 
 ```text
 @Client
-  -> [API v2 auth routes]: login, oldPassword, newPassword
-  -> [Registry password commands]
-  -> [(registry.Login)]: compare old password hash and write new hash
+  -> [/POST /api/v2/apps/{owner}/{app}/users/change-password/]: login, oldPassword, newPassword
+  -> [API v2 auth routes]
+  -> [Password handler]
+  -> [/c.registry.ChangePassword/]
+  -> [(registry.LoginIdx)]
+  -> [(registry.Login)]: old password matches; write new password hash
   -> @Client: 200 OK
 ```
 
-### Password change rejects malformed request
+#### Client resets password by verified email
 
 ```text
 @Client
-  -> [API v2 auth routes]: missing or non-string login, oldPassword, or newPassword
-  -> @Client: 400 Bad Request
-```
-
-### Password change rejects unknown login or wrong current password
-
-```text
-[Registry password commands]
-  -> [(registry.LoginIdx)] or [(registry.Login)]: login missing or password mismatch
-  -> @Client: 401 Unauthorized
-```
-
-### Client resets password by verified email
-
-```text
-@Client
-  -> [Registry reset password flow]: initiate reset by email
-  -> [Token service]: issue verification token
-  -> [Registry reset password flow]: verify code and reset password with verified value token
+  -> [/q.registry.InitiateResetPasswordByEmail/]
+  -> [(registry.LoginIdx)]
+  -> [(registry.Login)]: profileWSID is ready
+  -> [/q.sys.InitiateEmailVerification/]
+  -> @Client: verification token
+  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]: verification token and code
+  -> [/q.sys.IssueVerifiedValueToken/]
+  -> [Token service]: issue verified value token
+  -> [/c.registry.ResetPasswordByEmail/]: verified value token and new password
   -> [(registry.Login)]: write new password hash
 ```
 
-### Password reset initiation rejects unknown login
+#### Password change rejects malformed request
 
 ```text
-[Registry reset password flow]
+@Client
+  -> [/POST /api/v2/apps/{owner}/{app}/users/change-password/]: missing login, oldPassword, or newPassword
+  -> [Password handler]
+  -> @Client: 400 Bad Request
+```
+
+#### Password change rejects unknown login or wrong current password
+
+```text
+@Client
+  -> [Password handler]
+  -> [/c.registry.ChangePassword/]
+  -> [(registry.LoginIdx)]
+  -> [(registry.Login)]: login missing or password mismatch
+  -> @Client: 401 Unauthorized
+```
+
+#### Password reset initiation rejects unknown login
+
+```text
+@Client
+  -> [/q.registry.InitiateResetPasswordByEmail/]
   -> [(registry.LoginIdx)]: login missing
   -> @Client: 400 Bad Request
 ```
 
-### Password reset verification rejects wrong verification code
+#### Password reset verification rejects wrong verification code
 
 ```text
-[Registry reset password flow]
+@Client
+  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]: wrong verification code
+  -> [/q.sys.IssueVerifiedValueToken/]
   -> [Token service]: verification token and code do not match
   -> @Client: 400 Bad Request
 ```
 
-### User login creation rejects an invalid verified email token
+### Exception flows
+
+#### User login creation rejects an invalid verified email token
 
 ```text
 @Client
-  -> [API v2 auth routes]: invalid verifiedEmailToken
-  -> [Token service]: validation fails
+  -> [/POST /api/v2/apps/{owner}/{app}/users/]: invalid verifiedEmailToken
+  -> [User login handler]
+  -> [Token service]: verified value token validation fails
   -> @Client: 400 Bad Request
 ```
 
-### Login creation rejects an invalid login name
+#### Login creation rejects an invalid login name
 
 ```text
-[Registry login commands]
+@Client
+  -> [/c.registry.CreateLogin/]: invalid login
   -> [(registry.Login)]: login format validation fails before write
   -> @Client: 400 Bad Request
 ```
 
-### Sign-in rejects unknown login or wrong password
-
-```text
-[Registry principal token query]
-  -> [(registry.LoginIdx)] or [(registry.Login)]: login missing or password mismatch
-  -> @Client: 401 Unauthorized
-```
-
-### Principal token refresh requires an existing token
+#### Sign-in rejects unknown login or wrong password
 
 ```text
 @Client
-  -> [Auth refresh handler]: missing bearer token
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]
+  -> [(registry.LoginIdx)]
+  -> [(registry.Login)]: login missing or password mismatch
+  -> @Client: 401 Unauthorized
+```
+
+#### Principal token refresh requires an existing token
+
+```text
+@Client
+  -> [/POST /api/v2/apps/{owner}/{app}/auth/refresh/]: missing bearer token
+  -> [Auth refresh handler]
   -> @Client: 401 Unauthorized
 ```
 
 ## Cross-cutting concerns
 
-This feature inherits context-wide security, consistency, token, and error-handling
-rules from [auth architecture](./arch.md).
+This feature inherits context-wide security, consistency, token, and
+error-handling rules from [auth architecture](./arch.md).
 
-### Feature behavior
+### Security
 
-- Every Scenario in [authn.feature](./authn.feature) must preserve the documented public status code and response fields.
-- Every `[Registry principal token query]` issue must produce the authn identity fields consumed by the public authn response: login, subject kind, and profile workspace ID.
-- Every `[Registry reset password flow]` must validate the verified value token before changing `[(registry.Login)]`.
+- Every Component in `Public API endpoints` and `Authn request handlers` treats passwords, bearer tokens, verification tokens, and verified value tokens as request secrets.
+- Every Component in `Registry operations` stores password evidence only through `[(registry.Login)]` password hashes and never returns plaintext passwords except generated device credentials at creation time.
+- Every `[Token service]` principal token issue includes the authn identity fields required by this feature: login, subject kind, and profile workspace ID.
 
-### Password lifecycle
+### Error handling and resilience
 
-- Every password update affects future credential checks but does not revoke already issued principal tokens.
-- Every password reset changes credentials only after the email verification code is exchanged for a verified value token.
+- Every Component in `Public API endpoints` maps malformed public request bodies to `400 Bad Request`.
+- Every `[Auth login handler]` maps ready profile workspace responses to authn JSON output and maps zero profile workspace ID to `409 Conflict`.
+- Every `[Auth refresh handler]` maps a missing bearer token to `401 Unauthorized`.
+- Every `[/q.registry.IssuePrincipalToken/]` maps missing login or password mismatch to `401 Unauthorized` and maps TTL above `maxTokenTTLHours` to
+  `400 Bad Request`.
+
+### Consistency
+
+- Every `[[Profile workspace lifecycle]]` update is asynchronous; login creation can return `201 Created` before sign-in can issue a usable principal token.
+- Every `[(registry.LoginIdx)]` lookup used by sign-in, password change, and password reset resolves to the active `[(registry.Login)]` for the requested app and login hash.
+- Every password change or reset updates future credential checks but does not revoke already issued principal tokens.
 
 ### Testing
 
-- Every Scenario in `authn.feature` must have matching integration coverage or trace to existing integration coverage before authn behavior is changed.
-- Every feature-specific status-code mapping must be covered at API or registry integration level.
+- Every Scenario in [authn.feature](./authn.feature) has integration coverage or must gain integration coverage before authn behavior changes.
+- Every Component in `Public API endpoints` that maps a public status code has API-level integration coverage for success and rejection paths.
+- Every token contract Scenario validates the emitted token payload or returned authn response fields at API or registry integration level.
