@@ -360,9 +360,9 @@ func (q DataType) String() (s string) {
 	} else if q.Int64 {
 		return "int64"
 	} else if q.Float32 {
-		return "int32"
+		return "float32"
 	} else if q.Float64 {
-		return "int64"
+		return "float64"
 	} else if q.QName {
 		return "qname"
 	} else if q.Bool {
@@ -574,7 +574,7 @@ type RateValueTimeUnit struct {
 }
 
 type RateValue struct {
-	Count           *uint32              `parser:"(@Int"`
+	Count           *uint32           `parser:"(@Int"`
 	Variable        *DefQName         `parser:"| @@) 'PER'"`
 	TimeUnitAmounts *uint32           `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
