@@ -17,7 +17,7 @@ The authn feature technical design needs to match current uspecs rules so review
 
 ## Technical design
 
-- [x] update: [prod/auth/authn--td.md](../../specs/prod/auth/authn--td.md)
+- [x] update: [prod/auth/authn--td.md](../../../../specs/prod/auth/authn--td.md)
   - refactor: align Feature Technical Design structure and content with current uspecs rules
   - fix: separate or remove content that belongs to functional design, context architecture, or implementation notes
   - update: preserve traceability to authn scenarios, auth architecture, code paths, and test coverage without changing documented authn behavior
