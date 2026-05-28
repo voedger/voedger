@@ -220,7 +220,7 @@ func (g *schemaGenerator) generateFunctionExecuteSchemas(fn appdef.IFunction, op
 		if typ.QName() == appdef.QNameANY {
 			return
 		}
-		g.generateSchemaComponent(typ.(ischema), op, nil, schemas)
+		g.generateSchemaComponent(typ, op, nil, schemas)
 	}
 }
 
