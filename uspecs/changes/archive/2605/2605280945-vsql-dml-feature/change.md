@@ -25,8 +25,8 @@ Reorganize the VSQL DML documentation into a single, dedicated functional specif
 
 ## Functional design
 
-- [x] remove: [apps/vsql-acl.feature](../../specs/prod/apps/vsql-acl.feature)
+- [x] remove: [apps/vsql-acl.feature](../../../../specs/prod/apps/vsql-acl.feature)
   - superseded by `vsql-dml.feature` which covers the same ACL aspects within a broader DML scope
-- [x] create: [apps/vsql-dml.feature](../../specs/prod/apps/vsql-dml.feature)
+- [x] create: [apps/vsql-dml.feature](../../../../specs/prod/apps/vsql-dml.feature)
   - Feature specification for VSQL DML operations covering `SELECT` and `UPDATE` against table, view, and singleton; cross-workspace and cross-application targets; with and without a specific record ID; ACL effects; HTTP response status codes
-  - Derive scenarios from existing integration tests: [it/impl_sqlquery_test.go](../../../../pkg/sys/it/impl_sqlquery_test.go) and [it/impl_vsqlupdate_test.go](../../../../pkg/sys/it/impl_vsqlupdate_test.go)
+  - Derive scenarios from existing integration tests: [it/impl_sqlquery_test.go](../../../../../../pkg/sys/it/impl_sqlquery_test.go) and [it/impl_vsqlupdate_test.go](../../../../../../pkg/sys/it/impl_vsqlupdate_test.go)
