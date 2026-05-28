@@ -26,11 +26,11 @@ Narrow the surface so the actualizer only stores what is needed to break `WatchC
 
 ## Construction
 
-- [x] update: [actualizers/types.go](../../../pkg/processors/actualizers/types.go)
+- [x] update: [actualizers/types.go](../../../../../pkg/processors/actualizers/types.go)
   - remove: struct `asyncActualizerContextState` and its methods `cancelWithError`/`error()`
   - remove: unused `context` and `sync` imports
 
-- [x] update: [actualizers/async.go](../../../pkg/processors/actualizers/async.go)
+- [x] update: [actualizers/async.go](../../../../../pkg/processors/actualizers/async.go)
   - replace on `asyncActualizer`: field `readCtx *asyncActualizerContextState` → `n10nWatchChannelCtx context.Context` + `cancelN10NWatchChannelCtx context.CancelCauseFunc`
   - replace on `asyncErrorHandler`: field `readCtx *asyncActualizerContextState` → `cancelN10NWatchChannelCtx context.CancelCauseFunc`; update the `init` initializer accordingly
   - `init(vvmCtx)`: `a.n10nWatchChannelCtx, a.cancelN10NWatchChannelCtx = context.WithCancelCause(vvmCtx)`; pass `vvmCtx` to `readOffset`
@@ -41,7 +41,7 @@ Narrow the surface so the actualizer only stores what is needed to break `WatchC
   - `Prepare`'s `retrierCfg.OnError`: replace `logger.ErrorCtx(a.readCtx.vvmCtx, …)` with the `vvmCtx` captured from `Prepare`'s parameter
   - `OnError`: replace `h.readCtx.cancelWithError(err)` with `h.cancelN10NWatchChannelCtx(err)`
 
-- [x] update: [actualizers/async_test.go](../../../pkg/processors/actualizers/async_test.go)
+- [x] update: [actualizers/async_test.go](../../../../../pkg/processors/actualizers/async_test.go)
   - add: `Test_AsynchronousActualizer_KeepReadingPropagatesReadPLogErrorAsCause` covering the path where `WatchChannel`'s notify callback triggers `readPlogToOffset`, the failure is recorded as the cause of `n10nWatchChannelCtx`, and `keepReading` returns the same error verbatim (`require.Same` between returned error and `context.Cause(act.n10nWatchChannelCtx)`)
   - add: `ctxFailingAppParts` test helper (decorator over `IAppPartitions`) that fails `WaitForBorrow` only when the incoming `ctx` is identity-equal to a configured `failOnCtx` (mutex-protected), keying off `n10nWatchChannelCtx` to avoid races with the pipeline's background `Flush`-driven borrows
   - add: `sync` import

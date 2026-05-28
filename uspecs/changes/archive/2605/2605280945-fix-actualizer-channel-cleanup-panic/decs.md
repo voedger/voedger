@@ -6,7 +6,7 @@ The panic is caused by `a.channelCleanup` retaining a closure that references an
 
 Rationale:
 
-The panic stack shows `cleanupChannel` reaching the guard at [pkg/in10nmem/impl.go:265](../../../../../pkg/in10nmem/impl.go):
+The panic stack shows `cleanupChannel` reaching the guard at [pkg/in10nmem/impl.go:265](../../../../../../../pkg/in10nmem/impl.go):
 
 ```go
 if channel.terminated {
@@ -16,21 +16,21 @@ if channel.terminated {
 
 For this guard to fire, the same cleanup closure instance must be invoked twice on the same `*channel`. The codebase admits exactly one such path:
 
-- `channel.terminated = true` is set ONLY inside `cleanupChannel` itself ([impl.go:274](../../../../../pkg/in10nmem/impl.go)). No other path can pre-mark a channel terminated.
-- The cleanup closure is created uniquely per `NewChannel` call ([impl.go:58](../../../../../pkg/in10nmem/impl.go)), capturing one specific `&channel`, `channelID`, `metric` triple. It is the only call site of `cleanupChannel`.
-- In the actualizer, `a.channelCleanup` is written ONLY at [async.go:222](../../../../../pkg/processors/actualizers/async.go) (multi-value assignment from `Broker.NewChannel`; on `NewChannel` error the field is overwritten to `nil`).
-- `a.channelCleanup` is read ONLY at [async.go:237](../../../../../pkg/processors/actualizers/async.go) inside `finit()`.
-- `finit()` is called from a single site ([async.go:109](../../../../../pkg/processors/actualizers/async.go)) — exactly once per `RetryNoResult` attempt; `RetryNoResult` calls its op once per attempt and retries on error ([retry/utils.go](../../../../../pkg/goutils/retry/utils.go)).
+- `channel.terminated = true` is set ONLY inside `cleanupChannel` itself ([impl.go:274](../../../../../../../pkg/in10nmem/impl.go)). No other path can pre-mark a channel terminated.
+- The cleanup closure is created uniquely per `NewChannel` call ([impl.go:58](../../../../../../../pkg/in10nmem/impl.go)), capturing one specific `&channel`, `channelID`, `metric` triple. It is the only call site of `cleanupChannel`.
+- In the actualizer, `a.channelCleanup` is written ONLY at [async.go:222](../../../../../../../pkg/processors/actualizers/async.go) (multi-value assignment from `Broker.NewChannel`; on `NewChannel` error the field is overwritten to `nil`).
+- `a.channelCleanup` is read ONLY at [async.go:237](../../../../../../../pkg/processors/actualizers/async.go) inside `finit()`.
+- `finit()` is called from a single site ([async.go:109](../../../../../../../pkg/processors/actualizers/async.go)) — exactly once per `RetryNoResult` attempt; `RetryNoResult` calls its op once per attempt and retries on error ([retry/utils.go](../../../../../../../pkg/goutils/retry/utils.go)).
 - `Run` is invoked from one goroutine per `asyncActualizer` (`PartitionActualizers.start` → `actualizers.NewAndRun` → `asyncActualizer.Run`), so no concurrent `finit`.
 
 Combining these facts, the only way the same closure can run twice is across iterations:
 
 1. Iteration N: `init()` succeeds → `a.channelCleanup` = closure_N → `keepReading()` → `finit()` invokes closure_N → channel marked `terminated`
 2. After `finit()`, `a.pipeline = nil` is reset (per AIR-2302) but `a.channelCleanup` is NOT reset
-3. Iteration N+1: `init()` returns early before reaching [async.go:222](../../../../../pkg/processors/actualizers/async.go) (e.g., `appParts.AppDef` returns error, `appdef.Projector` returns nil, or `readOffset` fails — all plausible during VIT reset when app parts are torn down/restored)
+3. Iteration N+1: `init()` returns early before reaching [async.go:222](../../../../../../../pkg/processors/actualizers/async.go) (e.g., `appParts.AppDef` returns error, `appdef.Projector` returns nil, or `readOffset` fails — all plausible during VIT reset when app parts are torn down/restored)
 4. `a.channelCleanup` still references closure_N → `finit()` invokes closure_N again → `cleanupChannel` panics on the terminated channel
 
-The existing comment at [async.go:111-114](../../../../../pkg/processors/actualizers/async.go) describes this exact bug class for `a.pipeline` (AIR-2302). The fix nilled `a.pipeline` but missed `a.channelCleanup`, which has identical lifecycle semantics.
+The existing comment at [async.go:111-114](../../../../../../../pkg/processors/actualizers/async.go) describes this exact bug class for `a.pipeline` (AIR-2302). The fix nilled `a.pipeline` but missed `a.channelCleanup`, which has identical lifecycle semantics.
 
 Alternatives considered and ruled out:
 

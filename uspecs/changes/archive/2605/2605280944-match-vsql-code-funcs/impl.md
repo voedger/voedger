@@ -4,10 +4,10 @@
 
 ### Validator
 
-- [x] update: [pkg/iextengine/builtin/impl.go](../../../pkg/iextengine/builtin/impl.go)
+- [x] update: [pkg/iextengine/builtin/impl.go](../../../../../pkg/iextengine/builtin/impl.go)
   - add: `AppFuncs()` and `StatelessFuncs()` accessors on the BuiltIn factory returning the existing per-app and stateless `BuiltInExtFuncs` maps for deployment-time validation
 - [x] Review
-- [x] update: [pkg/appparts/impl_app.go](../../../pkg/appparts/impl_app.go)
+- [x] update: [pkg/appparts/impl_app.go](../../../../../pkg/appparts/impl_app.go)
   - add: package-local structural interface `builtInFuncsRegistry { AppFuncs(); StatelessFuncs() }` so the BuiltIn factory is matched via Go duck typing without exposing a new public type in `pkg/iextengine`
   - add: `validateExtensions(def, eef, extModuleURLs)` function that, before pools are constructed in `appRT.deploy`:
     - iterates `appdef.Extensions(def.Types())` once and switches on `ext.Engine()`:
@@ -19,30 +19,30 @@
 
 ### Cleanup of subsumed checks
 
-- [x] update: [pkg/istructsmem/appstruct-types.go](../../../pkg/istructsmem/appstruct-types.go)
+- [x] update: [pkg/istructsmem/appstruct-types.go](../../../../../pkg/istructsmem/appstruct-types.go)
   - remove: `validateResources()` and `validateJobs()` together with their two call sites in `AppConfigType.prepare()`
-- [x] update: [pkg/processors/actualizers/provide.go](../../../pkg/processors/actualizers/provide.go)
+- [x] update: [pkg/processors/actualizers/provide.go](../../../../../pkg/processors/actualizers/provide.go)
   - filter `statelessResources.Projectors` by `appStructs.AppDef().PackageLocalName(path) != ""` before the `appdef.Projector(...).Sync()` lookup; mirrors the validator's per-app filter so the call is safe by construction for projectors registered for other apps in the same VVM
 
 ### Tests
 
-- [x] update: [pkg/appparts/impl_test.go](../../../pkg/appparts/impl_test.go)
+- [x] update: [pkg/appparts/impl_test.go](../../../../../pkg/appparts/impl_test.go)
   - add: subtest `TestDeployApp_ValidateExtensions_MatchVSQLAndCode`:
     - `vsql declares a builtin projector / command / query with no code implementation` -> `DeployApp` panics with composite error containing the offending FullQName and direction `in vsql, not in code`
     - `code registers a stateless projector / command / query absent from AppDef` -> same composite error, direction `in code, not in vsql`
     - `aligned set` -> `DeployApp` succeeds
     - `wasm-engine extension declared in vsql with name not exported by the wasm module` -> `DeployApp` surfaces a typed deployment error wrapping the wazero engine error
 
-- [x] update: [pkg/sys/it/impl_bootstrap_test.go](../../../pkg/sys/it/impl_bootstrap_test.go)
+- [x] update: [pkg/sys/it/impl_bootstrap_test.go](../../../../../pkg/sys/it/impl_bootstrap_test.go)
   - add: VIT-driven `TestVVMLaunch_VSQLCodeMismatch` integration test using `it.NewOwnVITConfig` + `it.WithApp` with a mismatched `test1/app1` builder
     - subtest `in vsql, not in code`: vsql declares an extra builtin command absent from `cfg.Resources` -> `it.NewVIT` panics with `appparts.ErrDeployment` and message containing `in vsql, not in code`
     - subtest `in code, not in vsql`: `cfg.Resources` registers an extra command absent from vsql -> `it.NewVIT` panics with `appparts.ErrDeployment` and message containing `in code, not in vsql`
 
 ### Fix existing drift exposed by the new validator
 
-- [x] update: [pkg/vit/shared_cfgs.go](../../../pkg/vit/shared_cfgs.go)
+- [x] update: [pkg/vit/shared_cfgs.go](../../../../../pkg/vit/shared_cfgs.go)
   - register `app1pkg.QryAny` and `app1pkg.CmdAny` via `istructsmem.NullQueryExec` / `NullCommandExec` in `ProvideApp1` to satisfy the validator (they are declared in `pkg/vit/schemaTestApp1.vsql` but had no code stub)
-- [x] update: [pkg/parser/impl_test.go](../../../pkg/parser/impl_test.go)
+- [x] update: [pkg/parser/impl_test.go](../../../../../pkg/parser/impl_test.go)
   - `TestIsOperationAllowedOnNestedTable`: register null execs for `sys.CreateLogin`, `sys.UpdateSubscription`, `sys.UPTerminalWebhook` declared in `pkg/parser/sql_example_syspkg/system.vsql`
   - `TestIsOperationAllowedOnGrantRoleToRole`: register null execs for the test's own `pkg.Cmd1` plus the same three sys extensions
 
