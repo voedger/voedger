@@ -1,5 +1,5 @@
 ---
-change_id: 2605290953-correct-copyright-skill
+change_id: 2605291007-correct-copyright-skill
 type: feat
 issue_url: https://untill.atlassian.net/browse/AIR-4097
 ---
