@@ -2936,6 +2936,41 @@ func Test_Jobs(t *testing.T) {
 }
 
 func Test_DataTypes(t *testing.T) {
+	t.Run("String", func(t *testing.T) {
+		varcharMaxLen := uint64(10)
+		bytesMaxLen := uint64(20)
+
+		cases := []struct {
+			name string
+			typ  DataType
+			want string
+		}{
+			{name: "varchar with max len", typ: DataType{Varchar: &TypeVarchar{MaxLen: &varcharMaxLen}}, want: "varchar[10]"},
+			{name: "varchar default max len", typ: DataType{Varchar: &TypeVarchar{}}, want: fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)},
+			{name: "int8", typ: DataType{Int8: true}, want: "int8"},
+			{name: "int16", typ: DataType{Int16: true}, want: "int16"},
+			{name: "int32", typ: DataType{Int32: true}, want: "int32"},
+			{name: "int64", typ: DataType{Int64: true}, want: "int64"},
+			{name: "float32", typ: DataType{Float32: true}, want: "float32"},
+			{name: "float64", typ: DataType{Float64: true}, want: "float64"},
+			{name: "qname", typ: DataType{QName: true}, want: "qname"},
+			{name: "bool", typ: DataType{Bool: true}, want: "bool"},
+			{name: "bytes with max len", typ: DataType{Bytes: &TypeBytes{MaxLen: &bytesMaxLen}}, want: "bytes[20]"},
+			{name: "bytes default max len", typ: DataType{Bytes: &TypeBytes{}}, want: fmt.Sprintf("bytes[%d]", appdef.DefaultFieldMaxLength)},
+			{name: "blob", typ: DataType{Blob: true}, want: "blob"},
+			{name: "timestamp", typ: DataType{Timestamp: true}, want: "timestamp"},
+			{name: "currency", typ: DataType{Currency: true}, want: "currency"},
+			{name: "unknown", typ: DataType{}, want: "?"},
+		}
+
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				require := require.New(t)
+
+				require.Equal(c.want, c.typ.String())
+			})
+		}
+	})
 
 	require := assertions(t)
 	schema, err := require.AppSchema(`APPLICATION test();
