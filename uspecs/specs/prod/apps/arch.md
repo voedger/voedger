@@ -73,7 +73,7 @@ Shared engine
 
 - `[App partitions engine]`
   - Process-wide manager of deployed applications and partitions; `[[Deployment]]` calls `DeployApp` / `DeployAppPartitions`, `[[Processing]]` borrows partitions and invokes extensions through `IAppPartition.Invoke` and `IAppPartition.DoSyncActualizer`.
-  - Path to file: [pkg/appparts](../../../../pkg/appparts)
+  - Path to package: [pkg/appparts](../../../../pkg/appparts)
 
 ## Scenarios
 

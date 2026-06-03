@@ -115,7 +115,7 @@ State
 
 - `[Legacy ACL fallback]`
   - Falls back to `oldacl.IsOperationAllowed` when the new ACL denies, kept as a temporary bridge for Air; logged as `newACL not ok, but oldACL ok` when only the legacy path allows.
-  - Path to file: [pkg/processors/oldacl](../../../../pkg/processors/oldacl)
+  - Path to package: [pkg/processors/oldacl](../../../../pkg/processors/oldacl)
 
 ### Shared infrastructure
 
@@ -151,7 +151,7 @@ State
 
 - `[(BLOB storage)]`
   - BLOB byte storage targeted by `[BLOB processor]`.
-  - Path to file: [pkg/iblobstorage](../../../../pkg/iblobstorage)
+  - Path to package: [pkg/iblobstorage](../../../../pkg/iblobstorage)
 
 ## Scenarios
 
