@@ -6,7 +6,6 @@
 - Author: Maxim Geraskin
 - Labels: none
 - Assignees: Maxim Geraskin
-- Parent: [AIR-3968: Grandhotel Bad Pyrmont: Change email address](https://untill.atlassian.net/browse/AIR-3968)
 
 ## Description
 
