@@ -55,15 +55,15 @@ Out of scope:
 
 References:
 
-- [per-enum tests to be trimmed (DataKind)](../../../pkg/appdef/utils_data_test.go)
-- [per-enum tests to be trimmed (TypeKind)](../../../pkg/appdef/utils_type_test.go)
-- [per-enum tests to be trimmed (FilterKind)](../../../pkg/appdef/utils_filter_test.go)
-- [common doc/record builder and result interfaces consumed by the doc fixture](../../../pkg/appdef/interface_structure.go)
-- [typed per-kind lookup and enumeration helpers consumed by the doc fixture](../../../pkg/appdef/utils_type.go)
+- [per-enum tests to be trimmed (DataKind)](../../../../../pkg/appdef/utils_data_test.go)
+- [per-enum tests to be trimmed (TypeKind)](../../../../../pkg/appdef/utils_type_test.go)
+- [per-enum tests to be trimmed (FilterKind)](../../../../../pkg/appdef/utils_filter_test.go)
+- [common doc/record builder and result interfaces consumed by the doc fixture](../../../../../pkg/appdef/interface_structure.go)
+- [typed per-kind lookup and enumeration helpers consumed by the doc fixture](../../../../../pkg/appdef/utils_type.go)
 
 ## Construction
 
-- [x] create: [appdef/utils_kinds_test.go](../../../pkg/appdef/utils_kinds_test.go)
+- [x] create: [appdef/utils_kinds_test.go](../../../../../pkg/appdef/utils_kinds_test.go)
   - Consolidated `appdef_test` scenario for `MarshalText` and `TrimString` of every `~uint8` enum kind
   - Shared constraint `baseEnum` (`~uint8 + String()`); specialised constraints `enumKind` (adds `MarshalText`) and `enumTrimmer` (adds `TrimString`); single generic case struct `enumCase[T baseEnum]`
   - Generic helpers `testEnumMarshalText[T enumKind]` and `testEnumTrimString[T enumTrimmer]` driven by a per-kind table
@@ -71,7 +71,7 @@ References:
   - `TestEnumKinds_TrimString` covers the six kinds above plus `RateScope`
   - Each kind asserts basic in-range cases plus the out-of-range fallback (`KindName(N)` for `MarshalText`, `String()` parity for `TrimString`)
 
-- [x] create: [structures/docs_test.go](../../../pkg/appdef/internal/structures/docs_test.go)
+- [x] create: [structures/docs_test.go](../../../../../pkg/appdef/internal/structures/docs_test.go)
   - Consolidated `structures_test` scenario for `CDoc`, `GDoc`, `ODoc`, `WDoc`
   - Fixture struct `docFixture` with `name`, `docKind`, `recKind`, `skipSystem` and six function-pointer fields (`addDoc`, `addRec`, `findDoc`, `findRec`, `enumDocs`, `enumRecs`)
   - Generic adapters `seqAsDoc[T appdef.IDoc]` / `seqAsRec[T appdef.IRecord]` lift typed iterators into the common `iter.Seq[appdef.IDoc]` / `iter.Seq[appdef.IRecord]` used by the fixture
@@ -79,41 +79,41 @@ References:
   - Each kind verifies build, find-by-name and kind, container-kind, nil-on-unknown, and enumeration against both the AppDef root and the workspace
   - `skipSystem` filter applied only for `CDoc` to ignore platform-pre-registered system documents
 
-- [x] update: [appdef/utils_data_test.go](../../../pkg/appdef/utils_data_test.go)
+- [x] update: [appdef/utils_data_test.go](../../../../../pkg/appdef/utils_data_test.go)
   - remove: `TestConstraintKind_MarshalText`, `TestConstraintKind_TrimString`, `TestDataKindType_MarshalText`, `TestDataKind_TrimString` (coverage moved to `utils_kinds_test.go`)
 
-- [x] update: [appdef/utils_type_test.go](../../../pkg/appdef/utils_type_test.go)
+- [x] update: [appdef/utils_type_test.go](../../../../../pkg/appdef/utils_type_test.go)
   - remove: `TestTypeKind_MarshalText`, `TestTypeKindTrimString` (coverage moved to `utils_kinds_test.go`)
 
-- [x] update: [appdef/utils_filter_test.go](../../../pkg/appdef/utils_filter_test.go)
+- [x] update: [appdef/utils_filter_test.go](../../../../../pkg/appdef/utils_filter_test.go)
   - remove: `TestFilterKind_MarshalText`, `TestFilterKindTrimString` (coverage moved to `utils_kinds_test.go`)
 
-- [x] remove: [appdef/utils_extension_test.go](../../../pkg/appdef/utils_extension_test.go)
+- [x] remove: [appdef/utils_extension_test.go](../../../../../pkg/appdef/utils_extension_test.go)
   - File becomes empty after extracting `TestExtensionEngineKind_MarshalText` and `TestExtensionEngineKindTrimString`
 
-- [x] remove: [appdef/utils_ratelimit_test.go](../../../pkg/appdef/utils_ratelimit_test.go)
+- [x] remove: [appdef/utils_ratelimit_test.go](../../../../../pkg/appdef/utils_ratelimit_test.go)
   - File becomes empty after extracting `TestRateScopeTrimString`, `Test_LimitFilterOption_MarshalText`, and `TestLimitFilterOptionTrimString`
 
-- [x] remove: [structures/cdoc_test.go](../../../pkg/appdef/internal/structures/cdoc_test.go)
+- [x] remove: [structures/cdoc_test.go](../../../../../pkg/appdef/internal/structures/cdoc_test.go)
   - Coverage moved to `docs_test.go` under the `CDoc` fixture
 
-- [x] remove: [structures/gdoc_test.go](../../../pkg/appdef/internal/structures/gdoc_test.go)
+- [x] remove: [structures/gdoc_test.go](../../../../../pkg/appdef/internal/structures/gdoc_test.go)
   - Coverage moved to `docs_test.go` under the `GDoc` fixture
 
-- [x] remove: [structures/odoc_test.go](../../../pkg/appdef/internal/structures/odoc_test.go)
+- [x] remove: [structures/odoc_test.go](../../../../../pkg/appdef/internal/structures/odoc_test.go)
   - Coverage moved to `docs_test.go` under the `ODoc` fixture
 
-- [x] remove: [structures/wdoc_test.go](../../../pkg/appdef/internal/structures/wdoc_test.go)
+- [x] remove: [structures/wdoc_test.go](../../../../../pkg/appdef/internal/structures/wdoc_test.go)
   - Coverage moved to `docs_test.go` under the `WDoc` fixture
 
-- [x] update: [acl/provide_test.go](../../../pkg/appdef/acl/provide_test.go)
+- [x] update: [acl/provide_test.go](../../../../../pkg/appdef/acl/provide_test.go)
   - Extract `buildAppWithFieldACL` covering the 126-line workspace+ACL setup duplicated at 179-305 and 871-997
   - Extract `buildAppWithAncestors` covering the 28-line ancestors-and-grants setup duplicated at 771-799 and 1190-1218
 
-- [x] update: [appdef/utils_qname_test.go](../../../pkg/appdef/utils_qname_test.go)
+- [x] update: [appdef/utils_qname_test.go](../../../../../pkg/appdef/utils_qname_test.go)
   - Add `testJSONRoundtrip[T comparable, PT *T]` helper covering the marshal/unmarshal/structure-embedding/map-key cases shared by `TestBasicUsage_QName_JSon` and `TestBasicUsage_AppQName_JSon`
   - Add `testUnmarshalInvalidJSON[T comparable, PT *T]` helper covering the cases shared by `TestQName_UnmarshalInvalidString` and `TestAppQName_UnmarshalInvalidString`
   - The duplicated `MustParse*` blocks (`TestMustParseQName` vs `TestMustParseFullQName`) remain as-is (different types, no shared interface)
 
-- [x] update: [structures/extensions/storage_test.go](../../../pkg/appdef/internal/extensions/storage_test.go)
+- [x] update: [structures/extensions/storage_test.go](../../../../../pkg/appdef/internal/extensions/storage_test.go)
   - Replace the twin `States` / `Intents` panic subtests inside `should be panics` with a single table-driven loop selecting the accessor via a closure

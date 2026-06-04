@@ -99,34 +99,9 @@ func (g *schemaGenerator) generateComponents() {
 
 		for op, fields := range ops {
 			g.generateSchemaComponent(t, op, fields, schemas)
-			if t.Kind() == appdef.TypeKind_Command && op == appdef.OperationKind_Execute {
-				cmd := t.(appdef.ICommand)
-				if param := cmd.Param(); param != nil {
-					if param.QName() == appdef.QNameANY {
-						continue
-					}
-					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
-				}
-				if result := cmd.Result(); result != nil {
-					if result.QName() == appdef.QNameANY {
-						continue
-					}
-					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
-				}
-			}
-			if t.Kind() == appdef.TypeKind_Query && op == appdef.OperationKind_Execute {
-				qry := t.(appdef.IQuery)
-				if param := qry.Param(); param != nil {
-					if param.QName() == appdef.QNameANY {
-						continue
-					}
-					g.generateSchemaComponent(param.(ischema), op, nil, schemas)
-				}
-				if result := qry.Result(); result != nil {
-					if result.QName() == appdef.QNameANY {
-						continue
-					}
-					g.generateSchemaComponent(result.(ischema), op, nil, schemas)
+			if op == appdef.OperationKind_Execute {
+				if fn, ok := t.(appdef.IFunction); ok {
+					g.generateFunctionExecuteSchemas(fn, op, schemas)
 				}
 			}
 		}
@@ -234,6 +209,18 @@ func (g *schemaGenerator) opString(op appdef.OperationKind) string {
 		return "Execute"
 	default:
 		return "Unknown"
+	}
+}
+
+func (g *schemaGenerator) generateFunctionExecuteSchemas(fn appdef.IFunction, op appdef.OperationKind, schemas map[string]interface{}) {
+	for _, typ := range []appdef.IType{fn.Param(), fn.Result()} {
+		if typ == nil {
+			continue
+		}
+		if typ.QName() == appdef.QNameANY {
+			return
+		}
+		g.generateSchemaComponent(typ, op, nil, schemas)
 	}
 }
 
