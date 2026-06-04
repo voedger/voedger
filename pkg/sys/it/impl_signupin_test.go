@@ -298,7 +298,7 @@ func TestLoginAlias(t *testing.T) {
 		waitForLoginAlias(t, vit, login, "")
 
 		cdocLogin := getLoginCDoc(t, vit, login)
-		require.Equal("", cdocLogin["AliasError"])
+		require.Empty(cdocLogin["AliasError"])
 		require.Equal(float64(0), cdocLogin["AliasInProc"])
 	})
 

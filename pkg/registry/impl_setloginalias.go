@@ -175,8 +175,8 @@ func execCmdPutLoginAliasIndex(args istructs.ExecCommandArgs) error {
 	}
 	loginAlias.PutRecordID(appdef.SystemField_ID, 1)
 	loginAlias.PutString(field_AppName, appName)
-	loginAlias.PutInt64(field_SourceAppWSID, int64(sourceAppWSID))
-	loginAlias.PutInt64(field_CDocLoginID, int64(cdocLoginID))
+	loginAlias.PutInt64(field_SourceAppWSID, int64(sourceAppWSID)) // nolint G115: WSID highest bit is always 0
+	loginAlias.PutInt64(field_CDocLoginID, int64(cdocLoginID))     // nolint G115: RecordID highest bit is always 0
 	loginAlias.PutString(field_Login, args.ArgumentObject.AsString(field_Login))
 	loginAlias.PutString(field_Alias, alias)
 	return nil
@@ -193,8 +193,8 @@ func updateLoginAliasIndex(args istructs.ExecCommandArgs, loginAlias istructs.IS
 	}
 	loginAliasUpdater.PutBool(appdef.SystemField_IsActive, true)
 	loginAliasUpdater.PutString(field_AppName, appName)
-	loginAliasUpdater.PutInt64(field_SourceAppWSID, int64(sourceAppWSID))
-	loginAliasUpdater.PutInt64(field_CDocLoginID, int64(cdocLoginID))
+	loginAliasUpdater.PutInt64(field_SourceAppWSID, int64(sourceAppWSID)) // nolint G115: WSID highest bit is always 0
+	loginAliasUpdater.PutInt64(field_CDocLoginID, int64(cdocLoginID))     // nolint G115: RecordID highest bit is always 0
 	loginAliasUpdater.PutString(field_Login, args.ArgumentObject.AsString(field_Login))
 	loginAliasUpdater.PutString(field_Alias, alias)
 	return nil
@@ -214,6 +214,8 @@ func execCmdDeactivateLoginAliasIndex(args istructs.ExecCommandArgs) error {
 	if err != nil || loginAlias == nil {
 		return err
 	}
+
+	// nolint G115
 	if loginAlias.AsInt64(field_SourceAppWSID) != int64(sourceAppWSID) ||
 		loginAlias.AsInt64(field_CDocLoginID) != int64(cdocLoginID) {
 		return coreutils.NewHTTPErrorf(http.StatusConflict, "login alias belongs to another login")
@@ -253,6 +255,7 @@ func assertIdentifierAvailable(st istructs.IState, appName, identifier string, t
 	if err != nil || loginAlias == nil {
 		return err
 	}
+	// nolint G115
 	if allowedAliasOwner != nil &&
 		loginAlias.AsInt64(field_SourceAppWSID) == int64(allowedAliasOwner.sourceAppWSID) &&
 		loginAlias.AsInt64(field_CDocLoginID) == int64(allowedAliasOwner.cdocLoginID) {
