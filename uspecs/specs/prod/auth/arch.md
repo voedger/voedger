@@ -10,6 +10,9 @@ Roles:
 - `@Client`
   - External application or caller using Voedger HTTP APIs.
 
+- `@System`
+  - Trusted backend caller using a System Principal Token for internal authn operations.
+
 ## Scenarios overview
 
 - **`Create login`**
@@ -17,6 +20,9 @@ Roles:
 
 - **`Sign in`**
   - Client exchanges login credentials for a principal token once the profile workspace is ready.
+
+- **`Manage login alias`**
+  - System sets, updates, or clears a user alias used as an alternative sign-in identifier.
 
 - **`Refresh token`**
   - Client exchanges a valid principal token for a new token with the same authn identity payload.
@@ -51,6 +57,8 @@ Authn processing
 Registry and tokens
     |
     +-- [Registry login commands]
+    +-- [Registry alias commands]
+    +-- [Alias index projector]
     +-- [Registry principal token query]
     +-- [Registry password commands]
     +-- [Registry reset password flow]
@@ -61,6 +69,7 @@ State and workspace lifecycle
     |
     +-- [(registry.Login)]
     +-- [(registry.LoginIdx)]
+    +-- [(registry.LoginAlias)]
     +-- [[Profile workspace lifecycle]]
 ```
 
@@ -95,11 +104,19 @@ State and workspace lifecycle
 ### Registry and tokens
 
 - `[Registry login commands]`
-  - Create `registry.Login` records, validate login shape and app workspace placement, hash passwords, and reject duplicates.
+  - Create `registry.Login` records, validate login shape and app workspace placement, hash passwords, and reject duplicate logins or collisions with active aliases.
   - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
 
+- `[Registry alias commands]`
+  - System-authorized commands that initiate alias changes, write active alias indexes, and deactivate previous alias indexes across pseudo-workspaces.
+  - Path to file: [pkg/registry/impl_setloginalias.go](../../../../pkg/registry/impl_setloginalias.go)
+
+- `[Alias index projector]`
+  - Applies login alias intents asynchronously, drives cross-workspace alias index writes, records alias errors, and commits the active alias snapshot on `registry.Login`.
+  - Path to file: [pkg/registry/impl_setloginalias.go](../../../../pkg/registry/impl_setloginalias.go)
+
 - `[Registry principal token query]`
-  - Validates login credentials, checks profile workspace readiness, and issues principal tokens.
+  - Resolves sign-in by primary login or active alias, validates credentials, checks profile workspace readiness, and issues principal tokens.
   - Path to file: [pkg/registry/impl_issueprincipaltoken.go](../../../../pkg/registry/impl_issueprincipaltoken.go)
 
 - `[Registry password commands]`
@@ -117,12 +134,16 @@ State and workspace lifecycle
 ### State and workspace lifecycle
 
 - `[(registry.Login)]`
-  - Registry record holding login app, subject kind, password hash, profile cluster, profile workspace fields, and initialization data.
+  - Registry record holding login app, subject kind, password hash, profile cluster, profile workspace fields, initialization data, and active alias state.
   - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
 
 - `[(registry.LoginIdx)]`
   - Registry view used to resolve login records by application workspace and login hash.
   - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
+
+- `[(registry.LoginAlias)]`
+  - Active alias lookup index that maps an alternative sign-in identifier to the source `registry.Login` record and snapshots the primary login string.
+  - Path to file: [pkg/registry/impl_setloginalias.go](../../../../pkg/registry/impl_setloginalias.go)
 
 - `[[Profile workspace lifecycle]]`
   - Asynchronous workspace creation path triggered by login records and reflected back to the login profile fields.
@@ -148,10 +169,24 @@ State and workspace lifecycle
 @Client
   -> [API v2 auth routes]
   -> [Auth login handler]
-  -> [Registry principal token query]
+  -> [Registry principal token query]: resolve primary login or active alias
   -> [(registry.Login)]
+  -> [(registry.LoginAlias)]: alias path only
   -> [Token service]
   -> @Client: principalToken, expiresInSeconds, profileWSID
+```
+
+### Manage login alias
+
+```text
+@System
+  -> [Registry alias commands]: initiate set, update, or clear
+  -> [(registry.Login)]: mark alias operation in progress
+  -> [Alias index projector]
+  -> [Registry alias commands]: put new alias index in pseudoWSID(alias)
+  -> [Registry alias commands]: deactivate previous alias index in pseudoWSID(old alias)
+  -> [(registry.LoginAlias)]
+  -> [(registry.Login)]: commit Alias, AliasInProc, AliasError
 ```
 
 ### Refresh token
