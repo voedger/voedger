@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -36,7 +37,7 @@ func (q *iptRR) AsString(name string) string {
 	return q.principalToken
 }
 
-func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQueryClosure {
+func provideIssuePrincipalTokenExec(itokens itokens.ITokens, federation federation.IFederation) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		login := args.ArgumentObject.AsString(authnz.Field_Login)
 		appName := args.ArgumentObject.AsString(authnz.Field_AppName)
@@ -48,18 +49,24 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 			return err
 		}
 
-		// TODO: check we're called at our AppWSID?
-
 		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.WSID, appName)
 		if err != nil {
 			return err
 		}
-
+		var loginForSignIn signInLogin
+		if doesLoginExist {
+			loginForSignIn = loginFromPrimaryCDoc(login, cdocLogin)
+		} else {
+			loginForSignIn, doesLoginExist, err = resolveAliasSignInLogin(login, appName, args.State, args.WSID, itokens, federation)
+			if err != nil {
+				return err
+			}
+		}
 		if !doesLoginExist {
 			return errLoginOrPasswordIsIncorrect
 		}
 
-		isPasswordOK, err := CheckPassword(cdocLogin, args.ArgumentObject.AsString(field_Passwrd))
+		isPasswordOK, err := checkPasswordHash(loginForSignIn.pwdHash, args.ArgumentObject.AsString(field_Passwrd))
 		if err != nil {
 			return err
 		}
@@ -69,19 +76,19 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 		}
 
 		result := &iptRR{
-			profileWSID:          cdocLogin.AsInt64(authnz.Field_WSID),
-			profileCreationError: cdocLogin.AsString(authnz.Field_WSError),
+			profileWSID:          loginForSignIn.profileWSID,
+			profileCreationError: loginForSignIn.wsError,
 		}
 		if result.profileWSID == 0 || len(result.profileCreationError) > 0 {
 			return callback(result)
 		}
 
 		// read global globalRoles
-		globarRolesStr := cdocLogin.AsString(authnz.Field_GlobalRoles)
+		globarRolesStr := loginForSignIn.globalRoles
 		var globalRoles []appdef.QName
 		if len(globarRolesStr) > 0 {
-			globalRolesStr := strings.Split(cdocLogin.AsString(authnz.Field_GlobalRoles), ",")
-			for _, role := range globalRolesStr {
+			globalRolesStr := strings.SplitSeq(globarRolesStr, ",")
+			for role := range globalRolesStr {
 				roleQName, err := appdef.ParseQName(role)
 				if err != nil {
 					return err
@@ -92,8 +99,9 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 
 		// issue principal token
 		principalPayload := payloads.PrincipalPayload{
-			Login:       args.ArgumentObject.AsString(authnz.Field_Login),
-			SubjectKind: istructs.SubjectKindType(cdocLogin.AsInt32(authnz.Field_SubjectKind)),
+			Login:       loginForSignIn.canonicalLogin,
+			Alias:       loginForSignIn.alias,
+			SubjectKind: istructs.SubjectKindType(loginForSignIn.subjectKind),
 			ProfileWSID: istructs.WSID(result.profileWSID), //nolint G115 since WSID is created by NewWSID()
 			GlobalRoles: globalRoles,                       // [~server.authnz.groles/cmp.c.registry.IssuePrincipalToken~impl]
 		}

@@ -17,6 +17,7 @@ import (
 // isAPIToken -> principals will be built by Roles only in authenticator
 type PrincipalPayload struct {
 	Login       string
+	Alias       string
 	SubjectKind istructs.SubjectKindType
 	ProfileWSID istructs.WSID
 	Roles       []RoleType

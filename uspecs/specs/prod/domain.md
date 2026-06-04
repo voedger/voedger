@@ -69,13 +69,19 @@ Systems:
   - An entity that can make a request to Voedger, such as a user or device
 
 - `User`
-  - A human subject that authenticates with a login and credentials
+  - A human subject that authenticates with a sign-in identifier and credentials
 
 - `Device`
   - A non-human subject that authenticates with generated device credentials
 
+- `Sign-in Identifier`
+  - The value a subject provides to identify itself at sign-in, either a primary login or a login alias
+
 - `Login`
-  - A registry identity used to authenticate a subject for an application
+  - The primary registry sign-in identifier for a subject in an application
+
+- `Login Alias`
+  - An alternative sign-in identifier that resolves to an existing login
 
 - `Credential`
   - Evidence presented by a subject during authentication, such as a password or verified value token
@@ -84,7 +90,7 @@ Systems:
   - An authenticated identity representation for a subject
 
 - `Principal Token`
-  - A bearer token issued after authentication that carries authn identity fields such as login, subject kind, and profile workspace
+  - A bearer token issued after authentication that carries authn identity fields such as login, alias, subject kind, and profile workspace
 
 - `Verified Value Token`
   - A token proving that a verification flow, such as email verification, has succeeded for a specific value

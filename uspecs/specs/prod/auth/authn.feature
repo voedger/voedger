@@ -23,6 +23,11 @@ Feature: Authentication
       When Client creates the same login again
       Then the response status is "409 Conflict"
 
+    Scenario: Login creation rejects an existing active alias
+      Given a login exists with an active login alias
+      When Client creates a login using that alias value
+      Then the response status is "409 Conflict"
+
     Scenario Outline: User login creation rejects malformed request
       When Client creates a user login without "<field>"
       Then the response status is "400 Bad Request"
@@ -39,6 +44,48 @@ Feature: Authentication
       Then the response status is "400 Bad Request"
       And the response indicates unexpected body
 
+  Rule: Login alias management
+
+    Scenario: System sets the first Login Alias
+      Given a User Login "jsmith" with no Login Alias
+      When System sets the Login Alias "j.smith" for "jsmith"
+      Then "jsmith" has the active Login Alias "j.smith"
+
+    Scenario: System replaces an existing Login Alias
+      Given a User Login "jsmith" with the active Login Alias "j.smith"
+      When System sets the Login Alias "john.smith" for "jsmith"
+      Then "jsmith" has the active Login Alias "john.smith"
+      And "j.smith" is no longer active
+
+    Scenario: System clears a Login Alias
+      Given a User Login "jsmith" with the active Login Alias "j.smith"
+      When System clears the Login Alias for "jsmith"
+      Then "jsmith" has no active Login Alias
+
+    Scenario: Alias management rejects caller without System Principal Token
+      Given a user login exists
+      When a caller without a System Principal Token sets a login alias for the user
+      Then the alias change is rejected
+
+    Scenario Outline: Alias creation or update rejects a colliding identifier
+      Given a user login exists
+      And another "<identifier>" exists in the same application
+      When System "<operation>" the user's login alias using that value
+      Then the alias change is rejected as a conflict
+
+      Examples:
+        | operation | identifier   |
+        | creates   | login        |
+        | creates   | active alias |
+        | updates   | login        |
+        | updates   | active alias |
+
+    Scenario: Alias creation rejects an invalid sign-in identifier
+      Given a user login exists
+      When System sets an invalid login alias for the user
+      Then the alias change is rejected
+      And the response indicates incorrect login format
+
   Rule: Sign-in and profile readiness
 
     Scenario Outline: Subject signs in after profile workspace is ready
@@ -51,6 +98,32 @@ Feature: Authentication
         | subject |
         | user    |
         | device  |
+
+    Scenario: User signs in with original login while alias is active
+      Given a user login exists with an active login alias
+      And the profile workspace for the user is ready
+      When Client signs in with original login and password
+      Then the response contains principalToken, expiresInSeconds, and profileWSID
+
+    Scenario: User signs in with active alias
+      Given a user login exists with an active login alias
+      And the profile workspace for the user is ready
+      When Client signs in with alias and password
+      Then the response contains principalToken, expiresInSeconds, and profileWSID
+
+    Scenario: Sign-in rejects a previous alias after alias update
+      Given a user login exists
+      And the profile workspace for the user is ready
+      And System updated the user's login alias
+      When Client signs in with the previous alias and password
+      Then the response status is "401 Unauthorized"
+
+    Scenario: Sign-in rejects a cleared alias
+      Given a user login exists
+      And the profile workspace for the user is ready
+      And System cleared the user's login alias
+      When Client signs in with the cleared alias and password
+      Then the response status is "401 Unauthorized"
 
     Scenario: Sign-in reports profile workspace not ready
       Given a login exists
@@ -71,7 +144,7 @@ Feature: Authentication
       Given "<subject>" login exists
       And the profile workspace for "<subject>" is ready
       When Client signs in with login and password
-      Then the issued principal token identifies login, subject kind, and profileWSID
+      Then the issued principal token identifies login, alias, subject kind, and profileWSID
 
       Examples:
         | subject |
@@ -93,7 +166,19 @@ Feature: Authentication
       Given Client has a valid principal token
       When Client refreshes the principal token
       Then the response contains a new principalToken
-      And the new principalToken preserves the authn identity fields
+      And the new principalToken preserves login, alias, subject kind, and profileWSID from the input token
+
+    Scenario: Principal token carries original login and alias after alias sign-in
+      Given a user login exists with an active login alias
+      And the profile workspace for the user is ready
+      When Client signs in with alias and password
+      Then the issued principal token identifies original login, alias, subject kind, and profileWSID
+
+    Scenario: Existing principal token keeps alias snapshot after alias changes
+      Given Client has a valid principal token issued while a login alias is active
+      When System updates or clears that login alias
+      Then the existing principal token remains valid until normal expiration
+      And the existing principal token retains the alias snapshot from issue time
 
   Rule: Password lifecycle
 

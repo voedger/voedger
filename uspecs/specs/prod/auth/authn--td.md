@@ -9,6 +9,9 @@ Roles:
 - `@Client`
   - External caller that uses Voedger HTTP APIs or registry-backed authn calls.
 
+- `@System`
+  - Trusted backend caller using a System Principal Token for internal registry-backed authn operations.
+
 ## Components
 
 ### Layers
@@ -47,6 +50,10 @@ Registry operations
     |
     +-- [/c.registry.CreateEmailLogin/]
     +-- [/c.registry.CreateLogin/]
+    +-- [/c.registry.InitiateSetLoginAlias/]
+    +-- [/c.registry.PutLoginAliasIndex/]
+    +-- [/c.registry.DeactivateLoginAliasIndex/]
+    +-- [aproj.registry.ApplySetLoginAlias]
     +-- [/q.registry.IssuePrincipalToken/]
     +-- [/c.registry.ChangePassword/]
     +-- [/q.registry.InitiateResetPasswordByEmail/]
@@ -66,6 +73,7 @@ State and workspace lifecycle
     |
     +-- [(registry.Login)]
     +-- [(registry.LoginIdx)]
+    +-- [(registry.LoginAlias)]
     +-- [[Profile workspace lifecycle]]
     |     |
     |     +-- [/c.sys.CreateWorkspaceID/]
@@ -132,17 +140,37 @@ State and workspace lifecycle
 ### Registry operations
 
 - `[/c.registry.CreateEmailLogin/]`
-  - Creates a user `[(registry.Login)]` record from a verified email value and starts profile workspace creation.
+  - Creates a user `[(registry.Login)]` record from a verified email value, rejects collisions with active `[(registry.LoginAlias)]`, and starts profile workspace creation.
   - decl: [pkg/registry/appws.vsql#CreateEmailLogin](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_createlogin.go#execCmdCreateEmailLogin](../../../../pkg/registry/impl_createlogin.go)
 
 - `[/c.registry.CreateLogin/]`
-  - Creates a non-email login record, including device logins, after app, login format, duplicate, and profile-cluster validation.
+  - Creates a non-email login record, including device logins, after app, login format, duplicate, login-vs-alias collision, and profile-cluster validation.
   - decl: [pkg/registry/appws.vsql#CreateLogin](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_createlogin.go#execCmdCreateLogin](../../../../pkg/registry/impl_createlogin.go)
 
+- `[/c.registry.InitiateSetLoginAlias/]`
+  - System-authorized command that resolves the source `[(registry.Login)]`, validates the requested alias format, sets the alias in-progress lock, and records the alias intent for asynchronous application.
+  - decl: [pkg/registry/appws.vsql#InitiateSetLoginAlias](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_setloginalias.go#execCmdInitiateSetLoginAlias](../../../../pkg/registry/impl_setloginalias.go)
+
+- `[/c.registry.PutLoginAliasIndex/]`
+  - Internal System command that applies alias-vs-login and alias-vs-alias uniqueness in `pseudoWSID(alias)` and inserts or reactivates the active `[(registry.LoginAlias)]` row.
+  - decl: [pkg/registry/appws.vsql#PutLoginAliasIndex](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_setloginalias.go#execCmdPutLoginAliasIndex](../../../../pkg/registry/impl_setloginalias.go)
+
+- `[/c.registry.DeactivateLoginAliasIndex/]`
+  - Internal System command that deactivates the previous alias index row owned by the source `[(registry.Login)]`.
+  - decl: [pkg/registry/appws.vsql#DeactivateLoginAliasIndex](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_setloginalias.go#execCmdDeactivateLoginAliasIndex](../../../../pkg/registry/impl_setloginalias.go)
+
+- `[aproj.registry.ApplySetLoginAlias]`
+  - Async projector triggered `AFTER EXECUTE ON c.registry.InitiateSetLoginAlias`; drives cross-workspace alias-index put/deactivate calls and commits `Login.Alias`, `Login.AliasError`, and `Login.AliasInProc`.
+  - decl: [pkg/registry/appws.vsql#ApplySetLoginAlias](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_setloginalias.go#applySetLoginAlias](../../../../pkg/registry/impl_setloginalias.go)
+
 - `[/q.registry.IssuePrincipalToken/]`
-  - Resolves login state, validates password and profile readiness, applies TTL policy, and issues principal tokens.
+  - Resolves sign-in by primary login or active alias, validates password and profile readiness, applies TTL policy, and issues principal tokens. On the alias path, it reads `[(registry.LoginAlias)]`, fetches the source `[(registry.Login)]` with `q.sys.GetCDoc`, validates `Login.Alias` against the submitted identifier, and snapshots login and alias into the token.
   - decl: [pkg/registry/appws.vsql#IssuePrincipalToken](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_issueprincipaltoken.go#provideIssuePrincipalTokenExec](../../../../pkg/registry/impl_issueprincipaltoken.go)
 
@@ -174,7 +202,7 @@ State and workspace lifecycle
   - impl: [pkg/itokens-payloads/utils.go#GetPayload](../../../../pkg/itokens-payloads/utils.go)
 
 - `[/q.sys.RefreshPrincipalToken/]`
-  - Issues a replacement principal token from the existing principal token payload and duration.
+  - Issues a replacement principal token from the existing principal token payload and duration, preserving identity fields including alias.
   - decl: [pkg/sys/sys.vsql#RefreshPrincipalToken](../../../../pkg/sys/sys.vsql)
   - impl: [pkg/sys/authnz/impl_refreshprincipaltoken.go#provideRefreshPrincipalTokenExec](../../../../pkg/sys/authnz/impl_refreshprincipaltoken.go)
 
@@ -191,7 +219,7 @@ State and workspace lifecycle
 ### State and workspace lifecycle
 
 - `[(registry.Login)]`
-  - Registry CDoc that stores login app, subject kind, login hash, password hash, profile workspace fields, workspace error, and initialization data.
+  - Registry CDoc that stores login app, subject kind, login hash, password hash, profile workspace fields, workspace error, initialization data, alias in-progress state (`AliasInProc`), active alias snapshot (`Alias`), and last alias failure (`AliasError`).
   - decl: [pkg/registry/appws.vsql#Login](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_createlogin.go#createLogin](../../../../pkg/registry/impl_createlogin.go)
 
@@ -199,6 +227,11 @@ State and workspace lifecycle
   - Registry view that resolves active login records by application workspace and login hash.
   - decl: [pkg/registry/appws.vsql#LoginIdx](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_createlogin.go#projectorLoginIdx](../../../../pkg/registry/impl_createlogin.go)
+
+- `[(registry.LoginAlias)]`
+  - Registry CDoc used as the active alias lookup index, snapshotting `(AppName, SourceAppWSID, CDocLoginID, Login, Alias)` and enforcing active-row uniqueness by `(AppName, Alias)`; inactive rows may be reactivated when the same alias value is assigned again.
+  - decl: [pkg/registry/appws.vsql#LoginAlias](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_setloginalias.go#execCmdPutLoginAliasIndex](../../../../pkg/registry/impl_setloginalias.go)
 
 - `[[Profile workspace lifecycle]]`
   - Asynchronous profile workspace creation path triggered by login records and reflected back into `[(registry.Login)]` readiness fields.
@@ -255,6 +288,16 @@ State and workspace lifecycle
   -> @Client: 409 Conflict
 ```
 
+#### Login creation rejects an existing active alias
+
+```text
+@Client
+  -> [User login handler] or [Device login handler]
+  -> [/c.registry.CreateEmailLogin/] or [/c.registry.CreateLogin/]
+  -> [(registry.LoginAlias)]: active alias already uses the requested login string
+  -> @Client: 409 Conflict
+```
+
 #### User login creation rejects malformed request
 
 ```text
@@ -273,6 +316,82 @@ State and workspace lifecycle
   -> @Client: 400 Bad Request
 ```
 
+### Login alias management
+
+#### System sets the first login alias
+
+```text
+@System
+  -> [/c.registry.InitiateSetLoginAlias/]: Login = jsmith, Alias = j.smith
+  -> [(registry.Login)]: set AliasInProc
+  -> [aproj.registry.ApplySetLoginAlias]
+  -> [/c.registry.PutLoginAliasIndex/]
+  -> [(registry.LoginAlias)]: active alias index for j.smith
+  -> [(registry.Login)]: Alias = j.smith, AliasInProc = 0, AliasError = ""
+```
+
+#### System replaces an existing login alias
+
+```text
+@System
+  -> [/c.registry.InitiateSetLoginAlias/]: Login = jsmith, Alias = john.smith
+  -> [(registry.Login)]: set AliasInProc
+  -> [aproj.registry.ApplySetLoginAlias]
+  -> [/c.registry.PutLoginAliasIndex/]: create active alias index for john.smith
+  -> [/c.registry.DeactivateLoginAliasIndex/]: deactivate old alias index j.smith
+  -> [(registry.Login)]: Alias = john.smith, AliasInProc = 0, AliasError = ""
+```
+
+#### System clears a login alias
+
+```text
+@System
+  -> [/c.registry.InitiateSetLoginAlias/]: Login = jsmith, Alias = ""
+  -> [(registry.Login)]: set AliasInProc
+  -> [aproj.registry.ApplySetLoginAlias]
+  -> [/c.registry.DeactivateLoginAliasIndex/]: deactivate old alias index j.smith
+  -> [(registry.Login)]: Alias = "", AliasInProc = 0, AliasError = ""
+```
+
+#### Alias management rejects caller without System Principal Token
+
+```text
+@Client
+  -> [/c.registry.InitiateSetLoginAlias/]
+  -> @Client: rejected before alias state changes
+```
+
+#### Alias creation or update rejects alias-vs-login collision
+
+```text
+@System
+  -> [/c.registry.InitiateSetLoginAlias/]: Alias = existing-login
+  -> [aproj.registry.ApplySetLoginAlias]
+  -> [/c.registry.PutLoginAliasIndex/]
+  -> [(registry.LoginIdx)]: active login already uses the alias string
+  -> [(registry.Login)]: AliasError records conflict when best-effort write succeeds
+```
+
+#### Alias creation or update rejects alias-vs-alias collision
+
+```text
+@System
+  -> [/c.registry.InitiateSetLoginAlias/]: Alias = existing-alias
+  -> [aproj.registry.ApplySetLoginAlias]
+  -> [/c.registry.PutLoginAliasIndex/]
+  -> [(registry.LoginAlias)]: active alias already exists for another source login
+  -> [(registry.Login)]: AliasError records conflict when best-effort write succeeds
+```
+
+#### Alias creation rejects invalid alias format
+
+```text
+@System
+  -> [/c.registry.InitiateSetLoginAlias/]: Alias = invalid identifier
+  -> [(registry.Login)]: alias format validation fails before AliasInProc is set
+  -> @System: 400 Bad Request
+```
+
 ### Sign-in and profile readiness
 
 #### Subject signs in after profile workspace is ready
@@ -287,6 +406,42 @@ State and workspace lifecycle
   -> [(registry.Login)]: password hash matches and profileWSID is non-zero
   -> [Token service]: issue principal token
   -> @Client: principalToken, expiresInSeconds, profileWSID
+```
+
+#### User signs in with active alias
+
+```text
+@Client
+  -> [/POST /api/v2/apps/{owner}/{app}/auth/login/]: alias, password
+  -> [API v2 auth routes]
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]
+  -> [(registry.LoginIdx)]: primary-login miss
+  -> [(registry.LoginAlias)]: active alias hit
+  -> [/q.sys.GetCDoc/]: read source [(registry.Login)] in SourceAppWSID
+  -> [(registry.Login)]: Alias equals submitted alias; password hash matches and profileWSID is non-zero
+  -> [Token service]: issue principal token with Login and Alias
+  -> @Client: principalToken, expiresInSeconds, profileWSID
+```
+
+#### Sign-in rejects previous alias after alias update
+
+```text
+@Client
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]: previous alias, password
+  -> [(registry.LoginAlias)]: previous alias missing or inactive
+  -> @Client: 401 Unauthorized
+```
+
+#### Sign-in rejects cleared alias
+
+```text
+@Client
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]: cleared alias, password
+  -> [(registry.LoginAlias)]: cleared alias missing or inactive
+  -> @Client: 401 Unauthorized
 ```
 
 #### Sign-in reports profile workspace not ready
@@ -319,8 +474,8 @@ State and workspace lifecycle
 @Client
   -> [Auth login handler]
   -> [/q.registry.IssuePrincipalToken/]
-  -> [(registry.Login)]: login, subject kind, profileWSID
-  -> [Token service]: PrincipalPayload(Login, SubjectKind, ProfileWSID)
+  -> [(registry.Login)]: login, alias, subject kind, profileWSID
+  -> [Token service]: PrincipalPayload(Login, Alias, SubjectKind, ProfileWSID)
   -> @Client: principalToken
 ```
 
@@ -351,9 +506,19 @@ State and workspace lifecycle
   -> [API v2 auth routes]
   -> [Auth refresh handler]
   -> [/q.sys.RefreshPrincipalToken/]
-  -> [Token service]: validate existing token and issue replacement
+  -> [Token service]: validate existing token and issue replacement preserving Login, Alias, SubjectKind, ProfileWSID from the input token
   -> [Auth refresh handler]
   -> @Client: new principalToken, expiresInSeconds, profileWSID
+```
+
+#### Existing principal token keeps alias snapshot after alias changes
+
+```text
+@Client
+  -> [Token service]: principal token already issued with Alias = j.smith
+  -> @System: update or clear login alias
+  -> [Token service]: existing token remains valid until normal expiration
+  -> @Client: existing token payload still carries Alias = j.smith
 ```
 
 ### Password lifecycle
@@ -476,7 +641,7 @@ error-handling rules from [auth architecture](./arch.md).
 
 - Every Component in `Public API endpoints` and `Authn request handlers` treats passwords, bearer tokens, verification tokens, and verified value tokens as request secrets.
 - Every Component in `Registry operations` stores password evidence only through `[(registry.Login)]` password hashes and never returns plaintext passwords except generated device credentials at creation time.
-- Every `[Token service]` principal token issue includes the authn identity fields required by this feature: login, subject kind, and profile workspace ID.
+- Every `[Token service]` principal token issue includes the authn identity fields required by this feature: login, alias, subject kind, and profile workspace ID.
 
 ### Error handling and resilience
 
@@ -495,5 +660,6 @@ error-handling rules from [auth architecture](./arch.md).
 ### Testing
 
 - Every Scenario in [authn.feature](./authn.feature) has integration coverage or must gain integration coverage before authn behavior changes.
+- Every login-alias Scenario has registry integration coverage, including alias management, cross-namespace uniqueness, alias sign-in, stale-alias rejection, and token alias snapshots.
 - Every Component in `Public API endpoints` that maps a public status code has API-level integration coverage for success and rejection paths.
 - Every token contract Scenario validates the emitted token payload or returned authn response fields at API or registry integration level.

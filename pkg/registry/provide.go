@@ -24,15 +24,28 @@ func Provide(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, federation
 		QNameCommandCreateEmailLogin,
 		execCmdCreateEmailLogin,
 	))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		QNameCommandInitiateSetLoginAlias,
+		execCmdInitiateSetLoginAlias,
+	))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		QNameCommandPutLoginAliasIndex,
+		execCmdPutLoginAliasIndex,
+	))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		QNameCommandDeactivateLoginAliasIndex,
+		execCmdDeactivateLoginAliasIndex,
+	))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(RegistryPackage, "IssuePrincipalToken"),
-		provideIssuePrincipalTokenExec(itokens)))
+		provideIssuePrincipalTokenExec(itokens, federation)))
 	provideChangePassword(cfg)
 	provideResetPassword(cfg, itokens, federation)
 	provideUpdateGlobalRoles(cfg)
 	cfg.AddAsyncProjectors(
 		provideAsyncProjectorInvokeCreateWorkspaceID(federation.WithRetry(), itokens),
+		provideAsyncProjectorApplySetLoginAlias(federation.WithRetry(), itokens),
 	)
 	return ProvidePackageFS()
 }
@@ -48,6 +61,13 @@ func provideAsyncProjectorInvokeCreateWorkspaceID(federation federation.IFederat
 	return istructs.Projector{
 		Name: qNameProjectorInvokeCreateWorkspaceID_registry,
 		Func: invokeCreateWorkspaceIDProjector(federation, tokensAPI),
+	}
+}
+
+func provideAsyncProjectorApplySetLoginAlias(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) istructs.Projector {
+	return istructs.Projector{
+		Name: QNameProjectorApplySetLoginAlias,
+		Func: applySetLoginAlias(federation, tokensAPI),
 	}
 }
 
