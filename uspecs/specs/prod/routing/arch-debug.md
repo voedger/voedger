@@ -1,18 +1,18 @@
 # Context subsystem architecture: prod/routing/debug
 
-Routing debug subsystem architecture: `net/http/pprof` handlers mounted on the admin endpoint (and, for compatibility, also on the public router) for runtime profiling and diagnostics. Context-level overview: [arch.md](./arch.md).
+Routing debug subsystem architecture: `net/http/pprof` handlers mounted by `registerDebugHandlers` on every `routerService` instance — both the loopback-only admin endpoint and the public HTTP/HTTPS listener — for runtime profiling and diagnostics. Context-level overview: [arch.md](./arch.md).
 
 ## External actors
 
-Roles:
+Systems:
 
-- `@Admin`
-  - Operator collecting CPU / heap / goroutine / trace profiles for diagnostics over loopback.
+- `*Client`
+  - Any caller able to open a TCP connection to either listener. The debug routes carry no authentication, role check, or method restriction, so every reachable caller can collect the same profiles. Restricting access on the public listener is an operator-side concern (network ACLs, upstream reverse proxy, or wrapping the listener with an authentication layer); the admin listener is restricted only by its loopback bind address (`httpu.LocalhostIP:AdminPort`).
 
 ## Scenarios overview
 
 - **`Collect pprof profile`**
-  - The operator opens a loopback connection to the admin endpoint and reads any of the standard `pprof` handlers (`/debug/pprof`, `/debug/cmdline`, `/debug/profile`, `/debug/symbol`, `/debug/trace`, or `/debug/{cmd}` aliasing into `/debug/pprof/{cmd}`); the handler returns the corresponding profile.
+  - `*Client` opens a connection to either listener and reads any of the standard `pprof` handlers (`/debug/pprof`, `/debug/cmdline`, `/debug/profile`, `/debug/symbol`, `/debug/trace`, or `/debug/{cmd}` aliasing into `/debug/pprof/{cmd}`); the handler returns the corresponding profile.
 
 ## Components
 
@@ -21,7 +21,7 @@ Roles:
 ```text
 External actors
     |
-    +-- @Admin
+    +-- *Client
     |
     v
 Entry points
@@ -37,6 +37,7 @@ Entry points
 Cross-subsystem components
     |
     +-- [Admin endpoint]
+    +-- [Public listener]
     +-- [Router (gorilla/mux)]
 ```
 
@@ -69,11 +70,15 @@ Cross-subsystem components
 ### Cross-subsystem components
 
 - `[Admin endpoint]`
-  - Shared with the rest of the routing context; see [arch.md](./arch.md#cross-subsystem-components). All debug handlers are reachable on `localhost:AdminPort`.
+  - Shared with the rest of the routing context; see [arch.md](./arch.md#cross-subsystem-components). All debug handlers are reachable on `localhost:AdminPort`; restricted only by the loopback bind address.
   - Path to file: [pkg/router/provide.go](../../../../pkg/router/provide.go)
 
+- `[Public listener]`
+  - Shared with the rest of the routing context; defined in [arch-ingress.md](./arch-ingress.md#listeners). `registerDebugHandlers` is invoked from the same `routerService.Prepare` that runs on the public listener, so the same `/debug/*` routes are mounted there without authentication and are reachable by any `*Client`.
+  - Path to file: [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
+
 - `[Router (gorilla/mux)]`
-  - Shared with the rest of the routing context; see [arch.md](./arch.md#cross-subsystem-components). `registerDebugHandlers` runs after `registerHandlersV1` / `registerHandlersV2` and before `registerReverseProxyHandler`, so debug routes take precedence over the reverse-proxy fallback.
+  - Shared with the rest of the routing context; see [arch.md](./arch.md#cross-subsystem-components). `registerDebugHandlers` runs after `registerHandlersV1` / `registerHandlersV2` and before `registerReverseProxyHandler`, so debug routes take precedence over the reverse-proxy fallback on whichever listener they are mounted.
   - Path to file: [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
 
 ## Scenarios
@@ -81,19 +86,24 @@ Cross-subsystem components
 ### Collect pprof profile
 
 ```text
-@Admin curl http://localhost:55555/debug/pprof
+*Client curl http://localhost:55555/debug/pprof
   -> [Admin endpoint] -> [Router (gorilla/mux)] match "/debug/pprof"
   -> [Debug index] (pprof.Index) -> respond with profile listing
 
-@Admin curl http://localhost:55555/debug/profile?seconds=30
+*Client curl http://localhost:55555/debug/profile?seconds=30
   -> [Admin endpoint] -> [Router (gorilla/mux)] match "/debug/profile"
   -> [Debug profile] (pprof.Profile) -> respond with CPU profile
 
-@Admin curl http://localhost:55555/debug/heap
+*Client curl http://localhost:55555/debug/heap
   -> [Admin endpoint] -> [Router (gorilla/mux)] match "/debug/{cmd}"
   -> [Debug alias] rewrite to /debug/pprof/heap -> pprof.Index -> respond with heap profile
+
+*Client curl https://<public-host>/debug/profile?seconds=30
+  -> [Public listener] -> [Router (gorilla/mux)] match "/debug/profile"
+  -> [Debug profile] (pprof.Profile) -> respond with CPU profile
+       (same handler graph; no authentication is performed)
 ```
 
 ## Cross-cutting concerns
 
-`registerDebugHandlers` runs unconditionally in `routerService.Prepare`, so the same `/debug/*` routes are also registered on the public endpoint without authentication. The admin endpoint is loopback-only by construction (`httpu.LocalhostIP:AdminPort`); exposing the debug routes on the public listener safely is therefore an operator-side concern (network ACLs).
+`registerDebugHandlers` is invoked from `routerService.Prepare` and is therefore part of the handler graph on every listener that runs a `routerService` — both the admin endpoint (loopback by construction: `httpu.LocalhostIP:AdminPort`) and the public HTTP/HTTPS listener. The debug routes are not gated by `[Query limiter]`, `[Request validator]`, authentication, or any other operator. Restricting external access to `/debug/*` on the public listener is an operator-side concern (network ACLs, upstream reverse proxy, or wrapping the listener with an authentication layer).

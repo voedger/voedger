@@ -29,7 +29,7 @@ Systems:
   - The reverse-proxy matcher (registered last on the public router) inspects the request host and path and forwards unmatched requests to the configured upstream (path-prefix, path-prefix with rewrite, host-based domain, or default fallback). Details: [arch-reverse-proxy.md](./arch-reverse-proxy.md).
 
 - **`Serve bootstrap and operator request`**
-  - The admin endpoint accepts loopback requests for internal API calls used by `pkg/btstrp` (via `federation.AdminFunc`) and for debug endpoints used by operators. Details: [arch-debug.md](./arch-debug.md).
+  - The admin endpoint accepts loopback requests for internal API calls used by `pkg/btstrp` (via `federation.AdminFunc`). The debug endpoints are mounted on every `routerService` instance — both the admin endpoint and the public listener — without authentication. Details: [arch-debug.md](./arch-debug.md).
 
 ## Components
 
@@ -80,7 +80,7 @@ Configuration
   - Path to file: [arch-reverse-proxy.md](./arch-reverse-proxy.md)
 
 - `[[Debug]]`
-  - `net/http/pprof` endpoints (`/debug/pprof`, `/debug/cmdline`, `/debug/profile`, `/debug/symbol`, `/debug/trace`) mounted on the admin endpoint (and also on the public router, currently without authentication).
+  - `net/http/pprof` endpoints (`/debug/pprof`, `/debug/cmdline`, `/debug/profile`, `/debug/symbol`, `/debug/trace`, and `/debug/{cmd}` alias) mounted by `registerDebugHandlers` on every `routerService` instance. The routes carry no authentication, role check, or method restriction and are reachable by any `*Client` on whichever listener they are mounted; access control on the public listener is an operator-side concern (network ACLs).
   - Path to file: [arch-debug.md](./arch-debug.md)
 
 ### Cross-subsystem components
@@ -159,9 +159,13 @@ pkg/btstrp.callDeployApp
   -> [Router (gorilla/mux)] -> registerHandlersV1 -> RequestHandler_V1
   -> bus.IRequestSender -> command processor
 
-@Admin / operator
-  -> [Admin endpoint] /debug/...
+*Client
+  -> [Admin endpoint] (loopback) /debug/...
   -> [[Debug]] pprof handler
+
+*Client
+  -> [Public listener] /debug/...
+  -> [[Debug]] pprof handler  (same routes, no authentication)
 ```
 
 Details: [arch-debug.md](./arch-debug.md).
