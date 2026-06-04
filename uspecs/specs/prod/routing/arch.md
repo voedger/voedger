@@ -86,7 +86,7 @@ Configuration
 ### Cross-subsystem components
 
 - `[Admin endpoint]`
-  - Localhost-only listener on `AdminPort` (default `55555`) sharing the same handler registration sequence as the public endpoint (router checker, API v1, API v2, debug, reverse-proxy) with two carve-outs: BLOB routes are skipped because `blobRequestHandler` is nil, and the `[Query limiter]` is disabled (the comment in source: `limiter is nil for Admin and ACME services`). The VVM service pipeline (`provideServicePipeline`) runs the admin endpoint operator strictly before the bootstrap operator so `pkg/btstrp.callDeployApp` can invoke `c.cluster.DeployApp` via `federation.AdminFunc` (which targets `localhost:AdminPort`) before the public endpoint accepts external traffic.
+  - Localhost-only listener on `AdminPort` (default `55555`) sharing the same handler registration sequence as the public endpoint (router checker, API v1, API v2, debug, reverse-proxy) with two carve-outs: BLOB routes are skipped because `blobRequestHandler` is nil, and the `[Query limiter]` has no effective limit on this endpoint — `getRouterService` always allocates a non-nil `wsQueryLimiter`, but the admin service is constructed from an empty `RouterParams` so `MaxQueriesPerWS` stays `0`, and `acquire` short-circuits to `true` whenever `maxQPerWS <= 0`. The VVM service pipeline (`provideServicePipeline`) runs the admin endpoint operator strictly before the bootstrap operator so `pkg/btstrp.callDeployApp` can invoke `c.cluster.DeployApp` via `federation.AdminFunc` (which targets `localhost:AdminPort`) before the public endpoint accepts external traffic.
   - Path to file: [pkg/router/provide.go](../../../../pkg/router/provide.go)
 
 - `[HTTP server]`
@@ -98,11 +98,11 @@ Configuration
   - Path to file: [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
 
 - `[CORS wrapper]`
-  - Wraps every API, BLOB, and N10N handler to set `Access-Control-Allow-Origin: *`, allow the headers used by the browser SDK, and short-circuit `OPTIONS` preflight requests.
+  - Wraps API, BLOB, and N10N handlers to set `Access-Control-Allow-Origin: *` and allow the headers used by the browser SDK; for routes that include `OPTIONS` (API v1, API v2, BLOB read/write, `/api/check`, `/n10n/update/{offset}`) it also short-circuits preflight requests. The `GET`-only N10N subscribe endpoints (`/n10n/channel`, `/n10n/subscribe`, `/n10n/unsubscribe`) do not accept `OPTIONS`, so no preflight is served on them.
   - Path to file: [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
 
 - `[Query limiter]`
-  - Per-`WSID` concurrent-query cap (`MaxQueriesPerWS`, default `10`) gating API v1 queries and the `q.cluster.VSqlUpdate2` shim as well as every API v2 handler; rejects excess requests with `503 Service Unavailable` and logs aggregated rejections every `10s`. Disabled on the admin endpoint (`limiter is nil for Admin and ACME services`).
+  - Per-`WSID` concurrent-query cap (`MaxQueriesPerWS`, default `10`) gating API v1 `q.*` calls and the `q.cluster.VSqlUpdate2` shim, plus query-processor-bound `GET` requests on API v2 (`queries`, `views`, `docs`, `cdocs` — selected by `isQPBoundAPIPath`). Other v2 endpoints (commands, schemas, workspace roles, auth, user/device creation, BLOBs) and non-`q.*` v1 calls bypass the limiter. Rejects excess requests with `503 Service Unavailable` and logs aggregated rejections every `10s`. On the admin endpoint the limiter struct is allocated but `MaxQueriesPerWS` stays `0`, so `acquire` always succeeds (no effective limit); the ACME service runs no `routerService` at all and has no limiter.
   - Path to file: [pkg/router/impl_limiter.go](../../../../pkg/router/impl_limiter.go)
 
 ### Configuration

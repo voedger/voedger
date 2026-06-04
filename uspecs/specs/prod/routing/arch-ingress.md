@@ -61,6 +61,7 @@ In-pipeline operators
     +-- [CORS wrapper]
     +-- [Query limiter]
     +-- [VSqlUpdate v1 shim]
+    +-- [VSqlUpdate v2 shim]
     +-- [Response writer]
     |
     v
@@ -84,7 +85,7 @@ Boundary to apps
   - Path to file: [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
 
 - `[API v2 handler]`
-  - Family of handlers registered by `registerHandlersV2` covering `docs`, `cdocs`, `commands`, `queries`, `views`, `schemas` (`/api/v2/apps/{owner}/{app}/...`), workspace roles, BLOB temporary and persistent endpoints, and a generic catch-all for unknown v2 paths. Every handler acquires `[Query limiter]` and forwards through `[bus.IRequestSender]`.
+  - Family of handlers registered by `registerHandlersV2` covering `docs`, `cdocs`, `commands`, `queries`, `views`, `schemas` (`/api/v2/apps/{owner}/{app}/...`), workspace roles, BLOB temporary and persistent endpoints, and a generic catch-all for unknown v2 paths. Each handler forwards through `[bus.IRequestSender]`; `[Query limiter]` is acquired only for query-processor-bound `GET` requests (`queries`, `views`, `docs`, `cdocs` — selected by `isQPBoundAPIPath`) and for the `[VSqlUpdate v2 shim]`.
   - Path to file: [pkg/router/impl_apiv2.go](../../../../pkg/router/impl_apiv2.go)
 
 - `[BLOB handler]`
@@ -92,7 +93,7 @@ Boundary to apps
   - Path to file: [pkg/router/impl_blob.go](../../../../pkg/router/impl_blob.go)
 
 - `[N10N SSE handler]`
-  - Four handlers on `GET /n10n/...`: `subscribeAndWatchHandler` (`/n10n/channel` - opens an SSE stream and subscribes), `subscribeHandler` (`/n10n/subscribe`), `unSubscribeHandler` (`/n10n/unsubscribe`), and `updateHandler` (`/n10n/update/{offset}`). Each manipulates a channel on `[in10n.IN10nBroker]` and streams events over `text/event-stream` until the request context is cancelled. `routerService.Stop` waits for `MetricNumSubscriptions() == 0` before completing shutdown.
+  - Four handlers on `/n10n/...`: three on `GET` — `subscribeAndWatchHandler` (`/n10n/channel`; opens an SSE stream, creates a channel on `[in10n.IN10nBroker]` and subscribes), `subscribeHandler` (`/n10n/subscribe`; adds a projection-key subscription to an existing channel), `unSubscribeHandler` (`/n10n/unsubscribe`; removes a subscription) — and `updateHandler` (`/n10n/update/{offset:[0-9]{1,10}}`; no method restriction, documented in source as `POST` because it reads the projection key from the request body and calls `[in10n.IN10nBroker].Update` to publish an offset). The `/n10n/channel` handler streams updates over `text/event-stream` until the request context is cancelled. `routerService.Stop` waits for `MetricNumSubscriptions() == 0` before completing shutdown.
   - Path to file: [pkg/router/impl_n10n.go](../../../../pkg/router/impl_n10n.go)
 
 - `[Router checker]`
@@ -110,12 +111,16 @@ Boundary to apps
   - Path to file: [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
 
 - `[Query limiter]`
-  - Shared with the rest of the routing context; see [arch.md](./arch.md#cross-subsystem-components). On the public listener it wraps every API v2 handler and the `q.*` / `q.cluster.VSqlUpdate2` paths of `[API v1 handler]`; the admin endpoint mounts the same handler set but with the limiter disabled (`limiter is nil for Admin and ACME services`, see [arch.md](./arch.md#cross-subsystem-components)). Rejections reply `503 Service Unavailable`.
+  - Shared with the rest of the routing context; see [arch.md](./arch.md#cross-subsystem-components). On the public listener it wraps query-processor-bound `GET` requests of `[API v2 handler]` (`queries`, `views`, `docs`, `cdocs` — selected by `isQPBoundAPIPath`), the `q.*` paths of `[API v1 handler]`, and both `[VSqlUpdate v1 shim]` and `[VSqlUpdate v2 shim]` (which reroute to `q.cluster.VSqlUpdate2`); other v2 endpoints (commands, schemas, workspace roles, auth, user/device creation, BLOBs) and non-`q.*` v1 calls bypass it. The admin endpoint mounts the same handler set, but the limiter is constructed with `MaxQueriesPerWS = 0` and `acquire` short-circuits to `true` whenever `maxQPerWS <= 0`, so admin traffic is not capped (see [arch.md](./arch.md#cross-subsystem-components)). Rejections on the public listener reply `503 Service Unavailable`.
   - Path to file: [pkg/router/impl_limiter.go](../../../../pkg/router/impl_limiter.go)
 
 - `[VSqlUpdate v1 shim]`
   - `dispatchVSqlUpdateShim_V1` re-routes API v1 `c.cluster.VSqlUpdate` calls to `q.cluster.VSqlUpdate2` so the workpiece runs on the query processor instead of synchronously re-entering the command processor.
-  - Path to file: [pkg/router/impl_http.go](../../../../pkg/router/impl_http.go)
+  - Path to file: [pkg/router/impl_vsqlupdate_shim.go](../../../../pkg/router/impl_vsqlupdate_shim.go)
+
+- `[VSqlUpdate v2 shim]`
+  - `dispatchVSqlUpdateShim_V2` re-routes API v2 `c.cluster.VSqlUpdate` calls (detected by `isVSqlUpdateV2Call`) to `q.cluster.VSqlUpdate2` so the workpiece runs on the query processor; shares `[Query limiter]` gating with native queries.
+  - Path to file: [pkg/router/impl_vsqlupdate_shim.go](../../../../pkg/router/impl_vsqlupdate_shim.go)
 
 - `[Response writer]`
   - `initResponse` / `reply_v1` / `reply_v2` translate the `bus.ResponseMeta` mode (`Single`, `StreamJSON`, `StreamEvents`) into HTTP headers and stream-or-buffer the response body; `applySysErrorHeaders` propagates `coreutils.SysError` headers.
@@ -156,8 +161,9 @@ Boundary to apps
 *Client {GET|POST|PATCH|DELETE} /api/v2/apps/{owner}/{app}/...
   -> [Public listener] -> [Router (gorilla/mux)] match by API v2 path
   -> [CORS wrapper] -> [Request validator]
-  -> [Query limiter].acquire(WSID)
-  -> [API v2 handler] -> [bus.IRequestSender] -> apps v2 processor
+  -> if GET on queries/views/docs/cdocs, or VSqlUpdate v2 shim: [Query limiter].acquire(WSID)
+  -> if VSqlUpdate shim: [VSqlUpdate v2 shim] -> q.cluster.VSqlUpdate2
+  -> else: [API v2 handler] -> [bus.IRequestSender] -> apps v2 processor
   -> [Response writer]
   -> *Client
 ```

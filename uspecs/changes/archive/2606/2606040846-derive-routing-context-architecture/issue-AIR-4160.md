@@ -13,4 +13,4 @@ missing architecture for Routing context mentioned in domain.md
 
 ## What
 
-derive architeture from Routing context considering exisitng documentation and codebase.
+derive architecture from Routing context considering exisitng documentation and codebase.

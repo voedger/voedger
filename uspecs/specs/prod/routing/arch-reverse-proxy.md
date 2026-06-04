@@ -75,11 +75,11 @@ Shared infrastructure
 ### In-pipeline operators
 
 - `[Route table parser]`
-  - `parseRoutes` validates every path prefix starts with `/` and parses every target URL once at `Prepare` time. Failures abort listener startup.
+  - `parseRoutes` validates every path prefix starts with `/` and parses `Routes` / `RoutesRewrite` target URLs once at `Prepare` time; `RouteDefault`, when configured, is parsed once at the same point. Failures abort listener startup. `RouteDomains` target URLs are not handled here — they are parsed on demand inside `[Domain rule]` during request matching and the matcher panics on a parse error.
   - Path to file: [pkg/router/impl_reverseproxy.go](../../../../pkg/router/impl_reverseproxy.go)
 
 - `[Domain rule]`
-  - Looks up the request host (with the port stripped) in `RouteDomains`; on hit, rewrites the request host to the target host and forwards regardless of path. Highest precedence _within the reverse-proxy matcher_ — domain matches short-circuit `[Path-prefix rule]` and `[Default rule]`, but only requests that fall through the earlier API / BLOB / N10N / debug routes reach the matcher in the first place (the reverse proxy is registered last on the gorilla/mux router).
+  - Looks up the request host (with the port stripped) in `RouteDomains`; on hit, parses the configured target URL on demand (panics on parse error), rewrites the request host to the target host and forwards regardless of path. Highest precedence _within the reverse-proxy matcher_ — domain matches short-circuit `[Path-prefix rule]` and `[Default rule]`, but only requests that fall through the earlier API / BLOB / N10N / debug routes reach the matcher in the first place (the reverse proxy is registered last on the gorilla/mux router).
   - Path to file: [pkg/router/impl_reverseproxy.go](../../../../pkg/router/impl_reverseproxy.go)
 
 - `[Path-prefix rule]`
