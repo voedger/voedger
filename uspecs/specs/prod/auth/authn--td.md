@@ -1,6 +1,6 @@
 # Feature technical design: authn
 
-Technical design for the authentication feature: login creation, sign-in, principal token issue and refresh, profile workspace readiness, and password lifecycle flows.
+Technical design for the authentication feature: login creation, sign-in, principal token issue and refresh, profile workspace readiness, and password lifecycle flows. The subsystem architecture for the same scope is in [arch-authn.md](./arch-authn.md); the principal payload contract and refresh semantics (including the alias snapshot captured at issue time) are owned by [arch-tokens.md](./arch-tokens.md); shared concepts (`[(registry.Login)]`, `[Principal Token]`, `[Auth boundary]`) are defined in [arch.md](./arch.md#shared-concepts). This document only adds the HTTP-side surface (routes, handlers, status-code mapping) that is unique to the public authn feature.
 
 ## External actors
 
@@ -197,9 +197,7 @@ State and workspace lifecycle
 ### Token and verification operations
 
 - `[Token service]`
-  - Issues and validates app-scoped principal, verification, and verified value tokens.
-  - decl: [pkg/itokens-payloads/types.go#PrincipalPayload](../../../../pkg/itokens-payloads/types.go)
-  - impl: [pkg/itokens-payloads/utils.go#GetPayload](../../../../pkg/itokens-payloads/utils.go)
+  - Token primitives and `PrincipalPayload` are owned by [arch-tokens.md](./arch-tokens.md#token-primitives); referenced here as the layer that issues and validates the tokens carried by the authn HTTP flows.
 
 - `[/q.sys.RefreshPrincipalToken/]`
   - Issues a replacement principal token from the existing principal token payload and duration, preserving identity fields including alias.
@@ -219,19 +217,15 @@ State and workspace lifecycle
 ### State and workspace lifecycle
 
 - `[(registry.Login)]`
-  - Registry CDoc that stores login app, subject kind, login hash, password hash, profile workspace fields, workspace error, initialization data, alias in-progress state (`AliasInProc`), active alias snapshot (`Alias`), and last alias failure (`AliasError`).
-  - decl: [pkg/registry/appws.vsql#Login](../../../../pkg/registry/appws.vsql)
-  - impl: [pkg/registry/impl_createlogin.go#createLogin](../../../../pkg/registry/impl_createlogin.go)
+  - Shared concept; see [arch.md#shared-concepts](./arch.md#shared-concepts). The `AliasInProc` / `Alias` / `AliasError` fields used by the alias commands of this feature are described in [arch-authn.md](./arch-authn.md#sign-in-and-lifecycle-queriescommands).
 
 - `[(registry.LoginIdx)]`
-  - Registry view that resolves active login records by application workspace and login hash.
+  - Sync-projector-maintained registry view that resolves active login records by application workspace and login hash; produced and consumed by the registry operations of this feature. See [arch-authn.md](./arch-authn.md#registry-records-and-indexes) for the architectural role.
   - decl: [pkg/registry/appws.vsql#LoginIdx](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_createlogin.go#projectorLoginIdx](../../../../pkg/registry/impl_createlogin.go)
 
 - `[(registry.LoginAlias)]`
-  - Registry CDoc used as the active alias lookup index, snapshotting `(AppName, SourceAppWSID, CDocLoginID, Login, Alias)` and enforcing active-row uniqueness by `(AppName, Alias)`; inactive rows may be reactivated when the same alias value is assigned again.
-  - decl: [pkg/registry/appws.vsql#LoginAlias](../../../../pkg/registry/appws.vsql)
-  - impl: [pkg/registry/impl_setloginalias.go#execCmdPutLoginAliasIndex](../../../../pkg/registry/impl_setloginalias.go)
+  - Per-alias registry CDoc used as the alias lookup index. Its uniqueness and reactivation semantics are owned by [arch-authn.md](./arch-authn.md#registry-records-and-indexes); referenced here as the record consumed during sign-in by alias and written by `[/c.registry.PutLoginAliasIndex/]` / `[/c.registry.DeactivateLoginAliasIndex/]`.
 
 - `[[Profile workspace lifecycle]]`
   - Asynchronous profile workspace creation path triggered by login records and reflected back into `[(registry.Login)]` readiness fields.
