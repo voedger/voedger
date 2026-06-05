@@ -13,4 +13,4 @@ missing architecture for Auth context mentioned in [domain.md](https://github.co
 
 ## What
 
-derive architeture from Auth context considering exisitng documentation and codebase.
+derive architecture from Auth context considering existing documentation and codebase.

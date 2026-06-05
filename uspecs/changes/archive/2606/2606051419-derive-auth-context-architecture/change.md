@@ -49,7 +49,7 @@ Decisions:
 - Place the verifier sub-flow (issues and consumes verified-value tokens for email verification and password reset) under the authentication chapter, since its only consumers are authn flows in `pkg/registry`
 - Derive the authorization chapter's four-source effective-roles model from `pkg/iauthnzimpl/impl.go` (invite-granted, subjects doc, principal token incl. `GlobalRoles`, ACL-engine-emitted contextual roles plus VSQL inheritance)
 - Reconcile existing TDs in the same change rather than deferring to a follow-up issue
-- Derive the two login-lifecycle behaviors (listed in `## What`) from `pkg/registry/utils.go` `IsActive` / `errLoginDoesNotExist`
+- Derive the two login-lifecycle behaviors (listed in `## What`) from `pkg/registry/utils.go` `IsActive` check and `pkg/registry/impl_issueprincipaltoken.go`'s `errLoginOrPasswordIsIncorrect` response
 
 Out of scope:
 

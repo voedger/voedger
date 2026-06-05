@@ -97,7 +97,7 @@ Four sources by origin contribute to a request's principal set; each is enumerat
 
 - `[Request-context]`
   - Origin: computed at composition time from request state (`RequestWSID`, `Host`, token presence, `ProfileWSID`, workspace descriptor's `OwnerWSID`, app-supplied `isDeviceAllowed`), not from any persisted record.
-  - Composition: `Host` (unless API token), `AuthenticatedUser` (when token is present), `ProfileOwner` (when `RequestWSID==ProfileWSID`), `WorkspaceOwner` (user, descriptor's `OwnerWSID==ProfileWSID`), `WorkspaceDevice` (device, `isDeviceAllowed` true), and the `System` short-circuit (when the token carries `WorkspaceOwner.System` or when `ProfileWSID==NullWSID`).
+  - Composition: `Host` (unless API token), `AuthenticatedUser` (when token is present), `ProfileOwner` (when `RequestWSID==ProfileWSID`), `WorkspaceOwner` (user, descriptor's `OwnerWSID==ProfileWSID`), `WorkspaceDevice` (device, `isDeviceAllowed` true), and the `System` short-circuit (when principals already include `role.sys.System` or when `ProfileWSID==NullWSID`).
 
 - `[Anonymous-grants]`
   - Origin: emitted when no token is presented; combines the reserved `Anonymous` role and the `Guest` user (`sys.Guest @ GuestWSID`) defined in [pkg/iauthnz/authn-types.go](../../../../pkg/iauthnz/authn-types.go) with any `[(cdoc.sys.Subject)]` rows in `RequestWSID` that match `sys.Guest`.
@@ -126,6 +126,7 @@ VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later
        -> emit [Invite-granted] via [Subjects reader] for PrincipalPayload.Login in RequestWSID
        -> profileWSID = PrincipalPayload.ProfileWSID
        -> if Role(System) already in principals: return
+       -> if profileWSID == NullWSID: emit Role(System), return
        -> emit User|Device principal at profileWSID
        -> read cdoc.WorkspaceDescriptor in RequestWSID
        -> emit [Request-context]: ProfileOwner (if RequestWSID==profileWSID), WorkspaceOwner (user, OwnerWSID==profileWSID), WorkspaceDevice (device, app's isDeviceAllowed)
@@ -145,6 +146,6 @@ VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later
 
 ## Notes
 
-The `System` short-circuit (line ~119 of `pkg/iauthnzimpl/impl.go`) returns immediately when the token carries `WorkspaceOwner.System` in `Roles`: a system caller is not augmented with subject or workspace-owner roles. The `profileWSID == NullWSID` short-circuit additionally emits `System` for any user-kind subject with no profile (used by registry-app internal flows).
+The `System` short-circuit (line ~118 of `pkg/iauthnzimpl/impl.go`) returns immediately when the already-composed principals contain `role.sys.System` (sourced from the token's `GlobalRoles` or from roles read from `[(cdoc.sys.Subject)]` of the request workspace): a system caller is not augmented with subject or workspace-owner roles. The `profileWSID == NullWSID` short-circuit additionally emits `role.sys.System` for any user-kind subject with no profile (used by registry-app internal flows). API tokens are unaffected by either branch: their per-app `Roles` are applied in a dedicated loop that returns earlier (line ~74).
 
 `Anonymous`, `Guest`, `Everyone`, and `AuthenticatedUser` come from `pkg/iauthnz/authn-types.go` and are reserved names; ACL rules in `apps` reference these QNames to express coverage levels.

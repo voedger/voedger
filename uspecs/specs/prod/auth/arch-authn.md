@@ -15,7 +15,7 @@ Roles:
 ## Scenarios overview
 
 - **`Create login`**
-  - `@Client` calls `[c.registry.CreateLogin]` (user) or `[c.registry.CreateEmailLogin]` (email) with a `[Verified-value token]` and credentials; a `[(registry.Login)]` is persisted, `[(view.LoginIdx)]` is updated, and the profile workspace creation is started by the registry projector.
+  - `@Client` calls `[c.registry.CreateEmailLogin]` (user by verified email) with a `[Verified-value token]` and credentials, or `[c.registry.CreateLogin]` (device) with credentials; a `[(registry.Login)]` is persisted, `[(view.LoginIdx)]` is updated, and the profile workspace creation is started by the registry projector.
 
 - **`Sign in by login or by active alias`**
   - `@Client` calls `[q.registry.IssuePrincipalToken]` with a sign-in identifier; `[(registry.Login)]` is resolved either directly or via `[(registry.LoginAlias)]`, the password hash is checked, the `Profile workspace readiness gate` is enforced, and a [Principal Token](./arch-tokens.md) is issued.
@@ -129,7 +129,7 @@ Registry records and indexes
   -> @Client: principalToken, profileWSID
 ```
 
-The `Profile workspace readiness gate` returns the same error result for deactivated logins, missing logins, and inactive aliases; the principal token is never issued for a deactivated `[(registry.Login)]`, and a recreated login of the same name resolves to its fresh `[(registry.Login)]` and fresh profile.
+The login resolution phase (before the readiness gate) returns the same error result for deactivated logins, missing logins, and inactive aliases; the principal token is never issued for a deactivated `[(registry.Login)]`, and a recreated login of the same name resolves to its fresh `[(registry.Login)]` and fresh profile.
 
 ### Create login with verifier sub-flow
 
@@ -138,8 +138,8 @@ The `Profile workspace readiness gate` returns the same error result for deactiv
   -> [q.sys.InitiateEmailVerification] -> async send code by email
 @Client q.sys.IssueVerifiedValueToken(email, code)
   -> [q.sys.IssueVerifiedValueToken] -> [Verified-value token]
-@Client c.registry.CreateLogin(verifiedEmailToken, password, displayName)
-  -> [c.registry.CreateLogin]
+@Client c.registry.CreateEmailLogin(verifiedEmailToken, password, displayName)
+  -> [c.registry.CreateEmailLogin]
        -> consume [Verified-value token]
        -> [(view.LoginIdx)] uniqueness check
        -> persist [(registry.Login)] (Active=true, password hash)

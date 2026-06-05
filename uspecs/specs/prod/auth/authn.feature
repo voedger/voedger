@@ -236,11 +236,11 @@ Feature: Authentication
       When Client signs in with unknown login or wrong password
       Then the response status is "401 Unauthorized"
 
-    Scenario: Sign-in rejects a deactivated login as unknown
+    Scenario: Sign-in rejects a deactivated login with the same error as a missing login
       Given a login exists but is deactivated
       When Client signs in with that login and password
       Then the response status is "401 Unauthorized"
-      And the response indicates the login does not exist
+      And the response indicates the login or password is incorrect
 
     Scenario: Principal token refresh requires an existing token
       Given Client has no principal token
