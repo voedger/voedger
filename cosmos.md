@@ -1,0 +1,3 @@
+- https://cosmos.augmentcode.com/onboarding
+- `auggie update` or ` npm install -g @augmentcode/auggie@latest`
+- `auggie daemon`
