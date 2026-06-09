@@ -36,7 +36,13 @@ Alternatives:
 
 ## Vagueness: PR-thread status comment text
 
-Decision: Use concise PR comments:
+Decision: Use concise PR comments, with `/review` instructions only in the automatic review start comment:
+
+```text
+👀 Automated review started.
+
+Writers can request another review with `/review` or `/review <extra instructions>`.
+```
 
 ```text
 👀 Automated review started.
@@ -52,8 +58,8 @@ Details: <run-url>
 🔒 Only Writer can request an automated review with `/review`.
 ```
 
-- Pros: gives users immediate feedback; failure comments include the GitHub Actions run URL for diagnosis; emojis make status comments scannable without long text
-- Cons: emojis are slightly less formal than plain status text
+- Pros: gives users immediate feedback; the first automatic comment tells Writers how to request another review; failure comments include the GitHub Actions run URL for diagnosis; emojis make status comments scannable without long text
+- Cons: emojis are slightly less formal than plain status text; the automatic start comment is longer than Writer-requested start comments
 - Confidence: user-provided
 
 Alternatives:
@@ -62,7 +68,7 @@ Alternatives:
    - Pros: most formal and consistent with engineering prose
    - Cons: less visually distinct in a busy PR thread
    - Confidence: medium
-2. Include trigger details in every start comment
-   - Pros: explains why the review started
-   - Cons: exposes implementation detail and makes normal comments longer
+2. Include `/review` instructions in every start comment
+   - Pros: keeps the manual rerun command visible on every review start
+   - Cons: repeats guidance after Writer-requested reviews and increases comment noise
    - Confidence: medium

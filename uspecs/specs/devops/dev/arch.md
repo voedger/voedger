@@ -67,7 +67,7 @@ Provider integration
 ### Trigger handling
 
 - `[Automatic review job]`
-  - Runs only for `pull_request_target` events in `voedger/voedger` when a pull request is opened or marked ready for review. It posts a start comment, sends the pull request number and repository name to `[Review action]`, and posts a failure comment with the GitHub Actions run URL if `[Review action]` fails.
+  - Runs only for `pull_request_target` events in `voedger/voedger` when a pull request is opened or marked ready for review. It posts a start comment that tells Writers how to request another review, sends the pull request number and repository name to `[Review action]`, and posts a failure comment with the GitHub Actions run URL if `[Review action]` fails.
   - impl: [.github/workflows/pr-review.yml#jobs.automatic-review](../../../../.github/workflows/pr-review.yml)
 
 - `[Comment review job]`
@@ -111,7 +111,7 @@ Provider integration
 *GitHub
   -> [[PR review workflow]] (pull_request_target event)
   -> [Automatic review job]
-  -> *GitHub (PR start comment)
+  -> *GitHub (PR start comment with `/review` instructions)
   -> [Review action]
   -> [(Augment session secret)]
   -> [Repository rules]

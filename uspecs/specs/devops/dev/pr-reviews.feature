@@ -9,7 +9,12 @@ Feature: Pull request reviews
       When GitHub reports that the pull request is "<event>"
       Then Pull Request "AIR-4201" has an automated review
       And the review uses repository review rules
-      And Pull Request "AIR-4201" has comment "👀 Automated review started."
+      And Pull Request "AIR-4201" has comment:
+        """
+        👀 Automated review started.
+
+        Writers can request another review with `/review` or `/review <extra instructions>`.
+        """
 
       Examples:
         | state     | event            |
