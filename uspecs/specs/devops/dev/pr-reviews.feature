@@ -30,7 +30,12 @@ Feature: Pull request reviews
     Scenario: Automatic review fails
       Given Pull Request "AIR-4201" exists
       When automatic review of Pull Request "AIR-4201" fails in GitHub Actions run "https://github.com/voedger/voedger/actions/runs/42"
-      Then Pull Request "AIR-4201" has comment "⚠️ Automated review failed.\n\nDetails: https://github.com/voedger/voedger/actions/runs/42"
+      Then Pull Request "AIR-4201" has comment:
+        """
+        ⚠️ Automated review failed.
+
+        Details: https://github.com/voedger/voedger/actions/runs/42
+        """
 
   Rule: Manual review requests
 
@@ -52,7 +57,12 @@ Feature: Pull request reviews
     Scenario: Writer-requested review fails
       Given Pull Request "AIR-4201" exists
       When Writer-requested review of Pull Request "AIR-4201" fails in GitHub Actions run "https://github.com/voedger/voedger/actions/runs/42"
-      Then Pull Request "AIR-4201" has comment "⚠️ Automated review failed.\n\nDetails: https://github.com/voedger/voedger/actions/runs/42"
+      Then Pull Request "AIR-4201" has comment:
+        """
+        ⚠️ Automated review failed.
+
+        Details: https://github.com/voedger/voedger/actions/runs/42
+        """
 
     Scenario: Successful review result remains a pull request review
       Given Pull Request "AIR-4201" exists

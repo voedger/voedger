@@ -47,12 +47,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          body=$(cat <<EOF
-          ⚠️ Automated review failed.
-
-          Details: ${RUN_URL}
-          EOF
-          )
+          body=$(printf '⚠️ Automated review failed.\n\nDetails: %s' "$RUN_URL")
           gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
             -f body="$body"
 
@@ -141,11 +136,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          body=$(cat <<EOF
-          ⚠️ Automated review failed.
-
-          Details: ${RUN_URL}
-          EOF
-          )
+          body=$(printf '⚠️ Automated review failed.\n\nDetails: %s' "$RUN_URL")
           gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
             -f body="$body"
