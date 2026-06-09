@@ -2,19 +2,20 @@
 
 ## Workflows Overview
 
-| Workflow                     | Trigger                           | Purpose                            |
-| ---------------------------- | --------------------------------- | ---------------------------------- |
-| `ci.yml`                     | Push to main (excl. pkg/istorage) | Run CI tests, build Docker image   |
-| `ci_pr.yml`                  | PR (excl. pkg/istorage)           | Run CI tests                       |
-| `ci-full.yml`                | Daily 5 AM UTC / manual           | Full test suite with race detector |
-| `ci-pkg-storage.yml`         | Push/PR to pkg/istorage paths     | Run storage backend tests          |
-| `ci_cas.yml`                 | Called by ci-pkg-storage          | Cassandra/ScyllaDB tests           |
-| `ci_amazon.yml`              | Called by ci-pkg-storage          | Amazon DynamoDB tests              |
-| `cp.yml`                     | Reusable workflow                 | Cherry pick commits                |
-| `linkIssue.yml`              | Issue closed                      | Link issue to milestone            |
-| `unlinkIssue.yml`            | Issue reopened                    | Unlink issue from milestone        |
-| `cd-voedger.yml`             | Reusable workflow                 | Build and push Docker image        |
-| `ctool-integration-test.yml` | Manual                            | Integration tests for ctool        |
+| Workflow                     | Trigger                             | Purpose                            |
+| ---------------------------- | ----------------------------------- | ---------------------------------- |
+| `ci.yml`                     | Push to main (excl. pkg/istorage)   | Run CI tests, build Docker image   |
+| `ci_pr.yml`                  | PR (excl. pkg/istorage)             | Run CI tests                       |
+| `pr-review.yml`              | pull_request_target / issue_comment | Automated pull request reviews     |
+| `ci-full.yml`                | Daily 5 AM UTC / manual             | Full test suite with race detector |
+| `ci-pkg-storage.yml`         | Push/PR to pkg/istorage paths       | Run storage backend tests          |
+| `ci_cas.yml`                 | Called by ci-pkg-storage            | Cassandra/ScyllaDB tests           |
+| `ci_amazon.yml`              | Called by ci-pkg-storage            | Amazon DynamoDB tests              |
+| `cp.yml`                     | Reusable workflow                   | Cherry pick commits                |
+| `linkIssue.yml`              | Issue closed                        | Link issue to milestone            |
+| `unlinkIssue.yml`            | Issue reopened                      | Unlink issue from milestone        |
+| `cd-voedger.yml`             | Reusable workflow                   | Build and push Docker image        |
+| `ctool-integration-test.yml` | Manual                              | Integration tests for ctool        |
 
 ---
 
@@ -123,6 +124,27 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 ### PR (ci_pr.yml)
 
 1. Calls `untillpro/ci-action/.github/workflows/ci_pr.yml@main`
+
+### PR review (pr-review.yml)
+
+1. Runs automatic reviews on `pull_request_target` events:
+   - `opened`
+   - `synchronize`
+   - `reopened`
+   - `ready_for_review`
+2. Runs manual reviews on PR `issue_comment` `created` events when the trimmed comment body starts with `/review` as a command.
+3. Treats GitHub permissions `write`, `maintain`, and `admin` as Writer; all other commenters are NonWriters, receive a feedback comment, and do not trigger a review.
+4. Passes text after `/review` as extra review instructions.
+5. Calls `augmentcode/review-pr@v0.2.0` with:
+   - `AUGMENT_SESSION_AUTH`
+   - `GITHUB_TOKEN`
+   - pull request number
+   - repository name
+   - `.augment/rules/ar-common-develop.md`
+   - `.augment/rules/ar-golang.md`
+   - `.augment/rules/ar-markdown.md`
+6. Uses `contents: read`, `pull-requests: write`, and `issues: write` permissions.
+7. Serializes review runs per pull request with the `pr-review-{number}` concurrency group.
 
 ### Daily Tests (ci-full.yml)
 
