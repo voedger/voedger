@@ -18,10 +18,17 @@ Feature: Authentication
       And the response contains generated device login and password
       And the device profile workspace creation is started
 
-    Scenario: Login creation rejects duplicate login
-      Given a login already exists
+    Scenario: Login creation rejects an active duplicate login
+      Given an active login already exists
       When Client creates the same login again
       Then the response status is "409 Conflict"
+
+    Scenario: Login creation succeeds for a deactivated login name
+      Given a login was previously created and is now deactivated
+      When Client creates a login with the same name again
+      Then the response status is "201 Created"
+      And a new login is accepted with a fresh profile workspace
+      And the previously deactivated login is no longer reachable for sign-in or token issue
 
     Scenario: Login creation rejects an existing active alias
       Given a login exists with an active login alias
@@ -228,6 +235,12 @@ Feature: Authentication
     Scenario: Sign-in rejects unknown login or wrong password
       When Client signs in with unknown login or wrong password
       Then the response status is "401 Unauthorized"
+
+    Scenario: Sign-in rejects a deactivated login with the same error as a missing login
+      Given a login exists but is deactivated
+      When Client signs in with that login and password
+      Then the response status is "401 Unauthorized"
+      And the response indicates the login or password is incorrect
 
     Scenario: Principal token refresh requires an existing token
       Given Client has no principal token
