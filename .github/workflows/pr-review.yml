@@ -4,8 +4,6 @@ on:
   pull_request_target:
     types:
       - opened
-      - synchronize
-      - reopened
       - ready_for_review
   issue_comment:
     types:
@@ -24,7 +22,17 @@ jobs:
       group: pr-review-${{ github.event.pull_request.number }}
       cancel-in-progress: false
     steps:
+      - name: Comment review started
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body=$(printf '👀 Automated review started.\n\nWriters can request another review with `/review` or `/review <extra instructions>`.')
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            -f body="$body"
+
       - name: Review pull request
+        id: review
         uses: augmentcode/review-pr@v0.2.0
         with:
           augment_session_auth: ${{ secrets.AUGMENT_SESSION_AUTH }}
@@ -32,6 +40,17 @@ jobs:
           pull_number: ${{ github.event.pull_request.number }}
           repo_name: ${{ github.repository }}
           rules: '[".augment/rules/ar-common-develop.md",".augment/rules/ar-golang.md",".augment/rules/ar-markdown.md"]'
+
+      - name: Comment review failure
+        if: failure() && steps.review.outcome == 'failure'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '⚠️ Automated review failed.\n\nDetails: %s' "$RUN_URL")
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            -f body="$body"
 
   comment-review:
     if: github.repository == 'voedger/voedger' && github.event_name == 'issue_comment' && github.event.issue.pull_request
@@ -88,10 +107,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
-            -f body='Only Writer can request an automated review with `/review`.'
+            -f body='🔒 Only Writer can request an automated review with `/review`.'
+
+      - name: Comment review started
+        if: steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body='👀 Automated review started.'
 
       - name: Review pull request
         if: steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
+        id: review
         uses: augmentcode/review-pr@v0.2.0
         with:
           augment_session_auth: ${{ secrets.AUGMENT_SESSION_AUTH }}
@@ -100,3 +129,14 @@ jobs:
           repo_name: ${{ github.repository }}
           custom_guidelines: ${{ steps.review_command.outputs.extra_instructions }}
           rules: '[".augment/rules/ar-common-develop.md",".augment/rules/ar-golang.md",".augment/rules/ar-markdown.md"]'
+
+      - name: Comment review failure
+        if: failure() && steps.review.outcome == 'failure' && steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '⚠️ Automated review failed.\n\nDetails: %s' "$RUN_URL")
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body="$body"

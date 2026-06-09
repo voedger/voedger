@@ -67,7 +67,7 @@ Provider integration
 ### Trigger handling
 
 - `[Automatic review job]`
-  - Runs only for `pull_request_target` events in `voedger/voedger` when a pull request is opened, synchronized, reopened, or marked ready for review. It sends the pull request number and repository name to `[Review action]`.
+  - Runs only for `pull_request_target` events in `voedger/voedger` when a pull request is opened or marked ready for review. It posts a start comment that tells Writers how to request another review, sends the pull request number and repository name to `[Review action]`, and posts a failure comment with the GitHub Actions run URL if `[Review action]` fails.
   - impl: [.github/workflows/pr-review.yml#jobs.automatic-review](../../../../.github/workflows/pr-review.yml)
 
 - `[Comment review job]`
@@ -91,7 +91,7 @@ Provider integration
 ### Provider integration
 
 - `[Review action]`
-  - Calls `augmentcode/review-pr@v0.2.0` with `[(Augment session secret)]`, `GITHUB_TOKEN`, pull request number, repository name, and `[Repository rules]`. Manual reviews also pass extracted extra instructions as custom guidelines.
+  - Calls `augmentcode/review-pr@v0.2.0` with `[(Augment session secret)]`, `GITHUB_TOKEN`, pull request number, repository name, and `[Repository rules]`. Manual reviews also pass extracted extra instructions as custom guidelines. Successful results remain ReviewProvider pull request reviews; status comments do not replace review results.
   - impl: [.github/workflows/pr-review.yml#uses.augmentcode/review-pr@v0.2.0](../../../../.github/workflows/pr-review.yml)
 
 - `[Repository rules]`
@@ -111,6 +111,7 @@ Provider integration
 *GitHub
   -> [[PR review workflow]] (pull_request_target event)
   -> [Automatic review job]
+  -> *GitHub (PR start comment with `/review` instructions)
   -> [Review action]
   -> [(Augment session secret)]
   -> [Repository rules]
@@ -127,6 +128,7 @@ Provider integration
   -> [Comment review job]
   -> [Review command parser] extracts extra instructions
   -> [Writer permission check] resolves write-or-higher permission
+  -> *GitHub (PR start comment)
   -> [Review action]
   -> [(Augment session secret)]
   -> [Repository rules]

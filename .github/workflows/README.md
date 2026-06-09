@@ -129,13 +129,14 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 
 1. Runs automatic reviews on `pull_request_target` events:
    - `opened`
-   - `synchronize`
-   - `reopened`
    - `ready_for_review`
 2. Runs manual reviews on PR `issue_comment` `created` events when the trimmed comment body starts with `/review` as a command.
 3. Treats GitHub permissions `write`, `maintain`, and `admin` as Writer; all other commenters are NonWriters, receive a feedback comment, and do not trigger a review.
 4. Passes text after `/review` as extra review instructions.
-5. Calls `augmentcode/review-pr@v0.2.0` with:
+5. Posts a PR comment when automatic or Writer-requested review starts. The automatic start comment tells Writers they can request another review with `/review` or `/review <extra instructions>`.
+6. Posts a failure comment with the GitHub Actions run URL if review automation fails.
+7. Successful review results remain ReviewProvider pull request reviews; no success status comment is posted.
+8. Calls `augmentcode/review-pr@v0.2.0` with:
    - `AUGMENT_SESSION_AUTH`
    - `GITHUB_TOKEN`
    - pull request number
@@ -143,8 +144,8 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
    - `.augment/rules/ar-common-develop.md`
    - `.augment/rules/ar-golang.md`
    - `.augment/rules/ar-markdown.md`
-6. Uses `contents: read`, `pull-requests: write`, and `issues: write` permissions.
-7. Serializes review runs per pull request with the `pr-review-{number}` concurrency group.
+9. Uses `contents: read`, `pull-requests: write`, and `issues: write` permissions.
+10. Serializes review runs per pull request with the `pr-review-{number}` concurrency group.
 
 ### Daily Tests (ci-full.yml)
 
