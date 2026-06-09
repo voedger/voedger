@@ -1,7 +1,6 @@
 # Context architecture: prod/auth
 
-Auth context architecture for authenticating users and devices, issuing principal
-tokens, and maintaining credential lifecycle.
+Auth context architecture for authenticating subjects, issuing and validating principal tokens, evaluating authorization decisions, and maintaining workspace membership.
 
 ## External actors
 
@@ -11,227 +10,136 @@ Roles:
   - External application or caller using Voedger HTTP APIs.
 
 - `@System`
-  - Trusted backend caller using a System Principal Token for internal authn operations.
+  - Trusted backend caller using a System Principal Token for internal auth operations.
 
 ## Scenarios overview
 
-- **`Create login`**
-  - Client creates a user or device login in the registry and starts profile workspace creation.
+- **`Authenticate`**
+  - Subject establishes an authenticated identity and receives a principal token, including sign-in by login or by active alias and the verifier sub-flow for password reset.
 
-- **`Sign in`**
-  - Client exchanges login credentials for a principal token once the profile workspace is ready.
+- **`Authorize`**
+  - Request processing composes a principal set from four origin-perspective sources — invite-granted roles (`[(cdoc.sys.Subject)]` rows written by `[[Workspace membership]]`), token-carried roles (`PrincipalPayload.Roles` and `GlobalRoles` snapshotted by `[[Authentication]]`), request-context roles (derived at composition time from request state), and anonymous-grants (when no token is presented) — and evaluates ACL rules against it.
 
-- **`Manage login alias`**
-  - System sets, updates, or clears a user alias used as an alternative sign-in identifier.
+- **`Manage tokens`**
+  - Principal tokens are issued, refreshed, and validated; refresh preserves the identity payload including the alias snapshot captured at issue time.
 
-- **`Refresh token`**
-  - Client exchanges a valid principal token for a new token with the same authn identity payload.
-
-- **`Manage password`**
-  - Client changes or resets user credentials through registry-backed flows.
+- **`Manage membership`**
+  - Invite lifecycle creates subjects doc and joined-workspace records, updates roles, and removes members.
 
 ## Components
 
 ### Layers
 
 ```text
-External callers
+External actors
     |
     +-- @Client
+    +-- @System
     |
     v
-HTTP API
+Auth subsystems
     |
-    +-- [API v2 auth routes]
-    |
-    v
-Authn processing
-    |
-    +-- [Auth login handler]
-    +-- [Auth refresh handler]
-    +-- [User login handler]
-    +-- [Device login handler]
-    +-- [Password handler]
+    +-- [[Authentication]]
+    +-- [[Authorization]]
+    +-- [[Token management]]
+    +-- [[Workspace membership]]
     |
     v
-Registry and tokens
-    |
-    +-- [Registry login commands]
-    +-- [Registry alias commands]
-    +-- [Alias index projector]
-    +-- [Registry principal token query]
-    +-- [Registry password commands]
-    +-- [Registry reset password flow]
-    +-- [Token service]
-    |
-    v
-State and workspace lifecycle
+Shared concepts
     |
     +-- [(registry.Login)]
-    +-- [(registry.LoginIdx)]
-    +-- [(registry.LoginAlias)]
-    +-- [[Profile workspace lifecycle]]
+    +-- [(cdoc.sys.Subject)]
+    +-- [Principal Token]
+    +-- [Auth boundary]
 ```
 
-### HTTP API
+### Auth subsystems
 
-- `[API v2 auth routes]`
-  - Exposes login creation, device creation, password change, sign-in, and token refresh routes.
-  - Path to file: [pkg/router/impl_apiv2.go](../../../../pkg/router/impl_apiv2.go)
+- `[[Authentication]]`
+  - Login creation (including login-alias set/update/clear), sign-in by login or by active alias, password lifecycle, the verifier sub-flow that issues and consumes verified-value tokens, and the profile workspace readiness gate seen by sign-in.
+  - Path to file: [arch-authn.md](./arch-authn.md)
 
-### Authn processing
+- `[[Authorization]]`
+  - Runtime ACL evaluation, principal composition from the four sources of effective roles, and the enforcement points exposed to other contexts.
+  - Path to file: [arch-authz.md](./arch-authz.md)
 
-- `[Auth login handler]`
-  - Converts `/auth/login` request body into a registry principal token query and maps registry readiness into API responses.
-  - Path to file: [pkg/processors/query2/impl_auth_login_handler.go](../../../../pkg/processors/query2/impl_auth_login_handler.go)
+- `[[Token management]]`
+  - Principal token issue, refresh, and validation, and the principal payload contract shared by authentication and authorization.
+  - Path to file: [arch-tokens.md](./arch-tokens.md)
 
-- `[Auth refresh handler]`
-  - Requires an existing principal token, calls the app refresh query, validates the new token, and returns the refreshed response fields.
-  - Path to file: [pkg/processors/query2/impl_auth_refresh_handler.go](../../../../pkg/processors/query2/impl_auth_refresh_handler.go)
+- `[[Workspace membership]]`
+  - Invite lifecycle, the subjects doc, joined-workspace records, role updates, and member removal.
+  - Path to file: [arch-membership.md](./arch-membership.md)
 
-- `[User login handler]`
-  - Validates the verified email token and forwards user login creation to the registry.
-  - Path to file: [pkg/router/impl_apiv2.go](../../../../pkg/router/impl_apiv2.go)
-
-- `[Device login handler]`
-  - Generates device credentials and forwards device login creation to the registry.
-  - Path to file: [pkg/router/impl_apiv2.go](../../../../pkg/router/impl_apiv2.go)
-
-- `[Password handler]`
-  - Converts public password-change requests into registry password commands.
-  - Path to file: [pkg/router/impl_apiv2.go](../../../../pkg/router/impl_apiv2.go)
-
-### Registry and tokens
-
-- `[Registry login commands]`
-  - Create `registry.Login` records, validate login shape and app workspace placement, hash passwords, and reject duplicate logins or collisions with active aliases.
-  - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
-
-- `[Registry alias commands]`
-  - System-authorized commands that initiate alias changes, write active alias indexes, and deactivate previous alias indexes across pseudo-workspaces.
-  - Path to file: [pkg/registry/impl_setloginalias.go](../../../../pkg/registry/impl_setloginalias.go)
-
-- `[Alias index projector]`
-  - Applies login alias intents asynchronously, drives cross-workspace alias index writes, records alias errors, and commits the active alias snapshot on `registry.Login`.
-  - Path to file: [pkg/registry/impl_setloginalias.go](../../../../pkg/registry/impl_setloginalias.go)
-
-- `[Registry principal token query]`
-  - Resolves sign-in by primary login or active alias, validates credentials, checks profile workspace readiness, and issues principal tokens.
-  - Path to file: [pkg/registry/impl_issueprincipaltoken.go](../../../../pkg/registry/impl_issueprincipaltoken.go)
-
-- `[Registry password commands]`
-  - Validate current password and update stored password hashes.
-  - Path to file: [pkg/registry/impl_changepassword.go](../../../../pkg/registry/impl_changepassword.go)
-
-- `[Registry reset password flow]`
-  - Initiates email verification, verifies reset codes, and applies password reset with a verified value token.
-  - Path to file: [pkg/registry/impl_resetpassword.go](../../../../pkg/registry/impl_resetpassword.go)
-
-- `[Token service]`
-  - Issues and validates app-scoped tokens carrying principal and verified-value payloads.
-  - Path to file: [pkg/itokens-payloads/types.go](../../../../pkg/itokens-payloads/types.go)
-
-### State and workspace lifecycle
+### Shared concepts
 
 - `[(registry.Login)]`
-  - Registry record holding login app, subject kind, password hash, profile cluster, profile workspace fields, initialization data, and active alias state.
-  - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
+  - Registry CDoc holding the primary sign-in identifier, password hash, subject kind, profile workspace fields, alias snapshot, and active flag. Produced and consumed by `[[Authentication]]` during sign-in.
+  - decl: [pkg/registry/appws.vsql#Login](../../../../pkg/registry/appws.vsql)
+  - impl: [pkg/registry/impl_createlogin.go#createLogin](../../../../pkg/registry/impl_createlogin.go)
 
-- `[(registry.LoginIdx)]`
-  - Registry view used to resolve login records by application workspace and login hash.
-  - Path to file: [pkg/registry/impl_createlogin.go](../../../../pkg/registry/impl_createlogin.go)
+- `[(cdoc.sys.Subject)]`
+  - Workspace-scoped CDoc that grants a login a set of roles in a specific workspace. Produced by `[[Workspace membership]]`, consumed by `[[Authorization]]` on every request.
+  - decl: [pkg/sys/invite/consts.go#QNameCDocSubject](../../../../pkg/sys/invite/consts.go)
+  - impl: [pkg/sys/invite/impl_applyinviteevents.go](../../../../pkg/sys/invite/impl_applyinviteevents.go)
 
-- `[(registry.LoginAlias)]`
-  - Active alias lookup index that maps an alternative sign-in identifier to the source `registry.Login` record and snapshots the primary login string.
-  - Path to file: [pkg/registry/impl_setloginalias.go](../../../../pkg/registry/impl_setloginalias.go)
+- `[Principal Token]`
+  - Bearer token carrying `PrincipalPayload(Login, Alias, SubjectKind, ProfileWSID, Roles, GlobalRoles, IsAPIToken)`. Produced by `[[Authentication]]` and `[[Token management]]`, consumed by `[[Authorization]]` on every request.
+  - decl: [pkg/itokens-payloads/types.go#PrincipalPayload](../../../../pkg/itokens-payloads/types.go)
 
-- `[[Profile workspace lifecycle]]`
-  - Asynchronous workspace creation path triggered by login records and reflected back to the login profile fields.
-  - Path to file: [pkg/sys/workspace/impl.go](../../../../pkg/sys/workspace/impl.go)
+- `[Auth boundary]`
+  - The `pkg/iauthnz` interface that the `apps` context calls at every enforcement point to authenticate a request and obtain its principal set; the only programmatic surface that the `auth` context exposes to other contexts.
+  - decl: [pkg/iauthnz/authn-interface.go#IAuthenticator](../../../../pkg/iauthnz/authn-interface.go)
+  - impl: [pkg/iauthnzimpl/impl.go](../../../../pkg/iauthnzimpl/impl.go)
 
 ## Scenarios
 
-### Create login
+### Authenticate
 
 ```text
 @Client
-  -> [API v2 auth routes]
-  -> [User login handler] or [Device login handler]
-  -> [Registry login commands]
+  -> [[Authentication]]: sign-in by login or alias
   -> [(registry.Login)]
-  -> [(registry.LoginIdx)]
-  -> [[Profile workspace lifecycle]]
-```
-
-### Sign in
-
-```text
-@Client
-  -> [API v2 auth routes]
-  -> [Auth login handler]
-  -> [Registry principal token query]: resolve primary login or active alias
-  -> [(registry.Login)]
-  -> [(registry.LoginAlias)]: alias path only
-  -> [Token service]
+  -> [[Token management]]: issue [Principal Token]
   -> @Client: principalToken, expiresInSeconds, profileWSID
 ```
 
-### Manage login alias
+Details: [arch-authn.md](./arch-authn.md), [arch-tokens.md](./arch-tokens.md).
 
-```text
-@System
-  -> [Registry alias commands]: initiate set, update, or clear
-  -> [(registry.Login)]: mark alias operation in progress
-  -> [Alias index projector]
-  -> [Registry alias commands]: put new alias index in pseudoWSID(alias)
-  -> [Registry alias commands]: deactivate previous alias index in pseudoWSID(old alias)
-  -> [(registry.LoginAlias)]
-  -> [(registry.Login)]: commit Alias, AliasInProc, AliasError
-```
-
-### Refresh token
+### Authorize
 
 ```text
 @Client
-  -> [API v2 auth routes]
-  -> [Auth refresh handler]
-  -> [Token service]: validate existing token and issue replacement
-  -> @Client: principalToken, expiresInSeconds, profileWSID
+  -> [Auth boundary]: AuthnRequest(token, requestWSID)
+  -> [[Authorization]]: validate [Principal Token], compose principals from token + [(cdoc.sys.Subject)] + ACL-engine-emitted contextual roles
+  -> @Client: principals, profileWSID
 ```
 
-### Manage password
+Details: [arch-authz.md](./arch-authz.md).
+
+### Manage membership
 
 ```text
-@Client
-  -> [API v2 auth routes]
-  -> [Password handler]
-  -> [Registry password commands] or [Registry reset password flow]
-  -> [(registry.Login)]
+@Client (workspace owner) or @Client (invitee)
+  -> [[Workspace membership]]: invite, join, update roles, leave, cancel
+  -> [(cdoc.sys.Subject)]: roles in the inviting workspace
 ```
+
+Details: [arch-membership.md](./arch-membership.md).
 
 ## Cross-cutting concerns
 
+### Context dependencies
+
+- The `apps` context calls `[Auth boundary]` at every authnz enforcement point in command, query, and actualizer processors; see [../apps/arch.md](../apps/arch.md).
+- The `storage` context persists `[(registry.Login)]`, `[(cdoc.sys.Subject)]`, and joined-workspace records through `istructs.IAppStructs`.
+- Profile workspace lifecycle (creation, profile-fields write-back) is owned by the `apps` context; `[[Authentication]]` only observes the readiness gate.
+
 ### Security
 
-- Every Component in `Authn processing` must treat credentials and verified value tokens as request secrets and must not expose password values in response bodies.
-- Every Component in `Registry and tokens` must keep password evidence stored only as salted password hashes.
-- Every `[Token service]` issue must be app-scoped and validated through the application token API.
-- Authorization policy, ACL evaluation, role resolution, and invite membership are downstream concerns and are not owned by authn architecture.
-
-Token payloads may contain fields later consumed by authorization, but authn owns only identity establishment, token issue/refresh behavior, and identity payload production.
-
-### Error handling and resilience
-
-- Every Component in `Authn processing` maps malformed public request bodies to `400 Bad Request`.
-- `[Auth login handler]` maps profile workspace not-ready state to `409 Conflict`.
-- `[Auth refresh handler]` maps missing bearer token to `401 Unauthorized`.
-- `[Auth login handler]` uses retried federation for principal token issue to tolerate transient local startup failures.
-
-### Consistency
-
-- `[[Profile workspace lifecycle]]` is asynchronous; login creation can succeed before sign-in can issue a usable principal token.
-- `[(registry.LoginIdx)]` must be consistent with active `[(registry.Login)]` records for sign-in, password change, and reset lookup.
+- Every Component in `Auth subsystems` MUST treat passwords, bearer tokens, verification tokens, and verified-value tokens as request secrets and MUST NOT expose password values in response bodies.
+- Every `[Principal Token]` MUST be app-scoped and validated through the application token API.
 
 ### Testing
 
-- Every externally observable scenario in this architecture must be covered by integration tests or feature scenarios before implementation behavior is changed.
+- Every externally observable scenario in `Auth subsystems` MUST be covered by integration tests or feature scenarios before behavior changes.

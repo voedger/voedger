@@ -1,6 +1,6 @@
 # Feature technical design: Invites
 
-Invite users/devices to workspaces
+Invite users/devices to workspaces. The subsystem architecture for invite lifecycle, the subjects doc, joined-workspace records, role updates, and member removal is in [arch-membership.md](./arch-membership.md); how the resulting `[(cdoc.sys.Subject)]` is consumed on every request is in [arch-authz.md](./arch-authz.md); shared concepts (`[(cdoc.sys.Subject)]`, `[(registry.Login)]`) are defined in [arch.md](./arch.md#shared-concepts). This document only adds the projector-as-sole-writer design, the `Version` discriminator, dead-state handling, and decisions that are unique to this feature.
 
 ## Use cases
 
@@ -14,43 +14,7 @@ Invite users/devices to workspaces
 
 ## Overview
 
-Roles and permissions (from VSQL):
-
-- `WorkspaceOwner`: manages invitations, roles, and membership (WorkspaceOwnerFuncTag)
-- `AuthenticatedUser`: can join and leave workspaces (AllowedToAuthenticatedTag)
-
-Key documents:
-
-- `cdoc.sys.Invite`: tracks invitation status and metadata
-- `cdoc.sys.Subject`: represents an invited user/device in the workspace
-- `cdoc.sys.JoinedWorkspace`: records workspace membership in invitee's profile
-
-Invitation management:
-
-- `c.sys.InitiateInvitationByEMail`: creates new invitation (WorkspaceOwner)
-  - Params: Email, Roles, ExpireDatetime, EmailTemplate, EmailSubject
-- `c.sys.InitiateJoinWorkspace`: processes invite acceptance (AuthenticatedUser)
-  - Params: InviteID, VerificationCode
-
-Role management:
-
-- `c.sys.InitiateUpdateInviteRoles`: updates member permissions (WorkspaceOwner)
-  - Params: InviteID, Roles, EmailTemplate, EmailSubject
-
-Membership termination:
-
-- `c.sys.InitiateCancelAcceptedInvite`: owner removes joined member (WorkspaceOwner)
-  - Params: InviteID
-- `c.sys.InitiateLeaveWorkspace`: member voluntarily leaves (AuthenticatedUser)
-  - No params (invite found by login from auth token)
-- `c.sys.CancelSentInvite`: cancels pending invitation (WorkspaceOwner)
-  - Params: InviteID
-
-Internal commands (called by projectors via Federation):
-
-- `c.sys.CreateJoinedWorkspace`: creates JoinedWorkspace record in invitee's profile
-- `c.sys.UpdateJoinedWorkspaceRoles`: updates roles in invitee's JoinedWorkspace
-- `c.sys.DeactivateJoinedWorkspace`: deactivates JoinedWorkspace when member removed
+Roles, documents, and commands of the invite lifecycle (owner-side and invitee-side commands, projector-emitted internal commands, `[(cdoc.sys.Invite)]` / `[(cdoc.sys.Subject)]` / `[(cdoc.sys.JoinedWorkspace)]`) are catalogued in [arch-membership.md](./arch-membership.md#components). This document does not repeat them; the parameter lists and ACL bindings (`WorkspaceOwnerFuncTag`, `AllowedToAuthenticatedTag`) are kept inline with the corresponding VSQL in `pkg/sys/sys.vsql`.
 
 ---
 
