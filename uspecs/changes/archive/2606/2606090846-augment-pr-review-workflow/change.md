@@ -18,7 +18,7 @@ Introduce specified automated PR review behavior for repository participants:
 
 - The `devops` domain describes Voedger engineering operations, including repository automation used by NonWriters and Writers
 - The `dev` context contains the `pr-reviews` feature, which defines when automated reviews are created and who can request them
-- Every draft or non-draft pull request receives an automated review when it is opened, updated, reopened, or marked ready for review
+- Every draft or non-draft pull request receives an automated review when it is opened, synchronized, reopened, or marked ready for review
 - Writer can request another review by creating a PR comment whose trimmed body starts with `/review` as a command
 - Manual comment-triggered reviews are ignored on non-PR issues, edited or deleted comments, comments where `/review` is not the leading command, command-prefix lookalikes such as `/reviewed`, and comments from NonWriters
 - Reviews use the repository's existing development, Go, and Markdown guidance

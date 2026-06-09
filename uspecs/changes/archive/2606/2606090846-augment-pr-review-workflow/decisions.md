@@ -25,7 +25,7 @@ Alternatives:
 
 ## Ambiguity: whether automatic reviews include draft pull requests
 
-Decision: Review both draft and non-draft pull requests when they are opened, updated, reopened, or marked ready for review.
+Decision: Review both draft and non-draft pull requests when they are opened, synchronized, reopened, or marked ready for review.
 
 - Pros: matches the requested "all PRs" scope; gives early feedback before a draft is ready for human review; `pull_request_target` supports the selected activity types
 - Cons: may spend review-provider quota on work that is still incomplete

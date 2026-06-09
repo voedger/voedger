@@ -13,7 +13,7 @@ Feature: Pull request reviews
       Examples:
         | state     | event             |
         | draft     | opened            |
-        | non-draft | updated           |
+        | non-draft | synchronize       |
         | non-draft | reopened          |
         | draft     | ready for review  |
 
