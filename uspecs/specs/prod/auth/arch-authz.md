@@ -92,7 +92,7 @@ Four sources by origin contribute to a request's principal set; each is enumerat
   - Composition: `[Subjects reader]` reads `[(cdoc.sys.Subject)]` rows in `RequestWSID` matching the resolved login and emits one `Principal{Kind: Role, WSID: RequestWSID, QName: role}` per matched role.
 
 - `[Token-carried]`
-  - Origin: `[[Authentication]]` snapshots roles into `PrincipalPayload` at sign-in (per-app `Roles` from the registry login record) and `[c.registry.UpdateGlobalRoles]` updates the `GlobalRoles` field consumed at the next sign-in; see [arch-authn.md](./arch-authn.md).
+  - Origin: `[[Authentication]]` snapshots roles into `PrincipalPayload` at sign-in (per-app `Roles` from the registry login record) and `[c.registry.UpdateGlobalRoles]` updates the `GlobalRoles` field consumed at the next sign-in; see [arch-authn.md](./arch-authn.md). A second runtime write path is `[q.sys.EnrichPrincipalToken]`, which folds the request's composed `Principal{Kind: Role}` set into `PrincipalPayload.Roles` and re-issues the token so those roles travel into workspaces where they would not otherwise be composed; the token-lifecycle detail lives in [arch-tokens.md](./arch-tokens.md).
   - Composition: `PrincipalPayload.Roles []{WSID, QName}` is filtered to `RequestWSID` for API tokens, or to `OwnerWSID` of `RequestWSID` and re-keyed to `RequestWSID` for user/device tokens; `PrincipalPayload.GlobalRoles []QName` is emitted in any workspace as `Principal{Kind: Role, WSID: RequestWSID, QName: role}` when `IsAPIToken=false`.
 
 - `[Request-context]`

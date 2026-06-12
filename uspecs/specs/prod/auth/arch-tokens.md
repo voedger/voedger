@@ -1,6 +1,6 @@
 # Context subsystem architecture: prod/auth/tokens
 
-Token management subsystem architecture covering principal token issue, refresh, and validation, and the principal payload contract shared by authentication and authorization. Context-level overview and shared concepts: [arch.md](./arch.md). Producers of `PrincipalPayload`: [arch-authn.md](./arch-authn.md). Consumer that composes principals from a validated token: [arch-authz.md](./arch-authz.md).
+Token management subsystem architecture covering principal token issue, refresh, enrich, and validation, and the principal payload contract shared by authentication and authorization. Context-level overview and shared concepts: [arch.md](./arch.md). Producers of `PrincipalPayload`: [arch-authn.md](./arch-authn.md). Consumer that composes principals from a validated token: [arch-authz.md](./arch-authz.md).
 
 ## External actors
 
@@ -20,6 +20,9 @@ Roles:
 - **`Refresh principal token`**
   - `@Client` calls `[q.sys.RefreshPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, the same identity (including the captured `Alias`) is re-encoded with the same TTL/AppQName by `[ITokens].IssueToken`, and the new token is returned. Refresh never re-resolves the login or alias and never updates the alias snapshot.
 
+- **`Enrich principal token`**
+  - `@Client` (basic auth, `WorkspaceOwner`) calls `[q.sys.EnrichPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, every runtime-composed `Principal{Kind: Role}` for the request is folded into `PrincipalPayload.Roles` (deduplicated by `RoleType{WSID, QName}`), and a fresh `[Principal Token]` is minted by `[IAppTokens].IssueToken` with `DefaultPrincipalTokenExpiration`. Unlike refresh, enrich rewrites the `Roles` set; the other identity fields are preserved.
+
 - **`Validate principal token`**
   - On every request the authorization subsystem calls `[IAppTokens].ValidateToken(token, &payload)` (via `[Auth boundary]`) to verify the signature, audience, and expiry and to decode `PrincipalPayload` for principal composition (see [arch-authz.md](./arch-authz.md)).
 
@@ -37,6 +40,7 @@ External actors
 Token endpoints
     |
     +-- [q.sys.RefreshPrincipalToken]
+    +-- [q.sys.EnrichPrincipalToken]
     |
     v
 Token primitives
@@ -56,6 +60,11 @@ Payload contract
 - `[q.sys.RefreshPrincipalToken]`
   - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPayloadRegistry`, and re-issues a token for the same AppQName, duration, and payload. The decoded `Alias` is preserved verbatim, so the snapshot taken at the original issue time survives the refresh; alias changes performed in the registry between issue and refresh have no effect on the refreshed token.
   - impl: [pkg/sys/authnz/impl_refreshprincipaltoken.go#provideRefreshPrincipalTokenExec](../../../../pkg/sys/authnz/impl_refreshprincipaltoken.go)
+
+- `[q.sys.EnrichPrincipalToken]`
+  - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPrincipalPayload`, aggregates every `Principal{Kind: Role}` exposed by `args.Workpiece.(processors.IProcessorWorkpiece).GetPrincipals()` into `PrincipalPayload.Roles` (each as `RoleType{WSID, QName}`, appended only when not already present), and re-issues through `[IAppTokens].IssueToken` with `DefaultPrincipalTokenExpiration`. Runs under basic auth with the `WorkspaceOwner` role; it snapshots the request's runtime-composed roles into the token so they survive into workspaces where they are not otherwise composed (see the `[Token-carried]` role source in [arch-authz.md](./arch-authz.md)).
+  - impl: [pkg/sys/authnz/impl_enrichprincipaltoken.go#provideExecQryEnrichPrincipalToken](../../../../pkg/sys/authnz/impl_enrichprincipaltoken.go)
+  - decl: [pkg/sys/sys.vsql#EnrichPrincipalToken](../../../../pkg/sys/sys.vsql)
 
 ### Token primitives
 
@@ -107,6 +116,19 @@ Payload contract
 
 The Alias field is taken verbatim from the decoded payload and is not re-resolved against `[(registry.Login)]` or `[(registry.LoginAlias)]`. A login whose alias was set, replaced, or cleared after the original issue continues to refresh with the snapshotted alias until the next sign-in. To pick up a new alias the caller must sign in again rather than refresh.
 
+### Enrich principal token
+
+```text
+@Client POST q.sys.EnrichPrincipalToken (Authorization: Bearer <current token>, WorkspaceOwner)
+  -> [q.sys.EnrichPrincipalToken]
+       -> storages.GetPrincipalTokenFromState(state) -> current token
+       -> payloads.GetPrincipalPayload(appTokens, token) -> decode payload
+       -> for each Principal{Kind: Role} in IProcessorWorkpiece.GetPrincipals():
+            append RoleType{WSID, QName} to payload.Roles if absent
+       -> [IAppTokens].IssueToken(DefaultPrincipalTokenExpiration, &payload)
+  -> @Client: EnrichedToken
+```
+
 ### Validate principal token
 
 ```text
@@ -119,6 +141,6 @@ The Alias field is taken verbatim from the decoded payload and is not re-resolve
 
 ## Notes
 
-`DefaultPrincipalTokenExpiration = 1h` is defined in `pkg/sys/authnz/consts.go`; `[q.registry.IssuePrincipalToken]` rejects TTLs above `maxTokenTTLHours`. The TTL is preserved across refresh: each refresh extends the bearer-token wall-clock lifetime by the same duration that the original issue requested.
+`DefaultPrincipalTokenExpiration = 1h` is defined in `pkg/sys/authnz/consts.go`; `[q.registry.IssuePrincipalToken]` rejects TTLs above `maxTokenTTLHours`. The TTL is preserved across refresh: each refresh extends the bearer-token wall-clock lifetime by the same duration that the original issue requested. Enrich does not preserve the input token's remaining lifetime; it mints with `DefaultPrincipalTokenExpiration`, consistent with a freshly issued token.
 
 The `IsAPIToken` branch of principal composition is documented in [arch-authz.md](./arch-authz.md); the token subsystem owns only the flag's presence on `PrincipalPayload`, not the composition rules driven by it.
