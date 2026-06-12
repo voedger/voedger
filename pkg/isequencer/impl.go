@@ -184,11 +184,10 @@ func (s *sequencer) flusher(flusherCtx context.Context) {
 //   - Try s.inproc
 //   - Try s.toBeFlushed (use s.toBeFlushedMu to synchronize)
 //   - Try s.SeqStorage.ReadNumbers() for single requested seqID
-//   - If number is 0 then initial value is used
 //
-// - Write value+1 to s.cache
-// - Write value+1 to s.inproc
-// - Return value
+// - incrementNumber: max(number+1, initialValue)
+// - Write result to s.cache and s.inproc
+// - Return result
 //
 // TODO(AIR-3506): Should read all numbers per workspace and keep in memory without cache.
 func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
@@ -212,13 +211,12 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	// Try to obtain the next value using:
 	// Try s.cache (can be evicted)
 	if nextNumber, ok := s.cache.Get(key); ok {
-		return s.incrementNumber(key, nextNumber), nil
+		return s.incrementNumber(key, nextNumber, initialValue), nil
 	}
 
 	// Try s.inproc
-	lastNumber, ok := s.inproc[key]
-	if ok {
-		return s.incrementNumber(key, lastNumber), nil
+	if lastNumber, ok := s.inproc[key]; ok {
+		return s.incrementNumber(key, lastNumber, initialValue), nil
 	}
 
 	// Try s.toBeFlushed (use s.toBeFlushedMu to synchronize)
@@ -226,7 +224,7 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 	nextNumber, ok := s.toBeFlushed[key]
 	s.toBeFlushedMu.RUnlock()
 	if ok {
-		return s.incrementNumber(key, nextNumber), nil
+		return s.incrementNumber(key, nextNumber, initialValue), nil
 	}
 
 	// Try s.params.SeqStorage.ReadNumber()
@@ -238,20 +236,12 @@ func (s *sequencer) Next(seqID SeqID) (num Number, err error) {
 		return 0, err
 	}
 
-	// If number is 0 then initial value is used
-	nextNumber = storedNumbers[0]
-	if nextNumber == 0 {
-		nextNumber = initialValue - 1 // initial value 1 and there are no such records in plog at all -> should issue 1, not 2
-	}
-
-	// Write value+1 to s.cache
-	// Write value+1 to s.inproc
-	return s.incrementNumber(key, nextNumber), nil
+	return s.incrementNumber(key, storedNumbers[0], initialValue), nil
 }
 
 // incrementNumber increments the number for the given key and returns the next number
-func (s *sequencer) incrementNumber(key NumberKey, number Number) Number {
-	nextNumber := number + 1
+func (s *sequencer) incrementNumber(key NumberKey, number Number, initialValue Number) Number {
+	nextNumber := max(number+1, initialValue)
 	// Write value+1 to s.cache
 	s.cache.Add(key, nextNumber)
 	// Write value+1 to s.inproc
