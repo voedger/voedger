@@ -327,14 +327,14 @@ func requestHandlerV2_create_device(numsAppsWorkspaces map[appdef.AppQName]istru
 		login, pwd := coreutils.DeviceRandomLoginPwd()
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 		url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":%q}}`,
 			login, busRequest.AppQName, istructs.SubjectKind_Device, istructs.CurrentClusterID(), pwd)
 		_, err := federation.Func(url, body, httpu.WithMethod(http.MethodPost))
 		if err != nil {
 			replyErr(rw, err)
 			return
 		}
-		result := fmt.Sprintf(`{"%s":"%s","%s":"%s"}`, fieldLogin, login, fieldPassword, pwd)
+		result := fmt.Sprintf(`{%q:%q,%q:%q}`, fieldLogin, login, fieldPassword, pwd)
 		ReplyJSON(rw, result, http.StatusCreated)
 	})
 }
@@ -490,16 +490,22 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 
 func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSender bus.IRequestSender, rw http.ResponseWriter, data validatedData,
 	limiter *wsQueryLimiter) {
+	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
+
+	// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
+	// The shim reroutes c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2 (query processor),
+	// so it must share the wsQueryLimiter gating with native queries.
+	isShim := isVSqlUpdateV2Call(busRequest)
+
 	// limiter is nil for Admin and ACME services
-	if limiter != nil && busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)) {
+	if limiter != nil && (isShim || (busRequest.Method == http.MethodGet && isQPBoundAPIPath(processors.APIPath(busRequest.APIPath)))) {
 		if !limiter.acquire(busRequest.WSID) {
+			limiter.onQueryDrop(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 			replyServiceUnavailable(rw)
 			return
 		}
 		defer limiter.release(busRequest.WSID)
 	}
-
-	reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
 	// req's BaseContext is router service's context. See service.Start()
 	// router app closing or client disconnected -> req.Context() is done
@@ -514,6 +520,10 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	defer cancel() // to avoid context leak
 
 	logServeRequest(requestCtx, limiter)
+
+	if isShim && dispatchVSqlUpdateShim_V2(requestCtx, rw, busRequest, reqSender) {
+		return
+	}
 
 	sentAt := time.Now()
 	respCh, respMeta, respErr, err := reqSender.SendRequest(requestCtx, busRequest)

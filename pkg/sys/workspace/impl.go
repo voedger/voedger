@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -70,8 +71,8 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederationWithRetry, ap
 	wsKindInitializationData := ownerDoc.AsString(authnz.Field_WSKindInitializationData)
 	createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
 	logger.Info("aproj.sys.InvokeCreateWorkspaceID: request to " + createWSIDCmdURL)
-	body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":%q,"WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
-		ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
+	body := jsonu.Jprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":%q,"OwnerID":%d,"OwnerApp":%q,"WSName":%q,"WSKind":%q,"WSKindInitializationData":%q,"TemplateName":%q,"TemplateParams":%q}}`,
+		ownerWSID, ownerQName, ownerID, ownerApp, wsName, wsKind, wsKindInitializationData, templateName, templateParams)
 	targetAppQName, err := appdef.ParseAppQName(targetApp)
 	if err != nil {
 		// parsed already by c.registry.CreateLogin
@@ -111,12 +112,28 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	}
 	kb.PutInt64(Field_OwnerWSID, ownerWSID)
 	kb.PutString(authnz.Field_WSName, wsName)
-	_, ok, err := args.State.CanExist(kb)
+	viewRec, ok, err := args.State.CanExist(kb)
 	if err != nil {
 		return err
 	}
 	if ok {
-		return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID))
+		// the existing index entry must be honored only while its cdoc.sys.WorkspaceID is active;
+		// if the previous workspace was deactivated (cmdOnWorkspaceDeactivatedExec sets sys.IsActive=false on cdoc.sys.WorkspaceID),
+		// re-creation under the same (OwnerWSID, WSName) is allowed and workspaceIDIdxProjector overwrites the index entry
+		recKB, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocWorkspaceID)
+		if err != nil {
+			// notest
+			return err
+		}
+		recKB.PutRecordID(sys.Storage_Record_Field_ID, viewRec.AsRecordID(field_IDOfCDocWorkspaceID))
+		cdocWorkspaceID, err := args.State.MustExist(recKB)
+		if err != nil {
+			// notest
+			return err
+		}
+		if cdocWorkspaceID.AsBool(appdef.SystemField_IsActive) {
+			return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID))
+		}
 	}
 
 	// Get new WSID from View<NextBaseWSID>
@@ -199,8 +216,8 @@ func invokeCreateWorkspaceProjector(federation federation.IFederationWithRetry, 
 			ownerID := rec.AsInt64(Field_OwnerID)
 			ownerApp := rec.AsString(Field_OwnerApp)
 			templateParams := rec.AsString(Field_TemplateParams)
-			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":%q,"WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
-				ownerWSID, ownerQName, ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
+			body := jsonu.Jprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":%q,"OwnerID":%d,"OwnerApp":%q,"WSName":%q,"WSKind":%q,"WSKindInitializationData":%q,"TemplateName":%q,"TemplateParams":%q}}`,
+				ownerWSID, ownerQName, ownerID, ownerApp, wsName, wsKind, wsKindInitializationData, templateName, templateParams)
 			appQName := s.App()
 			createWSCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspace", appQName.String(), newWSID)
 			logger.Info("aproj.sys.InvokeCreateWorkspace: request to " + createWSCmdURL)
@@ -367,7 +384,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 			if wsDescr.AsInt64(Field_InitStartedAtMs) == 0 {
 				info("initStartedAtMs = 0. WS init was not started")
 				// WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
-				body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.QName": "%s","%s": %d}}]}`,
+				body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.QName": %q,%q: %d}}]}`,
 					wsDescr.ID(), appdef.QNameCDocWorkspaceDescriptor, Field_InitStartedAtMs, time.Now().UnixMilli())
 				info("updating initStartedAtMs:", updateWSDescrURL)
 
@@ -387,7 +404,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 				if wsError != nil {
 					wsErrStr = wsError.Error()
 				}
-				body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
+				body = jsonu.Jprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":%q,%q:%q,%q:%d}}]}`,
 					wsDescr.ID(), appdef.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, httpu.WithAuthorizeBy(systemPrincipalToken_TargetApp), httpu.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
@@ -396,7 +413,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 			} else if wsDescr.AsInt64(Field_InitCompletedAtMs) == 0 {
 				info("initCompletedAtMs = 0. WS data init was interrupted")
 				wsError = errors.New("workspace data initialization was interrupted")
-				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
+				body := jsonu.Jprintf(`{"cuds":[{"fields":{"sys.QName":%q,%q:%q,%q:%d}}]}`,
 					appdef.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, httpu.WithAuthorizeBy(systemPrincipalToken_TargetApp), httpu.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
@@ -443,7 +460,7 @@ func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp st
 	updateOwnerURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", ownerApp, ownerWSID)
 	logger.Info(fmt.Sprintf("updating owner %s/%d/%s.%d: NewWSID=%d, WSError='%s'", ownerAppQName, ownerWSID, ownerQNameStr,
 		ownerID, newWSID, errStr))
-	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"%s":%d,"%s":%q}}]}`,
+	body := jsonu.Jprintf(`{"cuds":[{"sys.ID":%d,"fields":{%q:%d,%q:%q}}]}`,
 		ownerID, authnz.Field_WSID, newWSID, authnz.Field_WSError, errStr)
 	_, err = federation.Func(updateOwnerURL, body, httpu.WithAuthorizeBy(ownerAppToken), httpu.WithDiscardResponse())
 	return err

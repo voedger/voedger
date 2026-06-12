@@ -22,7 +22,7 @@ func provideCmdCancelSentInvite(sr istructsmem.IStatelessResources, time timeu.I
 	))
 }
 
-func execCmdCancelSentInvite(time timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdCancelSentInvite(_ timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
@@ -42,13 +42,13 @@ func execCmdCancelSentInvite(time timeu.ITime) func(args istructs.ExecCommandArg
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
+		// no-op CUD: marks this as a post-refactor event (ap.sys.ApplyInviteEvents skips Version==0)
 		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
 		if err != nil {
-			return
+			return err
 		}
-		svbCDocInvite.PutInt64(Field_Updated, time.Now().UnixMilli())
-		svbCDocInvite.PutInt32(Field_State, int32(State_Cancelled))
+		svbCDocInvite.PutInt32(Field_Version, 1)
 
-		return
+		return nil
 	}
 }

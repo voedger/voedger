@@ -13,11 +13,11 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
@@ -57,25 +57,16 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
 
-		cdocLoginID, err := GetCDocLoginID(args.State, args.WSID, loginAppStr, login)
+		cdocLogin, loginExists, err := GetCDocLogin(login, args.State, args.WSID, loginAppStr)
 		if err != nil {
 			return err
 		}
-		if cdocLoginID == 0 {
+		if !loginExists {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "login does not exist")
 		}
 
 		// check CDoc<registry.Login>.WSID != 0
-		kb, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
-		if err != nil {
-			return err
-		}
-		kb.PutRecordID(sys.Storage_Record_Field_ID, cdocLoginID)
-		sv, err := args.State.MustExist(kb)
-		if err != nil {
-			return err
-		}
-		profileWSID := sv.AsInt64(authnz.Field_WSID)
+		profileWSID := cdocLogin.AsInt64(authnz.Field_WSID)
 		if profileWSID == 0 {
 			return coreutils.NewHTTPErrorf(http.StatusLocked, "login profile is not initialized")
 		}
@@ -84,8 +75,9 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 		if err != nil {
 			return err
 		}
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d,"ForRegistry":true,"Language":"%s"},"elements":[{"fields":["VerificationToken"]}]}`,
-			QNameCommandResetPasswordByEmailUnloggedParams, field_Email, email, profileWSID, language) // targetWSID - is the workspace we're going to use the verified value at
+		// targetWSID - is the workspace we're going to use the verified value at
+		body := jsonu.Jprintf(`{"args":{"Entity":%q,"Field":%q,"Email":%q,"TargetWSID":%d,"ForRegistry":true,"Language":%q},"elements":[{"fields":["VerificationToken"]}]}`,
+			QNameCommandResetPasswordByEmailUnloggedParams, field_Email, email, profileWSID, language)
 		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.InitiateEmailVerification", loginAppQName, profileWSID), body, httpu.WithAuthorizeBy(sysToken))
 		if err != nil {
 			return fmt.Errorf("q.sys.InitiateEmailVerification failed: %w", err)
@@ -115,7 +107,7 @@ func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens,
 			return err
 		}
 
-		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ForRegistry":true},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
+		body := jsonu.Jprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ForRegistry":true},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 		resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.IssueVerifiedValueToken", loginAppQName, profileWSID), body, httpu.WithAuthorizeBy(sysToken))
 		if err != nil {
 			return err

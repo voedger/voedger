@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/processors/oldacl"
@@ -448,10 +449,12 @@ func checkWSActive(_ context.Context, cmd *cmdWorkpiece) (err error) {
 }
 
 func limitCallRate(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	if exceeded, _ := cmd.appPart.IsLimitExceeded(cmd.cmdQName, appdef.OperationKind_Execute, cmd.cmdMes.WSID(), cmd.cmdMes.Host()); exceeded {
-		return coreutils.NewHTTPErrorf(http.StatusTooManyRequests)
+	exceeded, limit := cmd.appPart.IsLimitExceeded(cmd.cmdQName, appdef.OperationKind_Execute, cmd.cmdMes.WSID(), cmd.cmdMes.Host())
+	if !exceeded {
+		return nil
 	}
-	return nil
+	retryAfter := processors.RetryAfterSecondsOnLimitExceeded(cmd.appStructs.AppDef(), limit)
+	return coreutils.NewHTTPErrorf(http.StatusTooManyRequests).AddHeader(httpu.RetryAfter, strconv.Itoa(retryAfter))
 }
 
 func (cmdProc *cmdProc) authenticate(_ context.Context, cmd *cmdWorkpiece) (err error) {

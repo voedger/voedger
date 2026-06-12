@@ -264,31 +264,44 @@ func TestSqlQuery_readLogParams(t *testing.T) {
 
 	t.Run("Should return error when limit value not parsable", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog limit 7.1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500(`strconv.ParseInt: parsing "7.1": invalid syntax`))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400(`strconv.ParseInt: parsing "7.1": invalid syntax`))
 	})
 	t.Run("Should return error when limit value invalid", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog limit -3"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("limit must be greater than -2"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("limit must be greater than -2"))
 	})
 	t.Run("Should return error when Offset value not parsable", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 2.1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500(`strconv.ParseUint: parsing "2.1": invalid syntax`))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400(`strconv.ParseUint: parsing "2.1": invalid syntax`))
 	})
 	t.Run("Should return error when Offset value invalid", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 0"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("offset must be greater than zero"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("offset must be greater than zero"))
 	})
 	t.Run("Should return error when Offset operation not supported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset < 2"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported operation: <"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported operation: <"))
 	})
 	t.Run("Should return error when column name not supported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where something >= 1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported column name: something"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported column name: something"))
 	})
 	t.Run("Should return error when expression not supported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.wlog where Offset >= 1 and something >= 5"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect500("unsupported expression: *sqlparser.AndExpr"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported expression: *sqlparser.AndExpr"))
+	})
+
+	t.Run("Should return error when limit value is not a literal", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from sys.wlog limit sin(5)"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported limit value expression:"))
+	})
+	t.Run("Should return error when comparison left side is not a column reference", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from sys.plog where 5 = 1"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported column reference expression:"))
+	})
+	t.Run("Should return error when offset value is not a literal", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from sys.plog where Offset >= sin(5)"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("unsupported offset value expression:"))
 	})
 }
 
@@ -397,13 +410,44 @@ func TestSqlQuery_view_records(t *testing.T) {
 	})
 	t.Run("Should return error when field does not exist in value def", func(t *testing.T) {
 		body = `{"args":{"Query":"select abracadabra from sys.CollectionView where PartKey = 1"}}`
-		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("field 'abracadabra' does not exist in 'sys.CollectionView' value def"))
+		vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400("not found: field «abracadabra» in ViewRecord «sys.CollectionView»"))
 	})
 	t.Run("Should recover lowercased table and field names", func(t *testing.T) {
 		require := require.New(t)
 		body = `{"args":{"Query":"select docqname from sys.collectionview where PartKey = 1 and DocQName = 'app1pkg.payments'"}, "elements":[{"fields":["Result"]}]}`
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 		require.NotEmpty(resp.Sections[0].Elements)
+	})
+
+	// AIR-3801: WHERE clause on view keys of int8 / int16 kinds
+	t.Run("Should read view filtered by int8 and int16 key fields", func(t *testing.T) {
+		year := vit.NextNumber()
+		stringValue := fmt.Sprintf("year-%d", year)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":%d,"Month":3,"Day":7,"StringValue":"%s"}}]}`, year, stringValue)
+		vit.PostWS(ws, "c.sys.CUD", body)
+
+		t.Run("filter by int16 partition key", func(t *testing.T) {
+			require := require.New(t)
+			body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = %d"},"elements":[{"fields":["Result"]}]}`, year)
+			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+			require.Len(resp.Sections[0].Elements, 1)
+			require.Contains(resp.SectionRow(0)[0].(string), fmt.Sprintf(`"StringValue":"%s"`, stringValue))
+		})
+
+		t.Run("filter by int16 and int8 keys", func(t *testing.T) {
+			require := require.New(t)
+			body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = %d and Month = 3 and Day = 7"},"elements":[{"fields":["Result"]}]}`, year)
+			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+			require.Len(resp.Sections[0].Elements, 1)
+			require.Contains(resp.SectionRow(0)[0].(string), fmt.Sprintf(`"StringValue":"%s"`, stringValue))
+		})
+
+		t.Run("no rows when key value does not match", func(t *testing.T) {
+			require := require.New(t)
+			body = `{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = -1"},"elements":[{"fields":["Result"]}]}`
+			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+			require.Empty(resp.Sections)
+		})
 	})
 }
 
@@ -591,6 +635,89 @@ func TestAuthnz(t *testing.T) {
 	t.Run("403 on deny to read orecord", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.orecord1.%d"},"elements":[{"fields":["Result"]}]}`, orecordID)
 		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
+	})
+
+	t.Run("star projection denied when any field is denied (record)", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from app1pkg.TestCDocWithDeniedFields.123"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+	})
+
+	t.Run("star projection denied when any field is denied (view)", func(t *testing.T) {
+		body := `{"args":{"Query":"select * from app1pkg.TestViewWithDeniedFields where Year = 2025"},"elements":[{"fields":["Result"]}]}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+	})
+
+	t.Run("star projection allowed when every field is granted", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.payments","name":"EFT","guid":"guidEFT"}}]}`
+		paymentID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments.%d"},"elements":[{"fields":["Result"]}]}`, paymentID)
+		vit.PostWS(ws, "q.sys.SqlQuery", body)
+	})
+
+	t.Run("REVOKE SELECT on a system field", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.TestCDocSysIDRevoked","Fld1":42}}]}`
+		docID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		t.Run("explicit projection of revoked sys field is 403", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select sys.ID from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+		})
+
+		t.Run("star projection is 403 because sys.ID is revoked", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403())
+		})
+
+		t.Run("explicit projection of granted user field succeeds", func(t *testing.T) {
+			body := fmt.Sprintf(`{"args":{"Query":"select Fld1 from app1pkg.TestCDocSysIDRevoked.%d"},"elements":[{"fields":["Result"]}]}`, docID)
+			vit.PostWS(ws, "q.sys.SqlQuery", body)
+		})
+	})
+
+	t.Run("WHERE field ACL", func(t *testing.T) {
+		cases := []struct {
+			name  string
+			query string
+		}{
+			{
+				"denied field in WHERE with allowed projection",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where DeniedFld2 = 1",
+			},
+			{
+				"denied field in WHERE combined via AND",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where Fld1 = 1 and DeniedFld2 = 2",
+			},
+			{
+				"denied field in WHERE combined via OR",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where Fld1 = 1 or DeniedFld2 = 2",
+			},
+			{
+				"denied field in nested WHERE expression",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where (Fld1 = 1 and (DeniedFld2 = 2 or Fld1 = 3))",
+			},
+			{
+				"denied field on the left of IN",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where DeniedFld2 in (1, 2)",
+			},
+			{
+				"denied field inside IN value tuple",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where Fld1 in (DeniedFld2, 2)",
+			},
+			{
+				"denied field on the left of NOT IN",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where DeniedFld2 not in (1, 2)",
+			},
+			{
+				"denied field qualified by table name",
+				"select Fld1 from app1pkg.TestCDocWithDeniedFields.123 where TestCDocWithDeniedFields.DeniedFld2 = 1",
+			},
+		}
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, c.query)
+				vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.Expect403()).Println()
+			})
+		}
 	})
 }
 

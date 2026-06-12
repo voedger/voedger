@@ -106,7 +106,7 @@ func TestExecRootCmd(t *testing.T) {
 
 	sort.Sort(expectedNewState)
 	sort.Sort(newState)
-	require.Equal(t, len(expectedNewState), len(newState))
+	require.Len(t, newState, len(expectedNewState))
 	require.Equal(t, expectedNewState, newState)
 
 	err = cleanUp(projectName)

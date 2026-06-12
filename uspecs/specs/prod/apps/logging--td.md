@@ -92,6 +92,10 @@ HTTP root context is derived from VVM context:
 - Server stops accepting connections: level `Info`, stage `endpoint.shutdown`, msg (empty)
 - Error on http server shutdown: level `Error`, stage `endpoint.shutdown.error`, msg `<error message>`
 - Server exits unexpectedly: level `Error`, stage `endpoint.unexpectedstop`, msg `<err>`
+- http server internal error log: level `Error`, stage `endpoint.http.error`, msg `<trimmed line emitted to http.Server.ErrorLog>`
+  - `http.Server.ErrorLog` is bridged to voedger logger via `logger.NewStdErrorLogBridge(s.rootLogCtx, "endpoint.http.error", logger.WithFilter(skipAnnoyingErrors...))`
+  - Attributes are inherited from the http server root log context (`vapp="sys/voedger"`, `extension=<server name>`)
+  - Lines matching any substring in `skipAnnoyingErrors` (currently `"TLS handshake error"`) are suppressed by `logger.WithFilter`
 
 #### Application deployment
 
@@ -151,10 +155,24 @@ Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
   - `origin`: HTTP Origin header value
   - `headers`: all request headers formatted as a single string for production debugging of real IP propagation
 - Request received: level `Verbose`, stage `routing.accepted`, msg (empty)
-- Every `limiterSizeLogIntervalInRequests` requests: level `Verbose`, stage `routing.qpLimiterSize`, msg `<number of workspaces tracked by the per-WS query limiter>`
+- Per-workspace query limit reached: level `Warning`, stage `routing.qp.limit`, msg `droppedInLast10Seconds=<count>`
+  - Dropped queries are aggregated per [wsid, extension] key
+  - On each rejection: bump counter for the key, store request context from the last dropped query
+  - On every query request: check `lastLoggedAt` timestamp under mutex; if 10 seconds have elapsed, swap the rejections map, log one warning per key with non-zero count, update `lastLoggedAt`
+  - On server shutdown: `flushAll()` logs and purges all pending entries regardless of elapsed time
 - First response from bus (immediately after `SendRequest` returns): level `Verbose`, stage `routing.latency1`, msg `<latency_ms>`
-- Error sending request to VVM: level `Error`, stage `routing.send2vvm.error`, msg `<error message>`
+- Error sending request to VVM: level `Error`, stage `routing.send2vvm.error`, msg `<error message>` or `forwarding <source resource> to <target resource> failed: <error message>` for the VSqlUpdate shim
 - Error sending response to client: level `Error`, stage `routing.response.error`, msg `<error message>`
+
+**VSqlUpdate shim** (both API v1 and API v2, emitted by `dispatchVSqlUpdateShim_V1/V2`):
+
+The router reroutes legacy `c.cluster.VSqlUpdate` command requests to the `q.cluster.VSqlUpdate2` query to avoid a command processor deadlock. Shim-specific log entries share the `routing.vsqlupdate*` subsystem so `stage=routing.vsqlupdate*` filters the whole shim feed.
+
+- Reroute announcement (emitted once the shim is committed to forwarding the request - in `_V1` right before request rewriting, in `_V2` after the body / args preflight succeeds): level `Verbose`, stage `routing.vsqlupdate`, msg `rerouting c.cluster.VSqlUpdate to q.cluster.VSqlUpdate2`
+- Offset reporting (emitted on success after the query response has been captured): level `Verbose`, stage `routing.vsqlupdate`, msg `LogWLogOffset=<log> (to be sent to the client as CurrentWLogOffset), CUDWLogOffset=<cud>`
+- Shim reply failure (captured status is not 200 OK or downstream `respErr` is non-nil, logged right before the reply is flushed to the client): level `Error`, stage `routing.vsqlupdate.error`, msg `c.cluster.VSqlUpdate shim reply failed: status=<status> respErr=<err> body=<captured body>`
+
+APIv2 preflight failures (malformed JSON body, missing `args` object, args marshal error, downstream `SendRequest` error) do not emit a log line - the shim returns a fall-through signal so the request is replayed against the standard command processor which owns the error reporting.
 
 ---
 

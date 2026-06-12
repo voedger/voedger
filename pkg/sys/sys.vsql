@@ -80,6 +80,7 @@ ABSTRACT WORKSPACE Workspace (
 
 	TABLE Invite INHERITS sys.CDoc (
 		SubjectKind int32,
+		-- Login: email address the invitation was sent to (set by InitiateInvitationByEMail)
 		Login varchar NOT NULL,
 		Email varchar NOT NULL,
 		Roles varchar(1024),
@@ -90,7 +91,12 @@ ABSTRACT WORKSPACE Workspace (
 		Updated int64 NOT NULL,
 		SubjectID ref,
 		InviteeProfileWSID int64,
+		-- ActualLogin: invitee's login from auth token (set by InitiateJoinWorkspace when user accepts)
+		-- Currently always equals Login because InitiateJoinWorkspace validates they match
+		-- Used for cdoc.sys.Subject.Login field
 		ActualLogin varchar,
+		-- Version: command-side discriminator; current commands write 1, pre-refactor events have 0 and are skipped by ap.sys.ApplyInviteEvents
+		Version int32,
 		UNIQUEFIELD Email
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
@@ -179,6 +185,8 @@ ABSTRACT WORKSPACE Workspace (
 	TYPE CancelSentInviteParams (
 		InviteID ref NOT NULL
 	);
+
+
 
 	TYPE CreateJoinedWorkspaceParams (
 		Roles text NOT NULL,
@@ -411,11 +419,17 @@ ABSTRACT WORKSPACE Workspace (
 		COMMAND UpdateJoinedWorkspaceRoles(UpdateJoinedWorkspaceRolesParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		COMMAND DeactivateJoinedWorkspace(DeactivateJoinedWorkspaceParams) WITH Tags=(WorkspaceOwnerFuncTag);
 		QUERY QueryChildWorkspaceByName(QueryChildWorkspaceByNameParams) RETURNS QueryChildWorkspaceByNameResult WITH Tags=(WorkspaceOwnerFuncTag);
+		-- Deprecated: superseded by ApplyInviteEvents. Kept for backward compatibility only.
 		PROJECTOR ApplyInvitation AFTER EXECUTE ON (InitiateInvitationByEMail) STATE(sys.AppSecret) INTENTS(SendMail);
+		-- Deprecated: superseded by ApplyInviteEvents. Kept for backward compatibility only.
 		PROJECTOR ApplyCancelAcceptedInvite AFTER EXECUTE ON (InitiateCancelAcceptedInvite);
+		-- Deprecated: superseded by ApplyInviteEvents. Kept for backward compatibility only.
 		PROJECTOR ApplyJoinWorkspace AFTER EXECUTE ON (InitiateJoinWorkspace);
+		-- Deprecated: superseded by ApplyInviteEvents. Kept for backward compatibility only.
 		PROJECTOR ApplyLeaveWorkspace AFTER EXECUTE ON (InitiateLeaveWorkspace);
+		-- Deprecated: superseded by ApplyInviteEvents. Kept for backward compatibility only.
 		PROJECTOR ApplyUpdateInviteRoles AFTER EXECUTE ON (InitiateUpdateInviteRoles) STATE(sys.AppSecret) INTENTS(SendMail);
+		PROJECTOR ApplyInviteEvents AFTER EXECUTE ON (InitiateInvitationByEMail, InitiateJoinWorkspace, InitiateUpdateInviteRoles, InitiateCancelAcceptedInvite, InitiateLeaveWorkspace, CancelSentInvite) STATE(sys.AppSecret) INTENTS(SendMail);
 		SYNC PROJECTOR ProjectorInviteIndex AFTER EXECUTE ON (InitiateInvitationByEMail) INTENTS(sys.View(InviteIndexView));
 		SYNC PROJECTOR ProjectorJoinedWorkspaceIndex AFTER EXECUTE ON (CreateJoinedWorkspace) INTENTS(sys.View(JoinedWorkspaceIndexView));
 		SYNC PROJECTOR ApplyViewSubjectsIdx AFTER INSERT ON (Subject) INTENTS(sys.View(ViewSubjectsIdx));
@@ -482,6 +496,7 @@ ABSTRACT WORKSPACE Workspace (
 	GRANT BLOBUploader TO WorkspaceOwner;
 
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
+	GRANT SELECT ON ALL VIEWS WITH TAG WorkspaceOwnerTableTag TO WorkspaceOwner;
 
 	GRANT SELECT ON TABLE ChildWorkspace TO WorkspaceOwner;
 

@@ -72,19 +72,19 @@ func (vit *VIT) signUp(login Login, opts ...httpu.ReqOptFunc) {
 	vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/users", login.AppQName.Owner(), login.AppQName.Name()), string(bodyBytes), opts...)
 }
 
-func WithClusterID(clusterID istructs.ClusterID) signUpOptFunc {
-	return func(opts *signUpOpts) {
+func WithClusterID(clusterID istructs.ClusterID) ISignUpOpt {
+	return signUpOptFunc(func(opts *signUpOpts) {
 		opts.profileClusterID = clusterID
-	}
+	})
 }
 
-func WithReqOpt(reqOpt httpu.ReqOptFunc) signUpOptFunc {
-	return func(opts *signUpOpts) {
+func WithReqOpt(reqOpt httpu.ReqOptFunc) ISignUpOpt {
+	return signUpOptFunc(func(opts *signUpOpts) {
 		opts.reqOpts = append(opts.reqOpts, reqOpt)
-	}
+	})
 }
 
-func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...signUpOptFunc) Login {
+func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...ISignUpOpt) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_User, signUpOpts.profileClusterID)
@@ -92,17 +92,17 @@ func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...
 	return login
 }
 
-func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
+func getSignUpOpts(opts []ISignUpOpt) *signUpOpts {
 	res := &signUpOpts{
 		profileClusterID: istructs.CurrentClusterID(),
 	}
 	for _, opt := range opts {
-		opt(res)
+		opt.applySignUpOpt(res)
 	}
 	return res
 }
 
-func (vit *VIT) SignUpDevice(appQName appdef.AppQName, opts ...signUpOptFunc) Login {
+func (vit *VIT) SignUpDevice(appQName appdef.AppQName, opts ...ISignUpOpt) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	resp := vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", appQName.Owner(), appQName.Name()), "", signUpOpts.reqOpts...)
@@ -280,19 +280,19 @@ func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, opt
 	})
 }
 
-func DoNotFailOnTimeout() signInOptFunc {
-	return func(opts *signInOpts) {
+func DoNotFailOnTimeout() ISignInOpt {
+	return signInOptFunc(func(opts *signInOpts) {
 		opts.failOnTimeout = false
-	}
+	})
 }
 
-func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) {
+func (vit *VIT) SignIn(login Login, options ...ISignInOpt) (prn *Principal) {
 	vit.T.Helper()
 	opts := &signInOpts{
 		failOnTimeout: true,
 	}
-	for _, opt := range optFuncs {
-		opt(opts)
+	for _, opt := range options {
+		opt.applySignInOpt(opts)
 	}
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
@@ -426,6 +426,15 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	data := map[string]interface{}{}
 	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &data))
 	return istructs.RecordID(data["DocID"].(float64))
+}
+
+func (vit *VIT) RatePerPeriod(appQName appdef.AppQName, rateQName appdef.QName) (count appdef.RateCount, perPeriod time.Duration) {
+	vit.T.Helper()
+	appDef, err := vit.AppDef(appQName)
+	require.NoError(vit.T, err)
+	rate := appdef.Rate(appDef.Type, rateQName)
+	require.NotNil(vit.T, rate, "rate %s not found", rateQName)
+	return rate.Count(), rate.Period()
 }
 
 func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {

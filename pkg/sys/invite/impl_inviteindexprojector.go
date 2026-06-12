@@ -27,7 +27,7 @@ var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, in
 			return err
 		}
 		skbViewInviteIndex.PutInt32(field_Dummy, value_Dummy_One)
-		skbViewInviteIndex.PutString(Field_Login, event.ArgumentObject().AsString(field_Email))
+		skbViewInviteIndex.PutString(Field_Login, event.ArgumentObject().AsString(Field_Email))
 
 		svViewInviteIndex, err := intents.NewValue(skbViewInviteIndex)
 		if err != nil {

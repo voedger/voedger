@@ -132,7 +132,7 @@ func (r *Require) Error(err error, constaintsAndMsgAndArgs ...interface{}) {
 		}
 	}
 	if len(cc) > 0 {
-		errorWith(r.t, err, cc, msgAndArgs)
+		errorWith(r.t, err, cc, msgAndArgs...)
 	} else {
 		r.Assertions.Error(err, msgAndArgs...)
 	}

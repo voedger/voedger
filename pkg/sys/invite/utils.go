@@ -6,11 +6,45 @@
 package invite
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 )
+
+func validateInviteRoles(rolesStr string, ws appdef.IWorkspace) error {
+	trimmed := strings.TrimSpace(rolesStr)
+	if len(trimmed) == 0 {
+		return coreutils.NewHTTPError(http.StatusBadRequest, ErrRolesEmpty)
+	}
+	seen := make(map[appdef.QName]struct{})
+	for role := range strings.SplitSeq(trimmed, ",") {
+		role = strings.TrimSpace(role)
+		if len(role) == 0 {
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrRolesEmpty)
+		}
+		qName, err := appdef.ParseQName(role)
+		if err != nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s: %w", ErrRoleInvalid, role, err))
+		}
+		if _, ok := seen[qName]; ok {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s", ErrRoleDuplicate, role))
+		}
+		seen[qName] = struct{}{}
+		if iauthnz.IsSystemRole(qName) {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s", ErrSystemRole, role))
+		}
+		if appdef.Role(ws.Type, qName) == nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%w: %s", ErrRoleNotFound, role))
+		}
+	}
+	return nil
+}
 
 func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istructs.IIntents, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValueBuilder, err error) {
 	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(sys.Storage_View, QNameViewJoinedWorkspaceIndex)
@@ -97,15 +131,29 @@ func LoginFromToken(st istructs.IState) (loginFromToken string, err error) {
 	return svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name), nil
 }
 
-func SubjectExistsByLogin(login string, state istructs.IState) (existingSubjectID istructs.RecordID, err error) {
+// SubjectExistsByLogin returns SubjectID and isActive status for a Subject with the given login.
+// Returns (0, false, nil) if no Subject exists for this login.
+func SubjectExistsByLogin(login string, state istructs.IState) (subjectID istructs.RecordID, isActive bool, err error) {
 	skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, state)
 	if err != nil {
 		// notest
-		return 0, err
+		return 0, false, err
 	}
 	val, ok, err := state.CanExist(skbViewSubjectsIdx)
-	if ok {
-		existingSubjectID = val.AsRecordID("SubjectID")
+	if err != nil || !ok {
+		return 0, false, err
 	}
-	return existingSubjectID, err
+	subjectID = val.AsRecordID(Field_SubjectID)
+
+	skbSubject, err := state.KeyBuilder(sys.Storage_Record, QNameCDocSubject)
+	if err != nil {
+		// notest
+		return 0, false, err
+	}
+	skbSubject.PutRecordID(sys.Storage_Record_Field_ID, subjectID)
+	svSubject, ok, err := state.CanExist(skbSubject)
+	if err != nil || !ok {
+		return 0, false, err
+	}
+	return subjectID, svSubject.AsBool(appdef.SystemField_IsActive), nil
 }

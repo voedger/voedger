@@ -7,6 +7,7 @@ package filter
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -40,12 +41,9 @@ func (f qNamesFilter) QNames() []appdef.QName {
 
 func (f qNamesFilter) String() string {
 	// QNAMES(…)
-	s := "QNAMES("
+	parts := make([]string, len(f.names))
 	for i, c := range f.names {
-		if i > 0 {
-			s += ", "
-		}
-		s += fmt.Sprint(c)
+		parts[i] = fmt.Sprint(c)
 	}
-	return s + ")"
+	return "QNAMES(" + strings.Join(parts, ", ") + ")"
 }

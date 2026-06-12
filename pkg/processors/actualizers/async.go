@@ -56,17 +56,18 @@ type (
 
 // 1 asyncActualizer per each projector per each partition
 type asyncActualizer struct {
-	conf           AsyncActualizerConf
-	projectorQName appdef.QName
-	pipeline       pipeline.IAsyncPipeline
-	offset         istructs.Offset
-	name           string
-	readCtx        *asyncActualizerContextState
-	projErrState   int32 // 0 - no error, 1 - error
-	plogBatch            // [50]plogEvent
-	appParts       appparts.IAppPartitions
-	retrierCfg     retrier.Config
-	channelCleanup func()
+	conf                      AsyncActualizerConf
+	projectorQName            appdef.QName
+	pipeline                  pipeline.IAsyncPipeline
+	offset                    istructs.Offset
+	name                      string
+	n10nWatchChannelCtx       context.Context
+	cancelN10NWatchChannelCtx context.CancelCauseFunc
+	projErrState              int32 // 0 - no error, 1 - error
+	plogBatch                       // [50]plogEvent
+	appParts                  appparts.IAppPartitions
+	retrierCfg                retrier.Config
+	channelCleanup            func()
 }
 
 func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
@@ -93,7 +94,10 @@ func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
 				return true, nil
 			}
 		}
-		logger.ErrorCtx(a.readCtx.vvmCtx, a.name, opErr)
+		logCtx := logger.WithContextAttrs(vvmCtx, map[string]any{
+			logger.LogAttr_Extension: "sys._Actualizer",
+		})
+		logger.ErrorCtx(logCtx, "actualizer.error", opErr)
 		return true, nil
 	}
 }
@@ -113,22 +117,21 @@ func (a *asyncActualizer) Run(vvmCtx context.Context) {
 			// i.e. 2nd finit will panic if an error is returned from 2nd init before the place where the pipeline is re-created
 			// see https://untill.atlassian.net/browse/AIR-2302
 			a.pipeline = nil
+
+			// avoiding panic on cleanup of the already terminated n10n channel. Same lifecycle as a.pipeline:
+			// init (NewChannel sets channelCleanup), error, finit (channelCleanup terminates the channel),
+			// init again but error before NewChannel re-assigns channelCleanup, then 2nd finit -> panic in N10nBroker.cleanupChannel ("channel terminated")
+			// see https://untill.atlassian.net/browse/AIR-3888
+			a.channelCleanup = nil
 			return err
 		})
 	}
 }
 
-func (a *asyncActualizer) cancelChannel(e error) {
-	a.readCtx.cancelWithError(e)
-	a.conf.Broker.WatchChannel(a.readCtx.vvmCtx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
-}
-
 func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 	a.plogBatch = make(plogBatch, 0, plogReadBatchSize)
 
-	a.readCtx = &asyncActualizerContextState{}
-
-	a.readCtx.vvmCtx, a.readCtx.cancel = context.WithCancel(vvmCtx)
+	a.n10nWatchChannelCtx, a.cancelN10NWatchChannelCtx = context.WithCancelCause(vvmCtx)
 
 	appDef, err := a.appParts.AppDef(a.conf.AppQName)
 	if err != nil {
@@ -177,7 +180,7 @@ func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 
 	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.PartitionID)
 
-	err = a.readOffset(p.name)
+	err = a.readOffset(vvmCtx, p.name)
 	if err != nil {
 		return err
 	}
@@ -208,11 +211,11 @@ func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 	projectorOp := pipeline.WireAsyncOperator("Projector", p, a.conf.FlushInterval)
 
 	errHandler := &asyncErrorHandler{
-		readCtx:      a.readCtx,
-		projErrState: &a.projErrState,
-		metrics:      a.conf.Metrics,
-		vvmName:      a.conf.VvmName,
-		appQName:     a.conf.AppQName,
+		cancelN10NWatchChannelCtx: a.cancelN10NWatchChannelCtx,
+		projErrState:              &a.projErrState,
+		metrics:                   a.conf.Metrics,
+		vvmName:                   a.conf.VvmName,
+		appQName:                  a.conf.AppQName,
 	}
 	errorHandlerOp := pipeline.WireAsyncOperator("ErrorHandler", errHandler)
 
@@ -235,23 +238,30 @@ func (a *asyncActualizer) finit() {
 	if a.channelCleanup != nil {
 		a.channelCleanup()
 	}
+	if a.cancelN10NWatchChannelCtx != nil {
+		a.cancelN10NWatchChannelCtx(nil)
+	}
 }
 
-func (a *asyncActualizer) keepReading(ctx context.Context) (err error) {
-	err = a.readPlogToTheEnd(ctx)
-	if err != nil {
-		a.cancelChannel(err)
-		return
+func (a *asyncActualizer) keepReading(ctx context.Context) error {
+	if err := a.readPlogToTheEnd(ctx); err != nil {
+		return err
 	}
-	a.conf.Broker.WatchChannel(a.readCtx.vvmCtx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+	a.conf.Broker.WatchChannel(a.n10nWatchChannelCtx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
 		if a.offset < offset {
-			err = a.readPlogToOffset(a.readCtx.vvmCtx, offset)
-			if err != nil {
-				a.readCtx.cancelWithError(err)
+			if err := a.readPlogToOffset(a.n10nWatchChannelCtx, offset); err != nil {
+				a.cancelN10NWatchChannelCtx(err)
 			}
 		}
 	})
-	return a.readCtx.error()
+	// returns n10nWatchCtxCause of cancellation injected via cancelN10NWatchChannelCtx;
+	// suppresses parent-propagated cancellation so graceful shutdown doesn't
+	// trigger retrier.OnError logging
+	n10nWatchCtxCause := context.Cause(a.n10nWatchChannelCtx)
+	if !errors.Is(n10nWatchCtxCause, context.Cause(ctx)) {
+		return n10nWatchCtxCause
+	}
+	return nil
 }
 
 func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
@@ -272,7 +282,7 @@ func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.O
 }
 
 func (a *asyncActualizer) readPlogByBatches(ctx context.Context, readBatch readPLogBatch) error {
-	for a.readCtx.vvmCtx.Err() == nil {
+	for ctx.Err() == nil {
 		if err := readBatch(&a.plogBatch); err != nil {
 			return err
 		}
@@ -283,7 +293,7 @@ func (a *asyncActualizer) readPlogByBatches(ctx context.Context, readBatch readP
 			if err := a.handleEvent(ctx, e.Offset, e.IPLogEvent); err != nil {
 				return err
 			}
-			if a.readCtx.vvmCtx.Err() != nil {
+			if ctx.Err() != nil {
 				return nil // canceled
 			}
 		}
@@ -299,14 +309,14 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 	return a.readPlogByBatches(ctx, func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
-		ap, err := a.borrowAppPart(a.readCtx.vvmCtx)
+		ap, err := a.borrowAppPart(ctx)
 		if err != nil {
 			return err
 		}
 
 		defer ap.Release()
 
-		err = ap.AppStructs().Events().ReadPLog(a.readCtx.vvmCtx, a.conf.PartitionID, a.offset+1, istructs.ReadToTheEnd,
+		err = ap.AppStructs().Events().ReadPLog(ctx, a.conf.PartitionID, a.offset+1, istructs.ReadToTheEnd,
 			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 				if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 					return errBatchFull
@@ -334,7 +344,7 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 
 		plog := ap.AppStructs().Events()
 		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-			if err = plog.ReadPLog(a.readCtx.vvmCtx, a.conf.PartitionID, readOffset, 1,
+			if err = plog.ReadPLog(ctx, a.conf.PartitionID, readOffset, 1,
 				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 					if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 						return errBatchFull
@@ -352,8 +362,8 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 	})
 }
 
-func (a *asyncActualizer) readOffset(projectorName appdef.QName) error {
-	ap, err := a.borrowAppPart(a.readCtx.vvmCtx)
+func (a *asyncActualizer) readOffset(ctx context.Context, projectorName appdef.QName) error {
+	ap, err := a.borrowAppPart(ctx)
 	if err != nil {
 		return err
 	}
@@ -576,11 +586,11 @@ func (p *asyncProjector) flush() (err error) {
 
 type asyncErrorHandler struct {
 	pipeline.AsyncNOOP
-	readCtx      *asyncActualizerContextState
-	metrics      imetrics.IMetrics
-	vvmName      string
-	appQName     appdef.AppQName
-	projErrState *int32
+	cancelN10NWatchChannelCtx context.CancelCauseFunc
+	metrics                   imetrics.IMetrics
+	vvmName                   string
+	appQName                  appdef.AppQName
+	projErrState              *int32
 }
 
 func (h *asyncErrorHandler) OnError(_ context.Context, err error) {
@@ -589,7 +599,7 @@ func (h *asyncErrorHandler) OnError(_ context.Context, err error) {
 			h.metrics.IncreaseApp(ProjectorsInError, h.vvmName, h.appQName, 1)
 		}
 	}
-	h.readCtx.cancelWithError(err)
+	h.cancelN10NWatchChannelCtx(err)
 }
 
 func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName) (offset istructs.Offset, err error) {

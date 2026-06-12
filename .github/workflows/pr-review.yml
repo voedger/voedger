@@ -1,0 +1,142 @@
+name: PR review
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - ready_for_review
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  automatic-review:
+    if: github.repository == 'voedger/voedger' && github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pr-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Comment review started
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body=$(printf '👀 Automated review started.\n\nWriters can request another review with `/review` or `/review <extra instructions>`.')
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            -f body="$body"
+
+      - name: Review pull request
+        id: review
+        uses: augmentcode/review-pr@v0.2.0
+        with:
+          augment_session_auth: ${{ secrets.AUGMENT_SESSION_AUTH }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pull_number: ${{ github.event.pull_request.number }}
+          repo_name: ${{ github.repository }}
+          rules: '[".augment/rules/ar-common-develop.md",".augment/rules/ar-golang.md",".augment/rules/ar-markdown.md"]'
+
+      - name: Comment review failure
+        if: failure() && steps.review.outcome == 'failure'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '⚠️ Automated review failed.\n\nDetails: %s' "$RUN_URL")
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            -f body="$body"
+
+  comment-review:
+    if: github.repository == 'voedger/voedger' && github.event_name == 'issue_comment' && github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pr-review-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Parse review command
+        id: review_command
+        shell: bash
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import uuid
+
+          body = os.environ["COMMENT_BODY"].strip()
+          is_review_command = body == "/review" or (body.startswith("/review") and body[len("/review")].isspace())
+          extra_instructions = body[len("/review"):].strip() if is_review_command else ""
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"is_review_command={'true' if is_review_command else 'false'}\n")
+              delimiter = f"EOF_{uuid.uuid4().hex}"
+              output.write(f"extra_instructions<<{delimiter}\n")
+              output.write(extra_instructions)
+              output.write(f"\n{delimiter}\n")
+          PY
+
+      - name: Check commenter permission
+        if: steps.review_command.outputs.is_review_command == 'true'
+        id: commenter_permission
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+        run: |
+          permission=$(gh api "repos/${{ github.repository }}/collaborators/${COMMENT_AUTHOR}/permission" --jq .permission 2>/dev/null || echo none)
+
+          case "$permission" in
+            admin|maintain|write)
+              echo "is_writer=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "is_writer=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Reply to NonWriter
+        if: steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body='🔒 Only Writer can request an automated review with `/review`.'
+
+      - name: Comment review started
+        if: steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body='👀 Automated review started.'
+
+      - name: Review pull request
+        if: steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
+        id: review
+        uses: augmentcode/review-pr@v0.2.0
+        with:
+          augment_session_auth: ${{ secrets.AUGMENT_SESSION_AUTH }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pull_number: ${{ github.event.issue.number }}
+          repo_name: ${{ github.repository }}
+          custom_guidelines: ${{ steps.review_command.outputs.extra_instructions }}
+          rules: '[".augment/rules/ar-common-develop.md",".augment/rules/ar-golang.md",".augment/rules/ar-markdown.md"]'
+
+      - name: Comment review failure
+        if: failure() && steps.review.outcome == 'failure' && steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body=$(printf '⚠️ Automated review failed.\n\nDetails: %s' "$RUN_URL")
+          gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body="$body"

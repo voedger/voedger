@@ -20,6 +20,7 @@ import (
 	proxyproto "github.com/pires/go-proxyproto"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/sys"
@@ -38,13 +39,20 @@ func (s *httpsService) Prepare(work interface{}) error {
 }
 
 func (s *httpsService) Run(ctx context.Context) {
+	s.RunEx(ctx, func() {})
+}
+
+// pipeline.IServiceEx
+// RunEx ensures preRun completes before started() is signaled, so Stop observes a non-nil rootLogCtx with a proper happens-before
+func (s *httpsService) RunEx(ctx context.Context, started func()) {
 	s.preRun(ctx)
+	started()
 	if err := s.server.ServeTLS(s.listener, "", ""); err != http.ErrServerClosed {
 		logger.ErrorCtx(s.rootLogCtx, "endpoint.unexpectedstop", err.Error())
 	}
 }
 
-// pipeline.IService
+// pipeline.IServiceBase
 func (s *routerService) Prepare(work interface{}) error {
 	s.router = mux.NewRouter()
 
@@ -67,9 +75,12 @@ func (s *routerService) Prepare(work interface{}) error {
 	return s.prepareBasicServer(s.router)
 }
 
-// pipeline.IService
+// pipeline.IServiceBase
 func (s *routerService) Stop() {
 	s.httpServer.Stop()
+	if s.queryLimiter != nil {
+		s.queryLimiter.flushAll()
+	}
 	if s.n10n != nil {
 		for s.n10n.MetricNumSubscriptions() > 0 {
 			time.Sleep(subscriptionsCloseCheckInterval)
@@ -97,7 +108,6 @@ func (s *httpServer) prepareBasicServer(handler http.Handler) (err error) {
 		Handler:      handler,
 		ReadTimeout:  time.Duration(s.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.WriteTimeout) * time.Second,
-		ErrorLog:     log.New(&annoyingErrorsFilter{log.Default().Writer()}, log.Default().Prefix(), log.Default().Flags()),
 	}
 	return nil
 }
@@ -110,18 +120,26 @@ func (s *httpServer) preRun(ctx context.Context) {
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return s.rootLogCtx // need to track both client disconnect and app finalize
 	}
+	s.server.ErrorLog = logger.NewStdErrorLogBridge(s.rootLogCtx, "endpoint.http.error", logger.WithFilter(skipAnnoyingErrors...))
 	logger.InfoCtx(s.rootLogCtx, "endpoint.listen.start", s.listener.Addr().(*net.TCPAddr).String())
 }
 
 // pipeline.IService
 func (s *httpServer) Run(ctx context.Context) {
+	s.RunEx(ctx, func() {})
+}
+
+// pipeline.IServiceEx
+// RunEx ensures preRun completes before started() is signaled, so Stop observes a non-nil rootLogCtx with a proper happens-before
+func (s *httpServer) RunEx(ctx context.Context, started func()) {
 	s.preRun(ctx)
+	started()
 	if err := s.server.Serve(s.listener); err != http.ErrServerClosed {
 		logger.ErrorCtx(s.rootLogCtx, "endpoint.unexpectedstop", err.Error())
 	}
 }
 
-// pipeline.IService
+// pipeline.IServiceBase
 func (s *httpServer) Stop() {
 	// ctx here is used to avoid eternal waiting for close idle connections and listeners
 	// all connections and listeners are closed in the explicit way (they're tracks ctx.Done()) so it is not necessary to track ctx here
@@ -204,16 +222,23 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 	return withValidateForFuncs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		busRequest := createBusRequest(data, req)
 
+		reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
+
+		// [~server.vsqlupdate/cmp.routerVSqlUpdateShim~impl]
+		// c.cluster.VSqlUpdate synchronously calls c.sys.CUD on the same command processor.
+		// Re-route transparently to q.cluster.VSqlUpdate2 (runs in the query processor) to avoid self-deadlock.
+		// The shim runs on the query processor, so it must share the same wsQueryLimiter gating as native queries.
+		isShimV1 := isVSqlUpdateV1Call(busRequest)
+
 		// limiter is nil for Admin and ACME services
-		if limiter != nil && strings.HasPrefix(busRequest.Resource, "q.") {
+		if limiter != nil && (strings.HasPrefix(busRequest.Resource, "q.") || isShimV1) {
 			if !limiter.acquire(busRequest.WSID) {
+				limiter.onQueryDrop(reqCtxWithExtensionAttrib, busRequest.WSID, resolveExtension(busRequest))
 				replyServiceUnavailable(rw)
 				return
 			}
 			defer limiter.release(busRequest.WSID)
 		}
-
-		reqCtxWithExtensionAttrib := withLogAttribs(req.Context(), data, busRequest, req)
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
@@ -223,6 +248,11 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		defer cancel() // to avoid context leak
 
 		logServeRequest(requestCtx, limiter)
+
+		if isShimV1 {
+			dispatchVSqlUpdateShim_V1(requestCtx, rw, busRequest, requestSender)
+			return
+		}
 
 		sentAt := time.Now()
 		responseCh, responseMeta, responseErr, err := requestSender.SendRequest(requestCtx, busRequest)
@@ -234,7 +264,7 @@ func RequestHandler_V1(requestSender bus.IRequestSender, numsAppsWorkspaces map[
 		logLatency(requestCtx, sentAt)
 
 		initResponse(rw, responseMeta)
-		reply_v1(requestCtx, rw, responseCh, responseErr, responseMeta.ContentType, cancel, busRequest, responseMeta.Mode())
+		reply_v1(requestCtx, rw, responseCh, responseErr, cancel, busRequest, responseMeta)
 	})
 }
 
@@ -266,5 +296,10 @@ func initResponse(w http.ResponseWriter, responseMeta bus.ResponseMeta) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 	}
 	w.Header().Set(httpu.ContentType, responseMeta.ContentType)
-	w.WriteHeader(responseMeta.StatusCode)
+}
+
+func applySysErrorHeaders(w http.ResponseWriter, sysErr coreutils.SysError) {
+	for k, v := range sysErr.Headers() {
+		w.Header().Set(k, v)
+	}
 }

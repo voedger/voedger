@@ -24,14 +24,19 @@ const (
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
 	field_Query            = "Query"
 	field_NewID            = "NewID"
+	field_LogWLogOffset    = "LogWLogOffset"
+	field_CUDWLogOffset    = "CUDWLogOffset"
 )
 
 var (
-	qNameWDocApp          = appdef.NewQName(ClusterPackage, "App")
-	plog                  = appdef.NewQName(appdef.SysPackage, "PLog")
-	wlog                  = appdef.NewQName(appdef.SysPackage, "WLog")
-	qNameVSqlUpdateResult = appdef.NewQName(ClusterPackage, "VSqlUpdateResult")
-	updateDeniedFields    = map[string]bool{
+	qNameWDocApp           = appdef.NewQName(ClusterPackage, "App")
+	plog                   = appdef.NewQName(appdef.SysPackage, "PLog")
+	wlog                   = appdef.NewQName(appdef.SysPackage, "WLog")
+	qNameVSqlUpdateResult  = appdef.NewQName(ClusterPackage, "VSqlUpdateResult")
+	qNameVSqlUpdate2Result = appdef.NewQName(ClusterPackage, "VSqlUpdate2Result")
+	qNameCmdLogVSqlUpdate  = appdef.NewQName(ClusterPackage, "LogVSqlUpdate")
+	qNameQryVSqlUpdate2    = appdef.NewQName(ClusterPackage, "VSqlUpdate2")
+	updateDeniedFields     = map[string]bool{
 		appdef.SystemField_ID:    true,
 		appdef.SystemField_QName: true,
 	}

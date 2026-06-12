@@ -101,36 +101,28 @@ func newLessFilter(field string, value interface{}, _ coreutils.MapObject) (IFil
 	}, nil
 }
 
-func newAndFilter(operands []interface{}) (IFilter, error) {
-	andFilter := &AndFilter{make([]IFilter, len(operands))}
+func buildBinaryFilter(operands []interface{}, kind string, ctor func([]IFilter) IFilter) (IFilter, error) {
+	filters := make([]IFilter, len(operands))
 	for i, operandIntf := range operands {
 		operand, ok := operandIntf.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("'%s' filter: each 'args' member must be an object: %w", filterKind_And, ErrWrongType)
+			return nil, fmt.Errorf("'%s' filter: each 'args' member must be an object: %w", kind, ErrWrongType)
 		}
 		filter, err := NewFilter(operand)
 		if err != nil {
-			return nil, filterErr(filterKind_And, err)
+			return nil, filterErr(kind, err)
 		}
-		andFilter.filters[i] = filter
+		filters[i] = filter
 	}
-	return andFilter, nil
+	return ctor(filters), nil
+}
+
+func newAndFilter(operands []interface{}) (IFilter, error) {
+	return buildBinaryFilter(operands, filterKind_And, func(fs []IFilter) IFilter { return &AndFilter{fs} })
 }
 
 func newOrFilter(operands []interface{}) (IFilter, error) {
-	orFilter := &OrFilter{make([]IFilter, len(operands))}
-	for i, operandIntf := range operands {
-		operand, ok := operandIntf.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("'%s' filter: each 'args' member must be an object: %w", filterKind_Or, ErrWrongType)
-		}
-		filter, err := NewFilter(operand)
-		if err != nil {
-			return nil, filterErr(filterKind_Or, err)
-		}
-		orFilter.filters[i] = filter
-	}
-	return orFilter, nil
+	return buildBinaryFilter(operands, filterKind_Or, func(fs []IFilter) IFilter { return &OrFilter{fs} })
 }
 
 func filterErr(filterKind string, err error) error {

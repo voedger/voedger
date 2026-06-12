@@ -35,7 +35,12 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 	n10nBroker in10n.IN10nBroker, statelessResources istructsmem.IStatelessResources) func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 	return func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		projectors := maps.Clone(appStructs.SyncProjectors())
-		for _, projector := range statelessResources.Projectors {
+		// statelessResources is process-wide; skip projectors whose package is not imported by this app.
+		// After deployment-time validation this guarantees the lookup below resolves to a non-nil IProjector.
+		for path, projector := range statelessResources.Projectors {
+			if appStructs.AppDef().PackageLocalName(path) == "" {
+				continue
+			}
 			if appdef.Projector(appStructs.AppDef().Type, projector.Name).Sync() {
 				projectors[projector.Name] = projector
 			}

@@ -196,8 +196,8 @@ func TestEnvSshKey(t *testing.T) {
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
-	prepareScripts()
-	deleteDryRunDir()
+	require.NoError(prepareScripts())
+	require.NoError(deleteDryRunDir())
 	defer func() {
 		err := deleteScriptsTempDir()
 		if err != nil {
@@ -209,8 +209,7 @@ func TestEnvSshKey(t *testing.T) {
 	err := execRootCmd([]string{"./ctool", "init", "n5", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
 	require.Error(err)
 
-	err = os.Setenv(envVoedgerSshKey, "key")
-	require.NoError(err)
+	t.Setenv(envVoedgerSSHKey, "key")
 
 	// now the option --ssh-key can be omitted
 	err = execRootCmd([]string{"./ctool", "init", "n5", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
@@ -225,7 +224,7 @@ func TestCtoolCommands(t *testing.T) {
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
-	prepareScripts()
+	require.NoError(prepareScripts())
 	defer func() {
 		err := deleteScriptsTempDir()
 		if err != nil {
@@ -234,12 +233,21 @@ func TestCtoolCommands(t *testing.T) {
 	}()
 
 	version = "0.0.1"
-	deleteDryRunDir()
-	err := deleteClusterJson()
+	if logFile != nil {
+		_ = logFile.Close()
+		logFile = nil
+	}
+	require.NoError(deleteDryRunDir())
+	err := deleteClusterJSON()
 	require.NoError(err)
 
-	defer deleteDryRunDir()
-
+	defer func() {
+		if logFile != nil {
+			_ = logFile.Close()
+			logFile = nil
+		}
+		require.NoError(deleteDryRunDir())
+	}()
 	// Version command is performed without error
 	err = execRootCmd([]string{"./ctool", "version", "--dry-run"}, version)
 	require.NoError(err)
@@ -334,20 +342,18 @@ fi
 	err = os.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), filesu.FileMode_DefaultForFile)
 	require.NoError(err)
 
-	err = os.Setenv("TEST_VAR", "test_value")
-	require.NoError(err)
+	t.Setenv("TEST_VAR", "test_value")
 
 	err = newScriptExecuter("", "").run("test-script.sh")
 	require.NoError(err)
 
-	err = os.Setenv("TEST_VAR", "new_test_value")
-	require.NoError(err)
+	t.Setenv("TEST_VAR", "new_test_value")
 
 	err = newScriptExecuter("", "").run("test-script.sh")
 	require.Error(err)
 }
 
-func deleteClusterJson() error {
+func deleteClusterJSON() error {
 	fname := "cluster.json"
 	exists, err := filesu.Exists(fname)
 	if err != nil {

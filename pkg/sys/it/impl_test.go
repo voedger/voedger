@@ -8,9 +8,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -148,8 +151,9 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	require := require.New(t)
 	logCap := logger.StartCapture(t, logger.LogLevelError)
-	funcStarted := make(chan interface{})
+	funcStarted := make(chan interface{}, 1000)
 	okToFinish := make(chan interface{})
 	it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
 		funcStarted <- nil
@@ -179,13 +183,30 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 	}()
 	<-funcStarted
 
-	vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.app1pkg.MockCmd", body,
-		httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
+	got503 := atomic.Int32{}
+	extras := int(vit.VVMConfig.CommandProcessorChannelBufferSize) + 1
+	for range extras {
+		postDone.Add(1)
+		go func() {
+			defer postDone.Done()
+			resp := vit.PostWS(ws, "c.app1pkg.MockCmd", body,
+				httpu.WithAuthorizeBy(sys.Token),
+				httpu.WithNoRetryPolicy(),
+				httpu.WithExpectedCode(http.StatusOK),
+				httpu.WithExpectedCode(http.StatusServiceUnavailable))
+			if resp.HTTPResp.StatusCode == http.StatusServiceUnavailable {
+				got503.Add(1)
+			}
+		}()
+	}
+
+	require.Eventually(func() bool { return got503.Load() == 1 }, 10*time.Second, 10*time.Millisecond)
 
 	logCap.HasLine("stage=vvm.submit", "no command processors available")
 
-	okToFinish <- nil
+	close(okToFinish)
 	postDone.Wait()
+	require.EqualValues(1, got503.Load())
 }
 
 func Test503OnNoQueryProcessorsAvailable(t *testing.T) {

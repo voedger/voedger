@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -27,10 +28,12 @@ import (
 )
 
 func queryRateLimitExceeded(ctx context.Context, qw *queryWork) error {
-	if exceeded, _ := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host()); exceeded {
-		return coreutils.NewSysError(http.StatusTooManyRequests)
+	exceeded, limit := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host())
+	if !exceeded {
+		return nil
 	}
-	return nil
+	retryAfter := processors.RetryAfterSecondsOnLimitExceeded(qw.appStructs.AppDef(), limit)
+	return coreutils.NewHTTPErrorf(http.StatusTooManyRequests).AddHeader(httpu.RetryAfter, strconv.Itoa(retryAfter))
 }
 func querySetRequestType(ctx context.Context, qw *queryWork) error {
 	if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {

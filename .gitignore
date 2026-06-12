@@ -20,9 +20,10 @@ coverage.txt
 go.work.sum
 
 .*/
-# But not .github and .augment
+# But not .github, .augment and .claude
 !/.github
 !/.augment
+!/.claude
 
 # Other
 .DS_Store

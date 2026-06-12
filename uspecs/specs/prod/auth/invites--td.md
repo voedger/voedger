@@ -1,0 +1,274 @@
+# Feature technical design: Invites
+
+Invite users/devices to workspaces. The subsystem architecture for invite lifecycle, the subjects doc, joined-workspace records, role updates, and member removal is in [arch-membership.md](./arch-membership.md); how the resulting `[(cdoc.sys.Subject)]` is consumed on every request is in [arch-authz.md](./arch-authz.md); shared concepts (`[(cdoc.sys.Subject)]`, `[(registry.Login)]`) are defined in [arch.md](./arch.md#shared-concepts). This document only adds the projector-as-sole-writer design, the `Version` discriminator, dead-state handling, and decisions that are unique to this feature.
+
+## Use cases
+
+- Invite to workspace
+- As a workspace owner I want to change invited user's roles
+- As a user, I want to see the list of my workspaces and roles, so that I know what I can work with
+- As a user, I want to be able to leave the workspace I'm invited to
+- As a workspace owner I want to ban a user so they no longer have access to my workspace
+
+---
+
+## Overview
+
+Roles, documents, and commands of the invite lifecycle (owner-side and invitee-side commands, projector-emitted internal commands, `[(cdoc.sys.Invite)]` / `[(cdoc.sys.Subject)]` / `[(cdoc.sys.JoinedWorkspace)]`) are catalogued in [arch-membership.md](./arch-membership.md#components). This document does not repeat them; the parameter lists and ACL bindings (`WorkspaceOwnerFuncTag`, `AllowedToAuthenticatedTag`) are kept inline with the corresponding VSQL in `pkg/sys/sys.vsql`.
+
+---
+
+## Technical design
+
+### Data
+
+```mermaid
+    flowchart TD
+
+    WorkspaceOwner["role.sys.WorkspaceOwner"]:::B
+    WorkspaceAdmin["role.sys.WorkspaceAdmin"]:::B
+    SubjectRole["role.sys.Subject"]:::B
+    Inviter["Inviter"]:::B
+    Invitee["Invitee"]:::B
+
+
+    registry[(registry)]:::H
+        Login["cdoc.Login"]:::H
+
+    InviteeProfile[(InviteeProfile)]:::H
+    JoinedWorkspace["cdoc.sys.JoinedWorkspace"]:::H
+
+
+    InvitingWorkspace[(InvitingWorkspace)]:::H
+        InvitingWorkspace --x Invite["cdoc.sys.Invite"]:::H
+        Invite --- State(["State"]):::H
+        Invite --- InviteRoles(["Roles"]):::H
+        InvitingWorkspace --x Subject["cdoc.sys.Subject"]:::H
+
+    InvitesService([Invites Service]):::S
+
+    Subject -.- Invite
+    Subject -.- |gives| SubjectRole
+
+    InviteeProfile --- JoinedWorkspace
+
+    InvitesService -.- |creates| Subject
+    InvitesService -.- |reads| Invite
+    InvitesService -.- |can create| Login
+    InvitesService -.- |creates| JoinedWorkspace
+
+    Inviter -.- |creates, updates| Invite
+    Inviter -.- |must be| WorkspaceAdmin
+
+    WorkspaceOwner -.- |is| WorkspaceAdmin
+
+    registry --x Login
+
+    Invitee x-.- |joins WS using| Invite
+    Invitee --- InviteeProfile
+
+    JoinedWorkspace -.-x InvitingWorkspace
+
+
+    classDef G fill:#FFFFFF,color:#333,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
+    classDef B fill:#FFFFB5,color:#333
+    classDef S fill:#B5FFFF,color:#333
+    classDef H fill:#C9E7B7,color:#333
+
+```
+
+---
+
+### Invite state diagram
+
+Final states: Invited, Joined, Cancelled, Left (written by projector).
+Transient state: ToBeInvited (written by command, transitioned to Invited by projector).
+Dead states (ToBeJoined, ToUpdateRoles, ToBeCancelled, ToBeLeft) -- only in old data, no longer written.
+
+`InitiateInvitationByEMail` writes State=ToBeInvited (CDoc must have a State on
+creation; on re-invite it resets State so projector knows to send a new email).
+All final state transitions are performed by `ap.sys.ApplyInviteEvents` projector.
+
+```mermaid
+stateDiagram-v2
+
+    [*] --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
+
+    ToBeInvited --> Invited : ap.sys.ApplyInviteEvents()
+
+    Invited --> Joined : c.sys.InitiateJoinWorkspace() by Invitee
+    Invited --> Cancelled : c.sys.CancelSentInvite() by Inviter
+
+    Joined --> Cancelled : c.sys.InitiateCancelAcceptedInvite() by Inviter
+    Joined --> Left : c.sys.InitiateLeaveWorkspace() by Invitee
+    Joined --> Joined : c.sys.InitiateUpdateInviteRoles() by Inviter
+```
+
+Re-invite and recovery transitions:
+
+```mermaid
+stateDiagram-v2
+
+    ToBeInvited --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
+    ToBeInvited --> Cancelled : c.sys.CancelSentInvite() by Inviter
+    Cancelled --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
+    Left --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
+```
+
+---
+
+### Single projector design
+
+Commands do pre-validation (immediate 400 for invalid requests).
+The projector re-validates actual state before applying transitions (source of truth).
+
+`ap.sys.ApplyInviteEvents` is the sole writer of final states on `cdoc.sys.Invite`.
+It triggers on all 6 invite commands and handles each event type:
+
+- `InitiateInvitationByEMail`: ToBeInvited -> Invited, send invitation email
+- `InitiateJoinWorkspace`: Invited -> Joined, create Subject, create JoinedWorkspace via federation
+- `InitiateUpdateInviteRoles`: keep State=Joined, update Roles on Invite CDoc, update Subject/JoinedWorkspace roles via federation, send email
+- `InitiateCancelAcceptedInvite`: Joined -> Cancelled, deactivate Subject/JoinedWorkspace via federation
+- `InitiateLeaveWorkspace`: Joined -> Left, set IsActive=false, deactivate Subject/JoinedWorkspace via federation
+- `CancelSentInvite`: Invited/ToBeInvited -> Cancelled
+
+If actual state does not match the expected source state for the event, the projector skips the event (stale).
+
+Pre-refactor events are filtered out at dispatch time via a CUD-side `Version` discriminator -- see Versioning section below.
+
+Projector gets InviteID from:
+
+- `event.ArgumentObject().AsRecordID(field_InviteID)` for commands that have InviteID param
+- `InitiateInvitationByEMail`: from event CUDs (command creates/updates Invite CDoc)
+- `InitiateLeaveWorkspace`: from event CUDs. Command has no InviteID param and
+  projector has no access to auth token, so command keeps a no-op CUD on the
+  Invite CDoc (touch record, no meaningful field writes) as the only way to
+  pass InviteID to the projector
+
+Dead ToBe states in old data are treated as their source state:
+
+- ToBeJoined -> treat as Invited (apply join)
+- ToUpdateRoles -> treat as Joined (apply role update)
+- ToBeCancelled -> treat as Joined (apply cancel)
+- ToBeLeft -> treat as Joined (apply leave)
+
+Legacy deprecated projectors (`ap.sys.ApplyInvitation`, `ap.sys.ApplyJoinWorkspace`, `ap.sys.ApplyUpdateInviteRoles`, `ap.sys.ApplyCancelAcceptedInvite`, `ap.sys.ApplyLeaveWorkspace`) are kept declared as no-op handlers for backward compatibility; they perform no state changes or side effects. `ap.sys.ApplyInviteEvents` is the sole writer.
+
+---
+
+### Versioning
+
+`ap.sys.ApplyInviteEvents` is registered against all six invite commands and, on registration, replays the entire PLog from offset 0. Pre-refactor events (before AIR-3704) were already fully processed by the deprecated per-command projectors; replaying them through `ap.sys.ApplyInviteEvents` would re-execute side effects (emails, federation calls). A CUD-side `Version` field on `cdoc.sys.Invite` discriminates post-refactor events from pre-refactor ones.
+
+All six current commands write a CUD on `cdoc.sys.Invite` carrying `Version = 1`. Three of them (`InitiateUpdateInviteRoles`, `InitiateCancelAcceptedInvite`, `CancelSentInvite`) carry a no-op CUD on `cdoc.sys.Invite` for that purpose, mirroring the existing `InitiateLeaveWorkspace` pattern. The projector reads `Version` from the event's `cdoc.sys.Invite` CUD via `event.CUDs` and skips events with `Version == 0`.
+
+Why the discriminator lives on the CUD, not on the merged record:
+
+- `event.CUDs` yields per-CUD changes only (`cudType.enumRecs` returns
+  `&rec.changes`), not the merged record. A field a command never `Put*`-d reads
+  back as the type's zero value through the dynobuffer's set/unset encoding,
+  even after a PLog round-trip. So pre-refactor events naturally read
+  `Version == 0` while post-refactor events (where the command writes
+  `Version = 1`) read `1`.
+- The decision is event-scoped, not state-scoped: it is made from the immutable
+  event payload, so re-invites and re-joins on the current cdoc do not affect
+  whether a historical event is replayed.
+- A single dispatch-level filter protects all side-effecting handlers
+  (`handleApplyInvitation`, `handleApplyJoinWorkspace`,
+  `handleApplyUpdateInviteRoles`, `handleApplyCancelAcceptedInvite`,
+  `handleApplyLeaveWorkspace`) without per-handler patches against missing or
+  emptied fields (`ActualLogin`, `SubjectID`).
+- The cmd argument schemas are unchanged, so external clients are unaffected.
+
+Considered and rejected:
+
+- Per-field guard (e.g. `if ActualLogin == "" return nil`): patches one symptom
+  only, reads from current cdoc state instead of the immutable event, leaves
+  analogous replay risks in cancel/leave handlers, and does not stop unwanted
+  emails or role-update HTTP calls.
+- CUD-shape filter (presence of legacy `State_*` values): brittle to future
+  refactors and depends on auditing which `State_*` values still appear in
+  current commands.
+- Version on the command argument: would break external clients.
+
+---
+
+### Documents
+
+#### cdoc.sys.Invite
+
+- SubjectKind int32 // 1: User, 2: Device
+- Login varchar NOT NULL // email address set by InitiateInvitationByEMail
+- Email varchar NOT NULL // same as Login
+- Roles varchar(1024)
+- ExpireDatetime int64 // unix-timestamp
+- VerificationCode varchar // set by ap.sys.ApplyInviteEvents
+- State int32 NOT NULL // see state diagram; ToBeInvited by command, final states by projector
+- Created int64 // unix-timestamp, set on creation
+- Updated int64 NOT NULL // unix-timestamp, updated on every state change
+- SubjectID ref // set by ap.sys.ApplyInviteEvents
+- InviteeProfileWSID int64 // set by c.sys.InitiateJoinWorkspace
+- ActualLogin varchar // invitee's login from token, set by c.sys.InitiateJoinWorkspace
+- Version int32 // command-side discriminator; current commands write 1, pre-refactor events have 0 and are skipped by ap.sys.ApplyInviteEvents
+- UNIQUEFIELD Email
+
+#### cdoc.sys.Subject
+
+- Login varchar NOT NULL // Invite.ActualLogin (invitee's login from token)
+- SubjectKind int32 NOT NULL // 1: User, 2: Device
+- Roles varchar(1024) NOT NULL // comma-separated
+- ProfileWSID int64 NOT NULL
+- UNIQUEFIELD Login
+
+#### cdoc.sys.JoinedWorkspace
+
+Stored in invitee's profile workspace.
+
+- Roles varchar(1024) NOT NULL // comma-separated
+- InvitingWorkspaceWSID int64 NOT NULL
+- WSName varchar NOT NULL
+
+---
+
+## Decisions
+
+### Single projector as sole writer of final states
+
+Commands and projectors previously both wrote to the Invite CDoc, causing TOCTOU
+races and requiring guards and validated commands (CompleteInvitation,
+CompleteJoinWorkspace) as mitigation.
+
+New design: a single projector (`ap.sys.ApplyInviteEvents`) is the sole writer
+of final states (Invited, Joined, Cancelled, Left). It processes events in PLog
+order -- serialized, no races.
+
+`InitiateInvitationByEMail` writes transient State=ToBeInvited because the CDoc
+must have a State on creation (and on re-invite, to signal the projector).
+`InitiateJoinWorkspace` writes data fields from the auth token (InviteeProfileWSID,
+SubjectKind, ActualLogin) but does not write State. `InitiateLeaveWorkspace`,
+`InitiateUpdateInviteRoles`, `InitiateCancelAcceptedInvite`, and `CancelSentInvite`
+keep a no-op CUD on cdoc.sys.Invite (only writing `Version = 1`) so the projector
+can discover the InviteID from `event.CUDs` and so the Version discriminator is
+present on every post-refactor event.
+
+### Stale event handling
+
+Between command pre-validation and projector execution, other events may change
+the invite state. The projector re-validates actual state before applying
+transitions. If the state no longer matches the expected source state for the
+event, the projector skips it silently.
+
+Example: user calls CancelSentInvite (pre-validates state=Invited, creates
+event), then another command changes state before the projector runs. The
+projector sees the new state, determines the cancel event is stale, and skips.
+
+### Federation side effects and eventual consistency
+
+`ApplyInviteEvents` makes federation calls (create Subject, create/update/
+deactivate JoinedWorkspace) before writing the final state. If the projector
+fails after federation calls but before state write, the calls are already
+applied. On retry, the projector re-applies them (operations are idempotent).
+
+If a cancel event arrives while a join is in progress, the join's side effects
+(Subject, JoinedWorkspace) persist briefly. The cancel event's handler
+eventually deactivates them, so the system converges to the correct state.

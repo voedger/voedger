@@ -15,7 +15,24 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 
 		-- Comma-separated list of global roles
 		-- [~server.authnz.groles/cmp.cdoc.registry.Login.GlobalRoles~impl]
-		GlobalRoles varchar(1024)
+		GlobalRoles varchar(1024),
+
+		-- Login alias lifecycle state. AliasInProc is non-zero while the
+		-- async alias projector is applying an alias create, update, or clear.
+		AliasInProc int32,
+		Alias varchar,
+		AliasError varchar(1024)
+	);
+
+	-- Active sign-in alias index. SourceAppWSID and CDocLoginID point back to
+	-- the source Login record; Login snapshots the primary plaintext login.
+	TABLE LoginAlias INHERITS sys.CDoc (
+		AppName varchar NOT NULL,
+		SourceAppWSID int64 NOT NULL,
+		CDocLoginID int64 NOT NULL,
+		Login varchar NOT NULL,
+		Alias varchar NOT NULL,
+		UNIQUE (AppName, Alias)
 	);
 
 	TYPE CreateLoginParams (
@@ -28,6 +45,30 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 
 	TYPE CreateLoginUnloggedParams (
 		Password text NOT NULL
+	);
+
+	-- Public System-authorized request to set, update, or clear a login alias.
+	TYPE InitiateSetLoginAliasParams (
+		Login text NOT NULL,
+		AppName text NOT NULL,
+		Alias text
+	);
+
+	-- Internal alias-index write executed in pseudoWSID(Alias).
+	TYPE PutLoginAliasIndexParams (
+		AppName text NOT NULL,
+		SourceAppWSID int64 NOT NULL,
+		Alias text NOT NULL,
+		CDocLoginID int64 NOT NULL,
+		Login text NOT NULL
+	);
+
+	-- Internal alias-index deactivation for the previous alias value.
+	TYPE DeactivateLoginAliasIndexParams (
+		AppName text NOT NULL,
+		SourceAppWSID int64 NOT NULL,
+		Alias text NOT NULL,
+		CDocLoginID int64 NOT NULL
 	);
 
 	TYPE IssuePrincipalTokenParams (
@@ -116,11 +157,19 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~server.users/cmp.registry.CreateEmailLogin.vsql~impl]
 		COMMAND UpdateGlobalRoles (UpdateGlobalRolesParams); -- [~server.authnz.groles/cmp.c.registry.UpdateGlobalRoles~impl]
+		-- Login alias management commands. Public initiation and internal
+		-- index maintenance are separated because aliases route by alias value.
+		COMMAND InitiateSetLoginAlias (InitiateSetLoginAliasParams);
+		COMMAND PutLoginAliasIndex (PutLoginAliasIndexParams);
+		COMMAND DeactivateLoginAliasIndex (DeactivateLoginAliasIndexParams);
 		QUERY IssuePrincipalToken (IssuePrincipalTokenParams) RETURNS IssuePrincipalTokenResult;
 		QUERY InitiateResetPasswordByEmail (InitiateResetPasswordByEmailParams) RETURNS InitiateResetPasswordByEmailResult;
 		QUERY IssueVerifiedValueTokenForResetPassword (IssueVerifiedValueTokenForResetPasswordParams) RETURNS IssueVerifiedValueTokenForResetPasswordResult;
 		SYNC PROJECTOR ProjectorLoginIdx AFTER INSERT ON Login INTENTS(sys.View(LoginIdx));
 		PROJECTOR InvokeCreateWorkspaceID_registry AFTER INSERT ON(Login);
+		-- Applies the alias lifecycle request and maintains cross-workspace
+		-- alias index rows.
+		PROJECTOR ApplySetLoginAlias AFTER EXECUTE ON (InitiateSetLoginAlias);
 	);
 
 	RATE ChangePasswordRate 1 PER MINUTE PER APP PARTITION;
@@ -129,6 +178,11 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	GRANT EXECUTE ON COMMAND ChangePassword TO sys.Anonymous;
 	GRANT EXECUTE ON COMMAND ResetPasswordByEmail TO sys.Anonymous;
 	GRANT EXECUTE ON COMMAND CreateLogin TO sys.Anonymous;
+	-- Alias management is intentionally System-only; end users do not manage
+	-- aliases directly.
+	GRANT EXECUTE ON COMMAND InitiateSetLoginAlias TO sys.System;
+	GRANT EXECUTE ON COMMAND PutLoginAliasIndex TO sys.System;
+	GRANT EXECUTE ON COMMAND DeactivateLoginAliasIndex TO sys.System;
 	GRANT EXECUTE ON QUERY IssuePrincipalToken TO sys.Anonymous;
 	GRANT EXECUTE ON QUERY InitiateResetPasswordByEmail TO sys.Anonymous;
 	GRANT EXECUTE ON QUERY IssueVerifiedValueTokenForResetPassword TO sys.Anonymous;

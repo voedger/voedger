@@ -28,7 +28,7 @@ func newRestoreCmd() *cobra.Command {
 		RunE: restore,
 	}
 
-	if newCluster().Edition != clusterEditionN1 && !addSshKeyFlag(restoreCmd) {
+	if newCluster().Edition != clusterEditionN1 && !addSSHKeyFlag(restoreCmd) {
 		return nil
 	}
 
@@ -61,7 +61,7 @@ func restore(cmd *cobra.Command, args []string) error {
 		}
 		loggerInfoGreen("CENode restored successfully")
 	} else {
-		if err = restoreDbNodes(cluster, backupName); err != nil {
+		if err = restoreDBNodes(cluster, backupName); err != nil {
 			return err
 		}
 		loggerInfoGreen("DB nodes restored successfully")
@@ -70,7 +70,7 @@ func restore(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func restoreDbNodes(cluster *clusterType, backupName string) error {
+func restoreDBNodes(cluster *clusterType, backupName string) error {
 
 	seConf := newSeConfigType(cluster)
 

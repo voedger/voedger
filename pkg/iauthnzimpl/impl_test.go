@@ -176,7 +176,7 @@ func TestAuthenticate(t *testing.T) {
 	userToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	testRole := appdef.NewQName(appdef.SysPackage, "test")
+	testRole := appdef.NewQName("test", "role")
 	apiKeyToken, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{
 		testRole,
 	}, 2, pp)
@@ -191,7 +191,7 @@ func TestAuthenticate(t *testing.T) {
 	deviceToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	notIncludedRole := appdef.NewQName(appdef.SysPackage, "non-inluded")
+	notIncludedRole := appdef.NewQName("test", "non-included")
 	pp = payloads.PrincipalPayload{
 		Login:       login,
 		SubjectKind: istructs.SubjectKind_User,
@@ -445,7 +445,7 @@ func TestErrors(t *testing.T) {
 	})
 
 	t.Run("personal access token for NullWSID", func(t *testing.T) {
-		token, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{appdef.NewQName(appdef.SysPackage, "test")}, istructs.NullWSID, payloads.PrincipalPayload{})
+		token, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{appdef.NewQName("test", "role")}, istructs.NullWSID, payloads.PrincipalPayload{})
 		require.ErrorIs(err, ErrPersonalAccessTokenOnNullWSID)
 		require.Empty(token)
 	})

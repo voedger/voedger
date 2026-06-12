@@ -2,7 +2,7 @@
 
 ## Technical design
 
-- [x] update: [apps/sequences--arch.md](../../../../specs/prod/apps/sequences--arch.md)
+- [x] update: [apps/arch-sequences.md](../../../../specs/prod/apps/arch-sequences.md)
   - already done: `IVVMSeqStorageAdapter` added to Key components in previous PR
   - add: extra `sequencer` fields not in design: `cleanupCtx`/`cleanupCtxCancel`, `iTime`, `transactionIsInProgress`, `retrierCfg`
   - fix: `Start()` description — does not increment `nextOffset`; increment happens in `Flush()`

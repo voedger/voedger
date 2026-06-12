@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 )
 
 type SysError struct {
@@ -18,6 +19,22 @@ type SysError struct {
 	QName      appdef.QName
 	Message    string
 	Data       string
+	headers    map[string]string
+}
+
+func (he SysError) AddHeader(key, value string) SysError {
+	if _, ok := he.headers[key]; ok {
+		panic(fmt.Sprintf("header %q is already set", key))
+	}
+	if he.headers == nil {
+		he.headers = map[string]string{}
+	}
+	he.headers[key] = value
+	return he
+}
+
+func (he SysError) Headers() map[string]string {
+	return he.headers
 }
 
 func NewSysError(statusCode int) error {
@@ -49,26 +66,41 @@ func (he SysError) Error() string {
 	return he.Message
 }
 
+func (he SysError) Is(target error) bool {
+	var t SysError
+	switch v := target.(type) {
+	case SysError:
+		t = v
+	case *SysError:
+		if v == nil {
+			return false
+		}
+		t = *v
+	default:
+		return false
+	}
+	return he.HTTPStatus == t.HTTPStatus && he.QName == t.QName && he.Message == t.Message && he.Data == t.Data
+}
+
 func (he SysError) ToJSON_APIV1() string {
-	b := bytes.NewBuffer(nil)
-	fmt.Fprintf(b, `{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message)
+	b := bytes.NewBufferString(jsonu.Jprintf(`{"sys.Error":{"HTTPStatus":%d,"Message":%q`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
-		fmt.Fprintf(b, `,"QName":"%s"`, he.QName.String())
+		jsonu.Jfprintf(b, `,"QName":%q`, he.QName)
 	}
 	if len(he.Data) > 0 {
-		fmt.Fprintf(b, `,"Data":%q`, he.Data)
+		jsonu.Jfprintf(b, `,"Data":%q`, he.Data)
 	}
 	b.WriteString("}}")
 	return b.String()
 }
 
 func (he SysError) ToJSON_APIV2() string {
-	b := bytes.NewBufferString(fmt.Sprintf(`{"status":%d,"message":%q`, he.HTTPStatus, he.Message))
+	b := bytes.NewBufferString(jsonu.Jprintf(`{"status":%d,"message":%q`, he.HTTPStatus, he.Message))
 	if he.QName != appdef.NullQName {
-		fmt.Fprintf(b, `,"qname":"%s"`, he.QName.String())
+		jsonu.Jfprintf(b, `,"qname":%q`, he.QName)
 	}
 	if len(he.Data) > 0 {
-		fmt.Fprintf(b, `,"data":%q`, he.Data)
+		jsonu.Jfprintf(b, `,"data":%q`, he.Data)
 	}
 	b.WriteString("}")
 	return b.String()
@@ -77,7 +109,6 @@ func (he SysError) ToJSON_APIV2() string {
 func (he SysError) IsNil() bool {
 	return he.HTTPStatus == 0 && len(he.Data) == 0 && len(he.Message) == 0 && he.QName == appdef.NullQName
 }
-
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
 	return SysError{

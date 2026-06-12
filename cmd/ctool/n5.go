@@ -767,7 +767,7 @@ func setCronBackup(cluster *clusterType, backupTime string) error {
 			return err
 		}
 	} else {
-		args := []string{backupTime, cluster.SshPort}
+		args := []string{backupTime, cluster.SSHPort}
 		if cluster.Cron.ExpireTime != "" {
 			args = append(args, cluster.Cron.ExpireTime)
 		}

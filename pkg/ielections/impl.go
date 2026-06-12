@@ -38,7 +38,7 @@ func (e *elections[K, V]) AcquireLeadership(key K, val V, leadershipDurationSeco
 
 	logger.InfoCtx(logCtx, "leadership.acquire.success", "success")
 
-	logCtxWithCancel, cancel := context.WithCancel(logCtx)
+	logCtxWithCancel, cancel := context.WithCancel(logCtx) //nolint G118
 	li := &leaderInfo[K, V]{
 		val:    val,
 		ctx:    logCtxWithCancel,

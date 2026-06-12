@@ -2,7 +2,7 @@
 
 ## Technical design
 
-- [x] create: [apps/sequences--arch.md](../../../../specs/prod/apps/sequences--arch.md)
+- [x] create: [apps/arch-sequences.md](../../../../specs/prod/apps/arch-sequences.md)
   - add: Migrate actual sequences design into Context Subsystem Architecture format
   - add: Key components with deep code links (command processor components, ISequencer package, storage implementations)
   - add: Data structures (appPartition, workspace, implIIDGenerator) with key constants
@@ -13,7 +13,7 @@
   - add: Mark single seqID read per workspace stored in LRU cache as technical debt (FIXME)
   - fix: Separate active command processor behavior from ISequencer package (implemented, not yet integrated)
 
-- [x] create: [apps/sequences--arch2.md](../../../../specs/prod/apps/sequences--arch2.md)
+- [x] create: [apps/arch2-sequences.md](../../../../specs/prod/apps/arch2-sequences.md)
   - add: Migrate proposed (complicated) sequences design into Context Subsystem Architecture format
   - fix: Correct "Most Recently Used (LRU)" to "Least Recently Used (LRU)"
 

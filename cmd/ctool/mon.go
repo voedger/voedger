@@ -23,7 +23,7 @@ func newMonCmd() *cobra.Command {
 		RunE: monPassword,
 	}
 
-	if newCluster().Edition != clusterEditionN1 && !addSshKeyFlag(monPasswordCmd) {
+	if newCluster().Edition != clusterEditionN1 && !addSSHKeyFlag(monPasswordCmd) {
 		return nil
 	}
 

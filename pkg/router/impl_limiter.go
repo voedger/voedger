@@ -6,8 +6,11 @@
 package router
 
 import (
+	"context"
+	"fmt"
 	"sync/atomic"
 
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 )
@@ -40,13 +43,61 @@ func (l *wsQueryLimiter) release(wsid istructs.WSID) {
 	val.(*atomic.Int32).Add(-1)
 }
 
-func (l *wsQueryLimiter) size() int {
-	n := 0
-	l.counters.Range(func(_, _ any) bool {
-		n++
-		return true
-	})
-	return n
+func (l *wsQueryLimiter) onQueryDrop(requestCtx context.Context, wsid istructs.WSID, extension string) {
+	l.mu.Lock()
+	key := rejectionKey{wsid: wsid, extension: extension}
+	rc := l.rejections[key]
+	if rc == nil {
+		rc = &rejectionCounter{}
+		l.rejections[key] = rc
+	}
+	rc.count++
+	rc.logCtxFromLastQuery = requestCtx
+	if atomic.LoadInt64(&l.lastLoggedAt) == 0 {
+		atomic.StoreInt64(&l.lastLoggedAt, l.iTime.Now().UnixNano())
+	}
+	l.mu.Unlock()
+	l.tryFlush()
+}
+
+func (l *wsQueryLimiter) tryFlush() {
+	lastLoggedAt := atomic.LoadInt64(&l.lastLoggedAt)
+	if lastLoggedAt == 0 || l.iTime.Now().UnixNano()-lastLoggedAt < int64(rejectionLogInterval) {
+		return
+	}
+	l.mu.Lock()
+	if l.lastLoggedAt == 0 || l.iTime.Now().UnixNano()-l.lastLoggedAt < int64(rejectionLogInterval) {
+		l.mu.Unlock()
+		return
+	}
+	entries := l.rejections
+	if len(entries) == 0 {
+		atomic.StoreInt64(&l.lastLoggedAt, 0)
+		l.mu.Unlock()
+		return
+	}
+	l.rejections = make(map[rejectionKey]*rejectionCounter)
+	atomic.StoreInt64(&l.lastLoggedAt, l.iTime.Now().UnixNano())
+	l.mu.Unlock()
+	logRejections(entries)
+}
+
+func (l *wsQueryLimiter) flushAll() {
+	l.mu.Lock()
+	entries := l.rejections
+	l.rejections = make(map[rejectionKey]*rejectionCounter)
+	atomic.StoreInt64(&l.lastLoggedAt, 0)
+	l.mu.Unlock()
+	logRejections(entries)
+}
+
+func logRejections(entries map[rejectionKey]*rejectionCounter) {
+	for _, rc := range entries {
+		if rc.count > 0 {
+			logger.WarningCtx(rc.logCtxFromLastQuery, "routing.qp.limit",
+				fmt.Sprintf("droppedInLast10Seconds=%d", rc.count))
+		}
+	}
 }
 
 func isQPBoundAPIPath(apiPath processors.APIPath) bool {

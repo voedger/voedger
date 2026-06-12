@@ -8,12 +8,12 @@ package router
 import "github.com/voedger/voedger/pkg/pipeline"
 
 type IHTTPService interface {
-	pipeline.IService
+	pipeline.IServiceEx
 	GetPort() int
 }
 
 type IACMEService interface {
-	pipeline.IService
+	pipeline.IServiceEx
 }
 
 type IAdminService IHTTPService

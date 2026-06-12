@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	logCtxSkipFrames         = 3
-	eventuallyHasLineTimeout = time.Second
+	logCtxSkipFrames            = 3
+	stdLogBridgeSkipStackFrames = 3
+	eventuallyHasLineTimeout    = time.Second
 )
 
 const (

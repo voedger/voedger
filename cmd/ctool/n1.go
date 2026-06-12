@@ -123,10 +123,6 @@ func ceNodeControllerFunction(n *nodeType) error {
 	return nil
 }
 
-func deployCeCluster(*clusterType) error {
-	return nil
-}
-
 func copyCtoolToCeNode(node *nodeType) error {
 
 	ctoolPath, err := os.Executable()
@@ -168,7 +164,7 @@ func setupPasswordlessSudo(n *nodeType) error {
 	loggerInfo("Configuring passwordless sudo (you may be prompted for password)...")
 	if err := newScriptExecuter("", "").
 		run("ce/setup-passwordless-sudo.sh", n.address()); err != nil {
-		return fmt.Errorf("failed to setup passwordless sudo: %v", err)
+		return fmt.Errorf("failed to setup passwordless sudo: %w", err)
 	}
 
 	loggerInfo("Passwordless sudo configured successfully")

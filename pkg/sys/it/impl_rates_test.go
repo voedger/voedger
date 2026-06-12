@@ -14,12 +14,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/router"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
 func TestRates_BasicUsage(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -33,9 +35,11 @@ func TestRates_BasicUsage(t *testing.T) {
 		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
 
-	// 3rd is failed because per-minute rate is exceeded
-	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
-	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	// 3rd is failed because per-minute rate is exceeded (RatedPerMinute: 2 PER MINUTE -> 30s)
+	respQry := vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
+	require.Equal("30", respQry.HTTPResp.Header.Get(httpu.RetryAfter))
+	respCmd := vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	require.Equal("30", respCmd.HTTPResp.Header.Get(httpu.RetryAfter))
 
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
@@ -53,9 +57,11 @@ func TestRates_BasicUsage(t *testing.T) {
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
 
-	// next are failed again because per-hour rate is exceeded
-	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
-	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	// next are failed again because per-hour rate is exceeded (RatedPerHour: 4 PER HOUR -> 900s)
+	respQry = vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, httpu.Expect429())
+	require.Equal("900", respQry.HTTPResp.Header.Get(httpu.RetryAfter))
+	respCmd = vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, httpu.Expect429())
+	require.Equal("900", respCmd.HTTPResp.Header.Get(httpu.RetryAfter))
 
 	// proceed to the next hour to restore per-hour rates
 	vit.TimeAdd(time.Hour)
@@ -80,8 +86,12 @@ func TestRates_PerIP(t *testing.T) {
 		vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd)
 	}
 
-	vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry, httpu.Expect429())
-	vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd, httpu.Expect429())
+	// IPRatedPerMinute: 2 PER MINUTE -> 30s
+	require := require.New(t)
+	respQry := vit.PostWS(ws, "q.app1pkg.IPRatedQry", bodyQry, httpu.Expect429())
+	require.Equal("30", respQry.HTTPResp.Header.Get(httpu.RetryAfter))
+	respCmd := vit.PostWS(ws, "c.app1pkg.IPRatedCmd", bodyCmd, httpu.Expect429())
+	require.Equal("30", respCmd.HTTPResp.Header.Get(httpu.RetryAfter))
 
 	vit.TimeAdd(time.Minute)
 
@@ -101,23 +111,39 @@ func TestQueryLimiter_BasicUsage(t *testing.T) {
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 	limit := vit.VVMConfig.RouterMaxQueriesPerWS
 
+	logCap := logger.StartCapture(t, logger.LogLevelWarning)
+
 	t.Run("queries rejected with 503 when per-workspace limit reached", func(t *testing.T) {
 		t.Run("qpv1", func(t *testing.T) {
+			logCap.Reset()
 			wg, okToFinish := fillQuerySlots(t, vit, ws, limit)
-			defer releaseQuerySlots(wg, okToFinish, limit)
 
 			body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 			vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.Expect503(), httpu.WithAuthorizeBy(sys.Token), httpu.WithNoRetryPolicy())
+
+			vit.TimeAdd(10 * time.Second)
+			releaseQuerySlots(wg, okToFinish, limit)
+
+			body = `{"args": {"Text": "flush"},"elements":[{"fields":["Res"]}]}`
+			vit.PostWS(ws, "q.sys.Echo", body)
+			logCap.HasLine("stage=routing.qp.limit", "droppedInLast10Seconds=1")
 		})
 
 		t.Run("qpv2", func(t *testing.T) {
+			logCap.Reset()
 			wg, okToFinish := fillQuerySlots(t, vit, ws, limit)
-			defer releaseQuerySlots(wg, okToFinish, limit)
 
 			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello"}`)),
 				httpu.WithAuthorizeBy(sys.Token), httpu.Expect503(), httpu.WithNoRetryPolicy())
 			require.Equal(t, http.StatusServiceUnavailable, resp.HTTPResp.StatusCode)
 			require.Equal(t, fmt.Sprintf("%d", router.DefaultRetryAfterSecondsOn503), resp.HTTPResp.Header.Get("Retry-After"))
+
+			vit.TimeAdd(10 * time.Second)
+			releaseQuerySlots(wg, okToFinish, limit)
+
+			body := `{"args": {"Text": "flush"},"elements":[{"fields":["Res"]}]}`
+			vit.PostWS(ws, "q.sys.Echo", body)
+			logCap.HasLine("stage=routing.qp.limit", "droppedInLast10Seconds=1")
 		})
 	})
 

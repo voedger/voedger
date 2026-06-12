@@ -556,6 +556,14 @@ ALTERABLE WORKSPACE test_wsWS (
 		PRIMARY KEY ((ViewIntFld), ViewStrFld)
 	) AS RESULT OF ProjDummy WITH Tags=(WorkspaceOwnerTableTag);
 
+	VIEW TestViewWithDeniedFields (
+		Year int32,
+		Month int32,
+		AllowedFld int32,
+		DeniedFld int32,
+		PRIMARY KEY ((Year), Month)
+	) AS RESULT OF ProjDummyTestView;
+
 	VIEW CategoryIdx (
 		Name varchar,
 		Dummy int32,
@@ -573,6 +581,15 @@ ALTERABLE WORKSPACE test_wsWS (
     	offs int64,
     	PRIMARY KEY ((Year), Month, Day)
     ) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
+
+	VIEW DailyIdxSmall (
+		Year int16,
+		Month int8,
+		Day int8,
+		StringValue text,
+		offs int64,
+		PRIMARY KEY ((Year), Month, Day)
+	) AS RESULT OF ApplyDailyIdx WITH Tags=(WorkspaceOwnerTableTag);
 
     TABLE Daily INHERITS sys.CDoc (
     	Year int32,
@@ -605,6 +622,10 @@ ALTERABLE WORKSPACE test_wsWS (
 	TABLE TestCDocWithDeniedFields INHERITS sys.CDoc (
 		Fld1 int32,
 		DeniedFld2 int32 -- denied field, no grants
+	);
+
+	TABLE TestCDocSysIDRevoked INHERITS sys.CDoc (
+		Fld1 int32
 	);
 
 	TABLE DocActivateDenied INHERITS sys.CDoc (
@@ -787,8 +808,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		QUERY TestQryRawArg(sys.Raw) RETURNS MockQryResult WITH Tags=(WorkspaceOwnerFuncTag);
 		PROJECTOR ProjDummy AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(View)); -- does nothing, only to define view.app1pkg.View
 		PROJECTOR ProjDummyQName AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(ViewWithQName)); -- does nothing, only to define view.app1pkg.ViewQName
+		PROJECTOR ProjDummyTestView AFTER INSERT ON (sys.CRecord) INTENTS(sys.View(TestViewWithDeniedFields)); -- does nothing, only to define view.app1pkg.TestViewWithDeniedFields
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(sys.View(CategoryIdx), sys.View(CategoryIdxDenied));
-		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx));
+		SYNC PROJECTOR ApplyDailyIdx AFTER INSERT ON (Daily) INTENTS(sys.View(DailyIdx), sys.View(DailyIdxSmall));
 		PROJECTOR ApplyClient AFTER INSERT ON (Client) INTENTS(sys.View(Clients));
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams) WITH Tags=(WorkspaceOwnerFuncTag);
@@ -822,6 +844,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	ROLE Updated; -- need for invite tests
 	ROLE SpecialAPITokenRole; -- need to test foreign auth using APIToken
 	ROLE LimitedAccessRole; -- need to test ACL
+	ROLE InviteTestRole; -- non-system role used in invite tests as a substitute for sys.WorkspaceOwner
 
 	TAG WorkspaceOwnerTableTag;
 	TAG WorkspaceOwnerFuncTag;
@@ -851,15 +874,22 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT EXECUTE ON QUERY sys.Collection TO SpecialAPITokenRole;
 	GRANT SELECT ON TABLE articles TO SpecialAPITokenRole;
 
+
 	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
+	GRANT SELECT, INSERT, UPDATE, ACTIVATE, DEACTIVATE ON ALL TABLES WITH TAG WorkspaceOwnerTableTag TO InviteTestRole;
+	GRANT SELECT ON ALL VIEWS WITH TAG WorkspaceOwnerTableTag TO sys.WorkspaceOwner;
 
 	GRANT EXECUTE ON ALL QUERIES WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
 	GRANT EXECUTE ON ALL COMMANDS WITH TAG WorkspaceOwnerFuncTag TO sys.WorkspaceOwner;
+	GRANT EXECUTE ON COMMAND sys.CUD TO InviteTestRole;
 
 	GRANT SELECT(Fld1) ON TABLE TestCDocWithDeniedFields TO sys.WorkspaceOwner;
+	GRANT SELECT ON TABLE TestCDocSysIDRevoked TO sys.WorkspaceOwner;
+	GRANT SELECT(Year, Month, AllowedFld) ON VIEW TestViewWithDeniedFields TO sys.WorkspaceOwner;
 
 	GRANT SELECT ON VIEW CategoryIdx TO sys.WorkspaceOwner;
 	GRANT SELECT ON VIEW DailyIdx TO sys.WorkspaceOwner;
+	GRANT SELECT ON VIEW DailyIdxSmall TO sys.WorkspaceOwner;
 	GRANT SELECT ON VIEW Clients TO sys.WorkspaceOwner;
 	GRANT SELECT(Year, Month, Day, offs) ON VIEW DailyIdx TO LimitedAccessRole;
 
@@ -881,4 +911,5 @@ ALTERABLE WORKSPACE test_wsWS (
 	REVOKE UPDATE(FldDenied) ON TABLE DocFieldUpdateDenied FROM sys.WorkspaceOwner;
 
 	REVOKE SELECT(BlobReadDenied) ON TABLE DocWithBLOB FROM sys.WorkspaceOwner;
+	REVOKE SELECT(sys.ID) ON TABLE TestCDocSysIDRevoked FROM sys.WorkspaceOwner;
 );

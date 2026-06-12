@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -59,19 +58,14 @@ func createLogin(args istructs.ExecCommandArgs, login string) (err error) {
 		return
 	}
 
-	// see https://dev.untill.com/projects/#!537026
-	if strings.HasPrefix(login, "-") || strings.HasPrefix(login, ".") || strings.HasPrefix(login, " ") ||
-		strings.HasSuffix(login, "-") || strings.HasSuffix(login, ".") || strings.HasSuffix(login, " ") ||
-		strings.Contains(login, "..") || strings.HasPrefix(login, "sys.") || !validLoginRegexp.MatchString(login) {
-		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", login)
-	}
-
-	cdocLoginID, err := GetCDocLoginID(args.State, args.WSID, appName, login)
-	if err != nil {
+	if err = validateSignInIdentifier(login); err != nil {
 		return err
 	}
-	if cdocLoginID > 0 {
-		return coreutils.NewHTTPErrorf(http.StatusConflict, "login already exists")
+
+	// deactivated cdoc.registry.Login is treated as missing by GetCDocLogin so the same login name can be registered again;
+	// projectorLoginIdx then rewrites view.registry.LoginIdx by primary key (AppWSID, AppIDLoginHash)
+	if err = assertIdentifierAvailable(args.State, appName, login, args.WSID, nil); err != nil {
+		return err
 	}
 
 	wsKindInitializationData := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)

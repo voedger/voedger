@@ -32,24 +32,33 @@ const (
 	field_NewPwd            = "NewPwd"
 	field_AppName           = "AppName"
 	field_Login             = "Login"
+	field_Alias             = "Alias"
+	field_AliasInProc       = "AliasInProc"
+	field_AliasError        = "AliasError"
+	field_SourceAppWSID     = "SourceAppWSID"
 	field_TTLHours          = "TTLHours"
 	field_GlobalRoles       = "GlobalRoles"
 	maxTokenTTLHours        = 168 // 1 week
 )
 
 var (
-	validLoginRegexp                                  = regexp.MustCompile(`^[a-z0-9!#$%&'*+-\/=?^_{|}~@]+$`) // https://dev.untill.com/projects/#!537026
+	validLoginRegexp                                  = regexp.MustCompile(`^[a-z0-9!#$%&'*+\-\/=.?^_{|}~@]+$`) // https://dev.untill.com/projects/#!537026
 	QNameViewLoginIdx                                 = appdef.NewQName(RegistryPackage, "LoginIdx")
 	qNameCmdChangePassword                            = appdef.NewQName(RegistryPackage, "ChangePassword")
 	QNameProjectorLoginIdx                            = appdef.NewQName(RegistryPackage, "ProjectorLoginIdx")
 	QNameCommandCreateLogin                           = appdef.NewQName(RegistryPackage, "CreateLogin")
 	QNameCommandCreateEmailLogin                      = appdef.NewQName(RegistryPackage, "CreateEmailLogin")
+	QNameCommandInitiateSetLoginAlias                 = appdef.NewQName(RegistryPackage, "InitiateSetLoginAlias")
+	QNameCommandPutLoginAliasIndex                    = appdef.NewQName(RegistryPackage, "PutLoginAliasIndex")
+	QNameCommandDeactivateLoginAliasIndex             = appdef.NewQName(RegistryPackage, "DeactivateLoginAliasIndex")
 	QNameCommandResetPasswordByEmail                  = appdef.NewQName(RegistryPackage, "ResetPasswordByEmail")
 	QNameCommandUpdateGlobalRoles                     = appdef.NewQName(RegistryPackage, "UpdateGlobalRoles")
 	QNameCommandResetPasswordByEmailUnloggedParams    = appdef.NewQName(RegistryPackage, "ResetPasswordByEmailUnloggedParams")
 	QNameQueryInitiateResetPasswordByEmail            = appdef.NewQName(RegistryPackage, "InitiateResetPasswordByEmail")
 	QNameQueryIssueVerifiedValueTokenForResetPassword = appdef.NewQName(RegistryPackage, "IssueVerifiedValueTokenForResetPassword")
 	QNameCDocLogin                                    = appdef.NewQName(RegistryPackage, "Login")
+	QNameCDocLoginAlias                               = appdef.NewQName(RegistryPackage, "LoginAlias")
+	QNameProjectorApplySetLoginAlias                  = appdef.NewQName(RegistryPackage, "ApplySetLoginAlias")
 	qNameProjectorInvokeCreateWorkspaceID_registry    = appdef.NewQName(RegistryPackage, "InvokeCreateWorkspaceID_registry")
 	errPasswordIsIncorrect                            = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "password is incorrect")
 	errLoginOrPasswordIsIncorrect                     = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "login or password is incorrect")

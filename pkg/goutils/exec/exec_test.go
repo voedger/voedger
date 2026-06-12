@@ -24,7 +24,7 @@ import (
 func Test_PassEnvironmentVariable(t *testing.T) {
 
 	// set MYVAR=MYVALUE
-	os.Setenv("MYVAR", "MYVALUE")
+	t.Setenv("MYVAR", "MYVALUE")
 
 	stdout, stderr, err := new(exec.PipedExec).
 		Command("sh", "-c", "echo $MYVAR").

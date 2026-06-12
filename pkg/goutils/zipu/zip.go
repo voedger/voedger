@@ -40,6 +40,14 @@ func Zip(sourceDir string, zipFileName string) error {
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 
+	// open a root to scope subsequent file opens within absSourceDir and prevent symlink TOCTOU traversal (gosec G122)
+	sourceRoot, err := os.OpenRoot(absSourceDir)
+	if err != nil {
+		// notest
+		return err
+	}
+	defer sourceRoot.Close()
+
 	return filepath.WalkDir(sourceDir, func(pathToZip string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
 			// notest
@@ -90,7 +98,7 @@ func Zip(sourceDir string, zipFileName string) error {
 			return nil
 		}
 
-		fileToZip, err := os.Open(pathToZip)
+		fileToZip, err := sourceRoot.Open(filepath.ToSlash(relPath))
 		if err != nil {
 			// notest
 			return err

@@ -28,7 +28,7 @@ import (
 func getRegisterFunc(ctx context.Context, bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		bw.registerFuncName = registerPersistentBLOBFuncQName
-		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":"%s","OwnerRecordField":"%s"}}`,
+		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":%q,"OwnerRecordField":%q}}`,
 			bw.blobMessageWrite.ownerRecord, bw.blobMessageWrite.ownerRecordField)
 	} else {
 		registerFuncName, ok := durationToRegisterFuncs[bw.duration]

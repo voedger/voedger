@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sync"
@@ -88,6 +89,10 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]uint) {
 	eef := a.apps.extEngineFactories
 
+	if err := a.validateExtensions(def, eef); err != nil {
+		panic(err)
+	}
+
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
 	for ext := range appdef.Extensions(def.Types()) {
 		extEngineKind := ext.Engine()
@@ -134,7 +139,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			}
 			extEngines, err := extensionEngineFactory.New(a.apps.vvmCtx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, processorsCountPerKind)
 			if err != nil {
-				panic(err)
+				panic(errExtensionEngineDeploy(a.name, extEngineKind, err))
 			}
 			for i := uint(0); i < processorsCountPerKind; i++ {
 				if ee[i] == nil {
@@ -147,6 +152,73 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	}
 
 	a.lastestVersion.upgrade(def, structs, pools)
+}
+
+// builtInFuncsRegistry is implemented by the BuiltIn extension engine factory and
+// gives the deployment-time validator access to the merged per-app and stateless
+// BuiltInExtFuncs maps. Matched via duck typing to avoid widening the public
+// iextengine surface.
+type builtInFuncsRegistry interface {
+	AppFuncs() iextengine.BuiltInAppExtFuncs
+	StatelessFuncs() iextengine.BuiltInExtFuncs
+}
+
+// validateExtensions cross-checks vsql-declared extensions against code-registered
+// implementations for the BuiltIn engine, in both directions:
+//   - in vsql, not in code: every BuiltIn extension declared in def must have an
+//     entry either in the per-app or stateless BuiltInExtFuncs map
+//   - in code, not in vsql: every per-app entry, and every stateless entry whose
+//     package path is known to def, must be visited during the AppDef walk
+//
+// WASM extensions are validated by wazero.initModule when the engine factory is
+// constructed; this function leaves them to that path.
+func (a *appRT) validateExtensions(def appdef.IAppDef, eef iextengine.ExtensionEngineFactories) error {
+	registry, ok := eef[appdef.ExtensionEngineKind_BuiltIn].(builtInFuncsRegistry)
+	if !ok {
+		return nil
+	}
+
+	appFuncs := registry.AppFuncs()[a.name]
+	statelessFuncs := registry.StatelessFuncs()
+
+	visited := map[appdef.FullQName]bool{}
+	var errs []error
+	for ext := range appdef.Extensions(def.Types()) {
+		if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {
+			continue
+		}
+		fqn := def.FullQName(ext.QName())
+		if fqn == appdef.NullFullQName {
+			errs = append(errs, errExtensionUnknownPackage(a.name, ext))
+			continue
+		}
+		if _, ok := appFuncs[fqn]; ok {
+			visited[fqn] = true
+			continue
+		}
+		if _, ok := statelessFuncs[fqn]; ok {
+			visited[fqn] = true
+			continue
+		}
+		errs = append(errs, errExtensionInVSQLNotInCode(a.name, ext, fqn))
+	}
+
+	for fqn := range appFuncs {
+		if !visited[fqn] {
+			errs = append(errs, errExtensionInCodeNotInVSQL(a.name, fqn))
+		}
+	}
+	for fqn := range statelessFuncs {
+		if visited[fqn] {
+			continue
+		}
+		if def.PackageLocalName(fqn.PkgPath()) == "" {
+			continue
+		}
+		errs = append(errs, errExtensionInCodeNotInVSQL(a.name, fqn))
+	}
+
+	return errors.Join(errs...)
 }
 
 type appPartitionRT struct {

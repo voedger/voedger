@@ -7,9 +7,12 @@
 package actualizers
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,7 +21,9 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/filter"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -1148,4 +1153,212 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	})
 	require.NoError(t, err)
 	t.Logf("FlushesTotal: %d", actMetrics.total(aaFlushesTotal))
+}
+
+// Reproduces https://untill.atlassian.net/browse/AIR-3888.
+//
+// Drives asyncActualizer.Run through a transient failure sequence using a flaky
+// IAppPartitions decorator:
+//   - iter 1: AppDef OK, WaitForBorrow (readOffset) OK, NewChannel sets
+//     channelCleanup, then WaitForBorrow (readPlogToTheEnd) fails -> finit
+//     terminates the channel.
+//   - iter 2: AppDef fails -> init returns BEFORE NewChannel reassigns
+//     channelCleanup -> finit invokes the stale closure from iter 1.
+//
+// Without the `a.channelCleanup = nil` reset after finit() in Run(), the second
+// finit() panics in N10nBroker.cleanupChannel with "channel terminated".
+func Test_AsynchronousActualizer_ChannelCleanupPanicReproduction(t *testing.T) {
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1)
+
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels: 10, ChannelsPerSubject: 10, Subscriptions: 10, SubscriptionsPerSubject: 10,
+	}, timeu.NewITime())
+	defer bCleanup()
+
+	actCfg := &BasicAsyncActualizerConfig{Broker: broker}
+	appParts, _, stop := deployTestApp(appName, 1, false, testWorkspace, testWorkspaceDescriptor,
+		func(wsb appdef.IWorkspaceBuilder) {
+			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
+			wsb.AddCommand(testQName)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(testQName))
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(testIncrementor)
+		},
+		actCfg)
+	defer stop()
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
+
+	flaky := &flakyAppParts{IAppPartitions: appParts}
+	act := &asyncActualizer{
+		projectorQName: incrementorName,
+		conf: AsyncActualizerConf{
+			BasicAsyncActualizerConfig: *actCfg, AppQName: appName, PartitionID: partitionNr,
+		},
+		appParts:   flaky,
+		retrierCfg: retrier.NewConfig(time.Millisecond, 5*time.Millisecond),
+	}
+	vvmCtx, vvmCancel := context.WithCancel(context.Background())
+	act.Prepare(vvmCtx)
+
+	panicCh := make(chan string, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				panicCh <- fmt.Sprintf("%v\n%s", r, debug.Stack())
+			}
+		}()
+		act.Run(vvmCtx)
+	}()
+	defer func() { vvmCancel(); <-done }()
+
+	tick := time.NewTicker(time.Millisecond)
+	defer tick.Stop()
+	deadline := time.After(5 * time.Second)
+	recovered := false
+	for !recovered {
+		select {
+		case p := <-panicCh:
+			t.Fatalf("asyncActualizer panicked due to stale channelCleanup:\n%s", p)
+		case <-deadline:
+			t.Fatal("actualizer did not recover from injected failures")
+		case <-tick.C:
+			recovered = flaky.appDefCalls.Load() >= 3 && flaky.waitForBorrowCalls.Load() >= 3
+		}
+	}
+
+	vvmCancel()
+	<-done
+	select {
+	case p := <-panicCh:
+		t.Fatalf("asyncActualizer panicked during shutdown:\n%s", p)
+	default:
+	}
+}
+
+type flakyAppParts struct {
+	appparts.IAppPartitions
+	appDefCalls        atomic.Int32
+	waitForBorrowCalls atomic.Int32
+}
+
+func (f *flakyAppParts) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {
+	if f.appDefCalls.Add(1) == 2 {
+		return nil, errors.New("flaky AppDef failure")
+	}
+	return f.IAppPartitions.AppDef(name)
+}
+
+func (f *flakyAppParts) WaitForBorrow(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, kind appparts.ProcessorKind) (appparts.IAppPartition, error) {
+	if f.waitForBorrowCalls.Add(1) == 2 {
+		return nil, errors.New("flaky WaitForBorrow failure")
+	}
+	return f.IAppPartitions.WaitForBorrow(ctx, app, partID, kind)
+}
+
+// Verifies that when WatchChannel's notify callback triggers a readPlogToOffset that fails,
+// the error is recorded as the cause of n10nWatchChannelCtx and surfaced verbatim by keepReading.
+func Test_AsynchronousActualizer_KeepReadingPropagatesReadPLogErrorAsCause(t *testing.T) {
+	require := require.New(t)
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1)
+	logCap := logger.StartCapture(t, logger.LogLevelError)
+
+	broker, bCleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels: 10, ChannelsPerSubject: 10, Subscriptions: 10, SubscriptionsPerSubject: 10,
+	}, timeu.NewITime())
+	defer bCleanup()
+
+	actCfg := &BasicAsyncActualizerConfig{Broker: broker}
+	appParts, _, stop := deployTestApp(appName, 1, false, testWorkspace, testWorkspaceDescriptor,
+		func(wsb appdef.IWorkspaceBuilder) {
+			ProvideViewDef(wsb, incProjectionView, buildProjectionView)
+			wsb.AddCommand(testQName)
+			wsb.AddProjector(incrementorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(testQName))
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(testIncrementor)
+		},
+		actCfg)
+	defer stop()
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
+
+	injectedErr := errors.New("injected readPlogToOffset failure")
+	flaky := &ctxFailingAppParts{IAppPartitions: appParts, failErr: injectedErr}
+
+	act := &asyncActualizer{
+		projectorQName: incrementorName,
+		conf: AsyncActualizerConf{
+			BasicAsyncActualizerConfig: *actCfg, AppQName: appName, PartitionID: partitionNr,
+		},
+		appParts:   flaky,
+		retrierCfg: retrier.NewConfig(time.Millisecond, 5*time.Millisecond),
+	}
+	vvmCtx, vvmCancel := context.WithCancel(context.Background())
+	defer vvmCancel()
+
+	act.Prepare(vvmCtx)
+	require.NoError(act.init(vvmCtx))
+	defer act.finit()
+
+	flaky.setFailOnCtx(act.n10nWatchChannelCtx)
+
+	stopNotifier := make(chan struct{})
+	notifierDone := make(chan struct{})
+	go func() {
+		defer close(notifierDone)
+		ticker := time.NewTicker(5 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopNotifier:
+				return
+			case <-ticker.C:
+				broker.Update(in10n.ProjectionKey{
+					App: appName, Projection: PLogUpdatesQName, WS: istructs.WSID(partitionNr),
+				}, istructs.Offset(100))
+			}
+		}
+	}()
+
+	err := act.keepReading(vvmCtx)
+	close(stopNotifier)
+	<-notifierDone
+
+	require.ErrorIs(err, injectedErr)
+	require.Same(injectedErr, context.Cause(act.n10nWatchChannelCtx))
+	require.Same(err, context.Cause(act.n10nWatchChannelCtx))
+
+	retry, abortErr := act.retrierCfg.OnError(1, time.Millisecond, err)
+	require.True(retry)
+	require.NoError(abortErr)
+	logCap.HasLine("stage=actualizer.error", "extension=sys._Actualizer", injectedErr.Error())
+}
+
+type ctxFailingAppParts struct {
+	appparts.IAppPartitions
+	mu        sync.Mutex
+	failOnCtx context.Context
+	failErr   error
+}
+
+func (f *ctxFailingAppParts) setFailOnCtx(ctx context.Context) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.failOnCtx = ctx
+}
+
+func (f *ctxFailingAppParts) WaitForBorrow(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, kind appparts.ProcessorKind) (appparts.IAppPartition, error) {
+	f.mu.Lock()
+	failOnCtx := f.failOnCtx
+	f.mu.Unlock()
+	if failOnCtx != nil && ctx == failOnCtx {
+		return nil, f.failErr
+	}
+	return f.IAppPartitions.WaitForBorrow(ctx, app, partID, kind)
 }

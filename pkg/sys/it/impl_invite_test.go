@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	initialRoles        = "initial.Roles"
-	newRoles            = "new.Roles"
+	initialRoles        = "app1pkg.LimitedAccessRole"
+	newRoles            = "app1pkg.SpecialAPITokenRole"
 	inviteEmailTemplate = "text:" + strings.Join([]string{
 		invite.EmailTemplatePlaceholder_VerificationCode,
 		invite.EmailTemplatePlaceholder_InviteID,
@@ -158,7 +158,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	//Cancel then invite it again (inviteID3)
 	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
-	WaitForInviteState(vit, ws, inviteID3, invite.State_ToBeCancelled, invite.State_Cancelled)
+	WaitForInviteState(vit, ws, inviteID3, invite.State_Invited, invite.State_Cancelled)
 	InitiateInvitationByEMail(vit, ws, expireDatetime, email3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 	_ = vit.CaptureEmail()
 	WaitForInviteState(vit, ws, inviteID3, invite.State_ToBeInvited, invite.State_Invited)
@@ -167,15 +167,15 @@ func TestInvite_BasicUsage(t *testing.T) {
 	InitiateJoinWorkspace(vit, ws, inviteID, login1Prn, verificationCodeEmail)
 	InitiateJoinWorkspace(vit, ws, inviteID2, login2Prn, verificationCodeEmail2)
 
-	// State_ToBeJoined will be set for a very short period of time so let's do not catch it
-	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Joined)
-	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeJoined, invite.State_Joined)
+	WaitForInviteState(vit, ws, inviteID, invite.State_Invited, invite.State_Joined)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_Invited, invite.State_Joined)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
 	require.Equal(float64(login2Prn.ProfileWSID), cDocInvite[10])
 	require.Equal(float64(istructs.SubjectKind_User), cDocInvite[0])
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
+	require.NotEqual(float64(0), cDocInvite[9], "SubjectID must be set after join")
 
 	cDocJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, login2Prn)
 
@@ -207,8 +207,6 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal([]string{email2}, message.To)
 	require.Equal(updatedRoles, message.Body)
 
-	WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_ToUpdateRoles, invite.State_Joined)
-	WaitForInviteState(vit, ws, inviteID2, invite.State_Joined, invite.State_ToUpdateRoles, invite.State_Joined)
 	cDocInvite = findCDocInviteByID(inviteID)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
@@ -219,14 +217,10 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	//TODO Denis how to get WS by login? I want to check sys.JoinedWorkspace
 
-	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Joined)
-	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeJoined, invite.State_Joined)
-
 	//Cancel accepted invite
 	vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
 
-	// State_ToBeCancelled will be set for a veri short period of time so let's do not catch it
-	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
+	WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_Cancelled)
 
 	cDocInvite = findCDocInviteByID(inviteID)
 
@@ -243,7 +237,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//Leave workspace
 	vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", httpu.WithAuthorizeBy(login2Prn.Token))
 
-	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeLeft, invite.State_Left)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_Joined, invite.State_Left)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
@@ -256,10 +250,10 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//TODO check InviteeProfile joined workspace
 
 	//Re-invite
-	newRoles := "new.roles"
+	newRoles := "app1pkg.LimitedAccessRole"
 	InitiateInvitationByEMail(vit, ws, expireDatetime, email2, newRoles, inviteEmailTemplate, inviteEmailSubject)
 	log.Println(vit.CaptureEmail().Body)
-	WaitForInviteState(vit, ws, inviteID2, invite.State_Left, invite.State_Invited)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeInvited, invite.State_Invited)
 	cDocInvite = findCDocInviteByID(inviteID2)
 	require.Equal(newRoles, cDocInvite[3].(string))
 }
@@ -282,7 +276,7 @@ func TestCancelSentInvite(t *testing.T) {
 		vit.CaptureEmail()
 
 		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
-		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
+		WaitForInviteState(vit, ws, inviteID, invite.State_Invited, invite.State_Cancelled)
 	})
 	t.Run("invite not exists -> 400 bad request", func(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.NonExistingRecordID), it.Expect400RefIntegrity_Existence())
@@ -376,6 +370,54 @@ func TestWrongEmail(t *testing.T) {
 	}
 }
 
+func TestReinviteAfterCancelAcceptedInvite(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// Setup: create workspace and user
+	wsName := "TestReinviteAfterCancel_ws"
+	wsParams := it.SimpleWSParams(wsName)
+	expireDatetime := vit.Now().UnixMilli()
+
+	email := fmt.Sprintf("reinvite_after_cancel_%d@test.com", vit.NextNumber())
+	login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+	loginPrn := vit.SignIn(login)
+	ownerPrn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(wsParams, ownerPrn)
+
+	// Step 1: Invite and join
+	inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sentEmail := vit.CaptureEmail()
+	verificationCode := sentEmail.Body[:6]
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode)
+	WaitForInviteState(vit, ws, inviteID, invite.State_Invited, invite.State_Joined)
+
+	// Step 2: Cancel accepted invite (admin removes user)
+	vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+	WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_Cancelled)
+
+	// Step 3: Reinvite the same email
+	InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+	sentEmail2 := vit.CaptureEmail()
+	verificationCode2 := sentEmail2.Body[:6]
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+	// Step 4: User accepts invitation again - this should succeed
+	InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode2)
+	WaitForInviteState(vit, ws, inviteID, invite.State_Invited, invite.State_Joined)
+
+	// Verify: Subject should be active again
+	cDocSubject := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+		{"args":{"Schema":"sys.Subject"},
+		"elements":[{"fields":["Login","sys.IsActive"]}],
+		"filters":[{"expr":"eq","args":{"field":"Login","value":"%s"}}]}`, email)).SectionRow(0)
+	require.Equal(email, cDocSubject[0])
+	require.True(cDocSubject[1].(bool))
+}
+
 func TestResendInvitation(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -409,4 +451,221 @@ func TestResendInvitation(t *testing.T) {
 	require.Equal(sentEmail1Data[2], sentEmail2Data[2])
 	require.Equal(sentEmail1Data[3], sentEmail2Data[3])
 	require.Equal(sentEmail1Data[4], sentEmail2Data[4])
+}
+
+// TestRecoverFromStuckInviteStates tests that invites stuck in transitional states
+// (ToBeInvited, ToBeJoined) can be recovered via re-invite or cancel.
+// This can happen when async projectors fail (e.g., email send failed, federation call failed).
+func TestRecoverFromStuckInviteStates(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(it.SimpleWSParams("TestRecoverStuckStates_ws"), prn)
+
+	t.Run("re-invite from State_ToBeInvited", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobeinvited_reinvite_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state by forcing State_ToBeInvited via direct CUD
+		setInviteState(vit, ws, inviteID, invite.State_ToBeInvited)
+
+		// Re-invite should succeed from State_ToBeInvited
+		InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+	})
+
+	t.Run("cancel from State_ToBeInvited", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobeinvited_cancel_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state
+		setInviteState(vit, ws, inviteID, invite.State_ToBeInvited)
+
+		// Cancel should succeed from State_ToBeInvited
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Cancelled)
+	})
+
+	t.Run("re-invite from State_ToBeJoined", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobejoined_reinvite_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state by forcing State_ToBeJoined via direct CUD
+		setInviteState(vit, ws, inviteID, invite.State_ToBeJoined)
+
+		// Re-invite should succeed from State_ToBeJoined
+		InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+	})
+
+	t.Run("cancel from State_ToBeJoined", func(t *testing.T) {
+		email := fmt.Sprintf("stuck_tobejoined_cancel_%d@test.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		// Simulate stuck state
+		setInviteState(vit, ws, inviteID, invite.State_ToBeJoined)
+
+		// Cancel should succeed from State_ToBeJoined
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Cancelled)
+	})
+}
+
+func TestInvite_RolesValidation(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+	ws := vit.CreateWorkspace(it.SimpleWSParams("TestInvite_RolesValidation_ws"), prn)
+	expireDatetime := vit.Now().UnixMilli()
+
+	postInvite := func(roles string, opts ...httpu.ReqOptFunc) {
+		vit.T.Helper()
+		email := fmt.Sprintf("rolesvalid_%d@123.com", vit.NextNumber())
+		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			email, roles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
+		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, opts...)
+	}
+
+	t.Run("InitiateInvitationByEMail", func(t *testing.T) {
+		t.Run("whitespace-only roles -> 400", func(t *testing.T) {
+			postInvite("   ", it.Expect400("roles must not be empty"))
+		})
+		t.Run("leading comma -> 400", func(t *testing.T) {
+			postInvite(",app1pkg.LimitedAccessRole", it.Expect400("roles must not be empty"))
+		})
+		t.Run("malformed QName -> 400", func(t *testing.T) {
+			postInvite("not-a-qname", it.Expect400("invalid role"))
+		})
+		t.Run("system role -> 400", func(t *testing.T) {
+			postInvite("sys.WorkspaceOwner", it.Expect400("system roles cannot be assigned via invite"))
+		})
+		t.Run("non-existent role -> 400", func(t *testing.T) {
+			postInvite("app1pkg.NonExistentRole", it.Expect400("role not found in workspace"))
+		})
+		t.Run("duplicate role -> 400", func(t *testing.T) {
+			postInvite("app1pkg.LimitedAccessRole,app1pkg.LimitedAccessRole", it.Expect400("duplicate role"))
+		})
+	})
+
+	t.Run("InitiateUpdateInviteRoles", func(t *testing.T) {
+		email := fmt.Sprintf("rolesvalid_update_%d@123.com", vit.NextNumber())
+		inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		postUpdate := func(roles string, opts ...httpu.ReqOptFunc) {
+			vit.T.Helper()
+			body := fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`,
+				inviteID, roles, inviteEmailTemplate, inviteEmailSubject)
+			vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", body, opts...)
+		}
+
+		t.Run("whitespace-only roles -> 400", func(t *testing.T) {
+			postUpdate("   ", it.Expect400("roles must not be empty"))
+		})
+		t.Run("system role -> 400", func(t *testing.T) {
+			postUpdate("sys.WorkspaceOwner", it.Expect400("system roles cannot be assigned via invite"))
+		})
+		t.Run("non-existent role -> 400", func(t *testing.T) {
+			postUpdate("app1pkg.NonExistentRole", it.Expect400("role not found in workspace"))
+		})
+	})
+}
+
+// setInviteState directly sets invite state via CUD (for testing stuck state recovery)
+func setInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, state invite.State) {
+	vit.T.Helper()
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d}}]}`, inviteID, state)
+	vit.PostWS(ws, "c.sys.CUD", body)
+}
+
+// TestInvite_VersionMarker asserts that every current invite command writes Version=1
+// on its cdoc.sys.Invite CUD. ap.sys.ApplyInviteEvents uses this discriminator to skip
+// pre-refactor events whose CUD has Version==0 (or no cdoc.sys.Invite CUD at all).
+func TestInvite_VersionMarker(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	expireDatetime := vit.Now().UnixMilli()
+	ownerPrn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
+
+	getInviteVersion := func(ws *it.AppWorkspace, inviteID istructs.RecordID) int32 {
+		row := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+			{"args":{"Schema":"sys.Invite"},
+			"elements":[{"fields":["Version","sys.ID"]}],
+			"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
+		return int32(row[0].(float64))
+	}
+
+	t.Run("create+cancelsent+reinvite+join+updateroles+leave", func(t *testing.T) {
+		ws := vit.CreateWorkspace(it.SimpleWSParams("TestInvite_VersionMarker_A_ws"), ownerPrn)
+		email := fmt.Sprintf("invite_version_a_%d@test.com", vit.NextNumber())
+		login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+		loginPrn := vit.SignIn(login)
+
+		// 1. InitiateInvitationByEMail (create branch)
+		inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		vit.CaptureEmail()
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateInvitationByEMail (create)")
+
+		// 2. CancelSentInvite
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		WaitForInviteState(vit, ws, inviteID, invite.State_Invited, invite.State_Cancelled)
+		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after CancelSentInvite")
+
+		// 3. InitiateInvitationByEMail (re-invite update branch)
+		InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		verificationCode := vit.CaptureEmail().Body[:6]
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateInvitationByEMail (re-invite)")
+
+		// 4. InitiateJoinWorkspace
+		InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode)
+		WaitForInviteState(vit, ws, inviteID, invite.State_Invited, invite.State_Joined)
+		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateJoinWorkspace")
+
+		// 5. InitiateUpdateInviteRoles (state stays Joined)
+		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(
+			`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			inviteID, newRoles, inviteEmailTemplate, inviteEmailSubject))
+		vit.CaptureEmail()
+		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateUpdateInviteRoles")
+
+		// 6. InitiateLeaveWorkspace (called by invitee)
+		vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", httpu.WithAuthorizeBy(loginPrn.Token))
+		WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_Left)
+		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateLeaveWorkspace")
+	})
+
+	t.Run("InitiateCancelAcceptedInvite", func(t *testing.T) {
+		ws := vit.CreateWorkspace(it.SimpleWSParams("TestInvite_VersionMarker_B_ws"), ownerPrn)
+		email := fmt.Sprintf("invite_version_b_%d@test.com", vit.NextNumber())
+		login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
+		loginPrn := vit.SignIn(login)
+
+		inviteID := InitiateInvitationByEMail(vit, ws, expireDatetime, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		verificationCode := vit.CaptureEmail().Body[:6]
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+
+		InitiateJoinWorkspace(vit, ws, inviteID, loginPrn, verificationCode)
+		WaitForInviteState(vit, ws, inviteID, invite.State_Invited, invite.State_Joined)
+
+		vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_Cancelled)
+		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateCancelAcceptedInvite")
+	})
 }

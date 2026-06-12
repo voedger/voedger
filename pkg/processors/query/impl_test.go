@@ -1205,6 +1205,9 @@ func TestRateLimiter(t *testing.T) {
 			// 3rd exceeds the limit - not often than twice per minute
 			require.Error(*respErr)
 			require.Equal(http.StatusTooManyRequests, respMeta.StatusCode)
+			var sysErr coreutils.SysError
+			require.ErrorAs(*respErr, &sysErr)
+			require.Equal("30", sysErr.Headers()[httpu.RetryAfter]) // 60s / 2 = 30s
 			logCap.HasLine("stage=qp.error")
 			logCap.NotContains("stage=qp.success")
 		}

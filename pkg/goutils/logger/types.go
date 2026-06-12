@@ -7,6 +7,8 @@ package logger
 
 import (
 	"bytes"
+	"context"
+	"io"
 	"sync"
 )
 
@@ -26,6 +28,7 @@ type TB interface {
 }
 
 type ILogCaptor interface {
+	io.Writer
 	String() string
 	HasLine(str string, strs ...string)           // fails if no single line contains all substrings (any order)
 	EventuallyHasLine(str string, strs ...string) // same, retries up to 1 second
@@ -38,3 +41,12 @@ type captor struct {
 	buf bytes.Buffer
 	t   TB
 }
+
+type stdLogBridgeWriter struct {
+	ctx      context.Context
+	stage    string
+	logLevel TLogLevel
+	filters  [][]byte // not []string to avoid string->[]byte conversion on each log line
+}
+
+type StdLogBridgeOption func(*stdLogBridgeWriter)

@@ -57,6 +57,14 @@ func checkOperationOnTypeForRoles(ws appdef.IWorkspace, op appdef.OperationKind,
 										for _, f := range rule.Filter().Fields() {
 											allowedFields[f] = true
 										}
+										if op == appdef.OperationKind_Select {
+											// system fields follow the table-level SELECT grant implicitly
+											for _, f := range resFields.Fields() {
+												if appdef.IsSysField(f.Name()) {
+													allowedFields[f.Name()] = true
+												}
+											}
+										}
 									} else {
 										// allow for all fields
 										for _, f := range resFields.Fields() {

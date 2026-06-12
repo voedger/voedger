@@ -73,13 +73,13 @@ func newInitCmd() *cobra.Command {
 
 	// Only add SSH key flag to multi-node commands (N3, N5, SE)
 	// N1 and CE run locally and don't need SSH keys
-	if !addSshKeyFlag(initN3Cmd) {
+	if !addSSHKeyFlag(initN3Cmd) {
 		return nil
 	}
-	if !addSshKeyFlag(initN5Cmd) {
+	if !addSSHKeyFlag(initN5Cmd) {
 		return nil
 	}
-	if !addSshKeyFlag(initSeCmd) {
+	if !addSSHKeyFlag(initSeCmd) {
 		return nil
 	}
 
@@ -142,7 +142,7 @@ func initN1(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 	var err error
 
-	defer saveClusterToJson(cluster)
+	defer saveClusterToJSON(cluster)
 
 	if !cluster.Draft {
 		return ErrClusterConfAlreadyExists
@@ -190,7 +190,7 @@ func initN5(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer saveClusterToJson(cluster)
+	defer saveClusterToJSON(cluster)
 
 	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {

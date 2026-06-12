@@ -710,6 +710,18 @@ func TestRateLimit(t *testing.T) {
 	cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 	require.Error(err)
 	require.Equal(http.StatusTooManyRequests, cmdRespMeta.StatusCode)
+
+	// 4th call: inspect the SysError directly to assert Retry-After header: period/count = 60s/2 = 30s
+	respCh, _, _, err := app.requestSender.SendRequest(app.ctx, request)
+	require.NoError(err)
+	var sysErr coreutils.SysError
+	for elem := range respCh {
+		if se, ok := elem.(coreutils.SysError); ok {
+			sysErr = se
+		}
+	}
+	require.Equal(http.StatusTooManyRequests, sysErr.HTTPStatus)
+	require.Equal("30", sysErr.Headers()[httpu.RetryAfter])
 }
 
 type testApp struct {
@@ -820,7 +832,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 		if authHeader, ok := request.Header[httpu.Authorization]; ok {
 			token = strings.TrimPrefix(authHeader, "Bearer ")
 		}
-		icm := NewCommandMessage(vvmCtx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "", "")
+		icm := NewCommandMessage(requestCtx, request.Body, request.AppQName, request.WSID, responder, testAppPartID, cmdQName, token, "", 0, 0, "", "")
 		serviceChannel <- icm
 	})
 
