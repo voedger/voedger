@@ -224,7 +224,7 @@ func TestJprintf(t *testing.T) {
 	t.Run("nil-typed pointer Stringer yields fmt PANIC placeholder", func(t *testing.T) {
 		var s *testStringer
 		got := Jprintf(`{"v":%q}`, s)
-		require.Contains(got, "%!s(PANIC=")
+		require.Contains(got, "%!q(PANIC=")
 		require.Contains(got, "nil *testStringer pointer")
 	})
 

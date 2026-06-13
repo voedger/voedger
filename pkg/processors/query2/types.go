@@ -5,6 +5,7 @@
 package query2
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -225,24 +226,28 @@ func (k *keys) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pip
 	return work, nil
 }
 
+type orderParam struct {
+	field string
+	asc   bool
+}
+
 type aggregator struct {
 	pipeline.AsyncNOOP
 	params      QueryParams
-	orderParams map[string]bool
+	orderParams []orderParam
 	ww          []pipeline.IWorkpiece
 }
 
 func newAggregator(params QueryParams) pipeline.IAsyncOperator {
 	a := &aggregator{
-		params:      params,
-		orderParams: make(map[string]bool),
-		ww:          make([]pipeline.IWorkpiece, 0),
+		params: params,
+		ww:     make([]pipeline.IWorkpiece, 0),
 	}
 	for _, s := range params.Constraints.Order {
 		if strings.HasPrefix(s, "-") {
-			a.orderParams[strings.ReplaceAll(s, "-", "")] = false
+			a.orderParams = append(a.orderParams, orderParam{field: strings.ReplaceAll(s, "-", ""), asc: false})
 		} else {
-			a.orderParams[s] = true
+			a.orderParams = append(a.orderParams, orderParam{field: s, asc: true})
 		}
 	}
 	return a
@@ -268,37 +273,36 @@ func (a *aggregator) order() (err error) {
 		return nil
 	}
 	slices.SortFunc(a.ww, func(wi, wj pipeline.IWorkpiece) int {
-		for orderBy, asc := range a.orderParams {
-			vi := wi.(objectBackedByMap).data[orderBy]
-			vj := wj.(objectBackedByMap).data[orderBy]
-			var less bool
+		for _, op := range a.orderParams {
+			vi := wi.(objectBackedByMap).data[op.field]
+			vj := wj.(objectBackedByMap).data[op.field]
+			var c int
 			switch typed := vi.(type) {
 			case int32:
-				less = a.compareInt32(typed, vj.(int32), asc)
+				c = compareOrdered(typed, vj.(int32), op.asc)
 			case int64:
-				less = a.compareInt64(typed, vj.(int64), asc)
+				c = compareOrdered(typed, vj.(int64), op.asc)
 			case float32:
-				less = a.compareFloat32(typed, vj.(float32), asc)
+				c = compareOrdered(typed, vj.(float32), op.asc)
 			case float64:
-				less = a.compareFloat64(typed, vj.(float64), asc)
+				c = compareOrdered(typed, vj.(float64), op.asc)
 			case []byte:
-				less = a.compareString(string(typed), string(vi.([]byte)), asc)
+				c = compareOrdered(string(typed), string(vj.([]byte)), op.asc)
 			case string:
-				less = a.compareString(typed, vj.(string), asc)
+				c = compareOrdered(typed, vj.(string), op.asc)
 			case appdef.QName:
-				less = a.compareString(typed.String(), vj.(appdef.QName).String(), asc)
+				c = compareOrdered(typed.String(), vj.(appdef.QName).String(), op.asc)
 			case bool:
-				less = typed != vj.(bool)
+				c = compareOrdered(boolToInt(typed), boolToInt(vj.(bool)), op.asc)
 			case istructs.RecordID:
-				less = a.compareUint64(uint64(typed), uint64(vj.(istructs.RecordID)), asc)
+				c = compareOrdered(uint64(typed), uint64(vj.(istructs.RecordID)), op.asc)
 			default:
 				err = errors.New("unsupported type")
 				continue
 			}
-			if less {
-				return -1
+			if c != 0 {
+				return c
 			}
-			return 1
 		}
 		return 0
 	})
@@ -318,41 +322,19 @@ func (a *aggregator) subList() {
 	}
 	a.ww = a.ww[a.params.Constraints.Skip : a.params.Constraints.Skip+a.params.Constraints.Limit]
 }
-func (a *aggregator) compareInt32(v1, v2 int32, asc bool) bool {
+func compareOrdered[T cmp.Ordered](v1, v2 T, asc bool) int {
+	c := cmp.Compare(v1, v2)
 	if asc {
-		return v1 < v2
+		return c
 	}
-	return v1 > v2
+	return -c
 }
-func (a *aggregator) compareInt64(v1, v2 int64, asc bool) bool {
-	if asc {
-		return v1 < v2
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
 	}
-	return v1 > v2
-}
-func (a *aggregator) compareFloat32(v1, v2 float32, asc bool) bool {
-	if asc {
-		return v1 < v2
-	}
-	return v1 > v2
-}
-func (a *aggregator) compareFloat64(v1, v2 float64, asc bool) bool {
-	if asc {
-		return v1 < v2
-	}
-	return v1 > v2
-}
-func (a *aggregator) compareString(v1, v2 string, asc bool) bool {
-	if asc {
-		return v1 < v2
-	}
-	return v1 > v2
-}
-func (a *aggregator) compareUint64(v1, v2 uint64, asc bool) bool {
-	if asc {
-		return v1 < v2
-	}
-	return v1 > v2
+	return 0
 }
 
 type sender struct {
