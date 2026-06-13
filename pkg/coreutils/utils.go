@@ -37,7 +37,7 @@ func SplitErrors(joinedError error) (errs []error) {
 		}
 		return []error{joinedError}
 	}
-	return
+	return nil
 }
 
 func NilAdminPortGetter() int { panic("to be tested") }

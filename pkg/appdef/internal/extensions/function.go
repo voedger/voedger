@@ -24,9 +24,9 @@ func MakeFunc(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind) Fun
 	return Function{Extension: MakeExtension(ws, name, kind)}
 }
 
-func (f Function) Param() appdef.IType { return f.par.Target(f.App().Type) }
+func (f *Function) Param() appdef.IType { return f.par.Target(f.App().Type) }
 
-func (f Function) Result() appdef.IType { return f.res.Target(f.App().Type) }
+func (f *Function) Result() appdef.IType { return f.res.Target(f.App().Type) }
 
 func (f *Function) setParam(name appdef.QName) { f.par.SetName(name) }
 
@@ -52,8 +52,8 @@ func (f *Function) Validate() (err error) {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown result type: %w", f, e))
 	} else if typ := f.Result(); typ != nil {
 		switch typ.Kind() {
-		case appdef.TypeKind_Any: // ok
-		case appdef.TypeKind_Data, appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_Object: // ok
+		case appdef.TypeKind_Any, appdef.TypeKind_Data, appdef.TypeKind_GDoc, appdef.TypeKind_CDoc, appdef.TypeKind_WDoc, appdef.TypeKind_ODoc, appdef.TypeKind_Object:
+		// ok
 		default:
 			err = errors.Join(err, appdef.ErrInvalid("result type «%v», should be Document, Object or Data", typ))
 		}

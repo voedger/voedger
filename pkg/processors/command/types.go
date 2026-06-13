@@ -141,7 +141,6 @@ func newReusableHostState(ctx context.Context, secretReader isecrets.ISecretRead
 	b := &reusableHostState{}
 	b.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx,
 		func() istructs.IAppStructs { return b.wp.appStructs },
-		func() istructs.PartitionID { return b.wp.cmdMes.PartitionID() },
 		func() istructs.WSID { return b.wp.cmdMes.WSID() },
 		secretReader,
 		func() istructs.ICUD { return b.wp.reb.CUDBuilder() },

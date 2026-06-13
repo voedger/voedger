@@ -136,7 +136,7 @@ func TestWSNameCausesMaxPseudoWSID(t *testing.T) {
 	// considered as not pseudo -> panic on try to call AsQName() on a missing workspace descriptor on a non-inited ws
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, "2062880497", istructs.CurrentClusterID())
 	url := fmt.Sprintf("api/v2/apps/sys/registry/workspaces/%d/commands/registry.CreateLogin", pseudoWSID)
-	body := fmt.Sprintf(`{"args":{"Login":"2062880497","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"1"}}`,
+	body := fmt.Sprintf(`{"args":{"Login":"2062880497","AppName":%q,"SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"1"}}`,
 		istructs.AppQName_test1_app1, istructs.SubjectKind_Device, istructs.CurrentClusterID())
 	resp := vit.Func(url, body, httpu.WithMethod(http.MethodPost))
 	m := map[string]interface{}{}

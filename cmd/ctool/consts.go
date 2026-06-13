@@ -117,6 +117,6 @@ const (
 	alertLabelSeverity = "severity"
 )
 
-const emptyDiscordWebhookURL = "http://discord_webhook_url"
+const emptyDiscordWebhookURL = "http://discord_webhook_url" // nolint
 
 const n1NodeName = "n1-node"

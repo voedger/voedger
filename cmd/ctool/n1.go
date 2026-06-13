@@ -19,80 +19,58 @@ var ceSuccessPhrases = map[string]string{
 }
 
 func ceClusterControllerFunction(c *clusterType) error {
-
-	var err error
-
 	switch c.Cmd.Kind {
 	case ckInit, ckUpgrade, ckAcme:
-
-		if err = deployCeMonStack(); err != nil {
+		if err := deployCeMonStack(); err != nil {
 			return err
 		}
 
-		if err = deployVoedgerCe(); err != nil {
+		if err := deployVoedgerCe(); err != nil {
 			return err
 		}
 
-		if err = addVoedgerUser(c); err != nil {
+		if err := addVoedgerUser(c); err != nil {
 			return err
 		}
 
 		if c.Cmd.Kind == ckInit {
-			if err = resetMonPassword(c); err != nil {
+			if err := resetMonPassword(c); err != nil {
 				return err
 			}
 		}
-
 	default:
-		err = ErrUnknownCommand
+		return ErrUnknownCommand
 	}
 
-	if err == nil {
-
-		if succesPhrase, exists := ceSuccessPhrases[c.Cmd.Kind]; exists {
-			loggerInfoGreen(succesPhrase)
-		}
-
-		c.success()
+	if succesPhrase, exists := ceSuccessPhrases[c.Cmd.Kind]; exists {
+		loggerInfoGreen(succesPhrase)
 	}
 
-	return err
+	c.success()
+	return nil
 }
 
 func deployCeMonStack() error {
-
 	loggerInfo("Deploying monitoring stack...")
 	return newScriptExecuter("", "").run("ce/mon-prepare.sh")
 }
 
 func deployVoedgerCe() error {
-
 	loggerInfo("Deploying voedger N1 cluster...")
 	return newScriptExecuter("", "").run("ce/ce-start.sh")
 }
 
 func addVoedgerUser(c *clusterType) error {
-
 	loggerInfo("Adding user voedger to Grafana")
-	if err := addGrafanUser(c.nodeByHost(n1NodeName), voedger); err != nil {
-		return err
-	}
-
-	return nil
+	return addGrafanUser(c.nodeByHost(n1NodeName), voedger)
 }
 
 func resetMonPassword(c *clusterType) error {
-
 	loggerInfo("Voedger's password resetting to monitoring stack")
-	if err := setMonPassword(c, voedger); err != nil {
-		return err
-	}
-
-	return nil
+	return setMonPassword(c, voedger)
 }
 
 func ceNodeControllerFunction(n *nodeType) error {
-
 	if len(n.Error) > 0 && (n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty()) {
 		n.DesiredNodeState = newNodeState(n.ActualNodeState.Address, n.ActualNodeState.NodeVersion)
 	}
@@ -124,17 +102,15 @@ func ceNodeControllerFunction(n *nodeType) error {
 }
 
 func copyCtoolToCeNode(node *nodeType) error {
-
 	ctoolPath, err := os.Executable()
 
 	ok, e := filesu.Exists(node.cluster.configFileName)
-
 	if e != nil {
 		return e
 	}
 
 	if !ok {
-		if e := node.cluster.saveToJSON(); err != nil {
+		if e := node.cluster.saveToJSON(); e != nil {
 			return e
 		}
 	}

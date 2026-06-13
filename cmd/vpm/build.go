@@ -34,7 +34,7 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "build",
 		Short: "build application .var file",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(*cobra.Command, []string) error {
 			exists, err := checkPackageGenFileExists(params.Dir)
 			if err != nil {
 				return err
@@ -138,7 +138,6 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 					return err
 				}
 			}
-
 		}
 	}
 	return nil

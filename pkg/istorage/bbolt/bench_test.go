@@ -32,7 +32,7 @@ func Benchmark_Put_One_SameBucket_ST(b *testing.B) {
 
 	var cCols = make([]byte, 8)
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		binary.BigEndian.PutUint64(cCols, rand.Uint64())
 		err = appStorage.Put([]byte("persons"), cCols, []byte("Nikitin Nikolay Valeryevich"))
 		if err != nil {
@@ -60,10 +60,10 @@ func Benchmark_Put_50_DifferentBuckets_ST(b *testing.B) {
 	var cCols = make([]byte, 8)
 	var batchItems = make([]istorage.BatchItem, NumOfBatchItems)
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		binary.BigEndian.PutUint64(pKey, rand.Uint64())
 
-		for j := 0; j < NumOfBatchItems; j++ {
+		for j := range NumOfBatchItems {
 			binary.BigEndian.PutUint64(cCols, rand.Uint64())
 			batchItems[j] = istorage.BatchItem{PKey: pKey, CCols: cCols, Value: []byte("Nikitin Nikolay Valeryevich")}
 		}
@@ -89,7 +89,7 @@ func Benchmark_Put_One_DifferentBuckets_ST(b *testing.B) {
 	var pKey = make([]byte, 8)
 	var cCols = make([]byte, 8)
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		binary.BigEndian.PutUint64(pKey, rand.Uint64())
 		binary.BigEndian.PutUint64(cCols, rand.Uint64())
 		err = appStorage.Put(pKey, cCols, []byte("Nikitin Nikolay Valeryevich"))

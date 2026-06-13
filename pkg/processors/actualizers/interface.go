@@ -38,11 +38,11 @@ type BasicAsyncActualizerConfig struct {
 
 	// Optional.
 	AAMetrics AsyncActualizerMetrics
-	//IntentsLimit top limit per event, optional, default value is 100
+	// IntentsLimit top limit per event, optional, default value is 100
 	IntentsLimit int
-	//BundlesLimit top limit when bundle size is greater than this value, actualizer flushes changes to underlying storage, optional, default value is 100
+	// BundlesLimit top limit when bundle size is greater than this value, actualizer flushes changes to underlying storage, optional, default value is 100
 	BundlesLimit int
-	//FlushInterval specifies how often the current actualizer flushes changes to underlying storage, optional, default value is 100 milliseconds
+	// FlushInterval specifies how often the current actualizer flushes changes to underlying storage, optional, default value is 100 milliseconds
 	FlushInterval time.Duration
 	// FlushPositionInterval specifies how often actualizer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInterval time.Duration
@@ -68,7 +68,7 @@ type SyncActualizerConf struct {
 	Ctx          context.Context
 	SecretReader isecrets.ISecretReader
 	Partition    istructs.PartitionID
-	//IntentsLimit top limit per event, default value is 100
+	// IntentsLimit top limit per event, default value is 100
 	IntentsLimit int
 	N10nFunc     state.N10nFunc
 }

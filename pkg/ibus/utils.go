@@ -27,8 +27,8 @@ func NewResult(response interface{}, err error, errMsg string, errData string) (
 	return response, status, err
 }
 
-func NullHandler(responsePart interface{}) {}
+func NullHandler(interface{}) {}
 
-func EchoReceiver(_ context.Context, request interface{}, sectionsWriter SectionsWriterType) (response interface{}, status Status, err error) {
+func EchoReceiver(_ context.Context, request interface{}, _ SectionsWriterType) (response interface{}, status Status, err error) {
 	return NewResult(request, nil, "", "")
 }

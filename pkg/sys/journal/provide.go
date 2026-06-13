@@ -18,7 +18,7 @@ func Provide(sr istructsmem.IStatelessResources, eps map[appdef.AppQName]extensi
 		ji.AddNamed(QNameViewWLogDates.String(), QNameViewWLogDates)
 		ji.AddNamed("", QNameViewWLogDates) // default index
 		jp := ep.ExtensionPoint(EPJournalPredicates)
-		jp.AddNamed("all", func(schemas appdef.IWorkspace, qName appdef.QName) bool { return true }) // default predicate
+		jp.AddNamed("all", func(appdef.IWorkspace, appdef.QName) bool { return true }) // default predicate
 	}
 
 	sr.AddProjectors(appdef.SysPackagePath, istructs.Projector{Name: QNameProjectorWLogDates, Func: wLogDatesProjector})

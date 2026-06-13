@@ -25,7 +25,7 @@ func (s *bundledHostState) CanExist(key istructs.IStateKeyBuilder) (stateValue i
 		if value, ok := bundledStorage.get(key); ok {
 			// TODO later: For the optimization purposes, maybe would be wise to use e.g. AsValue()
 			// instead of BuildValue()
-			if stateValue = value.Value.BuildValue(); stateValue != nil {
+			if stateValue := value.Value.BuildValue(); stateValue != nil {
 				return stateValue, true, nil
 			}
 		}
@@ -39,21 +39,21 @@ func (s *bundledHostState) CanExistAll(keys []istructs.IStateKeyBuilder, callbac
 		if err != nil {
 			return err
 		}
-		if err = callback(k, value, ok); err != nil {
+		if err := callback(k, value, ok); err != nil {
 			return err
 		}
 	}
-	return
+	return nil
 }
 func (s *bundledHostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	value, ok, err := s.CanExist(key)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if !ok {
 		return nil, s.err(key, ErrNotExists)
 	}
-	return
+	return value, nil
 }
 func (s *bundledHostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	values := make([]istructs.IStateValue, len(keys))
@@ -65,30 +65,30 @@ func (s *bundledHostState) MustExistAll(keys []istructs.IStateKeyBuilder, callba
 		values[i] = value
 	}
 	for i, value := range values {
-		if err = callback(keys[i], value, true); err != nil {
+		if err := callback(keys[i], value, true); err != nil {
 			return err
 		}
 	}
-	return
+	return nil
 }
 func (s *bundledHostState) MustNotExist(key istructs.IStateKeyBuilder) (err error) {
 	_, ok, err := s.CanExist(key)
 	if err != nil {
-		return
+		return err
 	}
 	if ok {
 		return s.err(key, ErrExists)
 	}
-	return
+	return nil
 }
 func (s *bundledHostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error) {
 	for _, k := range keys {
 		err = s.MustNotExist(k)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }
 func (s *bundledHostState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	bundledStorage, ok := s.bundles[key.Storage()]
@@ -140,7 +140,7 @@ func (s *bundledHostState) FlushBundles() (err error) {
 			return err
 		}
 	}
-	return
+	return nil
 }
 func (s *bundledHostState) addStorage(storageName appdef.QName, storage state.IStateStorage, ops int) {
 	s.hostState.addStorage(storageName, storage, ops)

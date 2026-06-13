@@ -5,9 +5,10 @@
 package queryprocessor
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -38,34 +39,39 @@ func (o *OrderOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (ou
 	return nil, nil
 }
 
-func (o OrderOperator) Flush(callback pipeline.OpFuncFlush) (err error) {
+func (o *OrderOperator) Flush(callback pipeline.OpFuncFlush) (err error) {
 	begin := time.Now()
 	defer func() {
 		o.metrics.Increase(Metric_ExecOrderSeconds, time.Since(begin).Seconds())
 	}()
-	sort.Slice(o.rows, func(i, j int) bool {
+	slices.SortFunc(o.rows, func(a, b IOutputRow) int {
 		for _, orderBy := range o.orderBys {
-			o1 := o.value(i, orderBy.Field())
-			o2 := o.value(j, orderBy.Field())
-			if o1 == o2 {
-				continue
-			}
+			o1 := o.value(a, orderBy.Field())
+			o2 := o.value(b, orderBy.Field())
+			var c int
 			switch v := o1.(type) {
 			case int32:
-				return compareInt32(v, o2.(int32), orderBy.IsDesc())
+				c = cmp.Compare(v, o2.(int32))
 			case int64:
-				return compareInt64(v, o2.(int64), orderBy.IsDesc())
+				c = cmp.Compare(v, o2.(int64))
 			case float32:
-				return compareFloat32(v, o2.(float32), orderBy.IsDesc())
+				c = cmp.Compare(v, o2.(float32))
 			case float64:
-				return compareFloat64(v, o2.(float64), orderBy.IsDesc())
+				c = cmp.Compare(v, o2.(float64))
 			case string:
-				return compareString(v, o2.(string), orderBy.IsDesc())
+				c = cmp.Compare(v, o2.(string))
 			default:
 				err = fmt.Errorf("order by '%s' is impossible: %w", orderBy.Field(), ErrWrongType)
+				return 0
+			}
+			if c != 0 {
+				if orderBy.IsDesc() {
+					return -c
+				}
+				return c
 			}
 		}
-		return false
+		return 0
 	})
 	if err == nil {
 		for _, row := range o.rows {
@@ -75,41 +81,6 @@ func (o OrderOperator) Flush(callback pipeline.OpFuncFlush) (err error) {
 	return err
 }
 
-func (o OrderOperator) value(i int, field string) interface{} {
-	return o.rows[i].Value(rootDocument).([]IOutputRow)[0].Value(field)
-}
-
-func compareInt32(o1, o2 int32, desc bool) bool {
-	if desc {
-		return o1 > o2
-	}
-	return o1 < o2
-}
-
-func compareInt64(o1, o2 int64, desc bool) bool {
-	if desc {
-		return o1 > o2
-	}
-	return o1 < o2
-}
-
-func compareFloat32(o1, o2 float32, desc bool) bool {
-	if desc {
-		return o1 > o2
-	}
-	return o1 < o2
-}
-
-func compareFloat64(o1, o2 float64, desc bool) bool {
-	if desc {
-		return o1 > o2
-	}
-	return o1 < o2
-}
-
-func compareString(o1, o2 string, desc bool) bool {
-	if desc {
-		return o1 > o2
-	}
-	return o1 < o2
+func (o *OrderOperator) value(row IOutputRow, field string) interface{} {
+	return row.Value(rootDocument).([]IOutputRow)[0].Value(field)
 }

@@ -15,7 +15,6 @@ import (
 //
 // If operation is allowed, but with some fields restriction, then returns map of allowed fields, else returned fields map is nil.
 func checkOperationOnTypeForRoles(ws appdef.IWorkspace, op appdef.OperationKind, t appdef.IType, roles appdef.QNames) (allowed bool, fields map[appdef.FieldName]bool) {
-
 	if roles.Contains(appdef.QNameRoleSystem) {
 		// nothing else matters
 		return true, nil

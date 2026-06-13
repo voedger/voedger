@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"iter"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -150,7 +150,7 @@ type objectBackedByMap struct {
 	data map[string]interface{}
 }
 
-func (o objectBackedByMap) Release()                                { /*Do nothing*/ }
+func (o objectBackedByMap) Release()                                { /* Do nothing*/ }
 func (o objectBackedByMap) AsInt32(name appdef.FieldName) int32     { return o.data[name].(int32) }
 func (o objectBackedByMap) AsInt64(name appdef.FieldName) int64     { return o.data[name].(int64) }
 func (o objectBackedByMap) AsFloat32(name appdef.FieldName) float32 { return o.data[name].(float32) }
@@ -250,53 +250,59 @@ func newAggregator(params QueryParams) pipeline.IAsyncOperator {
 
 func (a *aggregator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	a.ww = append(a.ww, work)
-	return
+	return outWork, nil
 }
 func (a *aggregator) Flush(callback pipeline.OpFuncFlush) (err error) {
 	err = a.order()
 	if err != nil {
-		return
+		return err
 	}
 	a.subList()
 	for _, w := range a.ww {
 		callback(w)
 	}
-	return
+	return nil
 }
 func (a *aggregator) order() (err error) {
 	if len(a.orderParams) == 0 {
-		return
+		return nil
 	}
-	sort.Slice(a.ww, func(i, j int) bool {
+	slices.SortFunc(a.ww, func(wi, wj pipeline.IWorkpiece) int {
 		for orderBy, asc := range a.orderParams {
-			vi := a.ww[i].(objectBackedByMap).data[orderBy]
-			vj := a.ww[j].(objectBackedByMap).data[orderBy]
+			vi := wi.(objectBackedByMap).data[orderBy]
+			vj := wj.(objectBackedByMap).data[orderBy]
+			var less bool
 			switch typed := vi.(type) {
 			case int32:
-				return a.compareInt32(typed, vj.(int32), asc)
+				less = a.compareInt32(typed, vj.(int32), asc)
 			case int64:
-				return a.compareInt64(typed, vj.(int64), asc)
+				less = a.compareInt64(typed, vj.(int64), asc)
 			case float32:
-				return a.compareFloat32(typed, vj.(float32), asc)
+				less = a.compareFloat32(typed, vj.(float32), asc)
 			case float64:
-				return a.compareFloat64(typed, vj.(float64), asc)
+				less = a.compareFloat64(typed, vj.(float64), asc)
 			case []byte:
-				return a.compareString(string(typed), string(vi.([]byte)), asc)
+				less = a.compareString(string(typed), string(vi.([]byte)), asc)
 			case string:
-				return a.compareString(typed, vj.(string), asc)
+				less = a.compareString(typed, vj.(string), asc)
 			case appdef.QName:
-				return a.compareString(typed.String(), vj.(appdef.QName).String(), asc)
+				less = a.compareString(typed.String(), vj.(appdef.QName).String(), asc)
 			case bool:
-				return typed != vj.(bool)
+				less = typed != vj.(bool)
 			case istructs.RecordID:
-				return a.compareUint64(uint64(typed), uint64(vj.(istructs.RecordID)), asc)
+				less = a.compareUint64(uint64(typed), uint64(vj.(istructs.RecordID)), asc)
 			default:
 				err = errors.New("unsupported type")
+				continue
 			}
+			if less {
+				return -1
+			}
+			return 1
 		}
-		return false
+		return 0
 	})
-	return
+	return nil
 }
 func (a *aggregator) subList() {
 	if a.params.Constraints.Limit == 0 && a.params.Constraints.Skip == 0 {
@@ -474,7 +480,7 @@ func (w Where) getAsInt32(k string) (vv []int32, err error) {
 		}
 		return vv, nil
 	case nil:
-		return
+		return nil, nil
 	default:
 		return nil, errUnsupportedType
 	}
@@ -483,7 +489,6 @@ func (w Where) getAsString(k string) (vv []string, err error) {
 	switch v := w[k].(type) {
 	case string:
 		vv = append(vv, v)
-		return
 	case map[string]interface{}:
 		in, ok := v["$in"]
 		if !ok {
@@ -496,12 +501,11 @@ func (w Where) getAsString(k string) (vv []string, err error) {
 		for _, param := range params {
 			vv = append(vv, param.(string))
 		}
-		return
 	case nil:
-		return
 	default:
-		return nil, errUnsupportedType
+		err = errUnsupportedType
 	}
+	return vv, err
 }
 
 type queryResultWrapper struct {
@@ -546,12 +550,12 @@ func newInclude(qw *queryWork, cdoc bool) (o pipeline.IAsyncOperator) {
 func (i include) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	relations, err := i.getRelations(ctx, work)
 	if err != nil {
-		return
+		return nil, err
 	}
 	for _, refFieldsAndContainers := range i.refFieldsAndContainers {
 		err = i.fill(work.(objectBackedByMap).data, refFieldsAndContainers, relations, refFieldsAndContainers)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 	return work, nil
@@ -559,14 +563,14 @@ func (i include) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork
 func (i include) recordToMap(id istructs.RecordID) (obj map[string]interface{}, err error) {
 	record, err := i.records.Get(i.wsid, true, id)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if record.AsQName(appdef.SystemField_QName) != appdef.NullQName {
 		return coreutils.FieldsToMap(record, i.ad), nil
 	}
 	record, err = i.events.GetORec(i.wsid, id, istructs.NullOffset)
 	if err != nil {
-		return
+		return nil, err
 	}
 	return coreutils.FieldsToMap(record, i.ad), nil
 }
@@ -577,7 +581,7 @@ func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []st
 
 	err = i.checkField(parent, refFieldsAndContainers[0], refFieldOrContainerExpression)
 	if err != nil {
-		return
+		return err
 	}
 
 	if id, ok := parent[appdef.SystemField_ID].(istructs.RecordID); ok {
@@ -628,7 +632,7 @@ func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []st
 		for _, item := range v {
 			err = i.fill(item, refFieldsAndContainers[1:], relations, refFieldOrContainerExpression)
 			if err != nil {
-				return
+				return err
 			}
 			items = append(items, item)
 		}
@@ -638,21 +642,21 @@ func (i include) fill(parent map[string]interface{}, refFieldsAndContainers []st
 	default:
 		return errUnsupportedType
 	}
-	return
+	return nil
 }
 func (i include) getRelations(ctx context.Context, work pipeline.IWorkpiece) (relations map[istructs.RecordID]map[string][]istructs.RecordID, err error) {
 	relations = make(map[istructs.RecordID]map[string][]istructs.RecordID)
 	if !i.cdoc {
-		return
+		return relations, nil
 	}
 	kbCollectionView := i.viewRecords.KeyBuilder(collection.QNameCollectionView)
 	kbCollectionView.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 	kbCollectionView.PutQName(collection.Field_DocQName, work.(objectBackedByMap).data[appdef.SystemField_QName].(appdef.QName))
 	kbCollectionView.PutRecordID(collection.Field_DocID, work.(objectBackedByMap).data[appdef.SystemField_ID].(istructs.RecordID))
-	err = i.viewRecords.Read(ctx, i.wsid, kbCollectionView, func(key istructs.IKey, value istructs.IValue) (err error) {
+	err = i.viewRecords.Read(ctx, i.wsid, kbCollectionView, func(_ istructs.IKey, value istructs.IValue) (err error) {
 		record := value.AsRecord(collection.Field_Record)
 		if record.AsRecordID(appdef.SystemField_ParentID) == istructs.NullRecordID {
-			return
+			return nil
 		}
 
 		containers, okContainers := relations[record.AsRecordID(appdef.SystemField_ParentID)]
@@ -667,9 +671,9 @@ func (i include) getRelations(ctx context.Context, work pipeline.IWorkpiece) (re
 
 		containers[record.AsString(appdef.SystemField_Container)] = container
 		relations[record.AsRecordID(appdef.SystemField_ParentID)] = containers
-		return
+		return nil
 	})
-	return
+	return relations, err
 }
 func (i include) checkField(parent map[string]interface{}, refFieldOrContainer string, refFieldOrContainerExpression []string) (err error) {
 	iType := i.ad.Type(parent[appdef.SystemField_QName].(appdef.QName))

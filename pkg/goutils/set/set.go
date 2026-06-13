@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"iter"
 	"math/bits"
+	"slices"
 	"strings"
 )
 
@@ -188,12 +189,10 @@ func (s Set[V]) ContainsAll(values ...V) bool {
 // Returns is Set contains at least one from specified values.
 // If values is empty, returns true.
 func (s Set[V]) ContainsAny(values ...V) bool {
-	for _, v := range values {
-		if s.Contains(v) {
-			return true
-		}
+	if len(values) == 0 {
+		return true
 	}
-	return len(values) == 0
+	return slices.ContainsFunc(values, s.Contains)
 }
 
 // Returns is Set filled and first value set.
@@ -239,7 +238,6 @@ func (s *Set[V]) SetReadOnly() {
 // Renders Set in human-readable form, without `ValueTypeName_` prefixes,
 // suitable for debugging or error messages
 func (s Set[V]) String() string {
-
 	say := func(v any) string {
 		if trimV, ok := v.(interface{ TrimString() string }); ok {
 			return trimV.TrimString()

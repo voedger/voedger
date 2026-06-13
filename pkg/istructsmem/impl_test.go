@@ -191,7 +191,7 @@ func TestBasicUsage(t *testing.T) {
 		})
 
 	require.NotNil(wLogEvent1)
-	defer wLogEvent1.Release()
+	wLogEvent1.Release()
 }
 
 func TestBasicUsage_ViewRecords(t *testing.T) {

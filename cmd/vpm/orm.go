@@ -41,7 +41,7 @@ func newOrmCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "orm",
 		Short: "generate orm for package",
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(*cobra.Command, []string) (err error) {
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
@@ -66,12 +66,8 @@ func generateOrm(compileRes *compile.Result, params *vpmParams) error {
 		return err
 	}
 
-	iTypeObjsOfWS, pkgInfos, currentPkgLocalName := getPkgAppDefObjs(
-		compileRes.ModulePath,
-		compileRes.AppDef,
-		headerContent,
-	)
-	pkgData := getOrmData(currentPkgLocalName, pkgInfos, iTypeObjsOfWS)
+	iTypeObjsOfWS, pkgInfos := getPkgAppDefObjs(compileRes.AppDef, headerContent)
+	pkgData := getOrmData(pkgInfos, iTypeObjsOfWS)
 
 	if err := generateOrmFiles(pkgData, dir); err != nil {
 		return err
@@ -82,17 +78,15 @@ func generateOrm(compileRes *compile.Result, params *vpmParams) error {
 }
 
 // getPkgAppDefObjs gathers objects from the current package
-// and returns a map of workspaces to its objects, a map of package local names to its info and the current package local name
+// and returns a map of workspaces to its objects and a map of package local names to its info
 func getPkgAppDefObjs(
-	packagePath string,
 	appDef appdef.IAppDef,
 	headerContent string,
-) (iTypeObjsOfWS map[appdef.QName][]appdef.IType, pkgInfos map[string]ormPackageInfo, currentPkgLocalName string) {
+) (iTypeObjsOfWS map[appdef.QName][]appdef.IType, pkgInfos map[string]ormPackageInfo) {
 	uniqueObjects := make([]string, 0)
 	pkgInfos = make(map[string]ormPackageInfo) // mapping of package local names to its info
 	// sys package is implicitly added to the list of packages,
 	// so we need to add it manually
-	currentPkgLocalName = appdef.SysPackage
 	pkgInfos[appdef.SysPackage] = ormPackageInfo{
 		Name:              appdef.SysPackage,
 		FullPath:          sys.PackagePath,
@@ -100,9 +94,6 @@ func getPkgAppDefObjs(
 	}
 
 	for localName, fullPath := range appDef.Packages() {
-		if fullPath == packagePath {
-			currentPkgLocalName = localName
-		}
 		pkgInfos[localName] = ormPackageInfo{
 			Name:              localName,
 			FullPath:          fullPath,
@@ -141,7 +132,7 @@ func getPkgAppDefObjs(
 		}
 	}
 
-	return
+	return iTypeObjsOfWS, pkgInfos
 }
 
 // generateOrmFiles generates ORM files for the given package data
@@ -248,7 +239,6 @@ func generateUtilsFile(ormPkgData ormPackage, dir string) (filePath string, err 
 
 // getOrmData returns the ORM data for the given package
 func getOrmData(
-	localName string,
 	pkgInfos map[string]ormPackageInfo,
 	iTypeObjsOfWS map[appdef.QName][]appdef.IType,
 ) (pkgData map[ormPackageInfo][]interface{}) {
@@ -258,11 +248,11 @@ func getOrmData(
 
 	for wsQName, objs := range iTypeObjsOfWS {
 		for _, obj := range objs {
-			processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
+			processITypeObj(pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
 		}
 	}
 
-	return
+	return pkgData
 }
 
 // newPackageItem creates a new package item
@@ -320,14 +310,12 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 
 // processITypeObj processes IType object and returns the corresponding ORM object
 // Parameters:
-// - localName: the local name of the current package
 // - pkgInfos: a map of package local names to its info
 // - pkgData: a map of package info to its data
 // - uniquePkgQNames: a map of package info to its unique qnames
 // - wsQName: the qname of the workspace
 // - obj: the IType object to process
 func processITypeObj(
-	localName string,
 	pkgInfos map[string]ormPackageInfo,
 	pkgData map[ormPackageInfo][]interface{},
 	uniquePkgQNames map[ormPackageInfo][]string,
@@ -412,7 +400,7 @@ func processITypeObj(
 		// collecting projector events (Commands, CUDs, etc.)
 		for _, event := range iProjectorEvents {
 			for _, obj := range appdef.FilterMatches(event.Filter(), t.Workspace().Types()) {
-				ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
+				ormObject := processITypeObj(pkgInfos, pkgData, uniquePkgQNames, wsQName, obj, uniqueProjectorCommandEvents)
 				// Avoiding double generation of the same Cmd_ORM object via
 				// checking if it already exists in other projector events
 				cmdOrmObj, ok := ormObject.(ormCommand)
@@ -444,7 +432,6 @@ func processITypeObj(
 		var resultFields []ormField
 
 		argumentObj := processITypeObj(
-			localName,
 			pkgInfos,
 			pkgData,
 			uniquePkgQNames,
@@ -456,7 +443,6 @@ func processITypeObj(
 		var unloggedArgumentObj interface{}
 		if iCommand, ok := t.(appdef.ICommand); ok {
 			unloggedArgumentObj = processITypeObj(
-				localName,
 				pkgInfos,
 				pkgData,
 				uniquePkgQNames,
@@ -467,7 +453,6 @@ func processITypeObj(
 		}
 
 		if resultObj := processITypeObj(
-			localName,
 			pkgInfos,
 			pkgData,
 			uniquePkgQNames,
@@ -491,7 +476,6 @@ func processITypeObj(
 		typeKind := t.Kind()
 		if typeKind == appdef.TypeKind_Object {
 			return processITypeObj(
-				localName,
 				pkgInfos,
 				pkgData,
 				uniquePkgQNames,
@@ -510,7 +494,7 @@ func processITypeObj(
 		uniquePkgQNames[pkgItem.Package] = append(uniquePkgQNames[pkgItem.Package], getQName(newItem))
 	}
 
-	return
+	return newItem
 }
 
 // fillInTemplate fills in the template with the given ORM package data
@@ -587,7 +571,7 @@ func normalizeName(name string) (newName string) {
 		newName += "_"
 	}
 
-	return
+	return newName
 }
 
 // getQName returns the qname of the object

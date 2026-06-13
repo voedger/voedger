@@ -56,6 +56,7 @@ type (
 
 // 1 asyncActualizer per each projector per each partition
 type asyncActualizer struct {
+	plogBatch                 // [50]plogEvent
 	conf                      AsyncActualizerConf
 	projectorQName            appdef.QName
 	pipeline                  pipeline.IAsyncPipeline
@@ -64,7 +65,6 @@ type asyncActualizer struct {
 	n10nWatchChannelCtx       context.Context
 	cancelN10NWatchChannelCtx context.CancelCauseFunc
 	projErrState              int32 // 0 - no error, 1 - error
-	plogBatch                       // [50]plogEvent
 	appParts                  appparts.IAppPartitions
 	retrierCfg                retrier.Config
 	channelCleanup            func()
@@ -188,7 +188,6 @@ func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 	p.state = stateprovide.ProvideAsyncActualizerStateFactory()(
 		vvmCtx,
 		p.borrowedAppStructs,
-		state.SimplePartitionIDFunc(a.conf.PartitionID),
 		p.WSIDProvider,
 		func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
 			a.conf.Broker.Update(in10n.ProjectionKey{
@@ -247,7 +246,7 @@ func (a *asyncActualizer) keepReading(ctx context.Context) error {
 	if err := a.readPlogToTheEnd(ctx); err != nil {
 		return err
 	}
-	a.conf.Broker.WatchChannel(a.n10nWatchChannelCtx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {
+	a.conf.Broker.WatchChannel(a.n10nWatchChannelCtx, a.conf.channel, func(_ in10n.ProjectionKey, offset istructs.Offset) {
 		if a.offset < offset {
 			if err := a.readPlogToOffset(a.n10nWatchChannelCtx, offset); err != nil {
 				a.cancelN10NWatchChannelCtx(err)
@@ -294,7 +293,7 @@ func (a *asyncActualizer) readPlogByBatches(ctx context.Context, readBatch readP
 				return err
 			}
 			if ctx.Err() != nil {
-				return nil // canceled
+				return nil //nolint:nilerr // canceled
 			}
 		}
 	}
@@ -553,7 +552,7 @@ func (p *asyncProjector) savePosition() error {
 }
 func (p *asyncProjector) flush() (err error) {
 	if p.pLogOffset == istructs.NullOffset {
-		return
+		return nil
 	}
 	defer func() {
 		p.pLogOffset = istructs.NullOffset
@@ -561,8 +560,8 @@ func (p *asyncProjector) flush() (err error) {
 
 	timeToSavePosition := time.Since(p.lastSave) >= p.flushPositionInterval
 	if p.acceptedSinceSave || timeToSavePosition {
-		if err = p.savePosition(); err != nil {
-			return
+		if err := p.savePosition(); err != nil {
+			return err
 		}
 	}
 	_, err = p.state.ApplyIntents()

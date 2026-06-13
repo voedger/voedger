@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/processors"
 
 	"github.com/voedger/voedger/pkg/appparts"
@@ -21,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -58,7 +58,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hs := newReusableHostState(vvmCtx, secretReader)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
-				pipeline.WireFunc("applyRecords", func(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+				pipeline.WireFunc("applyRecords", func(_ context.Context, cmd *cmdWorkpiece) (err error) {
 					if cmd.reapplier != nil {
 						err = cmd.reapplier.ApplyRecords()
 					} else {
@@ -84,7 +84,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 							return err
 						}),
 					),
-					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+					pipeline.ForkBranch(pipeline.NewSyncOp(func(_ context.Context, cmd *cmdWorkpiece) (err error) {
 						if cmd.reapplier != nil {
 							err = cmd.reapplier.PutWLog()
 						} else {

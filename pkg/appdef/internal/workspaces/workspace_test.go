@@ -332,7 +332,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	testADB := func() appdef.IAppDefBuilder {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		for idx := 0; idx < wsCount; idx++ {
+		for idx := range wsCount {
 			ws := adb.AddWorkspace(wsName(idx))
 			anc := testAncestors[idx].anc
 			if len(anc) > 0 {
@@ -392,7 +392,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		}
 		for wsIdx, test := range tests {
 			ws := app.Workspace(wsName(wsIdx))
-			for a := 0; a < wsCount; a++ {
+			for a := range wsCount {
 				want := slices.Contains(test.inherits, a)
 				got := ws.Inherits(wsName(a))
 				require.Equal(want, got, "unexpected inheritance for «%v» from «%v»: want %v, got: %v", ws, wsName(a), want, got)
@@ -403,7 +403,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	})
 
 	t.Run("should be correspondence between Ancestors() and Inherits()", func(t *testing.T) {
-		for idx := 0; idx < wsCount; idx++ {
+		for idx := range wsCount {
 			ws := app.Workspace(wsName(idx))
 			for _, a := range ws.Ancestors() {
 				require.True(ws.Inherits(a.QName()), "%v.Inherits(%v) returns false for ancestor workspace", ws, a.QName())
@@ -426,7 +426,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 		}
 		for wsIdx, test := range tests {
 			ws := app.Workspace(wsName(wsIdx))
-			for o := 0; o < wsCount; o++ {
+			for o := range wsCount {
 				want := slices.Contains(test.objects, o)
 				obj := appdef.Object(ws.Type, objName(o))
 				got := obj != nil
@@ -441,7 +441,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 	})
 
 	t.Run("should be ok to iterate types", func(t *testing.T) {
-		for wsIdx := 0; wsIdx < wsCount; wsIdx++ {
+		for wsIdx := range wsCount {
 			ws := app.Workspace(wsName(wsIdx))
 			types := ws.Types()
 			for _, a := range ws.Ancestors() {
@@ -504,7 +504,7 @@ func Test_WorkspaceInheritance(t *testing.T) {
 			}
 
 			for wsIdx, test := range tests {
-				for a := 0; a < wsCount; a++ {
+				for a := range wsCount {
 					anc := wsName(a)
 
 					adb := testADB()
@@ -551,7 +551,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 	testADB := func() appdef.IAppDefBuilder {
 		adb := builder.New()
 		adb.AddPackage("test", "test.com/test")
-		for i := 0; i < wsCount; i++ {
+		for i := range wsCount {
 			ws := adb.AddWorkspace(wsName(i))
 			_ = ws.AddObject(objName(i))
 		}
@@ -577,7 +577,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 		app = a
 	})
 
-	t.Run("should be ok to to read workspace usage", func(t *testing.T) {
+	t.Run("should be ok to read workspace usage", func(t *testing.T) {
 		for idx, test := range testUses {
 			ws := app.Workspace(wsName(idx))
 			want := make([]appdef.QName, len(test.use))
@@ -597,7 +597,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 		for idx, test := range testUses {
 			ws := app.Workspace(wsName(idx))
 			t.Run("should be ok to find used workspaces by Type()", func(t *testing.T) {
-				for u := 0; u < wsCount; u++ {
+				for u := range wsCount {
 					used := wsName(u)
 					got := ws.Type(used)
 					if slices.Contains(test.use, u) {
@@ -610,7 +610,7 @@ func Test_WorkspaceUsage(t *testing.T) {
 			})
 			t.Run("should be ok to range used workspaces by Types()", func(t *testing.T) {
 				wsTypes := ws.Types()
-				for u := 0; u < wsCount; u++ {
+				for u := range wsCount {
 					usedWs := app.Type(wsName(u))
 					if slices.Contains(test.use, u) {
 						require.Contains(wsTypes, usedWs, "(%v).Types() should contain %v", ws, usedWs)

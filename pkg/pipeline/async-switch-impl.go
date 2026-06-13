@@ -8,9 +8,9 @@ package pipeline
 import "context"
 
 type asyncSwitchOperator struct {
+	AsyncNOOP
 	switchLogic ISwitch
 	branches    map[string]IAsyncPipeline
-	AsyncNOOP
 }
 
 func AsyncSwitchOperator(switchLogic ISwitch, firstBranch AsyncSwitchOperatorOptionFunc, otherBranches ...AsyncSwitchOperatorOptionFunc) IAsyncOperator {

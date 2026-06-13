@@ -46,7 +46,7 @@ func (a *Application) read(name appdef.AppQName, app appdef.IAppDef) {
 	}
 }
 
-func (a Application) pkg(name string) *Package {
+func (a *Application) pkg(name string) *Package {
 	return a.Packages[name]
 }
 

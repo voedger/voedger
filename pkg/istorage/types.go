@@ -16,6 +16,7 @@ type AppStorageDesc struct {
 
 type AppStorageStatus int
 
+//nolint recvcheck
 type SafeAppName struct {
 	name string
 }

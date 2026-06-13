@@ -33,28 +33,26 @@ type recordFunc func(rec *recordType) error
 //	   — istructs.IPLogEvent,
 //	   — istructs.IWLogEvent
 type eventType struct {
-	appCfg    *AppConfigType
-	rawBytes  []byte
-	partition istructs.PartitionID
-	pLogOffs  istructs.Offset
-	ws        istructs.WSID
-	wLogOffs  istructs.Offset
-	name      appdef.QName
-	regTime   istructs.UnixMilli
-	sync      bool
-	device    istructs.ConnectedDeviceID
-	syncTime  istructs.UnixMilli
-	argObject objectType
-	argUnlObj objectType
-	cud       cudType
+	objcache.RefCounter // cache supports
+	appCfg              *AppConfigType
+	rawBytes            []byte
+	partition           istructs.PartitionID
+	pLogOffs            istructs.Offset
+	ws                  istructs.WSID
+	wLogOffs            istructs.Offset
+	name                appdef.QName
+	regTime             istructs.UnixMilli
+	sync                bool
+	device              istructs.ConnectedDeviceID
+	syncTime            istructs.UnixMilli
+	argObject           objectType
+	argUnlObj           objectType
+	cud                 cudType
 
 	// db event members
 	buildErr eventErrorType
 
 	buffer *bytespool.ByteBuffer
-
-	// cache supports
-	objcache.RefCounter
 
 	// read from db -> true, event is created by Builder -> false
 	isStored bool
@@ -140,7 +138,7 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 	return arg, argUnl, nil
 }
 
-// build build all event arguments and CUDs
+// build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
 	if ev.name == appdef.NullQName {
 		return validateError(ECode_EmptyTypeName, ErrNameMissed("empty event command name"))
@@ -195,10 +193,7 @@ func (ev *eventType) regenerateIDs(generator istructs.IIDGenerator) (err error) 
 		}
 	}
 
-	if err := ev.cud.regenerateIDs(generator); err != nil {
-		return err
-	}
-	return nil
+	return ev.cud.regenerateIDs(generator)
 }
 
 // Sets specified error as build event error
@@ -268,15 +263,15 @@ func (ev *eventType) CUDBuilder() istructs.ICUD {
 
 // istructs.IRawEventBuilder.BuildRawEvent
 func (ev *eventType) BuildRawEvent() (raw istructs.IRawEvent, err error) {
-	if err = ev.build(); err != nil {
+	if err := ev.build(); err != nil {
 		return ev, err
 	}
 
-	if err = validateEvent(ev); err != nil {
+	if err := validateEvent(ev); err != nil {
 		return ev, err
 	}
 
-	if err = ev.appCfg.app.records.validEvent(ev); err != nil {
+	if err := ev.appCfg.app.records.validEvent(ev); err != nil {
 		return ev, err
 	}
 
@@ -399,9 +394,8 @@ func makeCUD(appCfg *AppConfigType) cudType {
 
 // applyRecs call store callback func for each record
 func (cud *cudType) applyRecs(load, store recordFunc) (err error) {
-
 	for _, rec := range cud.creates {
-		if err = store(rec); err != nil {
+		if err := store(rec); err != nil {
 			return err
 		}
 	}
@@ -412,14 +406,14 @@ func (cud *cudType) applyRecs(load, store recordFunc) (err error) {
 			// It is necessary to:
 			//	- load the existing record from the storage and
 			// 	- rebuild the result with changes
-			if err = load(&rec.originRec); err != nil {
+			if err := load(&rec.originRec); err != nil {
 				return err
 			}
-			if err = rec.build(); err != nil {
+			if err := rec.build(); err != nil {
 				return err
 			}
 		}
-		if err = store(&rec.result); err != nil {
+		if err := store(&rec.result); err != nil {
 			return err
 		}
 	}
@@ -430,13 +424,13 @@ func (cud *cudType) applyRecs(load, store recordFunc) (err error) {
 // build builds creates and updates and returns error if occurs
 func (cud *cudType) build() (err error) {
 	for _, rec := range cud.creates {
-		if err = rec.build(); err != nil {
+		if err := rec.build(); err != nil {
 			return err
 		}
 	}
 
 	for _, rec := range cud.updates {
-		if err = rec.build(); err != nil {
+		if err := rec.build(); err != nil {
 			return err
 		}
 	}
@@ -538,20 +532,19 @@ func regenerateIDsInUpdateRecord(rec *updateRecType, newIDs newIDsPlanType) (err
 
 // Regenerates all raw IDs to storage IDs
 func (cud *cudType) regenerateIDs(generator istructs.IIDGenerator) error {
-
 	newIDs, err := cud.regenerateIDsPlan(generator)
 	if err != nil {
 		return err
 	}
 
 	for _, rec := range cud.creates {
-		if err = regenerateIDsInRecord(rec, newIDs); err != nil {
+		if err := regenerateIDsInRecord(rec, newIDs); err != nil {
 			return err
 		}
 	}
 
 	for _, rec := range cud.updates {
-		if err = regenerateIDsInUpdateRecord(rec, newIDs); err != nil {
+		if err := regenerateIDsInUpdateRecord(rec, newIDs); err != nil {
 			return err
 		}
 	}
@@ -626,14 +619,13 @@ func newUpdateRec(appCfg *AppConfigType, rec istructs.IRecord) updateRecType {
 
 // build builds record changes and applies them to result record. If no errors then builds result record
 func (upd *updateRecType) build() (err error) {
-
 	upd.result.copyFrom(&upd.originRec)
 
 	if upd.changes.QName() == appdef.NullQName {
 		return nil
 	}
 
-	if err = upd.changes.build(); err != nil {
+	if err := upd.changes.build(); err != nil {
 		return err
 	}
 
@@ -752,7 +744,7 @@ func (o *objectType) find(visit func(*objectType) bool) *objectType {
 func (o *objectType) forEach(cb func(c *objectType) error) (err error) {
 	if err = cb(o); err == nil {
 		for _, e := range o.child {
-			if err = e.forEach(cb); err != nil {
+			if err := e.forEach(cb); err != nil {
 				break
 			}
 		}
@@ -947,7 +939,7 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 				c.FillFromJSON(childData)
 			}
 		default:
-			o.collectError(ErrWrongType(`%#T for field "%s" with value %v`, v, n, v))
+			o.collectError(ErrWrongType("%#T for field %q with value %v", v, n, v))
 		}
 	}
 }

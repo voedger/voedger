@@ -35,12 +35,11 @@ func newInitCmd(params *vpmParams) *cobra.Command {
 		Use:   "init module-path",
 		Short: "initialize a new package",
 		Args:  exactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(*cobra.Command, []string) (err error) {
 			return initPackage(params.Dir, params.ModulePath)
 		},
 	}
 	return cmd
-
 }
 
 func initPackage(dir, modulePath string) error {
@@ -158,11 +157,7 @@ func createPackagesGen(imports []string, dir, modulePath string, recreate bool) 
 		return err
 	}
 
-	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, filesu.FileMode_DefaultForFile); err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, filesu.FileMode_DefaultForFile)
 }
 
 func execGoGet(goModDir, dependencyToGet string) error {

@@ -24,7 +24,7 @@ func Provide(groups []ChannelGroup) (bus iprocbus.IProcBus) {
 	res := &implIProcBus{make([][]iprocbus.ServiceChannel, len(groups))}
 	for i, group := range groups {
 		res.chans[i] = make([]iprocbus.ServiceChannel, group.NumChannels)
-		for j := uint(0); j < group.NumChannels; j++ {
+		for j := range group.NumChannels {
 			res.chans[i][j] = make(iprocbus.ServiceChannel, group.ChannelBufferSize)
 		}
 	}

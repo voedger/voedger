@@ -18,7 +18,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/filesu"
-	"golang.org/x/term"
 )
 
 //go:embed scripts/drafts/*
@@ -39,13 +38,11 @@ func selectIndicator() []string {
 	indicators3 := []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
 
 	indicators := [][]string{indicators1, indicators2, indicators3}
-	// nolint
-	randomIndex := rand.Intn(len(indicators))
+	randomIndex := rand.Intn(len(indicators)) // nolint
 	return indicators[randomIndex]
 }
 
 func showProgress(done chan bool) {
-
 	if len(indicator) == 0 {
 		indicator = selectIndicator()
 	}
@@ -71,12 +68,10 @@ func verbose() bool {
 		return true
 	}
 	if currentCmd != nil {
-
 		b, err := currentCmd.Flags().GetBool("verbose")
 		return b && err == nil
 	}
 	return false
-
 }
 
 func trace() bool {
@@ -85,11 +80,9 @@ func trace() bool {
 		return b && err == nil
 	}
 	return false
-
 }
 
 func (se *scriptExecuterType) run(scriptName string, args ...string) error {
-
 	var pExec *exec.PipedExec
 
 	scriptDir := filepath.Dir(scriptName)
@@ -146,30 +139,20 @@ func newScriptExecuter(sshKey string, outputPrefix string) *scriptExecuterType {
 	return &scriptExecuterType{sshKeyPath: sshKey, outputPrefix: outputPrefix}
 }
 
-// nolint
-func getEnvValue1(key string) string {
-	value, _ := os.LookupEnv(key)
-	return value
-}
-
 func updateTemplateScripts() error {
-
 	cluster := newCluster()
 	if err := cluster.updateTemplateFile(filepath.Join("alertmanager", "config.yml")); err != nil {
 		return err
 	}
 
-	if err := cluster.updateTemplateFile(filepath.Join("ce", "alertmanager", "config.yml")); err != nil {
-		return err
-	}
-
-	return nil
+	return cluster.updateTemplateFile(filepath.Join("ce", "alertmanager", "config.yml"))
 }
 
 func prepareScripts(scriptFileNames ...string) error {
-
-	// nolint
-	os.Chdir(scriptsTempDir)
+	if err := os.Chdir(scriptsTempDir); err != nil {
+		// notest
+		return err
+	}
 
 	err := createScriptsTempDir()
 	if err != nil {
@@ -187,20 +170,7 @@ func prepareScripts(scriptFileNames ...string) error {
 	return updateTemplateScripts()
 }
 
-// nolint
-func inputPassword(pass *string) error {
-
-	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
-	if err == nil {
-		*pass = string(bytePassword)
-		return nil
-	}
-	return err
-}
-
-// nolint
 func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
-
 	err := createScriptsTempDir()
 	if err != nil {
 		return err
@@ -250,9 +220,5 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 		return err
 	}
 
-	if err = os.WriteFile(destFilename, output.Bytes(), filesu.FileMode_DefaultForFile); err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(destFilename, output.Bytes(), filesu.FileMode_DefaultForFile)
 }

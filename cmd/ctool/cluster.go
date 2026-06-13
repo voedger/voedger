@@ -70,7 +70,6 @@ func newCluster() *clusterType {
 
 	// Preparation of a configuration file for Dry Run mode
 	if cluster.dryRun {
-
 		dryRunDir := filepath.Join(dir, dryRunDir)
 		exists, err := filesu.Exists(dryRunDir)
 		if err != nil {
@@ -182,7 +181,8 @@ func (n *nodeType) address() string {
 
 // nolint
 func (n *nodeType) nodeName() string {
-	if n.cluster.Edition == clusterEditionN5 {
+	switch n.cluster.Edition {
+	case clusterEditionN5:
 		if n.cluster.SubEdition == clusterSubEditionSE3 {
 			return fmt.Sprintf("node-%d", n.idx)
 		} else {
@@ -202,19 +202,19 @@ func (n *nodeType) nodeName() string {
 
 			}
 		}
-
-	} else if n.cluster.Edition == clusterEditionN1 {
+	case clusterEditionN1:
 		return n1NodeName
-	} else {
+	default:
 		return "node"
 	}
 }
 
 // nolint
 func (n *nodeType) hostNames() []string {
-	if n.cluster.SubEdition == clusterSubEditionSE5 {
+	switch n.cluster.SubEdition {
+	case clusterSubEditionSE5:
 		return []string{n.nodeName()}
-	} else if n.cluster.SubEdition == clusterSubEditionSE3 {
+	case clusterSubEditionSE3:
 		switch n.idx {
 		case 1:
 			return []string{"app-node-1", "db-node-1"}
@@ -224,7 +224,6 @@ func (n *nodeType) hostNames() []string {
 			return []string{"db-node-3"}
 		}
 	}
-
 	return []string{n.nodeName()}
 }
 
@@ -362,10 +361,7 @@ func (a *cmdArgsType) replace(sourceValue, destValue string) {
 }
 
 func (c *cmdType) apply(cluster *clusterType) error {
-
-	var err error
-
-	if err = cluster.validate(); err != nil {
+	if err := cluster.validate(); err != nil {
 		loggerError(err.Error)
 		return err
 	}
@@ -375,7 +371,7 @@ func (c *cmdType) apply(cluster *clusterType) error {
 	var wg sync.WaitGroup
 	wg.Add(len(cluster.Nodes))
 
-	for i := 0; i < len(cluster.Nodes); i++ {
+	for i := range len(cluster.Nodes) {
 		go func(node *nodeType) {
 			defer wg.Done()
 			if err := node.nodeControllerFunction(); err != nil {
@@ -399,7 +395,6 @@ func (c *cmdType) clear() {
 }
 
 func (c *cmdType) isEmpty() bool {
-
 	return c.Kind == "" && len(c.Args) == 0
 }
 
@@ -429,7 +424,6 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // init SE [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
 // nolint
 func validateInitCmd(cmd *cmdType, _ *clusterType) error {
-
 	if len(cmd.Args) == 0 {
 		return ErrMissingCommandArguments
 	}
@@ -463,7 +457,6 @@ func validateUpgradeCmd(_ *cmdType, _ *clusterType) error {
 }
 
 func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
-
 	if len(cmd.Args) == 0 {
 		return ErrMissingCommandArguments
 	}
@@ -509,7 +502,6 @@ func validateBackupCmd(cmd *cmdType, cluster *clusterType) error {
 }
 
 func validateAcmeCmd(cmd *cmdType, cluster *clusterType) error {
-
 	if len(cmd.Args) == 0 {
 		return ErrMissingCommandArguments
 	}
@@ -526,11 +518,9 @@ func validateAcmeCmd(cmd *cmdType, cluster *clusterType) error {
 	default:
 		return ErrUnknownCommand
 	}
-
 }
 
 func validateAcmeAddCmd(cmd *cmdType, cluster *clusterType) error {
-
 	if cluster.Draft {
 		return ErrClusterConfNotFound
 	}
@@ -543,7 +533,6 @@ func validateAcmeAddCmd(cmd *cmdType, cluster *clusterType) error {
 }
 
 func validateAcmeRemoveCmd(cmd *cmdType, cluster *clusterType) error {
-
 	if cluster.Draft {
 		return ErrClusterConfNotFound
 	}
@@ -586,8 +575,8 @@ func (a *acmeType) domains() string {
 
 // adds new domains to the ACME Domains list from a string "Domain1,Domain2,Domain3"
 func (a *acmeType) addDomains(domainsStr string) {
-	domains := strings.Split(domainsStr, comma)
-	for _, d := range domains {
+	domains := strings.SplitSeq(domainsStr, comma)
+	for d := range domains {
 		if !strings.Contains(strings.Join(a.Domains, comma), d) {
 			a.Domains = append(a.Domains, d)
 		}
@@ -596,8 +585,8 @@ func (a *acmeType) addDomains(domainsStr string) {
 
 // removes domains from the ACME Domains list from a string "Domain1,Domain2,Domain3"
 func (a *acmeType) removeDomains(domainsStr string) {
-	domains := strings.Split(domainsStr, comma)
-	for _, d := range domains {
+	domains := strings.SplitSeq(domainsStr, comma)
+	for d := range domains {
 		for i, v := range a.Domains {
 			if v == d {
 				a.Domains = append(a.Domains[:i], a.Domains[i+1:]...)
@@ -613,7 +602,7 @@ type alertType struct {
 type clusterType struct {
 	configFileName        string
 	sshKey                string
-	exists                bool //the cluster is loaded from "cluster.json" at the start of ctool
+	exists                bool // the cluster is loaded from "cluster.json" at the start of ctool
 	dryRun                bool
 	Edition               string
 	SubEdition            string `json:"SubEdition,omitempty"`
@@ -636,7 +625,7 @@ func (c *clusterType) hosts() map[string]string {
 	hosts := make(map[string]string)
 	var addr string
 	for _, n := range c.Nodes {
-		for i := 0; i < len(n.hostNames()); i++ {
+		for i := range len(n.hostNames()) {
 			if n.DesiredNodeState != nil && len(n.DesiredNodeState.Address) > 0 {
 				addr = n.DesiredNodeState.Address
 			} else {
@@ -688,7 +677,6 @@ func equalIPs(ip1, ip2 string) bool {
 }
 
 func (c *clusterType) nodeByHost(addrOrHostName string) *nodeType {
-
 	if c.SubEdition == clusterSubEditionSE3 {
 		switch addrOrHostName {
 		case "app-node-1", "db-node-1":
@@ -760,7 +748,6 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 			if err := hostIsAvailable(c, newAddr); err != nil {
 				return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
 			}
-
 		}
 
 		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))
@@ -793,14 +780,13 @@ func (c *clusterType) updateNodeIndexes() {
 
 // TODO: Filename should be an argument
 func (c *clusterType) saveToJSON() error {
-
 	mu.Lock()
 	defer mu.Unlock()
 
 	if c.Cmd != nil && c.Cmd.isEmpty() {
 		c.Cmd = nil
 	}
-	for i := 0; i < len(c.Nodes); i++ {
+	for i := range len(c.Nodes) {
 		if c.Nodes[i].DesiredNodeState != nil && c.Nodes[i].DesiredNodeState.isEmpty() {
 			c.Nodes[i].DesiredNodeState = nil
 		}
@@ -822,12 +808,7 @@ func (c *clusterType) saveToJSON() error {
 
 // The address was replaced in the cluster
 func (c *clusterType) addressInReplacedList(address string) bool {
-	for _, value := range c.ReplacedAddresses {
-		if value == address {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.ReplacedAddresses, address)
 }
 
 func (c *clusterType) clusterConfigFileExists() (bool, error) {
@@ -835,13 +816,12 @@ func (c *clusterType) clusterConfigFileExists() (bool, error) {
 }
 
 func (c *clusterType) loadFromJSON() error {
-
 	defer c.updateNodeIndexes()
 	defer func() {
 		if c.Cmd == nil {
 			c.Cmd = newCmd("", []string{})
 		}
-		for i := 0; i < len(c.Nodes); i++ {
+		for i := range len(c.Nodes) {
 			if c.Nodes[i].ActualNodeState == nil {
 				c.Nodes[i].ActualNodeState = newNodeState("", "")
 			}
@@ -870,7 +850,7 @@ func (c *clusterType) loadFromJSON() error {
 		}
 	}
 
-	for i := 0; i < len(c.Nodes); i++ {
+	for i := range len(c.Nodes) {
 		c.Nodes[i].cluster = c
 	}
 
@@ -889,7 +869,7 @@ func (c *clusterType) loadFromJSON() error {
 		c.Nodes[0].NodeRole = nrN1Node
 	case clusterEditionSE:
 		if c.SubEdition == clusterSubEditionSE3 {
-			err = fmt.Errorf("the configuration of the SE3 cluster is not supported. You must use ctool version 0.0.6")
+			err = errors.New("the configuration of the SE3 cluster is not supported. You must use ctool version 0.0.6")
 		} else {
 			c.Edition = clusterEditionN5
 			c.SubEdition = ""
@@ -901,7 +881,6 @@ func (c *clusterType) loadFromJSON() error {
 
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
-
 	setEnv := "Set env %s = %s"
 
 	logger.Verbose(fmt.Sprintf(setEnv, envVoedgerNodeSSHPort, c.SSHPort))
@@ -928,7 +907,7 @@ func (c *clusterType) setEnv() error {
 		}
 	}
 
-	if /*c.Edition == clusterEditionN1 &&*/ len(c.Nodes) == 1 {
+	if /* c.Edition == clusterEditionN1 && */ len(c.Nodes) == 1 {
 		var port string
 
 		if c.Acme != nil && c.Acme.domains() != "" {
@@ -953,7 +932,6 @@ func (c *clusterType) setEnv() error {
 
 // nolint
 func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error {
-
 	defer c.updateNodeIndexes()
 
 	// nolint
@@ -1004,10 +982,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 }
 
 // nolint
-func (c *clusterType) validate() error {
-
-	var err error
-
+func (c *clusterType) validate() (err error) {
 	for _, n := range c.Nodes {
 		if n.DesiredNodeState != nil && len(n.DesiredNodeState.Address) > 0 && net.ParseIP(n.DesiredNodeState.Address) == nil {
 			err = errors.Join(err, errors.New(n.DesiredNodeState.Address+" "+ErrInvalidIpAddress.Error()))
@@ -1067,7 +1042,6 @@ func (c *clusterType) existsNodeError() bool {
 }
 
 func (c *clusterType) checkVersion() error {
-
 	loggerInfo("Ctool version: ", version)
 
 	var clusterVersion string
@@ -1114,5 +1088,4 @@ func (c *clusterType) needUpgrade() (bool, error) {
 	}
 
 	return false, nil
-
 }

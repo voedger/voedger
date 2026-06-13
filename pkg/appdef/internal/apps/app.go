@@ -68,7 +68,7 @@ func NewAppDefBuilder(app *AppDef) *AppDefBuilder {
 	}
 }
 
-func (ab AppDefBuilder) AppDef() appdef.IAppDef { return ab.app }
+func (ab *AppDefBuilder) AppDef() appdef.IAppDef { return ab.app }
 
 func (ab *AppDefBuilder) Build() (appdef.IAppDef, error) {
 	if err := ab.app.build(); err != nil {

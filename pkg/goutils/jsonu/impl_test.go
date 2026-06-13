@@ -31,7 +31,7 @@ func TestJprintf(t *testing.T) {
 	t.Run("escapes string args without adding outer quotes", func(t *testing.T) {
 		value := "quote: \", slash: \\, newline: \n, vtab: \v, nul: \x00"
 
-		got := Jprintf(`{"value":"%s"}`, value)
+		got := Jprintf(`{"value":%q}`, value)
 
 		var decoded struct {
 			Value string `json:"value"`
@@ -41,7 +41,7 @@ func TestJprintf(t *testing.T) {
 	})
 
 	t.Run("escapes stringer args using String result", func(t *testing.T) {
-		got := Jprintf(`{"value":"%s"}`, testStringer{value: `a"b\c`})
+		got := Jprintf(`{"value":%q}`, testStringer{value: `a"b\c`})
 
 		require.JSONEq(`{"value":"a\"b\\c"}`, got)
 	})
@@ -59,7 +59,7 @@ func TestJprintf(t *testing.T) {
 	})
 
 	t.Run("escapes error args using Error result", func(t *testing.T) {
-		got := Jprintf(`{"err":"%s"}`, errors.New(`bad "quote" and \slash`))
+		got := Jprintf(`{"err":%q}`, errors.New(`bad "quote" and \slash`))
 
 		require.JSONEq(`{"err":"bad \"quote\" and \\slash"}`, got)
 	})
@@ -103,7 +103,7 @@ func TestJprintf(t *testing.T) {
 	})
 
 	t.Run("escapes named string args", func(t *testing.T) {
-		got := Jprintf(`{"value":"%s"}`, testString(`a"b`))
+		got := Jprintf(`{"value":%q}`, testString(`a"b`))
 
 		require.JSONEq(`{"value":"a\"b"}`, got)
 	})
@@ -115,43 +115,43 @@ func TestJprintf(t *testing.T) {
 	})
 
 	t.Run("keeps stringer args compatible with non-string verbs", func(t *testing.T) {
-		got := Jprintf(`{"state":%d,"name":"%s"}`, testIntStringer(2), testStringer{value: `a"b`})
+		got := Jprintf(`{"state":%d,"name":%q}`, testIntStringer(2), testStringer{value: `a"b`})
 
 		require.JSONEq(`{"state":2,"name":"a\"b"}`, got)
 	})
 
 	t.Run("empty string produces empty content", func(t *testing.T) {
-		require.JSONEq(`{"v":""}`, Jprintf(`{"v":"%s"}`, ""))
+		require.JSONEq(`{"v":""}`, Jprintf(`{"v":%q}`, ""))
 	})
 
 	t.Run("preserves unicode characters", func(t *testing.T) {
-		require.JSONEq(`{"v":"héllo🙂"}`, Jprintf(`{"v":"%s"}`, "héllo🙂"))
+		require.JSONEq(`{"v":"héllo🙂"}`, Jprintf(`{"v":%q}`, "héllo🙂"))
 	})
 
 	t.Run("does not escape forward slash", func(t *testing.T) {
-		require.JSONEq(`{"v":"a/b"}`, Jprintf(`{"v":"%s"}`, "a/b"))
+		require.JSONEq(`{"v":"a/b"}`, Jprintf(`{"v":%q}`, "a/b"))
 	})
 
 	t.Run("escapes html-sensitive characters", func(t *testing.T) {
-		require.JSONEq(`{"v":"\u003cb\u003e\u0026\u003c/b\u003e"}`, Jprintf(`{"v":"%s"}`, "<b>&</b>"))
+		require.JSONEq(`{"v":"\u003cb\u003e\u0026\u003c/b\u003e"}`, Jprintf(`{"v":%q}`, "<b>&</b>"))
 	})
 
 	t.Run("escapes line and paragraph separators", func(t *testing.T) {
-		require.JSONEq(`{"v":"a\u2028b\u2029c"}`, Jprintf(`{"v":"%s"}`, "a\u2028b\u2029c"))
+		require.JSONEq(`{"v":"a\u2028b\u2029c"}`, Jprintf(`{"v":%q}`, "a\u2028b\u2029c"))
 	})
 
 	t.Run("escapes control characters", func(t *testing.T) {
 		require.JSONEq(`{"v":"\u0000\u0001\b\t\n\r\u001f"}`,
-			Jprintf(`{"v":"%s"}`, "\x00\x01\x08\x09\x0a\x0d\x1f"))
+			Jprintf(`{"v":%q}`, "\x00\x01\x08\x09\x0a\x0d\x1f"))
 	})
 
 	t.Run("replaces invalid utf-8 with replacement character", func(t *testing.T) {
-		require.JSONEq(`{"v":"a\ufffdb"}`, Jprintf(`{"v":"%s"}`, "a\xffb"))
+		require.JSONEq(`{"v":"a\ufffdb"}`, Jprintf(`{"v":%q}`, "a\xffb"))
 	})
 
 	t.Run("formats multiple mixed args", func(t *testing.T) {
 		require.JSONEq(`{"s":"a\"b","n":42,"b":true,"f":1.5}`,
-			Jprintf(`{"s":"%s","n":%d,"b":%t,"f":%g}`, `a"b`, 42, true, 1.5))
+			Jprintf(`{"s":%q,"n":%d,"b":%t,"f":%g}`, `a"b`, 42, true, 1.5))
 	})
 
 	t.Run("escapes explicitly indexed args", func(t *testing.T) {
@@ -213,7 +213,7 @@ func TestJprintf(t *testing.T) {
 	})
 
 	t.Run("%s in README example round-trips correctly", func(t *testing.T) {
-		got := Jprintf(`{"qname":"%s","name":"%s","count":%d}`, qname, name, 3)
+		got := Jprintf(`{"qname":%q,"name":%q,"count":%d}`, qname, name, 3)
 		var decoded readmePayload
 		require.NoError(json.Unmarshal([]byte(got), &decoded))
 		require.Equal("app.Doc", decoded.QName)
@@ -223,7 +223,7 @@ func TestJprintf(t *testing.T) {
 
 	t.Run("nil-typed pointer Stringer yields fmt PANIC placeholder", func(t *testing.T) {
 		var s *testStringer
-		got := Jprintf(`{"v":"%s"}`, s)
+		got := Jprintf(`{"v":%q}`, s)
 		require.Contains(got, "%!s(PANIC=")
 		require.Contains(got, "nil *testStringer pointer")
 	})
@@ -267,7 +267,7 @@ func TestJfprintf(t *testing.T) {
 	t.Run("escapes JSON-unsafe inputs", func(t *testing.T) {
 		require := require.New(t)
 		var b bytes.Buffer
-		_, err := Jfprintf(&b, `{"vtab":%q,"invalidUTF8":%q,"backslash":"%s"}`, "\v", "\xff\xfe", `\`)
+		_, err := Jfprintf(&b, `{"vtab":%q,"invalidUTF8":%q,"backslash":%q}`, "\v", "\xff\xfe", `\`)
 		require.NoError(err)
 		var decoded map[string]string
 		require.NoError(json.Unmarshal(b.Bytes(), &decoded))

@@ -36,7 +36,6 @@ func validateEvent(ev *eventType) error {
 //
 // For CUDs.Create() checks that IDs in sys.ParentID field and value in sys.Container are confirmable for target parent.
 func validateEventIDs(ev *eventType) error {
-
 	ids, err := validateObjectIDs(&ev.argObject, !ev.Synced())
 
 	err = errors.Join(err,
@@ -202,14 +201,14 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]*rowType) (er
 						// CRecord «CRec: test.CRecord» has parent ID «1» refers to CDoc «test.CDoc», which has no container «Record»
 						validateError(ECode_InvalidRefRecordID,
 							ErrWrongRecordID("%v has parent ID «%d» refers to %v, which has no container «%s»", rec, parID, target, rec.Container())))
-					return
+					return err
 				}
 				if cont.QName() != rec.QName() {
 					err = errors.Join(err,
 						// CRecord «Record: test.CRecord» has parent ID «1» refers to CDoc «test.CDoc», which container «Record» has another QName «test.CRecord1»
 						validateError(ECode_InvalidRefRecordID,
 							ErrWrongRecordID("%v has parent ID «%d» refers to %s, which container «%s» has another QName «%s»", rec, parID, target, rec.Container(), cont.QName())))
-					return
+					return err
 				}
 			}
 		}
@@ -349,16 +348,13 @@ func validateRow(row *rowType) (err error) {
 					validateError(ECode_EmptyData, ErrFieldMissed(row, f)))
 				continue
 			}
-			if !f.IsSys() {
-				switch f.DataKind() {
-				case appdef.DataKind_RecordID:
-					if row.AsRecordID(f.Name()) == istructs.NullRecordID {
-						err = errors.Join(err,
-							// ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID value
-							validateError(ECode_InvalidRefRecordID,
-								ErrWrongRecordID("%v required ref field «%s» has NullRecordID value", row, f.Name())))
-					}
-				}
+			if !f.IsSys() &&
+				f.DataKind() == appdef.DataKind_RecordID &&
+				row.AsRecordID(f.Name()) == istructs.NullRecordID {
+				err = errors.Join(err,
+					// ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID value
+					validateError(ECode_InvalidRefRecordID,
+						ErrWrongRecordID("%v required ref field «%s» has NullRecordID value", row, f.Name())))
 			}
 		}
 	}

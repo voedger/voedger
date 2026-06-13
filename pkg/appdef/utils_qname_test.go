@@ -168,7 +168,7 @@ func TestBasicUsage_QName(t *testing.T) {
 	require.Equal("sale", qname.Pkg())
 	require.Equal("orders", qname.Entity())
 
-	require.Equal("sale.orders", fmt.Sprint(qname))
+	require.Equal("sale.orders", qname.String())
 
 	// Parse string
 
@@ -448,7 +448,7 @@ func TestBasicUsage_FullQName(t *testing.T) {
 	require.Equal(pkgPath, fqn.PkgPath())
 	require.Equal(entity, fqn.Entity())
 
-	require.Equal(asString, fmt.Sprint(fqn))
+	require.Equal(asString, fqn.String())
 
 	// Parse string
 
@@ -700,7 +700,7 @@ func TestBasicUsage_AppQName(t *testing.T) {
 	require.Equal("registry", aqn.Name())
 	require.True(aqn.IsSys())
 
-	require.Equal("sys/registry", fmt.Sprint(aqn))
+	require.Equal("sys/registry", aqn.String())
 
 	// Parse string
 
@@ -869,6 +869,7 @@ func TestMustParseQNames(t *testing.T) {
 	}
 }
 
+//nolint:thelper
 func testJSONRoundtrip[T comparable, PT interface {
 	*T
 	UnmarshalText([]byte) error
@@ -928,6 +929,7 @@ func testJSONRoundtrip[T comparable, PT interface {
 	})
 }
 
+//nolint:thelper
 func testUnmarshalInvalidJSON[T comparable, PT interface {
 	*T
 	UnmarshalJSON([]byte) error

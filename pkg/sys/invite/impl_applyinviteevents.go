@@ -184,7 +184,7 @@ func handleApplyInvitation(event istructs.IPLogEvent, s istructs.IState, intents
 		EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(Field_Email),
 	)
 
-	if err = sendEmail(s, intents, smtpCfg,
+	if err := sendEmail(s, intents, smtpCfg,
 		event.ArgumentObject().AsString(field_EmailSubject),
 		event.ArgumentObject().AsString(Field_Email),
 		replacer.Replace(emailTemplate)); err != nil {
@@ -346,7 +346,7 @@ func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, 
 	emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 	replacer := strings.NewReplacer(EmailTemplatePlaceholder_Roles, event.ArgumentObject().AsString(Field_Roles))
 
-	if err = sendEmail(s, intents, smtpCfg,
+	if err := sendEmail(s, intents, smtpCfg,
 		event.ArgumentObject().AsString(field_EmailSubject),
 		svCDocInvite.AsString(Field_Email),
 		replacer.Replace(emailTemplate)); err != nil {
@@ -363,7 +363,7 @@ func handleApplyCancelAcceptedInvite(event istructs.IPLogEvent, s istructs.IStat
 		return err
 	}
 
-	if err = deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
+	if err := deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
 		return err
 	}
 	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
@@ -376,7 +376,7 @@ func handleApplyLeaveWorkspace(event istructs.IPLogEvent, s istructs.IState, svC
 		return err
 	}
 
-	if err = deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
+	if err := deactivateSubjectAndJoinedWorkspace(fed, appQName, event.Workspace(), token, svCDocInvite); err != nil {
 		return err
 	}
 	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,

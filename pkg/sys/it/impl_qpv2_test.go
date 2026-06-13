@@ -2484,7 +2484,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 	vit.SignIn(login1)
 
 	t.Run("Login", func(t *testing.T) {
-		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login1.Name, login1.Pwd)
+		body := fmt.Sprintf(`{"login": %q,"password": %q}`, login1.Name, login1.Pwd)
 		resp := vit.POST("api/v2/apps/test1/app1/auth/login", body)
 		require.Equal(200, resp.HTTPResp.StatusCode)
 		result := make(map[string]interface{})
@@ -2507,14 +2507,14 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 			{
 				bodies: []string{
 					`{"password": "pwd"}`,
-					fmt.Sprintf(`{"UnknownField": "%s","password": "pwd"}`, login1.Name),
+					fmt.Sprintf(`{"UnknownField": %q,"password": "pwd"}`, login1.Name),
 				},
 				expected: []string{`field is empty`, `Object «registry.IssuePrincipalTokenParams»`, `string-field «Login»`, `validate error code 4`},
 			},
 			{
 				bodies: []string{
 					`{"login": "pwd"}`,
-					fmt.Sprintf(`{"login": "%s","UnknownField": "pwd"}`, login1.Name),
+					fmt.Sprintf(`{"login": %q,"UnknownField": "pwd"}`, login1.Name),
 				},
 				expected: []string{`field is empty`, `Object «registry.IssuePrincipalTokenParams»`, `string-field «Password»`, `validate error code 4`},
 			},
@@ -2532,7 +2532,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 			},
 			{
 				bodies: []string{
-					fmt.Sprintf(`{"UnknownField": "%s","password": "%s"}`, login1.Name, "badpwd"),
+					fmt.Sprintf(`{"UnknownField": %q,"password": %q}`, login1.Name, "badpwd"),
 				},
 				expected: []string{`field is empty`, `Object «registry.IssuePrincipalTokenParams»`, `string-field «Login»`, `validate error code 4`},
 			},
@@ -2551,7 +2551,7 @@ func TestQueryProcessor2_AuthLogin(t *testing.T) {
 	})
 
 	t.Run("Login with incorrect password", func(t *testing.T) {
-		body := fmt.Sprintf(`{"login": "%s","password": "%s"}`, login1.Name, "badpwd")
+		body := fmt.Sprintf(`{"login": %q,"password": %q}`, login1.Name, "badpwd")
 		resp := vit.POST("api/v2/apps/test1/app1/auth/login", body, httpu.Expect401())
 		require.JSONEq(`{"status":401,"message":"login or password is incorrect"}`, resp.Body)
 	})

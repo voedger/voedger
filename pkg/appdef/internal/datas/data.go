@@ -60,15 +60,15 @@ func NewAnonymousData(ws appdef.IWorkspace, kind appdef.DataKind, anc appdef.QNa
 	return d
 }
 
-func (d Data) Ancestor() appdef.IData { return d.ancestor }
+func (d *Data) Ancestor() appdef.IData { return d.ancestor }
 
-func (d Data) Constraints(withInherited bool) map[appdef.ConstraintKind]appdef.IConstraint {
+func (d *Data) Constraints(withInherited bool) map[appdef.ConstraintKind]appdef.IConstraint {
 	if !withInherited || (d.ancestor == nil) || d.ancestor.IsSystem() {
 		return d.constraints
 	}
 
 	cc := make(map[appdef.ConstraintKind]appdef.IConstraint)
-	for a := &d; !a.IsSystem(); a = a.ancestor.(*Data) {
+	for a := d; !a.IsSystem(); a = a.ancestor.(*Data) {
 		for k, c := range a.constraints {
 			if _, ok := cc[k]; !ok {
 				cc[k] = c
@@ -78,9 +78,9 @@ func (d Data) Constraints(withInherited bool) map[appdef.ConstraintKind]appdef.I
 	return cc
 }
 
-func (d Data) DataKind() appdef.DataKind { return d.dataKind }
+func (d *Data) DataKind() appdef.DataKind { return d.dataKind }
 
-func (d Data) String() string {
+func (d *Data) String() string {
 	s := fmt.Sprintf("%s-data", d.DataKind().TrimString())
 	if n := d.QName(); n != appdef.NullQName {
 		s += fmt.Sprintf(" «%v»", n)
@@ -96,9 +96,7 @@ func (d *Data) addConstraints(cc ...appdef.IConstraint) {
 			panic(appdef.ErrIncompatible("constraint %v with data type «%v»", c, d))
 		}
 		switch c.Kind() {
-		case appdef.ConstraintKind_MinLen:
-			// no errors expected
-		case appdef.ConstraintKind_MaxLen:
+		case appdef.ConstraintKind_MinLen, appdef.ConstraintKind_MaxLen:
 			// no errors expected
 		case appdef.ConstraintKind_Enum:
 			ok := false
@@ -182,6 +180,7 @@ func (c DataConstraint) String() (s string) {
 		ellipsis = `…`
 	)
 
+	// nolint identical-switch-branches
 	switch c.kind {
 	case appdef.ConstraintKind_Pattern:
 		s = fmt.Sprintf("%s: `%v`", c.kind.TrimString(), c.value)

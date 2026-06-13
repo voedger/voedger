@@ -27,11 +27,11 @@ func FindOffsetsByTimeRange(from, till time.Time, idx appdef.QName, s istructs.I
 			if y < till.Year() || (y == till.Year() && yearDay <= till.YearDay()) {
 				lo = value.AsInt64(field_LastOffset)
 			}
-			return
+			return nil
 		})
 		if err != nil {
 			return 0, 0, err
 		}
 	}
-	return
+	return fo, lo, nil
 }

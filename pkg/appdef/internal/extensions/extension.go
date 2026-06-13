@@ -33,15 +33,15 @@ func MakeExtension(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind
 	}
 }
 
-func (ex Extension) Intents() appdef.IStorages { return ex.intents }
+func (ex *Extension) Intents() appdef.IStorages { return ex.intents }
 
-func (ex Extension) Name() string { return ex.name }
+func (ex *Extension) Name() string { return ex.name }
 
-func (ex Extension) Engine() appdef.ExtensionEngineKind { return ex.engine }
+func (ex *Extension) Engine() appdef.ExtensionEngineKind { return ex.engine }
 
-func (ex Extension) States() appdef.IStorages { return ex.states }
+func (ex *Extension) States() appdef.IStorages { return ex.states }
 
-func (ex Extension) String() string {
+func (ex *Extension) String() string {
 	// BuiltIn-function «test.func»
 	return fmt.Sprintf("%s-%v", ex.Engine().TrimString(), ex.Typ.String())
 }
@@ -50,7 +50,7 @@ func (ex Extension) String() string {
 //
 // # Returns error:
 //   - if storages (states or intents) contains unknown qname(s)
-func (ex Extension) Validate() error {
+func (ex *Extension) Validate() error {
 	return errors.Join(
 		ex.states.Validate(),
 		ex.intents.Validate(),
@@ -106,4 +106,4 @@ func (exb *ExtensionBuilder) SetName(name string) appdef.IExtensionBuilder {
 
 func (exb *ExtensionBuilder) States() appdef.IStoragesBuilder { return exb.states }
 
-func (exb ExtensionBuilder) String() string { return exb.Extension.String() }
+func (exb *ExtensionBuilder) String() string { return exb.Extension.String() }

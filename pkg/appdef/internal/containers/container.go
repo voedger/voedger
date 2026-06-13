@@ -42,15 +42,15 @@ func (cont *Container) Type() appdef.IStructure {
 	return cont.typ
 }
 
-func (cont Container) MaxOccurs() appdef.Occurs { return cont.maxOccurs }
+func (cont *Container) MaxOccurs() appdef.Occurs { return cont.maxOccurs }
 
-func (cont Container) MinOccurs() appdef.Occurs { return cont.minOccurs }
+func (cont *Container) MinOccurs() appdef.Occurs { return cont.minOccurs }
 
-func (cont Container) Name() string { return cont.name }
+func (cont *Container) Name() string { return cont.name }
 
-func (cont Container) QName() appdef.QName { return cont.qName }
+func (cont *Container) QName() appdef.QName { return cont.qName }
 
-func (cont Container) String() string {
+func (cont *Container) String() string {
 	return fmt.Sprintf("container «%s: %v»", cont.Name(), cont.QName())
 }
 
@@ -72,16 +72,16 @@ func MakeWithContainers(ws appdef.IWorkspace, typeKind appdef.TypeKind) WithCont
 	return cc
 }
 
-func (cc WithContainers) Container(name string) appdef.IContainer {
+func (cc *WithContainers) Container(name string) appdef.IContainer {
 	if c, ok := cc.containers[name]; ok {
 		return c
 	}
 	return nil
 }
 
-func (cc WithContainers) ContainerCount() int { return len(cc.containersOrdered) }
+func (cc *WithContainers) ContainerCount() int { return len(cc.containersOrdered) }
 
-func (cc WithContainers) Containers() []appdef.IContainer {
+func (cc *WithContainers) Containers() []appdef.IContainer {
 	return cc.containersOrdered
 }
 
