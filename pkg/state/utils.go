@@ -22,12 +22,12 @@ func ReadSecret(state istructs.IState, name string) (value string, err error) {
 	kb, err := state.KeyBuilder(sys.Storage_AppSecret, sys.Storage_AppSecret)
 	if err != nil {
 		// notest
-		return
+		return "", err
 	}
 	kb.PutString(sys.Storage_AppSecretField_Secret, name)
 	sv, err := state.MustExist(kb)
 	if err != nil {
-		return
+		return "", err
 	}
 	return sv.AsString(""), nil
 }

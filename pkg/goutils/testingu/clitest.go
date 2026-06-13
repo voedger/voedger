@@ -31,6 +31,7 @@ type CmdTestCase struct {
 type TestRunner interface {
 	Run(string, func(*testing.T)) bool
 	Helper()
+	Error(args ...any)
 	Errorf(format string, args ...any)
 }
 
@@ -61,7 +62,7 @@ func checkError(t TestRunner, expectedErr error, expectedErrPatterns []string, a
 	if expectedErr != nil || len(expectedErrPatterns) > 0 {
 		for _, expectedErrPattern := range expectedErrPatterns {
 			if actualErr == nil {
-				t.Errorf("error was not returned as expected")
+				t.Error("error was not returned as expected")
 				return
 			}
 			if expectedErr != nil && !errors.Is(actualErr, expectedErr) {
@@ -95,16 +96,15 @@ func checkOutput(t TestRunner, expectedPatterns []string, actual, outputTitle st
 // https://go.dev/play/p/Fzj1k7jul7z
 
 func CaptureStdoutStderr(f func() error) (stdout string, stderr string, err error) {
-
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		// notestdept
-		return
+		return "", "", err
 	}
 	stderrReader, stderrWriter, err := os.Pipe()
 	if err != nil {
 		// notestdept
-		return
+		return "", "", err
 	}
 
 	{
@@ -120,24 +120,20 @@ func CaptureStdoutStderr(f func() error) (stdout string, stderr string, err erro
 
 	wg := sync.WaitGroup{}
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		var b bytes.Buffer
-		defer wg.Done()
 		_, _ = io.Copy(&b, stdoutReader)
 		stdout = b.String()
-	}()
-	wg.Add(1)
-	go func() {
+	})
+	wg.Go(func() {
 		var b bytes.Buffer
-		defer wg.Done()
 		_, _ = io.Copy(&b, stderrReader)
 		stderr = b.String()
-	}()
+	})
 
 	err = f()
 	stderrWriter.Close()
 	stdoutWriter.Close()
 	wg.Wait()
-	return
+	return stdout, stderr, err
 }

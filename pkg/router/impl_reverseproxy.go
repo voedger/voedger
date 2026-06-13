@@ -40,11 +40,11 @@ func parseRoutes(routesURLs map[string]route, routes map[string]string, isRewrit
 // route domain : resellerportal.dev.untill.ru=http://resellerportal : https://resellerportal.dev.untill.ru/foo -> http://resellerportal/foo
 func (s *routerService) getRedirectMatcher() (redirectMatcher mux.MatcherFunc, err error) {
 	routes := map[string]route{}
-	reverseProxy := &httputil.ReverseProxy{Director: func(r *http.Request) {}} // director's job is done by redirectMatcher
+	reverseProxy := &httputil.ReverseProxy{Director: func(*http.Request) {}} // director's job is done by redirectMatcher
 	if err := parseRoutes(routes, s.routes, false); err != nil {
 		return nil, err
 	}
-	if err = parseRoutes(routes, s.routesRewrite, true); err != nil {
+	if err := parseRoutes(routes, s.routesRewrite, true); err != nil {
 		return nil, err
 	}
 	var defaultRouteURL *url.URL
@@ -106,7 +106,7 @@ func parseURL(urlStr string) (url *url.URL, err error) {
 	if err != nil {
 		err = fmt.Errorf("target url %s parse failed: %w", urlStr, err)
 	}
-	return
+	return url, err
 }
 
 func redirect(req *http.Request, targetPath string, targetURL *url.URL) {

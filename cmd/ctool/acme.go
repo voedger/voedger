@@ -110,7 +110,7 @@ func acmeRemove(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func acmeList(cmd *cobra.Command, args []string) error {
+func acmeList(_ *cobra.Command, _ []string) error {
 	cluster := newCluster()
 
 	exists, err := cluster.clusterConfigFileExists()

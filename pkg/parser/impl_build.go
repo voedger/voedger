@@ -7,6 +7,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -65,7 +66,7 @@ func (c *buildContext) build() error {
 // First should be called during build stage, then w.builder should be used in next steps.
 func (c *buildContext) prepareWSBuilders() {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, _ *iterateCtx) {
 			w.qName = schema.NewQName(w.Name)
 			switch w.qName {
 			case appdef.SysWorkspaceQName:
@@ -86,7 +87,7 @@ func (c *buildContext) packages() error {
 
 func (c *buildContext) rates() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(rate *RateStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(rate *RateStmt, _ *iterateCtx) {
 			var timeUnitAmount uint32 = 1
 			var period time.Duration
 			var rateScopes []appdef.RateScope
@@ -130,7 +131,7 @@ func (c *buildContext) rates() error {
 
 func (c *buildContext) limits() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(limit *LimitStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(limit *LimitStmt, _ *iterateCtx) {
 			wsb := limit.workspace.mustBuilder(c)
 			var opt appdef.LimitFilterOption
 			var types []appdef.TypeKind
@@ -201,7 +202,7 @@ func (c *buildContext) workspaces() error {
 	wsBuilders := make([]wsBuilder, 0)
 
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, _ *iterateCtx) {
 			wsBuilders = append(wsBuilders, wsBuilder{w, w.builder, schema})
 		})
 	}
@@ -244,7 +245,7 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommenter) {
 
 func (c *buildContext) tags() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(tag *TagStmt, _ *iterateCtx) {
 			qname := schema.NewQName(tag.Name)
 			builder := tag.workspace.mustBuilder(c)
 			featureAndComments := make([]string, 0, 2)
@@ -258,7 +259,7 @@ func (c *buildContext) tags() error {
 
 func (c *buildContext) types() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(typ *TypeStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(typ *TypeStmt, _ *iterateCtx) {
 			c.pushDef(schema.NewQName(typ.Name), appdef.TypeKind_Object, typ.workspace)
 			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommenter))
 			c.addTableItems(schema, typ.Items)
@@ -270,7 +271,7 @@ func (c *buildContext) types() error {
 
 func (c *buildContext) roles() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(role *RoleStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(role *RoleStmt, _ *iterateCtx) {
 			wsb := role.workspace.mustBuilder(c)
 			rb := wsb.AddRole(schema.NewQName(role.Name))
 			if role.Published {
@@ -280,78 +281,61 @@ func (c *buildContext) roles() error {
 		})
 	}
 	return nil
+}
 
+type aclRuleWriter func([]appdef.OperationKind, appdef.IFilter, []appdef.FieldName, appdef.QName, ...string) appdef.IACLBuilder
+
+func applyGrantOrRevokeRule(g *GrantOrRevoke, comments []string, write aclRuleWriter) {
+	flt := g.filter()
+	fields := []appdef.FieldName{}
+	if (g.AllTablesWithTag != nil && g.AllTablesWithTag.All) || (g.AllTables != nil && g.AllTables.All) {
+		write(grantAllToTableOps, flt, fields, g.toRole, comments...)
+		return
+	}
+	if g.Table != nil && g.Table.All != nil {
+		write(grantAllToTableOps, flt, g.Table.All.columns, g.toRole, comments...)
+		return
+	}
+	if g.Table != nil && g.Table.Items != nil {
+		for op, columns := range g.opColumns {
+			write([]appdef.OperationKind{op}, flt, columns, g.toRole, comments...)
+		}
+		return
+	}
+	if g.View != nil {
+		write(g.ops, flt, g.View.columns, g.toRole, comments...)
+		return
+	}
+	write(g.ops, flt, fields, g.toRole, comments...)
 }
 
 func (c *buildContext) grantsAndRevokes() error {
-	grants := func(stmts []WorkspaceStatement) {
+	applyStatements := func(stmts []WorkspaceStatement, pick func(WorkspaceStatement) (*GrantOrRevoke, []string, aclRuleWriter)) {
 		for _, s := range stmts {
-			if s.Grant != nil {
-				wsb := s.Grant.workspace.mustBuilder(c)
-				comments := s.Grant.GetComments()
-
-				// Handle ALL cases
-				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) ||
-					(s.Grant.AllTables != nil && s.Grant.AllTables.All) {
-					wsb.Grant(grantAllToTableOps, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
-					continue
-				}
-
-				if s.Grant.Table != nil && s.Grant.Table.All != nil {
-					wsb.Grant(grantAllToTableOps, s.Grant.filter(), s.Grant.Table.All.columns, s.Grant.toRole, comments...)
-					continue
-				}
-
-				if s.Grant.Table != nil && s.Grant.Table.Items != nil {
-					for op, columns := range s.Grant.opColumns {
-						wsb.Grant([]appdef.OperationKind{op}, s.Grant.filter(), columns, s.Grant.toRole, comments...)
-					}
-					continue
-				}
-
-				if s.Grant.View != nil {
-					wsb.Grant(s.Grant.ops, s.Grant.filter(), s.Grant.View.columns, s.Grant.toRole, comments...)
-					continue
-				}
-
-				wsb.Grant(s.Grant.ops, s.Grant.filter(), []appdef.FieldName{}, s.Grant.toRole, comments...)
+			grantOrRevoke, comments, write := pick(s)
+			if grantOrRevoke == nil {
+				continue
 			}
+			applyGrantOrRevokeRule(grantOrRevoke, comments, write)
 		}
 	}
 
-	revokes := func(stmts []WorkspaceStatement) {
-		for _, s := range stmts {
-			if s.Revoke != nil {
-				wsb := s.Revoke.workspace.mustBuilder(c)
-				comments := s.Revoke.GetComments()
-
-				// Handle ALL cases
-				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) ||
-					(s.Revoke.AllTables != nil && s.Revoke.AllTables.All) {
-					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
-					continue
-				}
-
-				if s.Revoke.Table != nil && s.Revoke.Table.All != nil {
-					wsb.Revoke(grantAllToTableOps, s.Revoke.filter(), s.Revoke.Table.All.columns, s.Revoke.toRole, comments...)
-					continue
-				}
-
-				if s.Revoke.Table != nil && s.Revoke.Table.Items != nil {
-					for op, columns := range s.Revoke.opColumns {
-						wsb.Revoke([]appdef.OperationKind{op}, s.Revoke.filter(), columns, s.Revoke.toRole, comments...)
-					}
-					continue
-				}
-
-				if s.Revoke.View != nil {
-					wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), s.Revoke.View.columns, s.Revoke.toRole, comments...)
-					continue
-				}
-
-				wsb.Revoke(s.Revoke.ops, s.Revoke.filter(), []appdef.FieldName{}, s.Revoke.toRole, comments...)
+	grants := func(stmts []WorkspaceStatement) {
+		applyStatements(stmts, func(s WorkspaceStatement) (*GrantOrRevoke, []string, aclRuleWriter) {
+			if s.Grant == nil {
+				return nil, nil, nil
 			}
-		}
+			return &s.Grant.GrantOrRevoke, s.Grant.GetComments(), s.Grant.workspace.mustBuilder(c).Grant
+		})
+	}
+
+	revokes := func(stmts []WorkspaceStatement) {
+		applyStatements(stmts, func(s WorkspaceStatement) (*GrantOrRevoke, []string, aclRuleWriter) {
+			if s.Revoke == nil {
+				return nil, nil, nil
+			}
+			return &s.Revoke.GrantOrRevoke, s.Revoke.GetComments(), s.Revoke.workspace.mustBuilder(c).Revoke
+		})
 	}
 
 	handleWorkspace := func(stmts []WorkspaceStatement) {
@@ -360,7 +344,7 @@ func (c *buildContext) grantsAndRevokes() error {
 	}
 
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, _ *iterateCtx) {
 			for _, inheritedWs := range w.inheritedWorkspaces {
 				handleWorkspace(inheritedWs.Statements)
 			}
@@ -368,7 +352,7 @@ func (c *buildContext) grantsAndRevokes() error {
 		})
 	}
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(w *AlterWorkspaceStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(w *AlterWorkspaceStmt, _ *iterateCtx) {
 			handleWorkspace(w.Statements)
 		})
 	}
@@ -377,7 +361,7 @@ func (c *buildContext) grantsAndRevokes() error {
 
 func (c *buildContext) jobs() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(job *JobStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(job *JobStmt, _ *iterateCtx) {
 			jQname := schema.NewQName(job.Name)
 
 			wsb := job.workspace.mustBuilder(c)
@@ -406,7 +390,7 @@ func (c *buildContext) jobs() error {
 
 func (c *buildContext) projectors() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(proj *ProjectorStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(proj *ProjectorStmt, _ *iterateCtx) {
 			pQname := schema.NewQName(proj.Name)
 
 			wsb := proj.workspace.mustBuilder(c)
@@ -453,7 +437,7 @@ func (c *buildContext) projectors() error {
 					default:
 						qNames.Add(n.qName)
 					}
-				} //Trigger qNames
+				} // Trigger qNames
 
 				if len(qNames) > 0 {
 					flt = append(flt, filter.QNames(qNames...))
@@ -471,7 +455,7 @@ func (c *buildContext) projectors() error {
 				default:
 					builder.Events().Add(ops, filter.Or(flt...))
 				}
-			} //Triggers
+			} // Triggers
 
 			if proj.IncludingErrors {
 				builder.SetWantErrors()
@@ -498,7 +482,7 @@ func (c *buildContext) projectors() error {
 
 func (c *buildContext) views() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(view *ViewStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(view *ViewStmt, _ *iterateCtx) {
 			c.pushDef(schema.NewQName(view.Name), appdef.TypeKind_ViewRecord, view.workspace)
 			vb := func() appdef.IViewBuilder {
 				return c.defCtx().defBuilder.(appdef.IViewBuilder)
@@ -669,7 +653,7 @@ func (c *buildContext) queries() error {
 
 func (c *buildContext) tables() error {
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(table *TableStmt, ictx *iterateCtx) {
+		iteratePackageStmt(schema, &c.basicContext, func(table *TableStmt, _ *iterateCtx) {
 			c.table(schema, table)
 		})
 		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
@@ -775,7 +759,6 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 }
 
 func (c *buildContext) addObjectFieldToType(field *FieldExpr) {
-
 	minOccur := appdef.Occurs(0)
 	if field.NotNull {
 		minOccur = 1
@@ -884,10 +867,9 @@ func (c *buildContext) addNestedTableToDef(schema *PackageSchemaAST, nested *Nes
 	}
 
 	c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, contQName, 0, maxNestedTableContainerOccurrences)
-
 }
-func (c *buildContext) addTableItems(schema *PackageSchemaAST, items []TableItemExpr) {
 
+func (c *buildContext) addTableItems(schema *PackageSchemaAST, items []TableItemExpr) {
 	func() {
 		// generate unique names if empty
 		const nameFmt = "%02d"
@@ -933,7 +915,6 @@ func (c *defBuildContext) checkName(name string) error {
 }
 
 func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind, currentWorkspace workspaceAddr) {
-
 	wsb := currentWorkspace.mustBuilder(c)
 
 	var builder interface{}
@@ -1002,10 +983,8 @@ func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) e
 		return nil
 	}
 
-	for _, k := range canNotReferenceTo[c.defCtx().kind] {
-		if k == refTableType.Kind() {
-			return fmt.Errorf("table %s can not reference to %v", c.defCtx().qname, refTableType)
-		}
+	if slices.Contains(canNotReferenceTo[c.defCtx().kind], refTableType.Kind()) {
+		return fmt.Errorf("table %s can not reference to %v", c.defCtx().qname, refTableType)
 	}
 
 	return nil

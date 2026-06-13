@@ -148,7 +148,7 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 
 	kb := key.(*federationBlobKeyBuilder)
 
-	for _, ec := range strings.Split(kb.expectedCodes, ",") {
+	for ec := range strings.SplitSeq(kb.expectedCodes, ",") {
 		if ec == "" {
 			continue
 		}
@@ -241,7 +241,7 @@ func (s *federationBlobStorage) Read(key istructs.IStateKeyBuilder, callback ist
 			err = nil
 			break
 		}
-		if err = callback(nil, &fBlobValue{data: buffer[:n]}); err != nil {
+		if err := callback(nil, &fBlobValue{data: buffer[:n]}); err != nil {
 			break
 		}
 	}

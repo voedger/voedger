@@ -13,8 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"slices"
+
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -101,7 +102,7 @@ func TestTTL(t *testing.T) {
 
 	t.Run("custom TTL", func(t *testing.T) {
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "%s","AppName": "%s", "TTLHours":15},"elements":[{"fields":["PrincipalToken"]}]}`,
+		body := fmt.Sprintf(`{"args": {"Login": %q,"Password": %q,"AppName": %q, "TTLHours":15},"elements":[{"fields":["PrincipalToken"]}]}`,
 			prn.Name, prn.Pwd, prn.AppQName.String())
 		resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
 		token := resp.SectionRow()[0].(string)
@@ -128,13 +129,13 @@ func TestCreateLoginErrors(t *testing.T) {
 	loginPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 
 	t.Run("unknown application", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
 			login, istructs.SubjectKind_User, istructs.CurrentClusterID())
 		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body, it.Expect400("my/unknown is not found"))
 	})
 
 	t.Run("wrong application name", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"wrong-AppName","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"different"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":"wrong-AppName","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"different"}}`,
 			login, istructs.SubjectKind_User)
 		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body,
 			it.Expect400("failed to parse app qualified name"))
@@ -170,7 +171,7 @@ func TestCreateLoginErrors(t *testing.T) {
 		}
 		for _, wrongLogin := range wrongLogins {
 			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.CurrentClusterID())
-			body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
+			body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":%q}}`,
 				wrongLogin, istructs.AppQName_test1_app1.String(), istructs.SubjectKind_User, istructs.CurrentClusterID(), "1")
 			vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body,
 				it.Expect400("incorrect login format"))
@@ -198,7 +199,7 @@ func TestSignInErrors(t *testing.T) {
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 
 	t.Run("unknown login", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
+		body := fmt.Sprintf(`{"args": {"Login": %q,"Password": "1","AppName": %q},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
 			login, istructs.AppQName_test1_app1.String())
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, httpu.Expect401()).Println()
 	})
@@ -208,14 +209,14 @@ func TestSignInErrors(t *testing.T) {
 	vit.SignIn(newLogin)
 
 	t.Run("wrong password", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "wrongPass","AppName": "%s"},"elements":[{"fields":[]}]}`,
+		body := fmt.Sprintf(`{"args": {"Login": %q,"Password": "wrongPass","AppName": %q},"elements":[{"fields":[]}]}`,
 			login, istructs.AppQName_test1_app1.String())
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, httpu.Expect401()).Println()
 	})
 
 	t.Run("wrong TTL", func(t *testing.T) {
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "%s","AppName": "%s", "TTLHours":1000},"elements":[{"fields":["PrincipalToken"]}]}`,
+		body := fmt.Sprintf(`{"args": {"Login": %q,"Password": %q,"AppName": %q, "TTLHours":1000},"elements":[{"fields":["PrincipalToken"]}]}`,
 			prn.Name, prn.Pwd, prn.AppQName.String())
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body,
 			it.Expect400("max token TTL hours is 168 hours"))
@@ -603,16 +604,16 @@ func TestGlobalRoles(t *testing.T) {
 		httpu.WithAuthorizeBy(prn.Token), httpu.Expect403())
 
 	// update global roles not allowed by default
-	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.Expect403())
 
 	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
 	// incorrect role name
-	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	body = fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"GlobalRoles":"LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken), httpu.Expect400())
 
 	// update global roles allowed for the System principal
-	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"}}`, login.Name, login.AppQName.String())
+	body = fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"}}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken))
 
 	// now global roles are in the new token

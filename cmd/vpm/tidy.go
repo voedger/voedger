@@ -22,7 +22,7 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tidy",
 		Short: "add missing and remove unused modules",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(*cobra.Command, []string) error {
 			if err := checkBeforeCompile(params.Dir); err != nil {
 				return err
 			}
@@ -40,7 +40,6 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 		},
 	}
 	return cmd
-
 }
 
 func tidy(notFoundDeps []string, appDef appdef.IAppDef, modulePath string, dir string) error {

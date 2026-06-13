@@ -66,8 +66,7 @@ func (o ResultFieldsOperator) fillRow(ctx context.Context, outputRow IOutputRow,
 	}
 	for _, field := range element.RefFields() {
 		if ctx.Err() != nil {
-			err = ctx.Err()
-			return
+			return ctx.Err()
 		}
 		row.Set(field.Key(), object.AsRecordID(field.Field()))
 	}

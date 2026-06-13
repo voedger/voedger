@@ -34,7 +34,6 @@ import (
 
 func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.ITokens, blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-
 		query := args.ArgumentObject.AsString(field_Query)
 
 		op, err := dml.ParseQuery(query)
@@ -68,7 +67,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			}
 			subjKB, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 			if err != nil {
-				//notest
+				// notest
 				return err
 			}
 			subj, err := args.State.MustExist(subjKB)
@@ -96,7 +95,7 @@ func provideExecQrySQLQuery(federation federation.IFederation, itokens itokens.I
 			if err != nil {
 				return err
 			}
-			for i := 0; i < resp.NumRows(); i++ {
+			for i := range resp.NumRows() {
 				if err := callback(&result{value: resp.SectionRow(i)[0].(string)}); err != nil {
 					// notest
 					return err
@@ -443,7 +442,7 @@ func collectWhereFields(expr sqlparser.Expr, withFields appdef.IWithFields, dst 
 }
 
 func getFilter(f func(string) bool) coreutils.MapperOpt {
-	return coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+	return coreutils.Filter(func(name string, _ appdef.DataKind) bool {
 		return f(name)
 	})
 }

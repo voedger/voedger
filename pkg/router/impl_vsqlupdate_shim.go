@@ -6,6 +6,7 @@
 package router
 
 import (
+	"maps"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -20,9 +21,9 @@ import (
 )
 
 const (
-	vSqlUpdateFieldLogOffs = "LogWLogOffset" //nolint ST1003
-	vSqlUpdateFieldCUDOffs = "CUDWLogOffset" //nolint ST1003
-	vSqlUpdateFieldNewID   = "NewID"         //nolint ST1003
+	vsqlUpdateFieldLogOffs = "LogWLogOffset" //nolint:stylecheck // ST1003: name intentiaonally kept to match wire field
+	vsqlUpdateFieldCUDOffs = "CUDWLogOffset" //nolint:stylecheck // ST1003: name intentiaonally kept to match wire field
+	vsqlUpdateFieldNewID   = "NewID"         //nolint:stylecheck // ST1003: name intentiaonally kept to match wire field
 	vsqlUpdateStage        = "routing.vsqlupdate"
 	vsqlUpdateErrorStage   = "routing.vsqlupdate.error"
 )
@@ -47,11 +48,11 @@ func isVSqlUpdateV2Call(busRequest bus.Request) bool {
 func rewriteVSqlUpdateBody(body []byte) []byte {
 	var buf bytes.Buffer
 	buf.WriteString(`{"elements":[{"fields":["`)
-	buf.WriteString(vSqlUpdateFieldLogOffs)
+	buf.WriteString(vsqlUpdateFieldLogOffs)
 	buf.WriteString(`","`)
-	buf.WriteString(vSqlUpdateFieldCUDOffs)
+	buf.WriteString(vsqlUpdateFieldCUDOffs)
 	buf.WriteString(`","`)
-	buf.WriteString(vSqlUpdateFieldNewID)
+	buf.WriteString(vsqlUpdateFieldNewID)
 	buf.WriteString(`"]}]`)
 	trimmed := bytes.TrimSpace(body)
 	if len(trimmed) > 2 {
@@ -80,9 +81,7 @@ func (c *capturingResponseWriter) WriteHeader(code int)        { c.status = code
 func (c *capturingResponseWriter) Flush()                      {}
 
 func (c *capturingResponseWriter) flushTo(rw http.ResponseWriter, overrideBody string) {
-	for k, v := range c.headers {
-		rw.Header()[k] = v
-	}
+	maps.Copy(rw.Header(), c.headers)
 	rw.WriteHeader(c.status)
 	if len(overrideBody) > 0 {
 		writeResponse(rw, overrideBody)
@@ -135,7 +134,7 @@ func dispatchVSqlUpdateShim_V2(requestCtx context.Context, rw http.ResponseWrite
 		busRequest.Query = map[string]string{}
 	}
 	busRequest.Query["args"] = string(argsBytes)
-	busRequest.Query["keys"] = vSqlUpdateFieldLogOffs + "," + vSqlUpdateFieldCUDOffs + "," + vSqlUpdateFieldNewID
+	busRequest.Query["keys"] = vsqlUpdateFieldLogOffs + "," + vsqlUpdateFieldCUDOffs + "," + vsqlUpdateFieldNewID
 	busRequest.Method = http.MethodGet
 	busRequest.APIPath = int(processors.APIPath_Queries)
 	busRequest.QName = qNameQryVSqlUpdate2
@@ -160,7 +159,7 @@ func finalizeShimResponse(requestCtx context.Context, rw http.ResponseWriter, ca
 	overrideBody := ""
 	if capture.status == http.StatusOK && *respErr == nil {
 		logOffset, cudOffset, newID := extract(capture.body.Bytes())
-		logger.VerboseCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("%s=%d (to be sent to the client as CurrentWLogOffset), %s=%d", vSqlUpdateFieldLogOffs, logOffset, vSqlUpdateFieldCUDOffs, cudOffset))
+		logger.VerboseCtx(requestCtx, vsqlUpdateStage, fmt.Sprintf("%s=%d (to be sent to the client as CurrentWLogOffset), %s=%d", vsqlUpdateFieldLogOffs, logOffset, vsqlUpdateFieldCUDOffs, cudOffset))
 		overrideBody = buildCmdResponse(logOffset, newID, offsetKey, resultKey)
 	} else {
 		logger.ErrorCtx(requestCtx, vsqlUpdateErrorStage, fmt.Sprintf("%s shim reply failed: status=%d respErr=%v body=%s", resourceCmdVSqlUpdate, capture.status, *respErr, capture.body.String()))
@@ -207,9 +206,9 @@ func extractFromQryVSqlUpdate2ResponseV2(raw []byte) (logOffset int64, cudOffset
 
 	// following data is got without any checking since we know for sure the data structure of the query result
 	// guarded by integration tests
-	logOffset = int64(env.QPv2Response[0][vSqlUpdateFieldLogOffs].(float64))
-	cudOffset = int64(env.QPv2Response[0][vSqlUpdateFieldCUDOffs].(float64))
-	newID = int64(env.QPv2Response[0][vSqlUpdateFieldNewID].(float64))
+	logOffset = int64(env.QPv2Response[0][vsqlUpdateFieldLogOffs].(float64))
+	cudOffset = int64(env.QPv2Response[0][vsqlUpdateFieldCUDOffs].(float64))
+	newID = int64(env.QPv2Response[0][vsqlUpdateFieldNewID].(float64))
 
 	return logOffset, cudOffset, newID
 }

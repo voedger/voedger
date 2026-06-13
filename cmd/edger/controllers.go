@@ -87,6 +87,7 @@ func rmExitedContainers(projectName string) error {
 	}
 
 	for _, containerID := range containerIDs {
+		//nolint:noctx // called in tests only
 		if err := exec.Command("docker", "rm", containerID).Run(); err != nil {
 			return err
 		}
@@ -110,7 +111,7 @@ func buildDockerArgs(command, projectName string, filter map[string]string, args
 	for k, v := range filter {
 		allArgs = append(allArgs, "-f", fmt.Sprintf("%s=%s", k, v))
 	}
-	return
+	return allArgs
 }
 
 // nolint
@@ -139,6 +140,7 @@ func stopContainers(projectName string) error {
 	}
 
 	for _, containerID := range containerIDs {
+		//nolint:noctx // called in tests only
 		if err := exec.Command("docker", "stop", containerID).Run(); err != nil {
 			return err
 		}

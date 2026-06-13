@@ -7,12 +7,12 @@ package iauthnzimpl
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"golang.org/x/exp/slices"
 )
 
 func (i *implIAuthenticator) Authenticate(requestContext context.Context, as istructs.IAppStructs, appTokens istructs.IAppTokens, req iauthnz.AuthnRequest) (principals []iauthnz.Principal, profileWSID istructs.WSID, err error) {
@@ -27,18 +27,19 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	}()
 
 	if len(req.Token) == 0 {
-		// add user with login "sys.Guest"
-		principals = append(principals, iauthnz.Principal{
-			Kind: iauthnz.PrincipalKind_User,
-			WSID: istructs.GuestWSID,
-			Name: istructs.SysGuestLogin,
-		})
-
-		// role.sys.Anonymous
-		principals = append(principals, iauthnz.Principal{
-			Kind:  iauthnz.PrincipalKind_Role,
-			QName: iauthnz.QNameRoleAnonymous,
-		})
+		principals = append(principals,
+			// add user with login "sys.Guest"
+			iauthnz.Principal{
+				Kind: iauthnz.PrincipalKind_User,
+				WSID: istructs.GuestWSID,
+				Name: istructs.SysGuestLogin,
+			},
+			// role.sys.Anonymous
+			iauthnz.Principal{
+				Kind:  iauthnz.PrincipalKind_Role,
+				QName: iauthnz.QNameRoleAnonymous,
+			},
+		)
 
 		// copy roles from subjects
 		rolesFromSubjects, err := i.rolesFromSubjects(requestContext, istructs.SysGuestLogin, as, req.RequestWSID)
@@ -71,7 +72,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 				QName: role.QName,
 			})
 		}
-		return
+		return principals, profileWSID, nil
 	}
 
 	// apply global roles
@@ -116,10 +117,10 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		QName: iauthnz.QNameRoleSystem,
 	}
 	if slices.Contains(principals, sysPrn) {
-		return // nothing else matters
+		return principals, profileWSID, nil // nothing else matters
 	} else if profileWSID == istructs.NullWSID {
 		principals = append(principals, sysPrn)
-		return // nothing else matters
+		return principals, profileWSID, nil
 	}
 
 	// user or device principal

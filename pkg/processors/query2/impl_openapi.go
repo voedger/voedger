@@ -5,6 +5,8 @@
 package query2
 
 import (
+	"slices"
+	"maps"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,7 +22,6 @@ import (
 // CreateOpenAPISchema generates an OpenAPI schema document for the given workspace and role
 func CreateOpenAPISchema(writer io.Writer, ws appdef.IWorkspace, role appdef.QName,
 	pubTypesFunc PublishedTypesFunc, meta SchemaMeta, developer bool) error {
-
 	generator := &schemaGenerator{
 		developer:      developer,
 		ws:             ws,
@@ -57,10 +58,7 @@ func (g *schemaGenerator) generate() {
 	// Materialize the iterator into a map so it can be iterated multiple times
 	g.types = make(map[appdef.IType]map[appdef.OperationKind]*[]appdef.FieldName)
 	for t, ops := range g.pubTypesFunc(g.ws, g.role) {
-		g.types[t] = make(map[appdef.OperationKind]*[]appdef.FieldName)
-		for op, fields := range ops {
-			g.types[t][op] = fields
-		}
+		g.types[t] = maps.Collect(ops)
 	}
 
 	g.collectDocSchemaTypes()
@@ -227,7 +225,6 @@ func (g *schemaGenerator) generateFunctionExecuteSchemas(fn appdef.IFunction, op
 // generateSchemaComponent creates a schema component for a specific type and operation
 func (g *schemaGenerator) generateSchemaComponent(typ appdef.IType, op appdef.OperationKind,
 	fieldNames *[]appdef.FieldName, schemas map[string]interface{}) {
-
 	typeName := typ.QName().String()
 
 	// If no field constraints (all fields allowed) or fieldNames is nil
@@ -335,13 +332,7 @@ func (g *schemaGenerator) isFieldAllowed(fieldName string, fieldNames *[]appdef.
 	}
 
 	// Check if the field is in the allowed list
-	for _, allowedField := range *fieldNames {
-		if allowedField == fieldName {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(*fieldNames, fieldName)
 }
 
 func (g *schemaGenerator) addAuthPaths() {
@@ -598,7 +589,6 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 					APIPath: processors.APIPath_CDocs,
 				},
 			}
-
 		}
 	}
 
@@ -637,7 +627,6 @@ func (g *schemaGenerator) getPaths(typ appdef.IType, op appdef.OperationKind) []
 
 // addPathItem adds a path item to the OpenAPI schema
 func (g *schemaGenerator) addPathItem(path, method string, typ appdef.IType, op appdef.OperationKind, apiPath processors.APIPath) {
-
 	// Create path if it doesn't exist
 	if _, exists := g.paths[path]; !exists {
 		g.paths[path] = make(map[string]interface{})
@@ -828,66 +817,63 @@ func (g *schemaGenerator) generateParameters(path string, typ appdef.IType) []ma
 		if len(pkFields) > 0 {
 			descr += fmt.Sprintf(". Required fields: %s", strings.Join(pkFields, ", "))
 		}
-		parameters = append(parameters, map[string]interface{}{
-			"name":     paramWhere,
-			"in":       paramInQuery,
-			"required": len(pkFields) > 0,
-			schemaKeySchema: map[string]interface{}{
-				schemaKeyType: schemaTypeString,
+		parameters = append(parameters,
+			map[string]interface{}{
+				"name":     paramWhere,
+				"in":       paramInQuery,
+				"required": len(pkFields) > 0,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyType: schemaTypeString,
+				},
+				schemaKeyDescription: descr,
+				propertyExample:      whereExample,
 			},
-			schemaKeyDescription: descr,
-			propertyExample:      whereExample,
-		})
-
-		parameters = append(parameters, map[string]interface{}{
-			"name":     paramOrder,
-			"in":       paramInQuery,
-			"required": false,
-			schemaKeySchema: map[string]interface{}{
-				schemaKeyType: schemaTypeString,
+			map[string]interface{}{
+				"name":     paramOrder,
+				"in":       paramInQuery,
+				"required": false,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyType: schemaTypeString,
+				},
+				schemaKeyDescription: descrOrderParam,
 			},
-			schemaKeyDescription: descrOrderParam,
-		})
-
-		parameters = append(parameters, map[string]interface{}{
-			"name":     paramLimit,
-			"in":       paramInQuery,
-			"required": false,
-			schemaKeySchema: map[string]interface{}{
-				schemaKeyType: schemaTypeInteger,
+			map[string]interface{}{
+				"name":     paramLimit,
+				"in":       paramInQuery,
+				"required": false,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyType: schemaTypeInteger,
+				},
+				schemaKeyDescription: descrLimitParam,
 			},
-			schemaKeyDescription: descrLimitParam,
-		})
-
-		parameters = append(parameters, map[string]interface{}{
-			"name":     paramSkip,
-			"in":       paramInQuery,
-			"required": false,
-			schemaKeySchema: map[string]interface{}{
-				schemaKeyType: schemaTypeInteger,
+			map[string]interface{}{
+				"name":     paramSkip,
+				"in":       paramInQuery,
+				"required": false,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyType: schemaTypeInteger,
+				},
+				schemaKeyDescription: descrSkipParam,
 			},
-			schemaKeyDescription: descrSkipParam,
-		})
-
-		parameters = append(parameters, map[string]interface{}{
-			"name":     paramInclude,
-			"in":       paramInQuery,
-			"required": false,
-			schemaKeySchema: map[string]interface{}{
-				schemaKeyType: schemaTypeString,
+			map[string]interface{}{
+				"name":     paramInclude,
+				"in":       paramInQuery,
+				"required": false,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyType: schemaTypeString,
+				},
+				schemaKeyDescription: descrIncludeParam,
 			},
-			schemaKeyDescription: descrIncludeParam,
-		})
-
-		parameters = append(parameters, map[string]interface{}{
-			"name":     paramKeys,
-			"in":       paramInQuery,
-			"required": false,
-			schemaKeySchema: map[string]interface{}{
-				schemaKeyType: schemaTypeString,
+			map[string]interface{}{
+				"name":     paramKeys,
+				"in":       paramInQuery,
+				"required": false,
+				schemaKeySchema: map[string]interface{}{
+					schemaKeyType: schemaTypeString,
+				},
+				schemaKeyDescription: descrKeysParam,
 			},
-			schemaKeyDescription: descrKeysParam,
-		})
+		)
 	}
 
 	// Add arg parameter for queries
@@ -1342,25 +1328,26 @@ func (g *schemaGenerator) generateBlobCreateParameters(path string, typ appdef.I
 	parameters := g.generateParameters(path, typ)
 
 	// Add header parameters
-	parameters = append(parameters, map[string]interface{}{
-		"name":     headerContentType,
-		"in":       paramInHeader,
-		"required": true,
-		"schema": map[string]interface{}{
-			schemaKeyType: schemaTypeString,
+	parameters = append(parameters,
+		map[string]interface{}{
+			"name":     headerContentType,
+			"in":       paramInHeader,
+			"required": true,
+			"schema": map[string]interface{}{
+				schemaKeyType: schemaTypeString,
+			},
+			schemaKeyDescription: descrBlobContentType,
 		},
-		schemaKeyDescription: descrBlobContentType,
-	})
-
-	parameters = append(parameters, map[string]interface{}{
-		"name":     headerBlobName,
-		"in":       paramInHeader,
-		"required": false,
-		"schema": map[string]interface{}{
-			schemaKeyType: schemaTypeString,
+		map[string]interface{}{
+			"name":     headerBlobName,
+			"in":       paramInHeader,
+			"required": false,
+			"schema": map[string]interface{}{
+				schemaKeyType: schemaTypeString,
+			},
+			schemaKeyDescription: descrBlobNameOptional,
 		},
-		schemaKeyDescription: descrBlobNameOptional,
-	})
+	)
 
 	return parameters
 }

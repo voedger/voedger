@@ -35,9 +35,9 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	body := fmt.Sprintf(`
 			{
 				"args":{
-					"Entity":"%s",
+					"Entity":%q,
 					"Field":"EmailField",
-					"Email":"%s",
+					"Email":%q,
 					"TargetWSID": %d,
 					"Language":"fr"
 				},
@@ -65,8 +65,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	body = fmt.Sprintf(`
 		{
 			"args":{
-				"VerificationToken":"%s",
-				"VerificationCode":"%s"
+				"VerificationToken":%q,
+				"VerificationCode":%q
 			},
 			"elements":[{"fields":["VerifiedValueToken"]}]
 		}
@@ -96,8 +96,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 					{
 						"fields": {
 							"sys.ID": 1,
-							"sys.QName": "%s",
-							"EmailField": "%s"
+							"sys.QName": %q,
+							"EmailField": %q
 						}
 					}
 				]
@@ -107,13 +107,13 @@ func TestBasicUsage_Verifier(t *testing.T) {
 	})
 
 	t.Run("bug: one token could be used in any wsid", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": %q,"EmailField": %q}}]}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
 		ws2 := vit.CreateWorkspace(it.SimpleWSParams("testws"+vit.NextName()), userPrincipal)
 		vit.PostProfile(ws2.Owner, "c.sys.CUD", body)
 	})
 
 	t.Run("read the actual verified field value - it should be the value decoded from the token", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields": ["EmailField"]}]}`, it.QNameApp1_TestEmailVerificationDoc)
+		body := fmt.Sprintf(`{"args":{"Schema":%q},"elements":[{"fields": ["EmailField"]}]}`, it.QNameApp1_TestEmailVerificationDoc)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 		resp := vit.PostProfile(ws.Owner, "q.sys.Collection", body)
 		require.Equal(it.TestEmail, resp.SectionRow()[0])
@@ -131,17 +131,17 @@ func TestVerifierErrors(t *testing.T) {
 		"EmailField", it.TestEmail, userPrincipal.ProfileWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
 
 	t.Run("error 400 on set the raw value instead of verified value token for the verified field", func(t *testing.T) {
-		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail)
+		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": %q,"EmailField": %q}}]}`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail)
 		vit.PostProfile(userPrincipal, "c.sys.CUD", body, it.Expect400("invalid token")).Println()
 	})
 
 	// issue a token for email field
-	body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
+	body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
 	resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
 	emailVerifiedValueToken := resp.SectionRow()[0].(string)
 	t.Run("error 400 on different verification algorithm", func(t *testing.T) {
 		// use the email token for the phone field
-		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","PhoneField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
+		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": %q,"PhoneField": %q}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		vit.PostProfile(userPrincipal, "c.sys.CUD", body, httpu.Expect400()).Println()
 	})
 
@@ -149,11 +149,11 @@ func TestVerifierErrors(t *testing.T) {
 
 	t.Run("error 400 issue token for one WSID but use it in different WSID", func(t *testing.T) {
 		t.Skip("WSID check is not implemented in istructsmem yet")
-		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
+		body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
 		resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
 		emailVerifiedValueToken = resp.SectionRow()[0].(string)
 
-		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
+		body = fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": %q,"EmailField": %q}}]}`, it.QNameApp1_TestEmailVerificationDoc, emailVerifiedValueToken)
 		// dws := vit.DummyWS(istructs.AppQName_test1_app1, ws.WSID+1)
 		userPrincipal2 := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
 		vit.PostProfile(userPrincipal2, "c.sys.CUD", body, httpu.Expect500()).Println()
@@ -167,7 +167,7 @@ func TestVerifierErrors(t *testing.T) {
 		}
 		for _, wrongEmail := range wrongEmails {
 			vit.TimeAdd(time.Hour)
-			body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"EmailField","Email":"%s","TargetWSID": %d,"Language":"fr"},"elements":[{"fields":["VerificationToken"]}]}`,
+			body := fmt.Sprintf(`{"args":{"Entity":%q,"Field":"EmailField","Email":%q,"TargetWSID": %d,"Language":"fr"},"elements":[{"fields":["VerificationToken"]}]}`,
 				it.QNameApp1_TestEmailVerificationDoc, wrongEmail, userPrincipal.ProfileWSID) // targetWSID - is the workspace we're going to use the verified value at
 			vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, httpu.Expect400()).Println()
 		}
@@ -179,7 +179,7 @@ func TestVerifierErrors(t *testing.T) {
 
 		vit.TimeAdd(verifier.VerificationTokenDuration + time.Minute)
 
-		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
+		body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
 		vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body, it.Expect400("your verification code has expired")).Println()
 	})
 }
@@ -203,7 +203,7 @@ func TestVerificationLimits(t *testing.T) {
 		}
 
 		// next call exceeds the limit -> 429 Too many requests
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID)
+		body := fmt.Sprintf(`{"args":{"Entity":%q,"Field":%q,"Email":%q,"TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID)
 		vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body, httpu.Expect429())
 
 		// still able to call in another profile because the limit is per-workspace (profile WSID)
@@ -217,8 +217,8 @@ func TestVerificationLimits(t *testing.T) {
 	})
 
 	t.Run("q.sys.IssueVerifiedValueToken limits", func(t *testing.T) {
-		bodyWrongCode := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code+"1")
-		bodyGoodCode := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
+		bodyWrongCode := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code+"1")
+		bodyGoodCode := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
 		for range verifierRateMaxAllowed {
 			// first X calls per period with a wrong code are allowed, just "code wrong" error is returned
@@ -233,7 +233,7 @@ func TestVerificationLimits(t *testing.T) {
 
 		// regenerate token and code because previous ones are expired already
 		token, code = InitiateEmailVerification(vit, userPrincipal, it.QNameApp1_TestEmailVerificationDoc, "EmailField", it.TestEmail, testWSID, httpu.WithAuthorizeBy(userPrincipal.Token))
-		bodyGoodCode = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
+		bodyGoodCode = fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code)
 
 		for range verifierRateMaxAllowed + 1 {
 			// now check that limits are restored and that limits are reset on successful code verification
@@ -250,13 +250,13 @@ func TestForRegistry(t *testing.T) {
 	userPrincipal := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 
 	verificationToken, verificationCode := InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"EmailField","Email":"%s","TargetWSID":%d,"ForRegistry":true},"elements":[{"fields":["VerificationToken"]}]}`,
+		body := fmt.Sprintf(`{"args":{"Entity":%q,"Field":"EmailField","Email":%q,"TargetWSID":%d,"ForRegistry":true},"elements":[{"fields":["VerificationToken"]}]}`,
 			it.QNameApp1_TestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID)
 		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
 		return resp
 	})
 
-	body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ForRegistry":true},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
+	body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ForRegistry":true},"elements":[{"fields":["VerifiedValueToken"]}]}`, verificationToken, verificationCode)
 	resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
 	verifiedValueToken := resp.SectionRow()[0].(string)
 

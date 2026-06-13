@@ -210,7 +210,7 @@ func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, appWSI
 		// notest
 		return false, err
 	}
-	if err = as.Events().PutWlog(pLogEvent); err != nil {
+	if err := as.Events().PutWlog(pLogEvent); err != nil {
 		// notest
 		return false, err
 	}

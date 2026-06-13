@@ -43,7 +43,6 @@ func storeEventCreateParams(ev *eventType, buf *bytes.Buffer) {
 }
 
 func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
-
 	valid := ev.valid()
 	utils.WriteBool(buf, valid)
 
@@ -108,7 +107,6 @@ func storeEventCUD(rec *recordType, buf *bytes.Buffer) {
 }
 
 func storeObject(o *objectType, buf *bytes.Buffer) {
-
 	storeRow(&o.rowType, buf)
 
 	if o.QName() == appdef.NullQName {
@@ -160,53 +158,52 @@ func loadEvent(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) {
 }
 
 func loadEventCreateParams(ev *eventType, buf *bytes.Buffer) (err error) {
-	if p, err := utils.ReadUInt16(buf); err == nil {
-		ev.partition = istructs.PartitionID(p)
-	} else {
+	p, err := utils.ReadUInt16(buf)
+	if err != nil {
 		return enrichError(err, "partition id")
 	}
+	ev.partition = istructs.PartitionID(p)
 
-	if o, err := utils.ReadUInt64(buf); err == nil {
-		ev.pLogOffs = istructs.Offset(o)
-	} else {
+	var o uint64
+	if o, err = utils.ReadUInt64(buf); err != nil {
 		return enrichError(err, "PLog offset")
 	}
+	ev.pLogOffs = istructs.Offset(o)
 
-	if w, err := utils.ReadUInt64(buf); err == nil {
-		ev.ws = istructs.WSID(w)
-	} else {
+	if o, err = utils.ReadUInt64(buf); err != nil {
 		return enrichError(err, "workspace id")
 	}
+	ev.ws = istructs.WSID(o)
 
-	if o, err := utils.ReadUInt64(buf); err == nil {
-		ev.wLogOffs = istructs.Offset(o)
-	} else {
+	if o, err = utils.ReadUInt64(buf); err != nil {
 		return enrichError(err, "WLog offset")
 	}
+	ev.wLogOffs = istructs.Offset(o)
 
-	if t, err := utils.ReadInt64(buf); err == nil {
-		ev.regTime = istructs.UnixMilli(t)
-	} else {
+	var t int64
+	if t, err = utils.ReadInt64(buf); err != nil {
 		return enrichError(err, "register time")
 	}
+	ev.regTime = istructs.UnixMilli(t)
 
 	if ev.sync, err = utils.ReadBool(buf); err != nil {
 		return enrichError(err, "synch flag")
 	}
 
-	if ev.sync {
-		if d, err := utils.ReadUInt16(buf); err == nil {
-			ev.device = istructs.ConnectedDeviceID(d)
-		} else {
-			return enrichError(err, "device ID")
-		}
-
-		if t, err := utils.ReadInt64(buf); err == nil {
-			ev.syncTime = istructs.UnixMilli(t)
-		} else {
-			return enrichError(err, "synch time")
-		}
+	if !ev.sync {
+		return nil
 	}
+
+	var d uint16
+	if d, err = utils.ReadUInt16(buf); err != nil {
+		return enrichError(err, "device ID")
+	}
+	ev.device = istructs.ConnectedDeviceID(d)
+
+	if t, err = utils.ReadInt64(buf); err != nil {
+		return enrichError(err, "synch time")
+	}
+	ev.syncTime = istructs.UnixMilli(t)
 
 	return nil
 }
@@ -314,7 +311,7 @@ func loadEventCUD(rec *recordType, codecVer byte, buf *bytes.Buffer) error {
 			}
 			fields := rec.fields.UserFields()
 			len := uint16(len(fields)) // nolint G115 see [appdef.MaxTypeFieldCount]
-			for i := uint16(0); i < count; i++ {
+			for i := range count {
 				idx, err := utils.ReadUInt16(buf)
 				if err != nil {
 					// no test: possible error (only EOF) is handled above
@@ -335,7 +332,6 @@ func loadEventCUD(rec *recordType, codecVer byte, buf *bytes.Buffer) error {
 }
 
 func loadObject(o *objectType, codecVer byte, buf *bytes.Buffer) (err error) {
-
 	if err := loadRow(&o.rowType, codecVer, buf); err != nil {
 		return err
 	}
@@ -348,7 +344,7 @@ func loadObject(o *objectType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if count, err = utils.ReadUInt16(buf); err != nil {
 		return enrichError(err, "child count for %v", o)
 	}
-	for i := uint16(0); i < count; i++ {
+	for i := range count {
 		child := newObject(o.appCfg, appdef.NullQName, o)
 		if err := loadObject(child, codecVer, buf); err != nil {
 			return enrichError(err, "%v child[%d]", o, i)

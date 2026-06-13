@@ -245,8 +245,8 @@ type ISchemasCache interface {
 
 type NullSchemasCache struct{}
 
-func (*NullSchemasCache) Get(appQName appdef.AppQName) *parser.AppSchemaAST {
+func (*NullSchemasCache) Get(appdef.AppQName) *parser.AppSchemaAST {
 	return nil
 }
 
-func (*NullSchemasCache) Put(appQName appdef.AppQName, schema *parser.AppSchemaAST) {}
+func (*NullSchemasCache) Put(appdef.AppQName, *parser.AppSchemaAST) {}

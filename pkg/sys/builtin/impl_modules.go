@@ -13,7 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 func provideQryModules(sr istructsmem.IStatelessResources, buildInfo *debug.BuildInfo) {
@@ -29,7 +29,7 @@ type qryModulesRR struct {
 }
 
 func provideQryModulesExec(buildInfo *debug.BuildInfo) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		sb := bytes.NewBufferString("")
 		for _, mod := range buildInfo.Deps {
 			fmt.Fprintf(sb, "path: %s version: %s\n", mod.Path, mod.Version)

@@ -56,9 +56,9 @@ func TestBLOBReadLogging(t *testing.T) {
 		require.NoError(p.SendSync(bw))
 
 		logCap.HasLine("bp.success", "blobid=42",
-			fmt.Sprintf(`ownerqname="%s"`, notApplicableInAPIv1),
-			fmt.Sprintf(`ownerfield="%s"`, notApplicableInAPIv1),
-			fmt.Sprintf(`ownerid="%s"`, notApplicableInAPIv1))
+			fmt.Sprintf(`ownerqname=%q`, notApplicableInAPIv1),
+			fmt.Sprintf(`ownerfield=%q`, notApplicableInAPIv1),
+			fmt.Sprintf(`ownerid=%q`, notApplicableInAPIv1))
 	})
 
 	t.Run("apiv2_success", func(t *testing.T) {

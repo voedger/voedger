@@ -36,8 +36,8 @@ func errExtensionEngineDeploy(app appdef.AppQName, kind appdef.ExtensionEngineKi
 }
 
 var (
-	ErrNotAvailableEngines                            = errors.New("no available engines")
-	errNotAvailableEngines [ProcessorKind_Count]error = [ProcessorKind_Count]error{
+	ErrNotAvailableEngines = errors.New("no available engines")
+	errNotAvailableEngines = [ProcessorKind_Count]error{
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Command.TrimString()),
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Query.TrimString()),
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Actualizer.TrimString()),

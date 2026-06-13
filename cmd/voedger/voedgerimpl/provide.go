@@ -60,7 +60,7 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 	return cas.Provide(casParams)
 }
 
-func NewSysRouterRequestHandler(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+func NewSysRouterRequestHandler(_ context.Context, request bus.Request, responder bus.IResponder) {
 	go func() {
 		queryParamsBytes, err := json.Marshal(request.Query)
 		if err != nil {

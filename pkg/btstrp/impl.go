@@ -30,7 +30,6 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	postWiredInterfacePtrs PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler,
 	requestSender bus.IRequestSender) (err error) {
-
 	logCtx := logger.WithContextAttrs(context.Background(), map[string]any{
 		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
 		logger.LogAttr_Extension: "sys._Bootstrap",

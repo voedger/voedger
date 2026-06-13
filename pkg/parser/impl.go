@@ -78,7 +78,7 @@ func parseFSImpl(fs filesu.IReadFS, dir string) (schemas []*FileSchemaAST, errs 
 	}
 	for _, entry := range entries {
 		fileExt := filepath.Ext(entry.Name())
-		if strings.ToLower(fileExt) == VSQLExt || strings.ToLower(fileExt) == SQLExt {
+		if strings.EqualFold(fileExt, VSQLExt) || strings.EqualFold(fileExt, SQLExt) {
 			var fpath string
 			if _, ok := fs.(embed.FS); ok {
 				if dir == "." || dir == "" {
@@ -143,7 +143,6 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 	var checkStatement func(stmt interface{})
 
 	checkStatement = func(stmt interface{}) {
-
 		if ws, ok := stmt.(*WorkspaceStmt); ok {
 			if !ws.Abstract {
 				if ws.Descriptor == nil {
@@ -183,7 +182,6 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 
 func cleanupComments(schema *SchemaAST) {
 	iterate(schema, func(stmt interface{}) {
-
 		if s, ok := stmt.(IStatement); ok {
 			var rawComments string
 			var mult bool
@@ -202,7 +200,7 @@ func cleanupComments(schema *SchemaAST) {
 
 			split := strings.Split(rawComments, "\n")
 			fixedComments := make([]string, 0)
-			for i := 0; i < len(split); i++ {
+			for i := range split {
 				fixed := strings.TrimSpace(split[i])
 				if !mult {
 					fixed, _ = strings.CutPrefix(fixed, "--")
@@ -219,7 +217,7 @@ func cleanupComments(schema *SchemaAST) {
 }
 
 func cleanupImports(schema *SchemaAST) {
-	for i := 0; i < len(schema.Imports); i++ {
+	for i := range schema.Imports {
 		imp := &schema.Imports[i]
 		imp.Name = strings.Trim(imp.Name, "\"")
 	}
@@ -255,7 +253,6 @@ func defineApp(c *basicContext) {
 	pkgNames[appAst.Name] = true
 
 	for _, use := range app.Uses {
-
 		if _, ok := pkgNames[string(use.Name)]; ok {
 			c.stmtErr(use.GetPos(), ErrPackageWithSameNameAlreadyIncludedInApp)
 			continue
@@ -294,7 +291,6 @@ func defineApp(c *basicContext) {
 }
 
 func buildAppSchemaImpl(packages []*PackageSchemaAST, opts ...ParserOption) (*AppSchemaAST, error) {
-
 	pkgMap := make(map[string]*PackageSchemaAST)
 	pkgPathLocalNames := make(map[string]string, len(packages))
 	var importErrors []error

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -30,7 +31,7 @@ func TestRates_BasicUsage(t *testing.T) {
 	bodyCmd := `{"args":{}}`
 
 	// first 2 calls are ok
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry)
 		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
@@ -45,7 +46,7 @@ func TestRates_BasicUsage(t *testing.T) {
 	vit.TimeAdd(time.Minute)
 
 	// next 2 calls are ok again
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry)
 		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
@@ -67,7 +68,7 @@ func TestRates_BasicUsage(t *testing.T) {
 	vit.TimeAdd(time.Hour)
 
 	// next 2 calls are ok again
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry)
 		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
@@ -136,7 +137,7 @@ func TestQueryLimiter_BasicUsage(t *testing.T) {
 			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello"}`)),
 				httpu.WithAuthorizeBy(sys.Token), httpu.Expect503(), httpu.WithNoRetryPolicy())
 			require.Equal(t, http.StatusServiceUnavailable, resp.HTTPResp.StatusCode)
-			require.Equal(t, fmt.Sprintf("%d", router.DefaultRetryAfterSecondsOn503), resp.HTTPResp.Header.Get("Retry-After"))
+			require.Equal(t, strconv.Itoa(router.DefaultRetryAfterSecondsOn503), resp.HTTPResp.Header.Get("Retry-After"))
 
 			vit.TimeAdd(10 * time.Second)
 			releaseQuerySlots(wg, okToFinish, limit)
@@ -179,11 +180,9 @@ func fillQuerySlots(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, count int) (
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	wg = &sync.WaitGroup{}
 	for range count {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.WithAuthorizeBy(sys.Token))
-		}()
+		})
 		<-funcStarted
 	}
 	return wg, okToFinish

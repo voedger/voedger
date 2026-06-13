@@ -29,7 +29,7 @@ func newCompatCmd(params *vpmParams) *cobra.Command {
 		Use:   "compat baseline-folder",
 		Short: "check backward compatibility",
 		Args:  exactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(*cobra.Command, []string) error {
 			ignores, err := readIgnoreFile(params.IgnoreFile)
 			if err != nil {
 				return err
@@ -186,5 +186,5 @@ func splitIgnorePaths(ignores []string) (res [][]string) {
 	for i, ignore := range ignores {
 		res[i] = strings.Split(ignore, "/")
 	}
-	return
+	return res
 }

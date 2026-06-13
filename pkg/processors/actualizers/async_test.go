@@ -770,7 +770,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	var topOffset istructs.Offset
 	const totalEvents = 50000
-	for i := 0; i < totalEvents/2; i++ {
+	for range totalEvents / 2 {
 		f.fill(1001, idGen)
 		topOffset = f.fill(1002, idGen)
 	}
@@ -949,7 +949,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		func(wsb appdef.IWorkspaceBuilder) {
 			wsb.AddCommand(projectorFilter)
 			wsb.AddCommand(testQName)
-			for i := 0; i < projectorsPerPartition; i++ {
+			for i := range projectorsPerPartition {
 				prj := prjName(i)
 				wsb.AddProjector(prj).Events().Add(
 					[]appdef.OperationKind{appdef.OperationKind_Execute},
@@ -959,7 +959,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			for i := 0; i < projectorsPerPartition; i++ {
+			for i := range projectorsPerPartition {
 				cfg.AddAsyncProjectors(istructs.Projector{
 					Name: prjName(i),
 					Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error { return nil },
@@ -982,7 +982,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 				cmdQName:  testQName,
 			},
 		}
-		for j := 0; j < eventsPerPartition; j++ {
+		for j := range eventsPerPartition {
 			partitions[i].topOffset = partitions[i].filler.fill(istructs.WSID(j), idGen)
 		}
 	}
@@ -992,9 +992,9 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	t.Logf("Initialized in %s", time.Since(t0))
 
 	// Wait for the projectors
-	for i := 0; i < totalPartitions; i++ {
+	for i := range totalPartitions {
 		tp := partitions[i]
-		for k := 0; k < projectorsPerPartition; k++ {
+		for k := range projectorsPerPartition {
 			stored := actMetrics.value(aaStoredOffset, tp.number, prjName(k))
 			for stored < int64(tp.topOffset) {
 				time.Sleep(time.Millisecond)
@@ -1079,7 +1079,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		func(wsb appdef.IWorkspaceBuilder) {
 			wsb.AddCommand(projectorCommand)
 			wsb.AddCommand(testQName)
-			for i := 0; i < projectorsPerPartition; i++ {
+			for i := range projectorsPerPartition {
 				prj := prjName(i)
 
 				wsb.AddProjector(prj).Events().Add(
@@ -1090,7 +1090,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorCommand, istructsmem.NullCommandExec))
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			for i := 0; i < projectorsPerPartition; i++ {
+			for i := range projectorsPerPartition {
 				cfg.AddAsyncProjectors(istructs.Projector{
 					Name: prjName(i),
 					Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error { return nil },
@@ -1113,7 +1113,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 				cmdQName:  testQName,
 			},
 		}
-		for j := 0; j < eventsPerPartition; j++ {
+		for j := range eventsPerPartition {
 			partitions[i].topOffset = partitions[i].filler.fill(istructs.WSID(j), idGen)
 		}
 	}
@@ -1123,9 +1123,9 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	t.Logf("Initialized in %s", time.Since(t0))
 
 	// Wait for the projectors
-	for i := 0; i < totalPartitions; i++ {
+	for i := range totalPartitions {
 		tp := partitions[i]
-		for k := 0; k < projectorsPerPartition; k++ {
+		for k := range projectorsPerPartition {
 			stored := actMetrics.value(aaStoredOffset, tp.number, prjName(k))
 			for stored < int64(tp.topOffset) {
 				time.Sleep(time.Millisecond)
@@ -1299,8 +1299,7 @@ func Test_AsynchronousActualizer_KeepReadingPropagatesReadPLogErrorAsCause(t *te
 		appParts:   flaky,
 		retrierCfg: retrier.NewConfig(time.Millisecond, 5*time.Millisecond),
 	}
-	vvmCtx, vvmCancel := context.WithCancel(context.Background())
-	defer vvmCancel()
+	vvmCtx := t.Context()
 
 	act.Prepare(vvmCtx)
 	require.NoError(act.init(vvmCtx))

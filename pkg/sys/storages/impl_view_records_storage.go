@@ -74,7 +74,7 @@ func (s *viewRecordsStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	batches := make(map[istructs.WSID][]istructs.ViewRecordGetBatchItem)
 	for itemIdx, item := range items {
 		k := item.Key.(*viewKeyBuilder)
-		if err = s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
+		if err := s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
 			return err
 		}
 		wsidToItemIdx[k.wsid] = append(wsidToItemIdx[k.wsid], itemIdx)
@@ -83,7 +83,7 @@ func (s *viewRecordsStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	for wsid, batch := range batches {
 		err = s.appStructsFunc().ViewRecords().GetBatch(wsid, batch)
 		if err != nil {
-			return
+			return err
 		}
 		for i, batchItem := range batch {
 			itemIndex := wsidToItemIdx[wsid][i]
@@ -104,7 +104,7 @@ func (s *viewRecordsStorage) Read(kb istructs.IStateKeyBuilder, callback istruct
 		})
 	}
 	k := kb.(*viewKeyBuilder)
-	if err = s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
+	if err := s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
 		return err
 	}
 	return s.appStructsFunc().ViewRecords().Read(s.ctx, k.wsid, k.IKeyBuilder, cb)

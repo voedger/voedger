@@ -136,7 +136,6 @@ func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKey
 func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*recordsKeyBuilder)
 	if k.isSingleton || k.singleton != appdef.NullQName {
-
 		qname := k.singleton // for compatibility
 		if k.isSingleton {
 			qname = k.entity
@@ -206,7 +205,7 @@ func (s *recordsStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	for wsid, batch := range batches {
 		err = s.recordsFunc().GetBatch(wsid, true, batch)
 		if err != nil {
-			return
+			return err
 		}
 		for i, batchItem := range batch {
 			if batchItem.Record.QName() == appdef.NullQName {
@@ -227,8 +226,8 @@ func (s *recordsStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	}
 	return err
 }
-func (s *recordsStorage) Validate([]state.ApplyBatchItem) (err error)   { return }
-func (s *recordsStorage) ApplyBatch([]state.ApplyBatchItem) (err error) { return }
+func (s *recordsStorage) Validate([]state.ApplyBatchItem) (err error)   { return nil }
+func (s *recordsStorage) ApplyBatch([]state.ApplyBatchItem) (err error) { return nil }
 func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	kb := key.(*recordsKeyBuilder)
 	if kb.entity == appdef.NullQName {

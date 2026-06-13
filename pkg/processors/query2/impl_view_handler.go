@@ -5,6 +5,7 @@
 package query2
 
 import (
+	"maps"
 	"context"
 	"errors"
 	"fmt"
@@ -32,17 +33,17 @@ func viewHandler() apiPathHandler {
 	}
 }
 
-func viewSetRequestType(ctx context.Context, qw *queryWork) error {
+func viewSetRequestType(_ context.Context, qw *queryWork) error {
 	if qw.iView = appdef.View(qw.iWorkspace.Type, qw.msg.QName()); qw.iView == nil {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("view %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
 	}
 	return nil
 }
-func viewSetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
+func viewSetResultType(_ context.Context, qw *queryWork, _ istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iView
 	return nil
 }
-func viewAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
+func viewAuthorizeResult(_ context.Context, qw *queryWork) (err error) {
 	ws := qw.iWorkspace
 	var requestedFields []string
 	if len(qw.queryParams.Constraints.Keys) != 0 {
@@ -73,7 +74,7 @@ func viewAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
 func viewRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	err = validateFields(qw)
 	if err != nil {
-		return
+		return err
 	}
 	oo := make([]*pipeline.WiredOperator, 0)
 	if len(qw.queryParams.Constraints.Include) != 0 {
@@ -87,7 +88,7 @@ func viewRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	fields = append(fields, qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Value().Fields()...)
 	o, err := newFilter(qw, fields)
 	if err != nil {
-		return
+		return err
 	}
 	if o != nil {
 		oo = append(oo, pipeline.WireAsyncOperator("Filter", o))
@@ -99,27 +100,25 @@ func viewRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = respWriterGetter
-	return
+	return nil
 }
 func viewExec(ctx context.Context, qw *queryWork) (err error) {
 	kk, err := getKeys(qw)
 	if err != nil {
-		return
+		return err
 	}
 	for i := range kk {
 		err = qw.appStructs.ViewRecords().Read(ctx, qw.msg.WSID(), kk[i], func(key istructs.IKey, value istructs.IValue) (err error) {
 			obj := objectBackedByMap{}
 			obj.data = coreutils.FieldsToMap(key, qw.appStructs.AppDef())
-			for k, v := range coreutils.FieldsToMap(value, qw.appStructs.AppDef()) {
-				obj.data[k] = v
-			}
+			maps.Copy(obj.data, coreutils.FieldsToMap(value, qw.appStructs.AppDef()))
 			return qw.callbackFunc(obj)
 		})
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }
 func getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
 	fields := qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView).Key().Fields()
@@ -172,7 +171,7 @@ func getKeys(qw *queryWork) (keys []istructs.IKeyBuilder, err error) {
 			}
 		}
 	}
-	return
+	return keys, nil
 }
 func validateFields(qw *queryWork) (err error) {
 	view := qw.appStructs.AppDef().Type(qw.iView.QName()).(appdef.IView)
@@ -198,5 +197,5 @@ func validateFields(qw *queryWork) (err error) {
 			return fmt.Errorf("%w: '%s'", errUnexpectedField, k)
 		}
 	}
-	return
+	return nil
 }

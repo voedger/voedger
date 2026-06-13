@@ -46,6 +46,7 @@ type pipedCmd struct {
 }
 
 func (pe *PipedExec) command(name string, stderrRedirection int, args ...string) *PipedExec {
+	//nolint:noctx
 	cmd := exec.Command(name, args...)
 	lastIdx := len(pe.cmds) - 1
 	if lastIdx > -1 {
@@ -84,7 +85,7 @@ func (pe *PipedExec) Wait() error {
 	var firstErr error
 	for _, cmd := range pe.cmds {
 		err := cmd.cmd.Wait()
-		if nil != err && firstErr == nil {
+		if err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
@@ -94,7 +95,7 @@ func (pe *PipedExec) Wait() error {
 // Start all cmds
 func (pe *PipedExec) Start(out io.Writer, err io.Writer) error {
 	for _, cmd := range pe.cmds {
-		if cmd.stderrRedirection == StderrRedirectNone && nil != err {
+		if cmd.stderrRedirection == StderrRedirectNone && err != nil {
 			cmd.cmd.Stderr = err
 		}
 	}
@@ -102,14 +103,14 @@ func (pe *PipedExec) Start(out io.Writer, err io.Writer) error {
 	if lastIdx < 0 {
 		return errors.New("empty command list")
 	}
-	if nil != out {
+	if out != nil {
 		pe.cmds[lastIdx].cmd.Stdout = out
 	}
 
 	for _, cmd := range pe.cmds {
 		logger.Verbose(cmd.cmd.Path, cmd.cmd.Args)
 		err := cmd.cmd.Start()
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -119,7 +120,7 @@ func (pe *PipedExec) Start(out io.Writer, err io.Writer) error {
 // Run starts the pipe
 func (pe *PipedExec) Run(out io.Writer, err io.Writer) error {
 	e := pe.Start(out, err)
-	if nil != e {
+	if e != nil {
 		return e
 	}
 	return pe.Wait()
@@ -132,49 +133,44 @@ func (pe *PipedExec) RunToStrings() (stdout string, stderr string, err error) {
 
 	var wg sync.WaitGroup
 
-	wg.Add(2)
-
 	lastCmd := pe.cmds[len(pe.cmds)-1]
 	stdoutPipe, err := lastCmd.cmd.StdoutPipe()
 	// notest
-	if nil != err {
+	if err != nil {
 		return "", "", err
 	}
 	stderrPipe, err := lastCmd.cmd.StderrPipe()
 	// notest
-	if nil != err {
+	if err != nil {
 		return "", "", err
 	}
 
 	err = pe.Start(nil, nil)
-	if nil != err {
+	if err != nil {
 		return "", "", err
 	}
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		buf := new(bytes.Buffer)
 		_, errr := buf.ReadFrom(stdoutPipe)
 		// notestdept
-		if nil != errr {
-			panic(errr)
+		if errr != nil {
+			panic(errr) // nolint
 		}
 		stdout = buf.String()
-	}()
+	})
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		buf := new(bytes.Buffer)
 		_, errr := buf.ReadFrom(stderrPipe)
 		// notestdept
-		if nil != errr {
-			panic(errr)
+		if errr != nil {
+			panic(errr) // nolint
 		}
 		stderr = buf.String()
-	}()
+	})
 
 	wg.Wait()
 
 	return stdout, stderr, pe.Wait()
-
 }

@@ -148,7 +148,7 @@ func (r Rule) String() string {
 	default:
 		s += " TO "
 	}
-	s += fmt.Sprint(r.Principal().QName())
+	s += r.Principal().QName().String()
 	return s
 }
 

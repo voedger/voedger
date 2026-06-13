@@ -23,8 +23,7 @@ func newRepeatCmd() *cobra.Command {
 	return repeatCmd
 }
 
-func repeat(cmd *cobra.Command, arg []string) error {
-
+func repeat(cmd *cobra.Command, _ []string) error {
 	currentCmd = cmd
 	cluster := newCluster()
 
@@ -41,13 +40,13 @@ func repeat(cmd *cobra.Command, arg []string) error {
 		return err
 	}
 
-	// nolint
 	defer saveClusterToJSON(cluster)
 
-	// nolint
-	mkCommandDirAndLogFile(cmd, cluster)
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
+		return err
+	}
 
-	if err = cluster.Cmd.apply(cluster); err != nil {
+	if err := cluster.Cmd.apply(cluster); err != nil {
 		loggerError(err)
 	}
 

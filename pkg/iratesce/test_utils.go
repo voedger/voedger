@@ -6,7 +6,7 @@ package iratesce
 
 import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
-	irates "github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/irates"
 )
 
 var TestBucketsFactory = func() irates.IBuckets {

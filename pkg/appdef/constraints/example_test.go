@@ -37,20 +37,21 @@ func ExampleMinLen() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)
@@ -84,20 +85,21 @@ func ExampleMaxLen() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)
@@ -131,20 +133,21 @@ func ExamplePattern() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)
@@ -178,20 +181,21 @@ func ExampleMinIncl() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)
@@ -226,20 +230,21 @@ func ExampleMinExcl() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)
@@ -274,20 +279,21 @@ func ExampleMaxIncl() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)
@@ -321,20 +327,21 @@ func ExampleMaxExcl() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)
@@ -368,20 +375,21 @@ func ExampleEnum() {
 	{
 		cnt := 0
 		for d := range appdef.DataTypes(app.Types()) {
-			if !d.IsSystem() {
-				cnt++
-				fmt.Println("-", d, "inherits from", d.Ancestor())
-				if d.Comment() != "" {
-					fmt.Println(" ", d.Comment())
-				}
-				str := []string{}
-				for _, c := range d.Constraints(false) {
-					str = append(str, fmt.Sprint(c))
-				}
-				if len(str) > 0 {
-					sort.Strings(str)
-					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-				}
+			if d.IsSystem() {
+				continue
+			}
+			cnt++
+			fmt.Println("-", d, "inherits from", d.Ancestor())
+			if d.Comment() != "" {
+				fmt.Println(" ", d.Comment())
+			}
+			str := []string{}
+			for _, c := range d.Constraints(false) {
+				str = append(str, fmt.Sprint(c))
+			}
+			if len(str) > 0 {
+				sort.Strings(str)
+				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		}
 		fmt.Println("overall user data types: ", cnt)

@@ -21,13 +21,14 @@ import (
 	"regexp"
 	"sync"
 
+	"slices"
+
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
-	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/ihttp"
@@ -79,26 +80,26 @@ func (p *httpProcessor) Prepare() (err error) {
 			WriteTimeout: defaultACMEServerWriteTimeout,
 			Handler:      p.certManager.HTTPHandler(nil),
 		}
+		//nolint:noctx // lefitime is controlled by IService engine
 		if p.acmeListener, err = net.Listen("tcp", acmeAddr); err == nil {
 			logger.Info("listening port ", p.acmeListener.Addr().(*net.TCPAddr).Port, " for acme server")
 		}
 	}
 
+	//nolint:noctx // lefitime is controlled by IService engine
 	if p.listener, err = net.Listen("tcp", httpu.ListenAddr(p.params.Port)); err == nil {
 		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 	}
 
 	p.registerRoutes()
 
-	return
+	return nil
 }
 
 func (p *httpProcessor) Run(ctx context.Context) {
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 	isHTTPS := p.isHTTPS()
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		logger.Info("httpProcessor starting:", fmt.Sprintf("%#v", p.params))
 		p.server.BaseContext = func(_ net.Listener) context.Context {
 			return ctx // need to track both client disconnect and app finalize
@@ -110,16 +111,14 @@ func (p *httpProcessor) Run(ctx context.Context) {
 			err = p.server.Serve(p.listener)
 		}
 		logger.Info("httpProcessor stopped, result:", err)
-	}()
+	})
 
 	if isHTTPS {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			logger.Info("httpProcessor's acme server starting:", fmt.Sprintf("%#v", p.params))
 			err := p.acmeServer.Serve(p.acmeListener)
 			logger.Info("httpProcessor's acme server  stopped, result:", err)
-		}()
+		})
 	}
 
 	<-ctx.Done()
@@ -248,11 +247,11 @@ func (p *httpProcessor) hostPolicy(_ context.Context, host string) error {
 }
 
 func (p *httpProcessor) cleanup() {
-	if nil != p.listener {
+	if p.listener != nil {
 		_ = p.listener.Close()
 		p.listener = nil
 	}
-	if nil != p.acmeListener {
+	if p.acmeListener != nil {
 		_ = p.acmeListener.Close()
 		p.acmeListener = nil
 	}
@@ -284,18 +283,18 @@ func (p *httpProcessor) requestHandler(requestCtx context.Context, request bus.R
 }
 
 type router struct {
+	sync.RWMutex
 	router        *mux.Router
 	reverseProxy  *httputil.ReverseProxy
 	staticContent map[string]http.HandlerFunc
 	redirections  []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
-	sync.RWMutex
 }
 
 func newRouter() *router {
 	return &router{
 		router:        mux.NewRouter(),
 		staticContent: make(map[string]http.HandlerFunc),
-		reverseProxy:  &httputil.ReverseProxy{Director: func(r *http.Request) {}},
+		reverseProxy:  &httputil.ReverseProxy{Director: func(*http.Request) {}},
 		redirections:  make([]*redirectionRoute, 1),
 	}
 }
@@ -363,7 +362,7 @@ func (r *router) matchStaticContent(req *http.Request, rm *mux.RouteMatch) (matc
 			return true
 		}
 	}
-	return
+	return false
 }
 
 func (r *router) matchRedirections(req *http.Request, rm *mux.RouteMatch) (matched bool) {
@@ -372,7 +371,7 @@ func (r *router) matchRedirections(req *http.Request, rm *mux.RouteMatch) (match
 			return true
 		}
 	}
-	return
+	return false
 }
 
 func checkRedirection(redirection *redirectionRoute, reverseProxy *httputil.ReverseProxy, req *http.Request, rm *mux.RouteMatch) bool {
@@ -428,7 +427,7 @@ func corsHandler(h http.Handler) http.HandlerFunc {
 		}
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
-		if r.Method == "OPTIONS" {
+		if r.Method == http.MethodOptions {
 			return
 		}
 		h.ServeHTTP(w, r)

@@ -88,10 +88,10 @@ func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {
-	for i := 0; i < len(s.Imports); i++ {
+	for i := range s.Imports {
 		callback(&s.Imports[i])
 	}
-	for i := 0; i < len(s.Statements); i++ {
+	for i := range s.Statements {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
 			raw.stmt = extractStatement(*raw)
@@ -171,7 +171,7 @@ type WorkspaceExtEngineStmt struct {
 }
 
 func (s *WorkspaceExtEngineStmt) Iterate(callback func(stmt interface{})) {
-	for i := 0; i < len(s.Statements); i++ {
+	for i := range s.Statements {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
 			raw.stmt = extractStatement(*raw)
@@ -189,7 +189,7 @@ type RootExtEngineStmt struct {
 }
 
 func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
-	for i := 0; i < len(s.Statements); i++ {
+	for i := range s.Statements {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
 			raw.stmt = extractStatement(*raw)
@@ -240,12 +240,12 @@ type WorkspaceStmt struct {
 	builder appdef.IWorkspaceBuilder
 }
 
-func (s WorkspaceStmt) GetName() string { return string(s.Name) }
+func (s *WorkspaceStmt) GetName() string { return string(s.Name) }
 func (s *WorkspaceStmt) Iterate(callback func(stmt interface{})) {
 	if s.Descriptor != nil {
 		callback(s.Descriptor)
 	}
-	for i := 0; i < len(s.Statements); i++ {
+	for i := range s.Statements {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
 			raw.stmt = extractStatement(*raw)
@@ -265,7 +265,7 @@ type AlterWorkspaceStmt struct {
 }
 
 func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
-	for i := 0; i < len(s.Statements); i++ {
+	for i := range s.Statements {
 		raw := &s.Statements[i]
 		if raw.stmt == nil {
 			raw.stmt = extractStatement(*raw)
@@ -287,7 +287,7 @@ type WsDescriptorStmt struct {
 	Statement
 	Name      Ident           `parser:"@Ident?"`
 	Items     []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
-	_         int             `parser:"';'"`
+	_         int             `parser:"';'"` //nolint:revive // participle needs this grammar-only field to consume the descriptor semicolon; no AST value is required
 	workspace workspaceAddr   // filled on the analysis stage
 }
 
@@ -305,7 +305,6 @@ func (q DefQName) String() string {
 		return string(q.Name)
 	}
 	return fmt.Sprintf("%s.%s", q.Package, q.Name)
-
 }
 
 type TypeVarchar struct {
@@ -346,37 +345,38 @@ type DataType struct {
 }
 
 func (q DataType) String() (s string) {
-	if q.Varchar != nil {
+	switch {
+	case q.Varchar != nil:
 		if q.Varchar.MaxLen != nil {
 			return fmt.Sprintf("varchar[%d]", *q.Varchar.MaxLen)
 		}
 		return fmt.Sprintf("varchar[%d]", appdef.DefaultFieldMaxLength)
-	} else if q.Int8 {
+	case q.Int8:
 		return "int8"
-	} else if q.Int16 {
+	case q.Int16:
 		return "int16"
-	} else if q.Int32 {
+	case q.Int32:
 		return "int32"
-	} else if q.Int64 {
+	case q.Int64:
 		return "int64"
-	} else if q.Float32 {
+	case q.Float32:
 		return "float32"
-	} else if q.Float64 {
+	case q.Float64:
 		return "float64"
-	} else if q.QName {
+	case q.QName:
 		return "qname"
-	} else if q.Bool {
+	case q.Bool:
 		return "bool"
-	} else if q.Bytes != nil {
+	case q.Bytes != nil:
 		if q.Bytes.MaxLen != nil {
 			return fmt.Sprintf("bytes[%d]", *q.Bytes.MaxLen)
 		}
 		return fmt.Sprintf("bytes[%d]", appdef.DefaultFieldMaxLength)
-	} else if q.Blob {
+	case q.Blob:
 		return "blob"
-	} else if q.Timestamp {
+	case q.Timestamp:
 		return "timestamp"
-	} else if q.Currency {
+	case q.Currency:
 		return "currency"
 	}
 
@@ -473,7 +473,7 @@ func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
 func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
 
 func (t *ProjectorTrigger) update() bool {
-	for i := 0; i < len(t.TableActions); i++ {
+	for i := range t.TableActions {
 		if t.TableActions[i].Update {
 			return true
 		}
@@ -482,7 +482,7 @@ func (t *ProjectorTrigger) update() bool {
 }
 
 func (t *ProjectorTrigger) insert() bool {
-	for i := 0; i < len(t.TableActions); i++ {
+	for i := range t.TableActions {
 		if t.TableActions[i].Insert {
 			return true
 		}
@@ -491,7 +491,7 @@ func (t *ProjectorTrigger) insert() bool {
 }
 
 func (t *ProjectorTrigger) activate() bool {
-	for i := 0; i < len(t.TableActions); i++ {
+	for i := range t.TableActions {
 		if t.TableActions[i].Activate {
 			return true
 		}
@@ -500,7 +500,7 @@ func (t *ProjectorTrigger) activate() bool {
 }
 
 func (t *ProjectorTrigger) deactivate() bool {
-	for i := 0; i < len(t.TableActions); i++ {
+	for i := range t.TableActions {
 		if t.TableActions[i].Deactivate {
 			return true
 		}
@@ -523,7 +523,7 @@ func (j *JobStmt) SetEngineType(e EngineType) { j.Engine = e }
 
 type TemplateStmt struct {
 	Statement
-	Name      Ident    `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
+	Name      Ident    `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'"`
 	Workspace DefQName `parser:"@@"`
 	Source    Ident    `parser:"'SOURCE' @Ident"`
 }
@@ -556,7 +556,7 @@ type UseWorkspaceStmt struct {
 	useWs     *statementNode
 }
 
-/*type sequenceStmt struct {
+/* type sequenceStmt struct {
 	Name        Ident `parser:"'SEQUENCE' @Ident"`
 	Type        Ident `parser:"@Ident"`
 	StartWith   *int   `parser:"(('START' 'WITH' @Number)"`
@@ -725,8 +725,8 @@ type GrantOrRevoke struct {
 	AllViews           bool                          `parser:"  | @(SELECT ONALLVIEWS)"`
 	AllTables          *GrantAllTables               `parser:"  | @@"`
 	Role               *DefQName                     `parser:"  | @@)"`
-	//AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
-	//Workspace *DefQName `parser:"  | (INSERTONWORKSPACE @@)"`
+	// AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
+	// Workspace *DefQName `parser:"  | (INSERTONWORKSPACE @@)"`
 
 	/* filled on the analysis stage */
 	toRole    appdef.QName
@@ -793,15 +793,15 @@ func (g GrantOrRevoke) filter() appdef.IFilter {
 
 type GrantStmt struct {
 	Statement
-	Revoke bool `parser:"'GRANT'"`
-	GrantOrRevoke
-	To DefQName `parser:"'TO' @@"`
+	Revoke        bool     `parser:"'GRANT'"`
+	GrantOrRevoke          //nolint:embeddedstructfieldcheck // parser grammar requires this embedded production after the GRANT keyword
+	To            DefQName `parser:"'TO' @@"`
 }
 type RevokeStmt struct {
 	Statement
-	Revoke bool `parser:"'REVOKE'"`
-	GrantOrRevoke
-	From DefQName `parser:"'FROM' @@"`
+	Revoke        bool     `parser:"'REVOKE'"`
+	GrantOrRevoke          //nolint:embeddedstructfieldcheck // parser grammar requires this embedded production after the REVOKE keyword
+	From          DefQName `parser:"'FROM' @@"`
 }
 
 type StorageStmt struct {
@@ -947,7 +947,7 @@ type TableStmt struct {
 
 func (s *TableStmt) GetName() string { return string(s.Name) }
 func (s *TableStmt) Iterate(callback func(stmt interface{})) {
-	for i := 0; i < len(s.Items); i++ {
+	for i := range s.Items {
 		item := &s.Items[i]
 		if item.Field != nil {
 			callback(item.Field)
@@ -1036,7 +1036,7 @@ type ViewStmt struct {
 }
 
 func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
-	for i := 0; i < len(s.Items); i++ {
+	for i := range s.Items {
 		item := &s.Items[i]
 		if item.Field != nil {
 			callback(item.Field)
@@ -1047,8 +1047,8 @@ func (s *ViewStmt) Iterate(callback func(stmt interface{})) {
 }
 
 // Returns view item with field by field name
-func (s ViewStmt) Field(fieldName Ident) *ViewItemExpr {
-	for i := 0; i < len(s.Items); i++ {
+func (s *ViewStmt) Field(fieldName Ident) *ViewItemExpr {
+	for i := range s.Items {
 		item := &s.Items[i]
 		if item.FieldName() == fieldName {
 			return item
@@ -1058,8 +1058,8 @@ func (s ViewStmt) Field(fieldName Ident) *ViewItemExpr {
 }
 
 // Iterate view partition fields
-func (s ViewStmt) PartitionFields(callback func(f *ViewItemExpr)) {
-	for i := 0; i < len(s.pkRef.PartitionKeyFields); i++ {
+func (s *ViewStmt) PartitionFields(callback func(f *ViewItemExpr)) {
+	for i := range s.pkRef.PartitionKeyFields {
 		if f := s.Field(s.pkRef.PartitionKeyFields[i].Value); f != nil {
 			callback(f)
 		}
@@ -1067,8 +1067,8 @@ func (s ViewStmt) PartitionFields(callback func(f *ViewItemExpr)) {
 }
 
 // Iterate view clustering columns
-func (s ViewStmt) ClusteringColumns(callback func(f *ViewItemExpr)) {
-	for i := 0; i < len(s.pkRef.ClusteringColumnsFields); i++ {
+func (s *ViewStmt) ClusteringColumns(callback func(f *ViewItemExpr)) {
+	for i := range s.pkRef.ClusteringColumnsFields {
 		if f := s.Field(s.pkRef.ClusteringColumnsFields[i].Value); f != nil {
 			callback(f)
 		}
@@ -1076,8 +1076,8 @@ func (s ViewStmt) ClusteringColumns(callback func(f *ViewItemExpr)) {
 }
 
 // Iterate view value fields
-func (s ViewStmt) ValueFields(callback func(f *ViewItemExpr)) {
-	for i := 0; i < len(s.Items); i++ {
+func (s *ViewStmt) ValueFields(callback func(f *ViewItemExpr)) {
+	for i := range s.Items {
 		f := &s.Items[i]
 		if n := f.FieldName(); len(n) > 0 {
 			if !contains(s.pkRef.PartitionKeyFields, n) && !contains(s.pkRef.ClusteringColumnsFields, n) {
@@ -1115,7 +1115,7 @@ type PrimaryKeyExpr struct {
 	ClusteringColumnsFields []Identifier `parser:"(','? @@ (',' @@)*)?"`
 }
 
-func (s ViewStmt) GetName() string { return string(s.Name) }
+func (s *ViewStmt) GetName() string { return string(s.Name) }
 
 type ViewRefField struct {
 	Statement

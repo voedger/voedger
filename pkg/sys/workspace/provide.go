@@ -18,7 +18,6 @@ import (
 func Provide(sr istructsmem.IStatelessResources, time timeu.ITime, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
 	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
-
 	federationWithRetry := federation.WithRetry()
 
 	sr.AddCommands(appdef.SysPackagePath,

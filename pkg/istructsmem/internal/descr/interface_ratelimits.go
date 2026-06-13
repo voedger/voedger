@@ -25,6 +25,6 @@ type Limit struct {
 }
 
 type LimitFilter struct {
-	Option string // ALL or EACH
 	Filter
+	Option string // ALL or EACH
 }

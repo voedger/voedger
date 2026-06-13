@@ -197,7 +197,7 @@ func TestISequencer_Start(t *testing.T) {
 		require.Equal(isequencer.PLogOffset(1), offset)
 
 		// obtain 6 numbers, 6th should overflow toBeFlushed
-		for i := 0; i < 6; i++ {
+		for i := range 6 {
 			num, err := seq.Next(isequencer.SeqID(i + 1))
 			require.NoError(err)
 			require.Equal(isequencer.Number(1), num)
@@ -292,7 +292,7 @@ func TestISequencer_Start(t *testing.T) {
 
 		count := 3
 		// Generate sequence Numbers
-		for i := 0; i < count; i++ {
+		for i := range count {
 			num, err := seq.Next(1)
 			require.NoError(err)
 			require.Equal(isequencer.Number(100+i+1), num)
@@ -867,7 +867,7 @@ func TestISequencer_MultipleActualizes(t *testing.T) {
 	flushCalled := false
 	// Run 100 transactions
 	const cycles = 100
-	for i := 0; i < cycles; i++ {
+	for i := range cycles {
 		// Start transaction
 		nextOffset = isequencer.WaitForStart(t, seq, 1, 1, true)
 		nextNumber, err := seq.Next(1)
@@ -994,7 +994,7 @@ func TestISequencer_LongRecovery(t *testing.T) {
 		pLogOffset := isequencer.PLogOffset(1)
 		number := isequencer.Number(1)
 		wsid := isequencer.WSID(1)
-		for i := 0; i < numEvents; i++ {
+		for range numEvents {
 			storage.AddPLogEntry(pLogOffset, wsid, seqID_1, number)
 			number++
 			storage.AddPLogEntry(pLogOffset, wsid, seqID_2, number)

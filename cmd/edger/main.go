@@ -33,7 +33,7 @@ func execRootCmd(args []string, ver string) error {
 		newServerCmd(),
 		newRunEdgerCmd(),
 	)
-	//rootCmd.PersistentFlags().BoolVar(&internal.IsDryRun, "dry-run", false, "Simulate the execution of the command without actually modifying any files or data")
+	// rootCmd.PersistentFlags().BoolVar(&internal.IsDryRun, "dry-run", false, "Simulate the execution of the command without actually modifying any files or data")
 
 	// Can just use `return rootCmd.Execute()`
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)

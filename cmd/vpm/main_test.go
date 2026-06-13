@@ -339,7 +339,7 @@ func TestBuildExample2(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	airVarFile := filepath.Join(wd, "../../examples/airs-bp2/air/air.var")
+	airVarFile := filepath.Join(wd, "..", "..", "examples", "airs-bp2", "air", "air.var")
 	exists, err := filesu.Exists(airVarFile)
 	require.NoError(err)
 	if exists {

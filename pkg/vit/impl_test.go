@@ -240,7 +240,7 @@ func TestEmailExpectation(t *testing.T) {
 	defer vit.TearDown()
 
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
-	s := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, nil, nil, nil, 1, 0,
+	s := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, nil, nil, 1, 0,
 		state.NullOpts, vit.emailCaptor, nil)
 	k, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 	require.NoError(err)

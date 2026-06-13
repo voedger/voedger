@@ -6,10 +6,11 @@ package query2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -24,10 +25,10 @@ func schemasRolesHandler() apiPathHandler {
 	}
 }
 
-func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
+func schemasRolesExec(_ context.Context, qw *queryWork) (err error) {
 	wsQname := qw.msg.WorkspaceQName()
 	if wsQname == appdef.NullQName {
-		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("workspace is not specified"))
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, errors.New("workspace is not specified"))
 	}
 	workspace := qw.appStructs.AppDef().Workspace(wsQname)
 	if workspace == nil {
@@ -69,13 +70,13 @@ func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 		for pkg := range packages {
 			pkgNames = append(pkgNames, pkg)
 		}
-		sort.Strings(pkgNames)
+		slices.Sort(pkgNames)
 
 		for _, pkg := range pkgNames {
 			roles := packages[pkg]
 			// Sort roles alphabetically
-			sort.Slice(roles, func(i, j int) bool {
-				return roles[i].QName().String() < roles[j].QName().String()
+			slices.SortFunc(roles, func(a, b appdef.IRole) int {
+				return strings.Compare(a.QName().String(), b.QName().String())
 			})
 
 			fmt.Fprintf(&sb, "<h2>Package %s</h2>", pkg)
@@ -84,7 +85,7 @@ func schemasRolesExec(ctx context.Context, qw *queryWork) (err error) {
 			appNameStr := qw.msg.AppQName().Name()
 			for _, role := range roles {
 				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles/%s", appOwnerStr, appNameStr, workspace.QName().String(), role.QName().String())
-				fmt.Fprintf(&sb, `<li><a href="%s">%s</a></li>`, html.EscapeString(ref), html.EscapeString(role.QName().String()))
+				fmt.Fprintf(&sb, `<li><a href=%q>%s</a></li>`, html.EscapeString(ref), html.EscapeString(role.QName().String()))
 			}
 			sb.WriteString("</ul>")
 		}

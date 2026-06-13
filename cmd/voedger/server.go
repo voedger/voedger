@@ -22,7 +22,7 @@ func newServerCmd() *cobra.Command {
 	serverCmd := &cobra.Command{
 		Use:   "server",
 		Short: "Start server",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			wired, cleanup, err := wireServer(httpCLIParams, appsCLIParams)
 			if err != nil {
 				return fmt.Errorf("services not wired: %w", err)

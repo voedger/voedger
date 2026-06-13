@@ -27,27 +27,27 @@ func MakeWithPackages() WithPackages {
 	}
 }
 
-func (p WithPackages) FullQName(n appdef.QName) appdef.FullQName {
+func (p *WithPackages) FullQName(n appdef.QName) appdef.FullQName {
 	if path, ok := p.pathByLocal[n.Pkg()]; ok {
 		return appdef.NewFullQName(path, n.Entity())
 	}
 	return appdef.NullFullQName
 }
 
-func (p WithPackages) LocalQName(n appdef.FullQName) appdef.QName {
+func (p *WithPackages) LocalQName(n appdef.FullQName) appdef.QName {
 	if pkg, ok := p.localByPath[n.PkgPath()]; ok {
 		return appdef.NewQName(pkg, n.Entity())
 	}
 	return appdef.NullQName
 }
 
-func (p WithPackages) PackageFullPath(localName string) string { return p.pathByLocal[localName] }
+func (p *WithPackages) PackageFullPath(localName string) string { return p.pathByLocal[localName] }
 
-func (p WithPackages) PackageLocalName(path string) string { return p.localByPath[path] }
+func (p *WithPackages) PackageLocalName(path string) string { return p.localByPath[path] }
 
-func (p WithPackages) PackageLocalNames() []string { return p.local }
+func (p *WithPackages) PackageLocalNames() []string { return p.local }
 
-func (p WithPackages) Packages() map[string]string { return p.pathByLocal }
+func (p *WithPackages) Packages() map[string]string { return p.pathByLocal }
 
 func (p *WithPackages) add(local, path string) {
 	if ok, err := appdef.ValidIdent(local); !ok {

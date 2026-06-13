@@ -20,7 +20,6 @@ type MockedState struct {
 }
 
 func implProvideMockedCommandProcessorState(ctx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
-
 	ms := &MockedState{
 		ctx:       ctx,
 		hostState: newHostState(ctx, "MockedCommandProcessorState", intentsLimit, appStructsFunc),
@@ -41,7 +40,6 @@ func implProvideMockedCommandProcessorState(ctx context.Context, intentsLimit in
 }
 
 func implProvideMockedActualizerState(ctx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
-
 	ms := &MockedState{
 		hostState: newHostState(ctx, "MockedActualizerState", intentsLimit, appStructsFunc),
 	}
