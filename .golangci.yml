@@ -47,32 +47,6 @@ linters:
     - forbidigo
     - contextcheck
     - thelper
-  # enable:
-  #   - asciicheck
-  #   - bidichk
-  #   - durationcheck
-  #   - errcheck
-  #   - errorlint
-  #   - gochecknoinits
-  #   - goconst
-  #   - gocritic
-  #   - gosec
-  #   - govet
-  #   - copyloopvar
-  #   - durationcheck
-  #   - mirror
-  #   - misspell
-  #   - nilnil
-  #   - nosprintfhostport
-  #   - prealloc
-  #   - predeclared
-  #   - revive
-  #   - staticcheck
-  #   - testifylint
-  #   - unconvert
-  #   - unused
-  #   -
-  #   - bodyclose
   settings:
     embeddedstructfieldcheck:
       empty-line: false
@@ -201,6 +175,7 @@ linters:
           - gosmopolitan
           - dupl
           - makezero
+          - goconst # TODO: eliminate this after switch to golangci-lint >= 2.12.2 in ci-action
         path: _test.go
       - linters:
           - gocritic
