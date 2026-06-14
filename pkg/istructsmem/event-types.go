@@ -744,7 +744,7 @@ func (o *objectType) find(visit func(*objectType) bool) *objectType {
 func (o *objectType) forEach(cb func(c *objectType) error) (err error) {
 	if err = cb(o); err == nil {
 		for _, e := range o.child {
-			if err := e.forEach(cb); err != nil {
+			if err = e.forEach(cb); err != nil {
 				break
 			}
 		}

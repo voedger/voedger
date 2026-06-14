@@ -71,7 +71,7 @@ func (p queryParams) fillArray(data coreutils.MapObject, fieldName string, cb fu
 		if !ok {
 			return fmt.Errorf("each member must be an object: %w", ErrWrongType)
 		}
-		if err := cb(elem); err != nil {
+		if err = cb(elem); err != nil {
 			break
 		}
 	}

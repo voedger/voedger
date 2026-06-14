@@ -31,6 +31,8 @@ import (
 //   - istructs.IValueBuilder
 //   - istructs.IRecord (partially)
 //   - istructs.IEditableRecord
+//
+//nolint:recvcheck // String() must use a value receiver (see its comment); the other rowType methods use pointer receivers
 type rowType struct {
 	appCfg           *AppConfigType
 	typ              appdef.IType
@@ -1070,7 +1072,10 @@ func (row *rowType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, 
 //
 // If row has container name, then the result complete like `CRecord «Price: sales.PriceRecord»`.
 // Otherwise it will be short form, such as "CDoc «sales.BillDocument»".
-func (row *rowType) String() string {
+// String uses a value receiver on purpose: recordType/updateRecType embed rowType (or hold it as a value field)
+// and are formatted by value via %v/%s; a pointer receiver would keep String() out of the value method set,
+// so fmt would print a raw struct dump instead of the QName.
+func (row rowType) String() string {
 	qName := row.AsQName(appdef.SystemField_QName)
 	if qName == appdef.NullQName {
 		return "null row"

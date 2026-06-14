@@ -46,7 +46,7 @@ func NewElement(data coreutils.MapObject) (IElement, error) {
 func fillArray(data coreutils.MapObject, fieldName string, cb func(elem interface{}) error) error {
 	elems, _, err := data.AsObjects(fieldName)
 	for _, elem := range elems {
-		if err := cb(elem); err != nil {
+		if err = cb(elem); err != nil {
 			break
 		}
 	}

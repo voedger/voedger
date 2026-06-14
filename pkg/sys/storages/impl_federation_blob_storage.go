@@ -241,7 +241,7 @@ func (s *federationBlobStorage) Read(key istructs.IStateKeyBuilder, callback ist
 			err = nil
 			break
 		}
-		if err := callback(nil, &fBlobValue{data: buffer[:n]}); err != nil {
+		if err = callback(nil, &fBlobValue{data: buffer[:n]}); err != nil {
 			break
 		}
 	}
