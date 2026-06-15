@@ -244,10 +244,10 @@ func TestLoginAlias(t *testing.T) {
 		waitForLoginAlias(t, vit, login, alias1)
 
 		primaryToken := issuePrincipalToken(t, vit, login.Name, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, primaryToken, login.Name, alias1)
+		assertPrincipalTokenClaims(t, vit, primaryToken, alias1, login.Name)
 
 		aliasToken := issuePrincipalToken(t, vit, alias1, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, aliasToken, login.Name, alias1)
+		assertPrincipalTokenClaims(t, vit, aliasToken, alias1, login.Name)
 
 		issuePrincipalToken(t, vit, alias1, "wrong-password", appQName, it.Expect401("login or password is incorrect"))
 	})
@@ -267,18 +267,18 @@ func TestLoginAlias(t *testing.T) {
 
 		issuePrincipalToken(t, vit, alias1, login.Pwd, appQName, it.Expect401("login or password is incorrect"))
 		aliasToken := issuePrincipalToken(t, vit, alias2, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, aliasToken, login.Name, alias2)
+		assertPrincipalTokenClaims(t, vit, aliasToken, alias2, login.Name)
 	})
 
 	t.Run("existing token keeps alias snapshot and refresh preserves it", func(t *testing.T) {
 		tokenBeforeClear := issuePrincipalToken(t, vit, alias2, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, tokenBeforeClear, login.Name, alias2)
+		assertPrincipalTokenClaims(t, vit, tokenBeforeClear, alias2, login.Name)
 
 		initiateSetLoginAlias(t, vit, login, "", sysRegistryToken)
 		waitForLoginAlias(t, vit, login, "")
 		issuePrincipalToken(t, vit, alias2, login.Pwd, appQName, it.Expect401("login or password is incorrect"))
 
-		assertPrincipalTokenClaims(t, vit, tokenBeforeClear, login.Name, alias2)
+		assertPrincipalTokenClaims(t, vit, tokenBeforeClear, alias2, login.Name)
 
 		vit.TimeAdd(time.Minute)
 		prnWithAliasSnapshot := &it.Principal{
@@ -290,7 +290,7 @@ func TestLoginAlias(t *testing.T) {
 		resp := vit.PostProfile(prnWithAliasSnapshot, "q.sys.RefreshPrincipalToken", body)
 		refreshedToken := resp.SectionRow()[0].(string)
 		require.NotEqual(tokenBeforeClear, refreshedToken)
-		assertPrincipalTokenClaims(t, vit, refreshedToken, login.Name, alias2)
+		assertPrincipalTokenClaims(t, vit, refreshedToken, alias2, login.Name)
 	})
 
 	t.Run("clearing when no alias is set is idempotent", func(t *testing.T) {
@@ -311,7 +311,7 @@ func TestLoginAlias(t *testing.T) {
 
 		issuePrincipalToken(t, vit, alias2, login.Pwd, appQName, it.Expect401("login or password is incorrect"))
 		aliasToken := issuePrincipalToken(t, vit, alias2, reuseLogin.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, aliasToken, reuseLogin.Name, alias2)
+		assertPrincipalTokenClaims(t, vit, aliasToken, alias2, reuseLogin.Name)
 	})
 }
 
@@ -486,15 +486,18 @@ func issuePrincipalToken(t *testing.T, vit *it.VIT, signInIdentifier, pwd string
 	return resp.SectionRow()[0].(string)
 }
 
-func assertPrincipalTokenClaims(t *testing.T, vit *it.VIT, token, expectedLogin, expectedAlias string) {
+func assertPrincipalTokenClaims(t *testing.T, vit *it.VIT, token, expectedPresentedLogin, expectedCanonicalLogin string) {
 	t.Helper()
 	payload := payloads.PrincipalPayload{}
 	_, err := vit.ITokens.ValidateToken(token, &payload)
 	require.NoError(t, err)
-	require.Equal(t, expectedLogin, payload.Login)
+	require.Equal(t, expectedPresentedLogin, payload.PresentedLogin)
 
 	claims := decodeJWTClaims(t, token)
-	require.Equal(t, expectedAlias, claims["Alias"])
+	require.Equal(t, expectedPresentedLogin, claims["Login"])
+	require.Equal(t, expectedCanonicalLogin, claims["CanonicalLogin"])
+	_, hasAlias := claims["Alias"]
+	require.False(t, hasAlias)
 }
 
 func decodeJWTClaims(t *testing.T, token string) map[string]any {

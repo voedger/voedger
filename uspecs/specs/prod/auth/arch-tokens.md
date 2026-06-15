@@ -15,10 +15,10 @@ Roles:
 ## Scenarios overview
 
 - **`Issue principal token`**
-  - At the end of sign-in (see [arch-authn.md](./arch-authn.md#sign-in-by-login-or-by-active-alias)) the authentication subsystem builds `PrincipalPayload` and calls `[ITokens].IssueToken(appQName, ttl, &payload)` to mint a `[Principal Token]`. The `Alias` field captures the active alias snapshot at issue time and is immune to any subsequent change to `[(registry.Login)]` or `[(registry.LoginAlias)]`.
+  - At the end of sign-in (see [arch-authn.md](./arch-authn.md#sign-in-by-login-or-by-active-alias)) the authentication subsystem builds `PrincipalPayload` and calls `[ITokens].IssueToken(appQName, ttl, &payload)` to mint a `[Principal Token]`. The `Login` field carries the active alias snapshot at issue time, or the canonical login when no alias is set; the `CanonicalLogin` field always carries the canonical login. Both are captured at issue time and are immune to any subsequent change to `[(registry.Login)]` or `[(registry.LoginAlias)]`.
 
 - **`Refresh principal token`**
-  - `@Client` calls `[q.sys.RefreshPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, the same identity (including the captured `Alias`) is re-encoded with the same TTL/AppQName by `[ITokens].IssueToken`, and the new token is returned. Refresh never re-resolves the login or alias and never updates the alias snapshot.
+  - `@Client` calls `[q.sys.RefreshPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, the same identity (including the captured `Login` and `CanonicalLogin`) is re-encoded with the same TTL/AppQName by `[ITokens].IssueToken`, and the new token is returned. Refresh never re-resolves the login or alias and never updates the captured values.
 
 - **`Enrich principal token`**
   - `@Client` (basic auth, `WorkspaceOwner`) calls `[q.sys.EnrichPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, every runtime-composed `Principal{Kind: Role}` for the request is folded into `PrincipalPayload.Roles` (deduplicated by `RoleType{WSID, QName}`), and a fresh `[Principal Token]` is minted by `[IAppTokens].IssueToken` with `DefaultPrincipalTokenExpiration`. Unlike refresh, enrich rewrites the `Roles` set; the other identity fields are preserved.
@@ -58,7 +58,7 @@ Payload contract
 ### Token endpoints
 
 - `[q.sys.RefreshPrincipalToken]`
-  - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPayloadRegistry`, and re-issues a token for the same AppQName, duration, and payload. The decoded `Alias` is preserved verbatim, so the snapshot taken at the original issue time survives the refresh; alias changes performed in the registry between issue and refresh have no effect on the refreshed token.
+  - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPayloadRegistry`, and re-issues a token for the same AppQName, duration, and payload. The decoded `Login` and `CanonicalLogin` are preserved verbatim, so the snapshot taken at the original issue time survives the refresh; alias changes performed in the registry between issue and refresh have no effect on the refreshed token.
   - impl: [pkg/sys/authnz/impl_refreshprincipaltoken.go#provideRefreshPrincipalTokenExec](../../../../pkg/sys/authnz/impl_refreshprincipaltoken.go)
 
 - `[q.sys.EnrichPrincipalToken]`
@@ -80,8 +80,8 @@ Payload contract
 
 - `[PrincipalPayload]`
   - Identity payload carried by `[Principal Token]`:
-    - `Login` - canonical login resolved at issue time
-    - `Alias` - snapshot of the active alias at issue time; never re-read on refresh
+    - `Login` - identifier the subject is known by: the active alias snapshot at issue time, or the canonical login when no alias is set; never re-read on refresh
+    - `CanonicalLogin` - canonical login resolved at issue time; never re-read on refresh
     - `SubjectKind` - `User` or `Device`
     - `ProfileWSID` - profile workspace of the subject (`NullWSID` for system-only tokens)
     - `Roles []{WSID, QName}` - workspace-scoped roles emitted on every request; for `IsAPIToken=true` these are the only persisted-role source (alongside the implicit `AuthenticatedUser`)
@@ -98,7 +98,7 @@ Payload contract
 
 ```text
 [q.registry.IssuePrincipalToken] (see arch-authn.md)
-  -> build PrincipalPayload{Login, Alias=loginForSignIn.alias (snapshot), SubjectKind, ProfileWSID, GlobalRoles}
+  -> build PrincipalPayload{Login=alias snapshot or canonical login, CanonicalLogin, SubjectKind, ProfileWSID, GlobalRoles}
   -> [ITokens].IssueToken(appQName, ttl, &payload)
   -> @Client: principalToken, profileWSID
 ```
@@ -111,10 +111,10 @@ Payload contract
        -> storages.GetPrincipalTokenFromState(state) -> current token
        -> payloads.GetPayloadRegistry([ITokens], token, &payload) -> decode + appQName + ttl
        -> [ITokens].IssueToken(appQName, ttl, &payload)
-  -> @Client: principalToken (new), Alias unchanged from original issue
+  -> @Client: principalToken (new), Login and CanonicalLogin unchanged from original issue
 ```
 
-The Alias field is taken verbatim from the decoded payload and is not re-resolved against `[(registry.Login)]` or `[(registry.LoginAlias)]`. A login whose alias was set, replaced, or cleared after the original issue continues to refresh with the snapshotted alias until the next sign-in. To pick up a new alias the caller must sign in again rather than refresh.
+The `Login` and `CanonicalLogin` fields are taken verbatim from the decoded payload and are not re-resolved against `[(registry.Login)]` or `[(registry.LoginAlias)]`. A login whose alias was set, replaced, or cleared after the original issue continues to refresh with the snapshotted `Login` until the next sign-in. To pick up a new alias the caller must sign in again rather than refresh.
 
 ### Enrich principal token
 

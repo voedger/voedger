@@ -151,9 +151,9 @@ func TestForeignAuthorization(t *testing.T) {
 		require.NoError(err)
 		apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("app1pkg", "SpecialAPITokenRole")},
 			childWS.WSID, payloads.PrincipalPayload{
-				Login:       parentWS.Owner.Name,
-				SubjectKind: istructs.SubjectKind_User,
-				ProfileWSID: parentWS.Owner.ProfileWSID,
+				PresentedLogin: parentWS.Owner.Name,
+				SubjectKind:    istructs.SubjectKind_User,
+				ProfileWSID:    parentWS.Owner.ProfileWSID,
 			})
 		require.NoError(err)
 

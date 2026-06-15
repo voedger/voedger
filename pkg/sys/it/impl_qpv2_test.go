@@ -214,9 +214,9 @@ func TestQueryProcessor2_Views(t *testing.T) {
 		require.NoError(err)
 		apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("app1pkg", "LimitedAccessRole")},
 			ws.WSID, payloads.PrincipalPayload{
-				Login:       newLogin.Name,
-				SubjectKind: istructs.SubjectKind_User,
-				ProfileWSID: newLoginPrn.ProfileWSID,
+				PresentedLogin: newLogin.Name,
+				SubjectKind:    istructs.SubjectKind_User,
+				ProfileWSID:    newLoginPrn.ProfileWSID,
 			})
 		require.NoError(err)
 
@@ -2241,10 +2241,10 @@ func TestQueryProcessor2_Schemas(t *testing.T) {
 	t.Run("read app schema as a sys.Developer", func(t *testing.T) {
 		// Generate sys.Developer token
 		pp := payloads.PrincipalPayload{
-			Login:       "Login",
-			SubjectKind: istructs.SubjectKind_User,
-			ProfileWSID: 1,
-			GlobalRoles: []appdef.QName{appdef.QNameRoleDeveloper},
+			PresentedLogin: "Login",
+			SubjectKind:    istructs.SubjectKind_User,
+			ProfileWSID:    1,
+			GlobalRoles:    []appdef.QName{appdef.QNameRoleDeveloper},
 		}
 		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
 		require.NoError(err)
@@ -2271,10 +2271,10 @@ func TestQueryProcessor2_SchemasRoles(t *testing.T) {
 	t.Run("read app workspace roles as a sys.Developer", func(t *testing.T) {
 		// Generate sys.Developer token
 		pp := payloads.PrincipalPayload{
-			Login:       "Login",
-			SubjectKind: istructs.SubjectKind_User,
-			ProfileWSID: 1,
-			GlobalRoles: []appdef.QName{appdef.QNameRoleDeveloper},
+			PresentedLogin: "Login",
+			SubjectKind:    istructs.SubjectKind_User,
+			ProfileWSID:    1,
+			GlobalRoles:    []appdef.QName{appdef.QNameRoleDeveloper},
 		}
 		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
 		require.NoError(err)
@@ -2315,10 +2315,10 @@ func TestQueryProcessor2_SchemasWorkspaceRole(t *testing.T) {
 	t.Run("read app workspace role as sys.Developer", func(t *testing.T) {
 		// Generate sys.Developer token
 		pp := payloads.PrincipalPayload{
-			Login:       "Login",
-			SubjectKind: istructs.SubjectKind_User,
-			ProfileWSID: 1,
-			GlobalRoles: []appdef.QName{appdef.QNameRoleDeveloper},
+			PresentedLogin: "Login",
+			SubjectKind:    istructs.SubjectKind_User,
+			ProfileWSID:    1,
+			GlobalRoles:    []appdef.QName{appdef.QNameRoleDeveloper},
 		}
 		tokenDeveloper, err := vit.IssueToken(istructs.AppQName_test1_app1, 100*time.Minute, &pp)
 		require.NoError(err)
