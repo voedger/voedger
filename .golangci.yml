@@ -209,7 +209,7 @@ linters:
       - linters:
           - exptostd
         # maps.Keys/Values rewrites to slices.AppendSeq(make(...), maps.Keys/Values(...)) hurt readability;
-        # the import-statement message is the consequence of keeping those calls. See .claude/skills/modernize-linter-efficiency
+        # see https://github.com/untillpro/air-rsch/blob/main/2606122107-modernize-linter-efficiency-skill/README.md
         text: golang\.org/x/exp/maps\.(Keys|Values)|Import statement.+golang\.org/x/exp/maps
     paths:
       - third_party$
