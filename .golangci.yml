@@ -208,9 +208,18 @@ linters:
         text: "prefer not to defer chains of function calls" # setup-and-restore pattern like `defer logger.SetLogLevelWithRestore(...)()`
       - linters:
           - exptostd
-        # maps.Keys/Values rewrites to slices.AppendSeq(make(...), maps.Keys/Values(...)) hurt readability;
+        # exptostd rewrites x/exp/maps.Keys/Values to slices.AppendSeq(make(...), ...) / slices.Collect(...);
+        # the unsized autofix regresses +34–79% CPU and +300–1300% allocs, and the pre-sized form only adds
+        # verbosity for no measurable win — keep x/exp/maps.Keys/Values.
         # see https://github.com/untillpro/air-rsch/blob/main/2606122107-modernize-linter-efficiency-skill/README.md
         text: golang\.org/x/exp/maps\.(Keys|Values)|Import statement.+golang\.org/x/exp/maps
+      - linters:
+          - modernize
+        # mapsloop's maps.Collect rewrite can't pre-size the destination from an iter.Seq2, so it grows the
+        # map incrementally: benchmarked +132–159% CPU and +150–175% allocs vs a pre-sized make(map,n)+loop.
+        # Only the Collect variant is suppressed; the maps.Copy/Clone/Insert rewrites are kept.
+        # see https://github.com/untillpro/air-rsch/blob/main/2606122107-modernize-linter-efficiency-skill/README.md
+        text: Replace m\[k\]=v loop with maps\.Collect
     paths:
       - third_party$
       - builtin$
