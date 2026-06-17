@@ -16,13 +16,17 @@ import (
 // Owner is a record with {WSID, IDOfOwner} key
 // isAPIToken -> principals will be built by Roles only in authenticator
 type PrincipalPayload struct {
-	Login       string
-	Alias       string
-	SubjectKind istructs.SubjectKindType
-	ProfileWSID istructs.WSID
-	Roles       []RoleType
-	GlobalRoles []appdef.QName
-	IsAPIToken  bool
+	// PresentedLogin is the frontend-facing presented identity: the active alias snapshot at issue time,
+	// or the canonical login when no alias is set. Not to be used for internal identity, authorization,
+	// quotas, or metrics. Carries a json:"Login" tag so the wire/JWT claim key stays "Login".
+	PresentedLogin string `json:"Login"`
+	// CanonicalLogin is the immutable internal identity: the canonical primary login resolved at issue time.
+	CanonicalLogin string
+	SubjectKind    istructs.SubjectKindType
+	ProfileWSID    istructs.WSID
+	Roles          []RoleType
+	GlobalRoles    []appdef.QName
+	IsAPIToken     bool
 }
 
 type RoleType struct {

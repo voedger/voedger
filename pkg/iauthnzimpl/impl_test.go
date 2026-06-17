@@ -35,8 +35,8 @@ func TestBasicUsage(t *testing.T) {
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	pp := payloads.PrincipalPayload{
-		Login:       "testlogin",
-		SubjectKind: istructs.SubjectKind_User,
+		PresentedLogin: "testlogin",
+		SubjectKind:    istructs.SubjectKind_User,
 		Roles: []payloads.RoleType{
 			{
 				WSID:  42,
@@ -125,8 +125,8 @@ func TestBasicUsage(t *testing.T) {
 
 	t.Run("authenticate in the child workspace", func(t *testing.T) {
 		pp := payloads.PrincipalPayload{
-			Login:       "testlogin",
-			SubjectKind: istructs.SubjectKind_User,
+			PresentedLogin: "testlogin",
+			SubjectKind:    istructs.SubjectKind_User,
 			Roles: []payloads.RoleType{
 				{
 					WSID:  2,
@@ -169,9 +169,9 @@ func TestAuthenticate(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	login := "testlogin"
 	pp := payloads.PrincipalPayload{
-		Login:       login,
-		SubjectKind: istructs.SubjectKind_User,
-		ProfileWSID: 1,
+		PresentedLogin: login,
+		SubjectKind:    istructs.SubjectKind_User,
+		ProfileWSID:    1,
 	}
 	userToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
@@ -193,10 +193,10 @@ func TestAuthenticate(t *testing.T) {
 
 	notIncludedRole := appdef.NewQName("test", "non-included")
 	pp = payloads.PrincipalPayload{
-		Login:       login,
-		SubjectKind: istructs.SubjectKind_User,
-		ProfileWSID: 1,
-		Roles:       []payloads.RoleType{{WSID: 1, QName: testRole}, {WSID: 2, QName: notIncludedRole}},
+		PresentedLogin: login,
+		SubjectKind:    istructs.SubjectKind_User,
+		ProfileWSID:    1,
+		Roles:          []payloads.RoleType{{WSID: 1, QName: testRole}, {WSID: 2, QName: notIncludedRole}},
 	}
 	enrichedToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
@@ -422,9 +422,9 @@ func TestErrors(t *testing.T) {
 	t.Run("unsupported subject kind", func(t *testing.T) {
 
 		pp := payloads.PrincipalPayload{
-			Login:       "testlogin",
-			SubjectKind: istructs.SubjectKind_FakeLast,
-			ProfileWSID: 1,
+			PresentedLogin: "testlogin",
+			SubjectKind:    istructs.SubjectKind_FakeLast,
+			ProfileWSID:    1,
 		}
 		token, err := appTokens.IssueToken(time.Minute, &pp)
 		require.NoError(err)

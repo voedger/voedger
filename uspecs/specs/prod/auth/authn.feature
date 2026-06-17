@@ -151,7 +151,7 @@ Feature: Authentication
       Given "<subject>" login exists
       And the profile workspace for "<subject>" is ready
       When Client signs in with login and password
-      Then the issued principal token identifies login, alias, subject kind, and profileWSID
+      Then the issued principal token identifies login, canonical login, subject kind, and profileWSID
 
       Examples:
         | subject |
@@ -173,19 +173,25 @@ Feature: Authentication
       Given Client has a valid principal token
       When Client refreshes the principal token
       Then the response contains a new principalToken
-      And the new principalToken preserves login, alias, subject kind, and profileWSID from the input token
+      And the new principalToken preserves login, canonical login, subject kind, and profileWSID from the input token
 
-    Scenario: Principal token carries original login and alias after alias sign-in
+    Scenario: Principal token uses the active alias as login after alias sign-in
       Given a user login exists with an active login alias
       And the profile workspace for the user is ready
       When Client signs in with alias and password
-      Then the issued principal token identifies original login, alias, subject kind, and profileWSID
+      Then the issued principal token's login is the active alias and its canonical login is the original login
 
-    Scenario: Existing principal token keeps alias snapshot after alias changes
+    Scenario: Principal token uses the active alias as login when signing in with the original login
+      Given a user login exists with an active login alias
+      And the profile workspace for the user is ready
+      When Client signs in with original login and password
+      Then the issued principal token's login is the active alias and its canonical login is the original login
+
+    Scenario: Existing principal token retains login and canonical login after alias changes
       Given Client has a valid principal token issued while a login alias is active
       When System updates or clears that login alias
       Then the existing principal token remains valid until normal expiration
-      And the existing principal token retains the alias snapshot from issue time
+      And the existing principal token retains the login and canonical login captured at issue time
 
   Rule: Password lifecycle
 

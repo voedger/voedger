@@ -170,7 +170,7 @@ State and workspace lifecycle
   - impl: [pkg/registry/impl_setloginalias.go#applySetLoginAlias](../../../../pkg/registry/impl_setloginalias.go)
 
 - `[/q.registry.IssuePrincipalToken/]`
-  - Resolves sign-in by primary login or active alias, validates password and profile readiness, applies TTL policy, and issues principal tokens. On the alias path, it reads `[(registry.LoginAlias)]`, fetches the source `[(registry.Login)]` with `q.sys.GetCDoc`, validates `Login.Alias` against the submitted identifier, and snapshots login and alias into the token.
+  - Resolves sign-in by primary login or active alias, validates password and profile readiness, applies TTL policy, and issues principal tokens. On the alias path, it reads `[(registry.LoginAlias)]`, fetches the source `[(registry.Login)]` with `q.sys.GetCDoc`, validates `Login.Alias` against the submitted identifier, and snapshots the presented identifier into `Login` (the active alias, or the canonical login when none is set) and the canonical login into `CanonicalLogin`; payload-field semantics are owned by [arch-tokens.md](./arch-tokens.md).
   - decl: [pkg/registry/appws.vsql#IssuePrincipalToken](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_issueprincipaltoken.go#provideIssuePrincipalTokenExec](../../../../pkg/registry/impl_issueprincipaltoken.go)
 
@@ -200,7 +200,7 @@ State and workspace lifecycle
   - Token primitives and `PrincipalPayload` are owned by [arch-tokens.md](./arch-tokens.md#token-primitives); referenced here as the layer that issues and validates the tokens carried by the authn HTTP flows.
 
 - `[/q.sys.RefreshPrincipalToken/]`
-  - Issues a replacement principal token from the existing principal token payload and duration, preserving identity fields including alias.
+  - Issues a replacement principal token from the existing principal token payload and duration, preserving identity fields including `Login` and `CanonicalLogin`.
   - decl: [pkg/sys/sys.vsql#RefreshPrincipalToken](../../../../pkg/sys/sys.vsql)
   - impl: [pkg/sys/authnz/impl_refreshprincipaltoken.go#provideRefreshPrincipalTokenExec](../../../../pkg/sys/authnz/impl_refreshprincipaltoken.go)
 
@@ -414,7 +414,7 @@ State and workspace lifecycle
   -> [(registry.LoginAlias)]: active alias hit
   -> [/q.sys.GetCDoc/]: read source [(registry.Login)] in SourceAppWSID
   -> [(registry.Login)]: Alias equals submitted alias; password hash matches and profileWSID is non-zero
-  -> [Token service]: issue principal token with Login and Alias
+  -> [Token service]: issue principal token with Login (active alias) and CanonicalLogin (canonical login)
   -> @Client: principalToken, expiresInSeconds, profileWSID
 ```
 
@@ -469,7 +469,7 @@ State and workspace lifecycle
   -> [Auth login handler]
   -> [/q.registry.IssuePrincipalToken/]
   -> [(registry.Login)]: login, alias, subject kind, profileWSID
-  -> [Token service]: PrincipalPayload(Login, Alias, SubjectKind, ProfileWSID)
+  -> [Token service]: PrincipalPayload(Login, CanonicalLogin, SubjectKind, ProfileWSID)
   -> @Client: principalToken
 ```
 
@@ -500,7 +500,7 @@ State and workspace lifecycle
   -> [API v2 auth routes]
   -> [Auth refresh handler]
   -> [/q.sys.RefreshPrincipalToken/]
-  -> [Token service]: validate existing token and issue replacement preserving Login, Alias, SubjectKind, ProfileWSID from the input token
+  -> [Token service]: validate existing token and issue replacement preserving Login, CanonicalLogin, SubjectKind, ProfileWSID from the input token
   -> [Auth refresh handler]
   -> @Client: new principalToken, expiresInSeconds, profileWSID
 ```
@@ -509,10 +509,10 @@ State and workspace lifecycle
 
 ```text
 @Client
-  -> [Token service]: principal token already issued with Alias = j.smith
+  -> [Token service]: principal token already issued with Login = j.smith, CanonicalLogin = jsmith
   -> @System: update or clear login alias
   -> [Token service]: existing token remains valid until normal expiration
-  -> @Client: existing token payload still carries Alias = j.smith
+  -> @Client: existing token payload still carries Login = j.smith, CanonicalLogin = jsmith
 ```
 
 ### Password lifecycle
@@ -635,7 +635,7 @@ error-handling rules from [auth architecture](./arch.md).
 
 - Every Component in `Public API endpoints` and `Authn request handlers` treats passwords, bearer tokens, verification tokens, and verified value tokens as request secrets.
 - Every Component in `Registry operations` stores password evidence only through `[(registry.Login)]` password hashes and never returns plaintext passwords except generated device credentials at creation time.
-- Every `[Token service]` principal token issue includes the authn identity fields required by this feature: login, alias, subject kind, and profile workspace ID.
+- Every `[Token service]` principal token issue includes the authn identity fields required by this feature: login, canonical login, subject kind, and profile workspace ID.
 
 ### Error handling and resilience
 
