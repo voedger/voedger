@@ -1,8 +1,17 @@
 ---
 name: golang-fmt-string-escape
-description: Use this skill when writing or reviewing any `fmt.Sprintf`, `fmt.Errorf`, `fmt.Fprintf`, `fmt.Printf` (or other `fmt.*` formatter) call in Go code that embeds string data into a JSON value, URL path/query, host:port, file path, shell argument, SQL literal, HTML attribute/text, Go-quoted literal, or human-readable log/error message. Picks the correct verb (`%s` / `%q`) and escaping helper (`jsonu.Jprintf`, `jsonu.Jfprintf`, `json.Marshal`, `url.PathEscape`, `url.QueryEscape`, `net.JoinHostPort`, `filepath.Join`, `html.EscapeString`, parameterized SQL). JSON-string escaping rules do not apply to `_test.go` files.
+description: Use this skill when writing or reviewing any `fmt.Sprintf`, `fmt.Errorf`, `fmt.Fprintf`, `fmt.Printf` (or other `fmt.*` formatter) call in Go code that embeds string data into a JSON value, URL path/query, host:port, file path, shell argument, SQL literal, HTML attribute/text, Go-quoted literal, or human-readable log/error message. Picks the correct verb (`%s` / `%q`) and escaping helper (`jsonu.Jprintf`, `jsonu.Jfprintf`, `json.Marshal`, `url.PathEscape`, `url.QueryEscape`, `net.JoinHostPort`, `filepath.Join`, `html.EscapeString`, parameterized SQL). Always classify each call site individually by its sink (how the result is used) and the source of every string operand (whether it can contain sink-breaking bytes); never apply a blanket, sink-blind verb swap such as `"%s"` -> `%q`. JSON-string escaping rules do not apply to `_test.go` files.
 user-invocable: false
 ---
+
+## Core principle -- classify every site individually
+
+Before choosing a verb or helper for any `fmt.*` formatter call, answer two questions, per call site and never in bulk:
+
+1. Sink -- how is the result used (JSON value, URL path/query, host:port, file path, shell arg, SQL, HTML, Go-quoted literal, human message)? see the table below
+2. Source -- where does each string operand come from, and can it contain bytes that break that sink? user input / external API / DB field / event payload -> assume unsafe; fixed enum / `appdef.QName.String()` / integer-derived id -> safe-ASCII
+
+A blanket, sink-blind transformation is forbidden -- in particular never mechanically rewrite every `"%s"` to `%q` across a file. `%q` is correct only in some sinks (Go-quoted literal, JSON with safe-ASCII operands) and wrong in others (HTML, or JSON with unsafe operands where it can emit `\v` / `\xNN` that JSON parsers reject). Clearing the `sprintfQuotedString` linter is a side effect of the correct fix, not the goal
 
 ## Decision by embedding context
 
@@ -35,8 +44,9 @@ user-invocable: false
 - a JSON template (`fmt.Sprintf` or `jsonu.Jprintf`) MUST be self-balanced: `{...}` and `[...]` in the same template; never split the closing brace into a different branch / write
 - if a JSON object MUST be streamed across multiple writes, exactly one piece of code owns the opening `{` and its matching `}` and emits both on every reachable path (success, error, empty)
 - ad-hoc error / status responses (`{"status":N,"errorDescription":"..."}`): emit the whole object in one `Write` -- a `jsonu.Jprintf` template (default), a `json.Marshal`ed struct (typed schema), or a `fmt.Sprintf` template with `%q` (safe-ASCII operands)
-- when an existing non-test JSON `fmt.Sprintf` site is being touched, rewrite to `jsonu.Jprintf`; if a rewrite is out of scope, at minimum replace every `"%s"` with `%q`
+- when an existing non-test JSON `fmt.Sprintf` site is touched, rewrite it to `jsonu.Jprintf` (or `json.Marshal` of a typed value); the mechanical `"%s"` -> `%q` swap is NOT an acceptable substitute -- it only silences `sprintfQuotedString` while leaving the wrong helper in place for unsafe operands
 - streaming JSON to an `io.Writer` (`http.ResponseWriter`, `*bytes.Buffer`, ...) -- use `jsonu.Jfprintf` instead of `fmt.Fprintf`; same verb rules as `jsonu.Jprintf`. The returned `error` is infallible for `*bytes.Buffer`: handle with `// notest` + `panic(err)` per `ar-golang.md`
+- automated / AST tooling for these sites may only DETECT and PRINT each call site (file:line, the format string, and the operand expressions) for individual review; it MUST NOT auto-apply a verb swap. A reported site is then classified by sink + source and fixed one at a time
 
 ## Anti-patterns
 
@@ -105,10 +115,11 @@ s := fmt.Sprint(qname)  // bad
 s := qname.String()     // good
 ```
 
-## Checklist before writing any `fmt.Sprintf` / `fmt.Errorf` / `fmt.Fprintf`
+## Checklist before writing or changing any `fmt.Sprintf` / `fmt.Errorf` / `fmt.Fprintf`
 
-1. Classify the embedding context (see table above)
-2. `_test.go` JSON fixtures: plain `"%s"` allowed; all other contexts still apply
-3. Pick the verb and escaper from the table for that exact context
-4. On a `sprintfQuotedString` linter hit -- in JSON switch to `jsonu.Jprintf` (keep `"%s"`) or `%q` (safe-ASCII only); in HTML switch the escaper to `html.EscapeString` and keep `"%s"` (do NOT switch to `%q`)
-5. Drop `fmt.Sprintf("%s", x)` / `fmt.Sprint(x)`; use `strconv` instead of `fmt.Sprintf("%d", ...)`
+1. Identify the sink (embedding context) -- see the table above
+2. Identify the source of every string operand and decide whether it can contain sink-breaking bytes -- default to unsafe unless it is a fixed enum / `Stringer` id
+3. `_test.go` JSON fixtures: plain `"%s"` allowed; all other contexts still apply
+4. Pick the verb and escaper from the table for that exact sink + source -- one site at a time, never a bulk verb swap
+5. A `sprintfQuotedString` linter hit is a prompt to classify the site (steps 1-2), not a license to blanket-replace `"%s"` with `%q`; the linter going green does not prove the helper is correct
+6. Drop `fmt.Sprintf("%s", x)` / `fmt.Sprint(x)`; use `strconv` instead of `fmt.Sprintf("%d", ...)`
