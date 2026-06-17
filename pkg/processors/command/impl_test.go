@@ -578,9 +578,9 @@ func TestAuthnz(t *testing.T) {
 	defer tearDown(app)
 
 	pp := payloads.PrincipalPayload{
-		Login:       "testlogin",
-		SubjectKind: istructs.SubjectKind_User,
-		ProfileWSID: 1,
+		PresentedLogin: "testlogin",
+		SubjectKind:    istructs.SubjectKind_User,
+		ProfileWSID:    1,
 	}
 	token, err := app.appTokens.IssueToken(10*time.Second, &pp)
 	require.NoError(err)

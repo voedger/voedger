@@ -596,9 +596,10 @@ func (vit *VIT) RefreshTokens() {
 		for _, prn := range appPrns {
 			// issue principal token
 			principalPayload := payloads.PrincipalPayload{
-				Login:       prn.Name,
-				SubjectKind: istructs.SubjectKind_User,
-				ProfileWSID: prn.ProfileWSID,
+				PresentedLogin: prn.Name,
+				CanonicalLogin: prn.Name,
+				SubjectKind:    istructs.SubjectKind_User,
+				ProfileWSID:    prn.ProfileWSID,
 			}
 			as, err := vit.BuiltIn(prn.AppQName)
 			require.NoError(vit.T, err) // notest

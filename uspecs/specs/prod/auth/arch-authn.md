@@ -70,7 +70,7 @@ Registry records and indexes
 ### Sign-in and lifecycle queries/commands
 
 - `[q.registry.IssuePrincipalToken]`
-  - Resolves the sign-in identifier against `[(registry.Login)]` directly, then against `[(registry.LoginAlias)]` if the direct lookup misses; verifies the password hash, enforces the `Profile workspace readiness gate`, builds `PrincipalPayload` (with the alias snapshot captured at issue time) and delegates token issuance to [Token management](./arch-tokens.md). Returns the same `errLoginOrPasswordIsIncorrect` for missing login, deactivated login, missing alias, and wrong password to prevent enumeration.
+  - Resolves the sign-in identifier against `[(registry.Login)]` directly, then against `[(registry.LoginAlias)]` if the direct lookup misses; verifies the password hash, enforces the `Profile workspace readiness gate`, builds `PrincipalPayload` (setting `Login` to the active-alias snapshot with canonical fallback and `CanonicalLogin` to the canonical login, both captured at issue time) and delegates token issuance to [Token management](./arch-tokens.md). Returns the same `errLoginOrPasswordIsIncorrect` for missing login, deactivated login, missing alias, and wrong password to prevent enumeration.
   - impl: [pkg/registry/impl_issueprincipaltoken.go#provideIssuePrincipalTokenExec](../../../../pkg/registry/impl_issueprincipaltoken.go)
 
 - `[c.registry.CreateLogin]`, `[c.registry.CreateEmailLogin]`
@@ -124,7 +124,7 @@ Registry records and indexes
        -> on miss: [(registry.LoginAlias)] -> [(registry.Login)]
        -> checkPasswordHash
        -> Profile workspace readiness gate: if ProfileWSID == 0 or WSError != "" return error result
-       -> build PrincipalPayload(Login, Alias, SubjectKind, ProfileWSID, GlobalRoles)
+       -> build PrincipalPayload(Login=alias snapshot or canonical login, CanonicalLogin, SubjectKind, ProfileWSID, GlobalRoles)
        -> [Token management].IssueToken (see arch-tokens.md)
   -> @Client: principalToken, profileWSID
 ```
