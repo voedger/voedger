@@ -3,10 +3,7 @@
 - URL: https://untill.atlassian.net/browse/AIR-4270
 - ID: AIR-4270
 - State: in-progress
-- Author: Unknown user name (712020:89894cda-e18f-4f7e-989d-8540111610e5)
 - Labels: none
-- Parent: AIR-3968 (Grandhotel Bad Pyrmont: Change email address)
-- Assignees: Unknown user name (712020:89894cda-e18f-4f7e-989d-8540111610e5)
 
 ## Why
 
