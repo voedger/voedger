@@ -31,9 +31,9 @@ func TestBasicUsage_PrincipalPayload(t *testing.T) {
 	signer := itokensjwt.TestTokensJWT()
 
 	srcPayload := PrincipalPayload{
-		Login:       "login",
-		SubjectKind: istructs.SubjectKind_User,
-		ProfileWSID: istructs.WSID(10),
+		PresentedLogin: "login",
+		SubjectKind:    istructs.SubjectKind_User,
+		ProfileWSID:    istructs.WSID(10),
 	}
 
 	var token string
@@ -135,9 +135,9 @@ func TestBasicUsage_IAppTokens(t *testing.T) {
 
 	t.Run("Issue token", func(t *testing.T) {
 		srcPayload := PrincipalPayload{
-			Login:       "login",
-			SubjectKind: istructs.SubjectKind_User,
-			ProfileWSID: istructs.WSID(10),
+			PresentedLogin: "login",
+			SubjectKind:    istructs.SubjectKind_User,
+			ProfileWSID:    istructs.WSID(10),
 		}
 		token, err = at.IssueToken(testDuration, &srcPayload)
 		require.NoError(err)
