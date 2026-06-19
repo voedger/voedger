@@ -13,7 +13,7 @@ Refs:
 
 ## Why
 
-CI action in Voedger now provides exclusions for ci-action to be used in lint-all.sh. Need to change the approach to “convetion over configuration”
+CI action in Voedger now provides exclusions for ci-action to be used in lint-all.sh. Need to change the approach to “convention over configuration”
 
 ## What
 
