@@ -9,7 +9,7 @@ domains: [devops]
 
 Refs:
 
-- [AIR-4322: voedger: accomodate .nolint files according to exclusions](./issue-AIR-4322.md)
+- [AIR-4322: voedger: accommodate .nolint files according to exclusions](./issue-AIR-4322.md)
 
 ## Why
 
