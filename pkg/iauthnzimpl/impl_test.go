@@ -35,8 +35,8 @@ func TestBasicUsage(t *testing.T) {
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	pp := payloads.PrincipalPayload{
-		PresentedLogin: "testlogin",
-		SubjectKind:    istructs.SubjectKind_User,
+		Login:       "testlogin",
+		SubjectKind: istructs.SubjectKind_User,
 		Roles: []payloads.RoleType{
 			{
 				WSID:  42,
@@ -125,8 +125,8 @@ func TestBasicUsage(t *testing.T) {
 
 	t.Run("authenticate in the child workspace", func(t *testing.T) {
 		pp := payloads.PrincipalPayload{
-			PresentedLogin: "testlogin",
-			SubjectKind:    istructs.SubjectKind_User,
+			Login:       "testlogin",
+			SubjectKind: istructs.SubjectKind_User,
 			Roles: []payloads.RoleType{
 				{
 					WSID:  2,
@@ -169,9 +169,9 @@ func TestAuthenticate(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	login := "testlogin"
 	pp := payloads.PrincipalPayload{
-		PresentedLogin: login,
-		SubjectKind:    istructs.SubjectKind_User,
-		ProfileWSID:    1,
+		Login:       login,
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: 1,
 	}
 	userToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
@@ -193,10 +193,10 @@ func TestAuthenticate(t *testing.T) {
 
 	notIncludedRole := appdef.NewQName("test", "non-included")
 	pp = payloads.PrincipalPayload{
-		PresentedLogin: login,
-		SubjectKind:    istructs.SubjectKind_User,
-		ProfileWSID:    1,
-		Roles:          []payloads.RoleType{{WSID: 1, QName: testRole}, {WSID: 2, QName: notIncludedRole}},
+		Login:       login,
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: 1,
+		Roles:       []payloads.RoleType{{WSID: 1, QName: testRole}, {WSID: 2, QName: notIncludedRole}},
 	}
 	enrichedToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
@@ -422,9 +422,9 @@ func TestErrors(t *testing.T) {
 	t.Run("unsupported subject kind", func(t *testing.T) {
 
 		pp := payloads.PrincipalPayload{
-			PresentedLogin: "testlogin",
-			SubjectKind:    istructs.SubjectKind_FakeLast,
-			ProfileWSID:    1,
+			Login:       "testlogin",
+			SubjectKind: istructs.SubjectKind_FakeLast,
+			ProfileWSID: 1,
 		}
 		token, err := appTokens.IssueToken(time.Minute, &pp)
 		require.NoError(err)
@@ -448,6 +448,65 @@ func TestErrors(t *testing.T) {
 		token, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{appdef.NewQName("test", "role")}, istructs.NullWSID, payloads.PrincipalPayload{})
 		require.ErrorIs(err, ErrPersonalAccessTokenOnNullWSID)
 		require.Empty(token)
+	})
+}
+
+func TestSubjectRolesResolveAgainstLoginAndAlias(t *testing.T) {
+	require := require.New(t)
+
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
+	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
+
+	const canonicalLogin = "jsmith"
+	const aliasLogin = "j.smith"
+	subjectRole := appdef.NewQName("test", "subjectrole")
+
+	// grants subjectRole only to the subject login string it is configured to match
+	rolesGetterFor := func(matchLogin string) SubjectGetterFunc {
+		return func(_ context.Context, login string, _ istructs.IAppStructs, _ istructs.WSID) ([]appdef.QName, error) {
+			if login == matchLogin {
+				return []appdef.QName{subjectRole}, nil
+			}
+			return nil, nil
+		}
+	}
+
+	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{})
+
+	authenticateWith := func(getterMatch string) []iauthnz.Principal {
+		pp := payloads.PrincipalPayload{
+			Login:       canonicalLogin,
+			Alias:       aliasLogin,
+			SubjectKind: istructs.SubjectKind_User,
+			ProfileWSID: 1,
+		}
+		token, err := appTokens.IssueToken(time.Minute, &pp)
+		require.NoError(err)
+		authn := NewDefaultAuthenticator(rolesGetterFor(getterMatch), TestIsDeviceAllowedFuncs)
+		principals, _, err := authn.Authenticate(context.Background(), appStructs, appTokens, iauthnz.AuthnRequest{
+			Host:        "127.0.0.1",
+			RequestWSID: 1,
+			Token:       token,
+		})
+		require.NoError(err)
+		return principals
+	}
+
+	hasSubjectRole := func(principals []iauthnz.Principal) bool {
+		for _, prn := range principals {
+			if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == subjectRole {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Run("subject registered under the canonical login resolves", func(t *testing.T) {
+		require.True(hasSubjectRole(authenticateWith(canonicalLogin)))
+	})
+
+	t.Run("subject registered under the active alias resolves", func(t *testing.T) {
+		require.True(hasSubjectRole(authenticateWith(aliasLogin)))
 	})
 }
 

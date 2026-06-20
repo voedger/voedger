@@ -98,16 +98,12 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens, federation federati
 		}
 
 		// issue principal token
-		presentedLogin := loginForSignIn.alias
-		if presentedLogin == "" {
-			presentedLogin = loginForSignIn.canonicalLogin
-		}
 		principalPayload := payloads.PrincipalPayload{
-			PresentedLogin: presentedLogin,
-			CanonicalLogin: loginForSignIn.canonicalLogin,
-			SubjectKind:    istructs.SubjectKindType(loginForSignIn.subjectKind),
-			ProfileWSID:    istructs.WSID(result.profileWSID), //nolint G115 since WSID is created by NewWSID()
-			GlobalRoles:    globalRoles,                       // [~server.authnz.groles/cmp.c.registry.IssuePrincipalToken~impl]
+			Login:       loginForSignIn.canonicalLogin,
+			Alias:       loginForSignIn.alias,
+			SubjectKind: istructs.SubjectKindType(loginForSignIn.subjectKind),
+			ProfileWSID: istructs.WSID(result.profileWSID), //nolint G115 since WSID is created by NewWSID()
+			GlobalRoles: globalRoles,                       // [~server.authnz.groles/cmp.c.registry.IssuePrincipalToken~impl]
 		}
 		ttl := time.Duration(args.ArgumentObject.AsInt32(field_TTLHours)) * time.Hour
 		if ttl == 0 {

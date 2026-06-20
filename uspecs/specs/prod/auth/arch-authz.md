@@ -72,7 +72,7 @@ Role sources
   - impl: [pkg/iauthnzimpl/impl.go#Authenticate](../../../../pkg/iauthnzimpl/impl.go)
 
 - `[Subjects reader]`
-  - Reads `[(cdoc.sys.Subject)]` from `RequestWSID` for the resolved subject (or `sys.Guest` when anonymous) through the injected `subjectRolesGetter`, matching rows against both `PrincipalPayload.Login` and `PrincipalPayload.CanonicalLogin` so an invite under either identifier resolves, and emits one `Principal{Kind: Role, WSID: RequestWSID, QName: role}` per matched role.
+  - Reads `[(cdoc.sys.Subject)]` from `RequestWSID` for the resolved subject (or `sys.Guest` when anonymous) through the injected `subjectRolesGetter`, matching rows against both `PrincipalPayload.Login` and `PrincipalPayload.Alias` so an invite under either identifier resolves, and emits one `Principal{Kind: Role, WSID: RequestWSID, QName: role}` per matched role.
   - impl: [pkg/iauthnzimpl/impl.go#rolesFromSubjects](../../../../pkg/iauthnzimpl/impl.go)
 
 - `[Workspace role deriver]`
@@ -89,7 +89,7 @@ Four sources by origin contribute to a request's principal set; each is enumerat
 
 - `[Invite-granted]`
   - Origin: `[[Workspace membership]]` writes `[(cdoc.sys.Subject)]` rows in the inviting workspace as part of the join flow; see [arch-membership.md](./arch-membership.md).
-  - Composition: `[Subjects reader]` reads `[(cdoc.sys.Subject)]` rows in `RequestWSID` matching either `PrincipalPayload.Login` or `PrincipalPayload.CanonicalLogin` and emits one `Principal{Kind: Role, WSID: RequestWSID, QName: role}` per matched role.
+  - Composition: `[Subjects reader]` reads `[(cdoc.sys.Subject)]` rows in `RequestWSID` matching either `PrincipalPayload.Login` or `PrincipalPayload.Alias` and emits one `Principal{Kind: Role, WSID: RequestWSID, QName: role}` per matched role.
 
 - `[Token-carried]`
   - Origin: `[[Authentication]]` snapshots roles into `PrincipalPayload` at sign-in (per-app `Roles` from the registry login record) and `[c.registry.UpdateGlobalRoles]` updates the `GlobalRoles` field consumed at the next sign-in; see [arch-authn.md](./arch-authn.md). A second runtime write path is `[q.sys.EnrichPrincipalToken]`, which folds the request's composed `Principal{Kind: Role}` set into `PrincipalPayload.Roles` and re-issues the token so those roles travel into workspaces where they would not otherwise be composed; the token-lifecycle detail lives in [arch-tokens.md](./arch-tokens.md).
@@ -123,7 +123,7 @@ VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later
             emit [Token-carried] PrincipalPayload.Roles filtered to RequestWSID
             return (principals, NullWSID)
        -> emit [Token-carried] PrincipalPayload.GlobalRoles in RequestWSID
-       -> emit [Invite-granted] via [Subjects reader] for PrincipalPayload.Login and PrincipalPayload.CanonicalLogin in RequestWSID
+       -> emit [Invite-granted] via [Subjects reader] for PrincipalPayload.Login and PrincipalPayload.Alias in RequestWSID
        -> profileWSID = PrincipalPayload.ProfileWSID
        -> if Role(System) already in principals: return
        -> if profileWSID == NullWSID: emit Role(System), return

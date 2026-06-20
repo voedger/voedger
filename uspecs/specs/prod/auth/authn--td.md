@@ -170,7 +170,7 @@ State and workspace lifecycle
   - impl: [pkg/registry/impl_setloginalias.go#applySetLoginAlias](../../../../pkg/registry/impl_setloginalias.go)
 
 - `[/q.registry.IssuePrincipalToken/]`
-  - Resolves sign-in by primary login or active alias, validates password and profile readiness, applies TTL policy, and issues principal tokens. On the alias path, it reads `[(registry.LoginAlias)]`, fetches the source `[(registry.Login)]` with `q.sys.GetCDoc`, validates `Login.Alias` against the submitted identifier, and snapshots the presented identifier into `Login` (the active alias, or the canonical login when none is set) and the canonical login into `CanonicalLogin`; payload-field semantics are owned by [arch-tokens.md](./arch-tokens.md).
+  - Resolves sign-in by primary login or active alias, validates password and profile readiness, applies TTL policy, and issues principal tokens. On the alias path, it reads `[(registry.LoginAlias)]`, fetches the source `[(registry.Login)]` with `q.sys.GetCDoc`, validates `Login.Alias` against the submitted identifier, and snapshots the canonical login into `Login` and the active alias (empty when none is set) into `Alias`; payload-field semantics are owned by [arch-tokens.md](./arch-tokens.md).
   - decl: [pkg/registry/appws.vsql#IssuePrincipalToken](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_issueprincipaltoken.go#provideIssuePrincipalTokenExec](../../../../pkg/registry/impl_issueprincipaltoken.go)
 
@@ -200,7 +200,7 @@ State and workspace lifecycle
   - Token primitives and `PrincipalPayload` are owned by [arch-tokens.md](./arch-tokens.md#token-primitives); referenced here as the layer that issues and validates the tokens carried by the authn HTTP flows.
 
 - `[/q.sys.RefreshPrincipalToken/]`
-  - Issues a replacement principal token from the existing principal token payload and duration, preserving identity fields including `Login` and `CanonicalLogin`.
+  - Issues a replacement principal token from the existing principal token payload and duration, preserving identity fields including `Login` and `Alias`.
   - decl: [pkg/sys/sys.vsql#RefreshPrincipalToken](../../../../pkg/sys/sys.vsql)
   - impl: [pkg/sys/authnz/impl_refreshprincipaltoken.go#provideRefreshPrincipalTokenExec](../../../../pkg/sys/authnz/impl_refreshprincipaltoken.go)
 
@@ -414,7 +414,7 @@ State and workspace lifecycle
   -> [(registry.LoginAlias)]: active alias hit
   -> [/q.sys.GetCDoc/]: read source [(registry.Login)] in SourceAppWSID
   -> [(registry.Login)]: Alias equals submitted alias; password hash matches and profileWSID is non-zero
-  -> [Token service]: issue principal token with Login (active alias) and CanonicalLogin (canonical login)
+  -> [Token service]: issue principal token with Login (canonical login) and Alias (active alias)
   -> @Client: principalToken, expiresInSeconds, profileWSID
 ```
 
@@ -469,7 +469,7 @@ State and workspace lifecycle
   -> [Auth login handler]
   -> [/q.registry.IssuePrincipalToken/]
   -> [(registry.Login)]: login, alias, subject kind, profileWSID
-  -> [Token service]: PrincipalPayload(Login, CanonicalLogin, SubjectKind, ProfileWSID)
+  -> [Token service]: PrincipalPayload(Login, Alias, SubjectKind, ProfileWSID)
   -> @Client: principalToken
 ```
 
@@ -500,7 +500,7 @@ State and workspace lifecycle
   -> [API v2 auth routes]
   -> [Auth refresh handler]
   -> [/q.sys.RefreshPrincipalToken/]
-  -> [Token service]: validate existing token and issue replacement preserving Login, CanonicalLogin, SubjectKind, ProfileWSID from the input token
+  -> [Token service]: validate existing token and issue replacement preserving Login, Alias, SubjectKind, ProfileWSID from the input token
   -> [Auth refresh handler]
   -> @Client: new principalToken, expiresInSeconds, profileWSID
 ```
@@ -509,10 +509,10 @@ State and workspace lifecycle
 
 ```text
 @Client
-  -> [Token service]: principal token already issued with Login = j.smith, CanonicalLogin = jsmith
+  -> [Token service]: principal token already issued with Login = jsmith, Alias = j.smith
   -> @System: update or clear login alias
   -> [Token service]: existing token remains valid until normal expiration
-  -> @Client: existing token payload still carries Login = j.smith, CanonicalLogin = jsmith
+  -> @Client: existing token payload still carries Login = jsmith, Alias = j.smith
 ```
 
 ### Password lifecycle
