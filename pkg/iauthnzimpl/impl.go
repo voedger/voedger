@@ -114,8 +114,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	switch principalPayload.SubjectKind {
 	case istructs.SubjectKind_User:
 		pkt = iauthnz.PrincipalKind_User
-		// internal identity: canonical Login, with defensive Alias fallback
-		loginName = principalPayload.InternalLogin()
+		loginName = principalPayload.Login
 	case istructs.SubjectKind_Device:
 		pkt = iauthnz.PrincipalKind_Device
 	default:

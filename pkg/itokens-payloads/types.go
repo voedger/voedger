@@ -29,15 +29,6 @@ type PrincipalPayload struct {
 	IsAPIToken  bool
 }
 
-// InternalLogin returns the canonical internal identity: Login, falling back to
-// Alias only when Login is empty (a defensive guard for tokens carrying no Login).
-func (p PrincipalPayload) InternalLogin() string {
-	if p.Login != "" {
-		return p.Login
-	}
-	return p.Alias
-}
-
 type RoleType struct {
 	// for role must be OwnerWSID, not the request WSID
 	WSID istructs.WSID

@@ -53,7 +53,7 @@ func (p *implIN10NProc) validateToken(ctx context.Context, n10nWP *n10nWorkpiece
 }
 
 func (p *implIN10NProc) getSubjectLogin(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
-	subjectLogin := n10nWP.principalPayload.InternalLogin()
+	subjectLogin := n10nWP.principalPayload.Login
 	n10nWP.subjectLogin = istructs.SubjectLogin(subjectLogin)
 	return nil
 }
