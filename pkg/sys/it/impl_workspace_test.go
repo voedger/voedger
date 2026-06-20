@@ -340,10 +340,10 @@ func TestCreateChildOfChildWorkspace(t *testing.T) {
 	// owner of ws is not owner of child of ws so let's generate a token with a WorkspaceOwner role
 	// note: WSID the role belongs to must be ws, not newWS because iauthnz implementation compares wsid to ownerWSID
 	pp := payloads.PrincipalPayload{
-		PresentedLogin: ws.Owner.Name,
-		SubjectKind:    istructs.SubjectKind_User,
-		ProfileWSID:    ws.Owner.ProfileWSID,
-		Roles:          []payloads.RoleType{{WSID: ws.WSID, QName: iauthnz.QNameRoleWorkspaceOwner}},
+		Login:       ws.Owner.Name,
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: ws.Owner.ProfileWSID,
+		Roles:       []payloads.RoleType{{WSID: ws.WSID, QName: iauthnz.QNameRoleWorkspaceOwner}},
 	}
 	tokenForChildOfChild, err := vit.IssueToken(istructs.AppQName_test1_app1, time.Minute, &pp)
 	require.NoError(t, err)
