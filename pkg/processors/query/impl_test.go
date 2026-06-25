@@ -1336,9 +1336,9 @@ func (m *testMetrics) Increase(string, float64) {}
 
 func getTestToken(appTokens istructs.IAppTokens, wsid istructs.WSID) string {
 	pp := payloads.PrincipalPayload{
-		PresentedLogin: "syslogin",
-		SubjectKind:    istructs.SubjectKind_User,
-		ProfileWSID:    wsid,
+		Login:       "syslogin",
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: wsid,
 	}
 	token, err := appTokens.IssueToken(time.Minute, &pp)
 	if err != nil {
@@ -1349,9 +1349,9 @@ func getTestToken(appTokens istructs.IAppTokens, wsid istructs.WSID) string {
 
 func getSystemToken(appTokens istructs.IAppTokens) string {
 	pp := payloads.PrincipalPayload{
-		PresentedLogin: "syslogin",
-		SubjectKind:    istructs.SubjectKind_User,
-		ProfileWSID:    istructs.NullWSID,
+		Login:       "syslogin",
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: istructs.NullWSID,
 	}
 	token, err := appTokens.IssueToken(time.Minute, &pp)
 	if err != nil {

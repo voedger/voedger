@@ -21,7 +21,7 @@ Roles:
   - Request processing composes a principal set from four origin-perspective sources — invite-granted roles (`[(cdoc.sys.Subject)]` rows written by `[[Workspace membership]]`), token-carried roles (`PrincipalPayload.Roles` and `GlobalRoles` snapshotted by `[[Authentication]]`), request-context roles (derived at composition time from request state), and anonymous-grants (when no token is presented) — and evaluates ACL rules against it.
 
 - **`Manage tokens`**
-  - Principal tokens are issued, refreshed, and validated; refresh preserves the identity payload including the `Login` and `CanonicalLogin` captured at issue time.
+  - Principal tokens are issued, refreshed, and validated; refresh preserves the identity payload including the `Login` and `Alias` captured at issue time.
 
 - **`Manage membership`**
   - Invite lifecycle creates subjects doc and joined-workspace records, updates roles, and removes members.
@@ -84,7 +84,7 @@ Shared concepts
   - impl: [pkg/sys/invite/impl_applyinviteevents.go](../../../../pkg/sys/invite/impl_applyinviteevents.go)
 
 - `[Principal Token]`
-  - Bearer token carrying `PrincipalPayload(Login, CanonicalLogin, SubjectKind, ProfileWSID, Roles, GlobalRoles, IsAPIToken)`. Produced by `[[Authentication]]` and `[[Token management]]`, consumed by `[[Authorization]]` on every request.
+  - Bearer token carrying `PrincipalPayload(Login, Alias, SubjectKind, ProfileWSID, Roles, GlobalRoles, IsAPIToken)`. Produced by `[[Authentication]]` and `[[Token management]]`, consumed by `[[Authorization]]` on every request.
   - decl: [pkg/itokens-payloads/types.go#PrincipalPayload](../../../../pkg/itokens-payloads/types.go)
 
 - `[Auth boundary]`

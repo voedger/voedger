@@ -13,9 +13,9 @@ import (
 
 var (
 	systemPrincipalPayload = PrincipalPayload{
-		PresentedLogin: "system",
-		SubjectKind:    istructs.SubjectKind_User,
-		ProfileWSID:    istructs.NullWSID,
+		Login:       "system",
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: istructs.NullWSID,
 	}
 )
 

@@ -53,10 +53,7 @@ func (p *implIN10NProc) validateToken(_ context.Context, n10nWP *n10nWorkpiece) 
 }
 
 func (p *implIN10NProc) getSubjectLogin(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
-	subjectLogin := n10nWP.principalPayload.CanonicalLogin
-	if subjectLogin == "" {
-		subjectLogin = n10nWP.principalPayload.PresentedLogin
-	}
+	subjectLogin := n10nWP.principalPayload.Login
 	n10nWP.subjectLogin = istructs.SubjectLogin(subjectLogin)
 	return nil
 }
