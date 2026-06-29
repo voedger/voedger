@@ -53,9 +53,10 @@ func writeCommonError_V2(w http.ResponseWriter, err error, code int) bool {
 }
 
 func writeCommonError_V1(w http.ResponseWriter, err error, code int) bool {
-	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
-	w.WriteHeader(code)
 	sysErr := coreutils.WrapSysErrorToExact(err, code)
+	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
+	applySysErrorHeaders(w, sysErr)
+	w.WriteHeader(code)
 	return writeResponse(w, sysErr.ToJSON_APIV1())
 }
 
@@ -73,7 +74,7 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 }
 
 func replyServiceUnavailable(rw http.ResponseWriter) {
-	rw.Header().Set("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+	rw.Header().Set(httpu.RetryAfter, strconv.Itoa(DefaultRetryAfterSecondsOn503))
 	rw.WriteHeader(http.StatusServiceUnavailable)
 }
 
