@@ -173,7 +173,7 @@ func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 	for i := range eventsCnt {
 		name := fmt.Sprintf("buyer-%d", i)
 		expected[name] = true
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"%s","name":"%s"}}]}`, airTablePlan, name)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":%q,"name":%q}}]}`, airTablePlan, name)
 		vit.PostWS(ws, "c.sys.CUD", body)
 	}
 
