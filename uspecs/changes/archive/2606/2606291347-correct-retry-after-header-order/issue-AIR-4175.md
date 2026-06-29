@@ -9,7 +9,7 @@
 
 ## Why
 
-In BLOB handler (and probably in other places) `Retry-After` header is sent after status code. So it is dropped by the client.
+In BLOB handler (and probably in other places) `Retry-After` header is sent after status code. So it is dropped by net/http and never reaches the client.
 
 ## What
 
