@@ -172,7 +172,7 @@ type testObject struct {
 func TestSysErrorHeaders(t *testing.T) {
 	require := require.New(t)
 	sysErr := coreutils.SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate limit exceeded"}.
-		AddHeader("Retry-After", "10")
+		AddHeader(httpu.RetryAfter, "10")
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			err := responder.Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: sysErr.HTTPStatus}, sysErr)
@@ -232,6 +232,23 @@ func TestRetryAfter_writeCommonError_V1(t *testing.T) {
 
 	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
 	require.Equal("7", resp.Header.Get(httpu.RetryAfter))
+}
+
+func TestRetryAfter_replyErr(t *testing.T) {
+	require := require.New(t)
+	sysErr := coreutils.SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate limit exceeded"}.
+		AddHeader(httpu.RetryAfter, "8")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		replyErr(w, sysErr)
+	}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	require.NoError(err)
+	defer resp.Body.Close()
+
+	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal("8", resp.Header.Get(httpu.RetryAfter))
 }
 
 type busyBlobRequestHandler struct{}

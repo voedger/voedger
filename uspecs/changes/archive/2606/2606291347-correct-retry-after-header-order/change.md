@@ -39,7 +39,7 @@ client sends request to the router
 client receives the error without Retry-After   (symptom)
 ```
 
-Corrected behavior: Every router path that emits a back-off-eligible error sets `Retry-After` (and any other headers) before writing the status code, referencing the `httpu.RetryAfter` constant instead of a raw string. The `writeCommonError_V1` writer applies the `SysError` headers before `WriteHeader`, so a processor-provided `Retry-After` reaches the client on BLOB and HTTP error responses as well.
+Corrected behavior: Every router path that emits a back-off-eligible error sets `Retry-After` (and any other headers) before writing the status code, referencing the `httpu.RetryAfter` constant instead of a raw string. The `writeCommonError_V1` writer (V1 BLOB / HTTP error path) and the `replyErr` writer (V2 BLOB error path) apply the `SysError` headers before `WriteHeader`, so a processor-provided `Retry-After` reaches the client on BLOB and HTTP error responses as well.
 
 ## How
 
@@ -47,7 +47,7 @@ Decisions:
 
 - Fix the ordering at the emission site in the BLOB handlers by reusing the already-correct `replyServiceUnavailable` helper instead of duplicating the header-then-status sequence inline
 - Reference the `httpu.RetryAfter` constant everywhere a `Retry-After` header name is written, replacing the raw `"Retry-After"` literal (the `replyServiceUnavailable` helper)
-- Reuse the existing `applySysErrorHeaders` helper to propagate `SysError` headers before the status line in `writeCommonError_V1` (used by the BLOB and HTTP error responders)
+- Reuse the existing `applySysErrorHeaders` helper to propagate `SysError` headers before the status line in `writeCommonError_V1` (V1 BLOB and HTTP error responders) and in `replyErr` (V2 BLOB error responder)
 - Leave the processors unchanged — they already attach `Retry-After` to the `SysError` via `httpu.RetryAfter`
 
 Out of scope:
@@ -70,7 +70,8 @@ References:
 
 - [x] update: [router/impl_test.go](../../../../../pkg/router/impl_test.go)
   - add: regression asserting BLOB write and read `503` responses carry the `Retry-After` header (fault A)
-  - add: case asserting a `SysError` carrying `Retry-After` rendered through `writeCommonError_V1` (BLOB / HTTP error path) propagates the header
+  - add: case asserting a `SysError` carrying `Retry-After` rendered through `writeCommonError_V1` (V1 BLOB / HTTP error path) propagates the header
+  - add: case asserting a `SysError` carrying `Retry-After` rendered through `replyErr` (V2 BLOB error path) propagates the header
 
 - [x] update: [sys/it/impl_rates_test.go](../../../../../pkg/sys/it/impl_rates_test.go)
   - switch the existing query `503` `Retry-After` assertion from the raw `"Retry-After"` literal to the `httpu.RetryAfter` constant, keeping the rest of the file consistent
@@ -81,3 +82,4 @@ References:
 - [x] update: [router/utils.go](../../../../../pkg/router/utils.go)
   - `replyServiceUnavailable`: use the `httpu.RetryAfter` constant instead of the `"Retry-After"` literal
   - `writeCommonError_V1`: apply `applySysErrorHeaders` for the unwrapped `SysError` before `WriteHeader`
+  - `replyErr`: apply `applySysErrorHeaders` before delegating to `ReplyJSON`, so the V2 BLOB error path propagates `SysError` headers

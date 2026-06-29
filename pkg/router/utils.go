@@ -81,6 +81,7 @@ func replyServiceUnavailable(rw http.ResponseWriter) {
 func replyErr(rw http.ResponseWriter, err error) {
 	var sysError coreutils.SysError
 	if errors.As(err, &sysError) {
+		applySysErrorHeaders(rw, sysError)
 		ReplyJSON(rw, sysError.ToJSON_APIV2(), sysError.HTTPStatus)
 	} else {
 		ReplyCommonError(rw, err.Error(), http.StatusInternalServerError)
