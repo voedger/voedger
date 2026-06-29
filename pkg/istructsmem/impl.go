@@ -463,11 +463,11 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 			err = e.app.config.storage.Read(ctx, pKey, cFrom, cTo, func(ccols, data []byte) error {
 				count++
 				ofs := glueLogOffset(ofsHi, binary.BigEndian.Uint16(ccols))
-				event := newEvent(e.app.config)
-				if err = event.loadFromBytes(data); err == nil {
-					err = cb(ofs, event)
+				event, err := newStoredEvent(e.app.config, data)
+				if err != nil {
+					return err
 				}
-				return err
+				return cb(ofs, event)
 			})
 			return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
 		})
@@ -504,11 +504,11 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 			err = e.app.config.storage.Read(ctx, pKey, cFrom, cTo, func(ccols, data []byte) error {
 				count++
 				ofs := glueLogOffset(ofsHi, binary.BigEndian.Uint16(ccols))
-				event := newEvent(e.app.config)
-				if err = event.loadFromBytes(data); err == nil {
-					err = cb(ofs, event)
+				event, err := newStoredEvent(e.app.config, data)
+				if err != nil {
+					return err
 				}
-				return err
+				return cb(ofs, event)
 			})
 			return (err == nil) && (count > 0), err // stop iterate parts if error or no events in last partition
 		})
