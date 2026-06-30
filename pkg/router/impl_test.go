@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -29,10 +30,12 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	blobprocessor "github.com/voedger/voedger/pkg/processors/blobber"
 )
 
 const (
@@ -169,7 +172,7 @@ type testObject struct {
 func TestSysErrorHeaders(t *testing.T) {
 	require := require.New(t)
 	sysErr := coreutils.SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate limit exceeded"}.
-		AddHeader("Retry-After", "10")
+		AddHeader(httpu.RetryAfter, "10")
 	router := setUp(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			err := responder.Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: sysErr.HTTPStatus}, sysErr)
@@ -183,7 +186,102 @@ func TestSysErrorHeaders(t *testing.T) {
 	defer resp.Body.Close()
 
 	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
-	require.Equal("10", resp.Header.Get("Retry-After"))
+	require.Equal("10", resp.Header.Get(httpu.RetryAfter))
+}
+
+func TestRetryAfter_BLOBServiceUnavailable(t *testing.T) {
+	require := require.New(t)
+	for _, c := range []struct {
+		name string
+		url  func(port int) string
+	}{
+		{"write", func(port int) string {
+			return fmt.Sprintf("http://127.0.0.1:%d/blob/test1/app1/%d", port, testWSID)
+		}},
+		{"read", func(port int) string {
+			return fmt.Sprintf("http://127.0.0.1:%d/blob/test1/app1/%d/1", port, testWSID)
+		}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			router := setUpWithBlobHandler(t, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
+			}, busyBlobRequestHandler{})
+			defer tearDown(router)
+
+			resp, err := http.Post(c.url(router.port()), httpu.ContentType_ApplicationJSON, http.NoBody)
+			require.NoError(err)
+			defer resp.Body.Close()
+
+			require.Equal(http.StatusServiceUnavailable, resp.StatusCode)
+			require.Equal(strconv.Itoa(DefaultRetryAfterSecondsOn503), resp.Header.Get(httpu.RetryAfter))
+		})
+	}
+}
+
+func TestRetryAfter_writeCommonError_V1(t *testing.T) {
+	require := require.New(t)
+	sysErr := coreutils.SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate limit exceeded"}.
+		AddHeader(httpu.RetryAfter, "7")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeCommonError_V1(w, sysErr, sysErr.HTTPStatus)
+	}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	require.NoError(err)
+	defer resp.Body.Close()
+
+	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal("7", resp.Header.Get(httpu.RetryAfter))
+}
+
+func TestRetryAfter_replyErr(t *testing.T) {
+	require := require.New(t)
+	sysErr := coreutils.SysError{HTTPStatus: http.StatusTooManyRequests, Message: "rate limit exceeded"}.
+		AddHeader(httpu.RetryAfter, "8")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		replyErr(w, sysErr)
+	}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	require.NoError(err)
+	defer resp.Body.Close()
+
+	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal("8", resp.Header.Get(httpu.RetryAfter))
+}
+
+type busyBlobRequestHandler struct{}
+
+func (busyBlobRequestHandler) HandleRead(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, string, bus.IRequestSender, iblobstorage.RLimiterType) bool {
+	return false
+}
+
+func (busyBlobRequestHandler) HandleWrite(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+	url.Values, func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender) bool {
+	return false
+}
+
+func (busyBlobRequestHandler) HandleWrite_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+	func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender, appdef.QName, string) bool {
+	return false
+}
+
+func (busyBlobRequestHandler) HandleRead_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, appdef.QName, string, istructs.RecordID,
+	bus.IRequestSender, iblobstorage.RLimiterType) bool {
+	return false
+}
+
+func (busyBlobRequestHandler) HandleReadTemp_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, bus.IRequestSender, iblobstorage.SUUID, iblobstorage.RLimiterType) bool {
+	return false
+}
+
+func (busyBlobRequestHandler) HandleWriteTemp_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+	func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender) bool {
+	return false
 }
 
 func TestHandlerPanic(t *testing.T) {
@@ -413,10 +511,10 @@ type testRouter struct {
 	clientDisconnections chan struct{}
 }
 
-func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandler bus.RequestHandler) {
+func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandler bus.RequestHandler, blobRequestHandler blobprocessor.IRequestHandler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	requestSender := bus.NewIRequestSender(testingu.MockTime, requestHandler)
-	httpSrv, acmeSrv, adminService := Provide(rp, nil, nil, nil, requestSender,
+	httpSrv, acmeSrv, adminService := Provide(rp, nil, blobRequestHandler, nil, requestSender,
 		map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10}, nil, nil, nil)
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
@@ -441,6 +539,10 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandl
 }
 
 func setUp(t *testing.T, requestHandler bus.RequestHandler) *testRouter {
+	return setUpWithBlobHandler(t, requestHandler, nil)
+}
+
+func setUpWithBlobHandler(t *testing.T, requestHandler bus.RequestHandler, blobRequestHandler blobprocessor.IRequestHandler) *testRouter {
 	rp := RouterParams{
 		HTTPServerParams: HTTPServerParams{
 			Port:             0,
@@ -454,7 +556,7 @@ func setUp(t *testing.T, requestHandler bus.RequestHandler) *testRouter {
 		clientDisconnections: make(chan struct{}, 1),
 	}
 
-	startRouter(t, router, rp, requestHandler)
+	startRouter(t, router, rp, requestHandler, blobRequestHandler)
 	return router
 }
 
