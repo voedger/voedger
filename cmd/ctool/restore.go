@@ -36,13 +36,10 @@ func newRestoreCmd() *cobra.Command {
 }
 
 func restore(cmd *cobra.Command, args []string) error {
-
 	currentCmd = cmd
 	cluster := newCluster()
 
-	var err error
-
-	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
 	}
 
@@ -51,17 +48,17 @@ func restore(cmd *cobra.Command, args []string) error {
 		backupName = filepath.Join(backupFolder, backupName)
 	}
 
-	if err = backupExists(cluster, backupName); err != nil {
+	if err := backupExists(cluster, backupName); err != nil {
 		return err
 	}
 
 	if cluster.Edition == clusterEditionN1 {
-		if err = resoreCeNode(backupName); err != nil {
+		if err := resoreCeNode(backupName); err != nil {
 			return err
 		}
 		loggerInfoGreen("CENode restored successfully")
 	} else {
-		if err = restoreDBNodes(cluster, backupName); err != nil {
+		if err := restoreDBNodes(cluster, backupName); err != nil {
 			return err
 		}
 		loggerInfoGreen("DB nodes restored successfully")
@@ -71,29 +68,17 @@ func restore(cmd *cobra.Command, args []string) error {
 }
 
 func restoreDBNodes(cluster *clusterType, backupName string) error {
-
 	seConf := newSeConfigType(cluster)
-
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("restore-node.sh", backupName, seConf.DBNode1, seConf.DBNode2, seConf.DBNode3); err != nil {
-		return err
-	}
-
-	return nil
+	return newScriptExecuter(cluster.sshKey, "").
+		run("restore-node.sh", backupName, seConf.DBNode1, seConf.DBNode2, seConf.DBNode3)
 }
 
 func resoreCeNode(backupName string) error {
-
-	if err := newScriptExecuter("", "").
-		run("ce/ce-restore-node.sh", backupName); err != nil {
-		return err
-	}
-
-	return nil
+	return newScriptExecuter("", "").
+		run("ce/ce-restore-node.sh", backupName)
 }
 
 func backupExists(cluster *clusterType, backupPath string) error {
-
 	if cluster.Edition == clusterEditionN1 {
 		exists, err := filesu.Exists(backupPath)
 		if err != nil {

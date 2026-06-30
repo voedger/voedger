@@ -11,7 +11,6 @@ require (
 	github.com/voedger/voedger v0.0.0-20260422190003-496f20ef67ec
 	golang.org/x/crypto v0.51.0
 	golang.org/x/mod v0.36.0
-	golang.org/x/term v0.43.0
 )
 
 require (

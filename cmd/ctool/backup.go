@@ -158,16 +158,12 @@ func newExpireType(str string) (*expireType, error) {
 }
 
 func validateBackupCronCmd(cmd *cmdType, _ *clusterType) error {
-
 	if len(cmd.Args) != 2 {
 		return ErrInvalidNumberOfArguments
 	}
 
-	if _, err := cron.ParseStandard(cmd.Args[1]); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := cron.ParseStandard(cmd.Args[1])
+	return err
 }
 
 // nolint
@@ -213,7 +209,6 @@ func newBackupErrorEvent(host string, err error) *eventType {
 }
 
 func backupCENode(cmd *cobra.Command, args []string) error {
-
 	currentCmd = cmd
 	cluster := newCluster()
 
@@ -221,7 +216,7 @@ func backupCENode(cmd *cobra.Command, args []string) error {
 
 	host := "ce-node"
 
-	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		if e := newBackupErrorEvent(host, err).postAlert(cluster); e != nil {
 			err = errors.Join(err, e)
 		}
@@ -248,15 +243,10 @@ func backupCENode(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err = deleteExpireBacupsCE(cluster); err != nil {
-		return err
-	}
-
-	return nil
+	return deleteExpireBacupsCE(cluster)
 }
 
 func backupNode(cmd *cobra.Command, args []string) error {
-
 	currentCmd = cmd
 	cluster := newCluster()
 
@@ -264,7 +254,7 @@ func backupNode(cmd *cobra.Command, args []string) error {
 
 	host := args[0]
 
-	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		if e := newBackupErrorEvent(host, err).postAlert(cluster); e != nil {
 			err = errors.Join(err, e)
 		}
@@ -291,11 +281,7 @@ func backupNode(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err = deleteExpireBacups(cluster, args[0]); err != nil {
-		return err
-	}
-
-	return nil
+	return deleteExpireBacups(cluster, args[0])
 }
 
 func newBackupFolderName() string {
@@ -304,7 +290,7 @@ func newBackupFolderName() string {
 	return filepath.Join(backupFolder, formattedDate+"-backup")
 }
 
-func backupNow(cmd *cobra.Command, args []string) error {
+func backupNow(cmd *cobra.Command, _ []string) error {
 	currentCmd = cmd
 	cluster := newCluster()
 
@@ -312,13 +298,11 @@ func backupNow(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfNotFound
 	}
 
-	var err error
-
-	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
 	}
 
-	if err = checkBackupFolders(cluster); err != nil {
+	if err := checkBackupFolders(cluster); err != nil {
 		return err
 	}
 
@@ -329,14 +313,14 @@ func backupNow(cmd *cobra.Command, args []string) error {
 	for _, n := range cluster.Nodes {
 		if n.NodeRole == nrDBNode {
 			loggerInfo(sBackupNode, n.nodeName(), n.address())
-			if err = newScriptExecuter(cluster.sshKey, "").
+			if err := newScriptExecuter(cluster.sshKey, "").
 				run("backup-node.sh", n.address(), folder); err != nil {
 				return err
 			}
 		}
 		if n.NodeRole == nrN1Node {
 			loggerInfo(sBackupNode, n.nodeName(), n.address())
-			if err = newScriptExecuter("", "").
+			if err := newScriptExecuter("", "").
 				run("ce/backup-node.sh", folder); err != nil {
 				return err
 			}
@@ -346,7 +330,6 @@ func backupNow(cmd *cobra.Command, args []string) error {
 }
 
 func backupCron(cmd *cobra.Command, args []string) error {
-
 	currentCmd = cmd
 	cluster := newCluster()
 	if cluster.Draft {
@@ -361,34 +344,29 @@ func backupCron(cmd *cobra.Command, args []string) error {
 		cluster.Cron.ExpireTime = expire.string()
 	}
 
-	Cmd := newCmd(ckBackup, append([]string{"cron"}, args...))
+	backupCmd := newCmd(ckBackup, append([]string{"cron"}, args...))
 
-	var err error
-
-	if err = Cmd.validate(cluster); err != nil {
+	if err := backupCmd.validate(cluster); err != nil {
 		return err
 	}
 
-	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
 	}
 
-	if err = checkBackupFolders(cluster); err != nil {
+	if err := checkBackupFolders(cluster); err != nil {
 		return err
 	}
 
-	if err = setCronBackup(cluster, args[0]); err != nil {
+	if err := setCronBackup(cluster, args[0]); err != nil {
 		return err
 	}
 
 	loggerInfoGreen("Cron schedule set successfully")
 
 	cluster.Cron.Backup = args[0]
-	if err = cluster.saveToJSON(); err != nil {
-		return err
-	}
 
-	return nil
+	return cluster.saveToJSON()
 }
 
 // Checking the presence of a Backup folder on DBNodes
@@ -421,21 +399,18 @@ func checkBackupFolderOnHost(cluster *clusterType, addr string) error {
 	return nil
 }
 
-func backupList(cmd *cobra.Command, args []string) error {
-
+func backupList(cmd *cobra.Command, _ []string) error {
 	currentCmd = cmd
 	cluster := newCluster()
 	if cluster.Draft {
 		return ErrClusterConfNotFound
 	}
 
-	var err error
-
-	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
 	}
 
-	if err = checkBackupFolders(cluster); err != nil {
+	if err := checkBackupFolders(cluster); err != nil {
 		return err
 	}
 
@@ -447,7 +422,6 @@ func backupList(cmd *cobra.Command, args []string) error {
 }
 
 func getBackupList(cluster *clusterType) (string, error) {
-
 	backupFName := filepath.Join(scriptsTempDir, "backups.lst")
 
 	err := os.Remove(backupFName)
@@ -461,12 +435,12 @@ func getBackupList(cluster *clusterType) (string, error) {
 	}
 
 	if cluster.Edition == clusterEditionN1 {
-		if err = newScriptExecuter("", "").run("ce/backup-list.sh", args...); err != nil {
-			return "", nil
+		if err := newScriptExecuter("", "").run("ce/backup-list.sh", args...); err != nil {
+			return "", err
 		}
 	} else {
-		if err = newScriptExecuter(cluster.sshKey, "").run("backup-list.sh", args...); err != nil {
-			return "", nil
+		if err := newScriptExecuter(cluster.sshKey, "").run("backup-list.sh", args...); err != nil {
+			return "", err
 		}
 	}
 
@@ -479,31 +453,23 @@ func getBackupList(cluster *clusterType) (string, error) {
 }
 
 func deleteExpireBacups(cluster *clusterType, hostAddr string) error {
-
 	if cluster.Cron.ExpireTime == "" {
 		return nil
 	}
 
 	loggerInfo("Search and delete expire backups on", hostAddr)
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("delete-expire-backups-ssh.sh", hostAddr, backupFolder, cluster.Cron.ExpireTime); err != nil {
-		return err
-	}
 
-	return nil
+	return newScriptExecuter(cluster.sshKey, "").
+		run("delete-expire-backups-ssh.sh", hostAddr, backupFolder, cluster.Cron.ExpireTime)
 }
 
 func deleteExpireBacupsCE(cluster *clusterType) error {
-
 	if cluster.Cron.ExpireTime == "" {
 		return nil
 	}
 
 	loggerInfo("Search and delete expire backups on ce-node")
-	if err := newScriptExecuter("", "").
-		run("ce/delete-expire-backups.sh", backupFolder, cluster.Cron.ExpireTime); err != nil {
-		return err
-	}
 
-	return nil
+	return newScriptExecuter("", "").
+		run("ce/delete-expire-backups.sh", backupFolder, cluster.Cron.ExpireTime)
 }

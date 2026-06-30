@@ -27,8 +27,8 @@ func (filter) WS() appdef.QName         { return appdef.NullQName }
 //   - fmt.Stringer
 type trueFilter struct{ filter }
 
-func (trueFilter) Kind() appdef.FilterKind   { return appdef.FilterKind_True }
-func (trueFilter) Match(t appdef.IType) bool { return true }
-func (trueFilter) String() string            { return "TRUE" }
+func (trueFilter) Kind() appdef.FilterKind { return appdef.FilterKind_True }
+func (trueFilter) Match(appdef.IType) bool { return true }
+func (trueFilter) String() string          { return "TRUE" }
 
-var trueFlt *trueFilter = &trueFilter{}
+var trueFlt = &trueFilter{}

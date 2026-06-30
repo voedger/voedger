@@ -63,7 +63,7 @@ func TestExecRootCmd(t *testing.T) {
 	testData := InputControlMessage{
 		Type: "docker",
 		Value: json.RawMessage(fmt.Sprintf(`{
-			"Key": "%s",
+			"Key": %q,
 			"SP": {
 				"Version": "1.0",
 				"ComposeText": "version: \"3.7\"\nservices:\n  redis:\n    image: 'redis:7.0.11-alpine'\n    restart: always\n  nginx:\n    image: 'nginx:1.23.4'\n    restart: always\n"

@@ -179,7 +179,7 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 
 		f := doc.Field("pin")
 		fmt.Printf("field %q: kind: %v, required: %v, comment: %s\n", f.Name(), f.DataKind(), f.Required(), f.Comment())
-		for v := appdef.VerificationKind_EMail; v < appdef.VerificationKind_FakeLast; v++ {
+		for v := range appdef.VerificationKind_FakeLast {
 			fmt.Println(v, f.VerificationKind(v))
 		}
 	}

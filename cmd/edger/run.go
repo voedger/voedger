@@ -24,13 +24,13 @@ type InputControlMessage struct {
 	Value json.RawMessage
 }
 
-var inputStreamReadingInterval time.Duration = 0
+var inputStreamReadingInterval time.Duration
 
 func newRunEdgerCmd() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "run",
 		Short: "Runs edger and processes SP values from stdin",
-		Run: func(c *cobra.Command, args []string) {
+		Run: func(c *cobra.Command, _ []string) {
 			commandInCh := make(chan ctrlloop.ControlMessage[string, CommandSP])
 			commandCtrlloopWaitFunc := ctrlloop.New(CommandController, CommandReporter, NumCommandControllerRoutines, commandInCh, time.Now)
 			defer commandCtrlloopWaitFunc()
@@ -91,9 +91,7 @@ func decodeControlMessage[Key comparable, SP any](input InputControlMessage) *ct
 
 func getControlMessage[Key comparable, SP any](input InputControlMessage) *ctrlloop.ControlMessage[Key, SP] {
 	switch input.Type {
-	case SPTypeCommand:
-		return decodeControlMessage[Key, SP](input)
-	case SPTypeDocker:
+	case SPTypeCommand, SPTypeDocker:
 		return decodeControlMessage[Key, SP](input)
 	default:
 		logger.Verbose("unknown sp type: " + input.Type)
