@@ -534,16 +534,30 @@ State and workspace lifecycle
 
 ```text
 @Client
-  -> [/q.registry.InitiateResetPasswordByEmail/]
-  -> [(registry.LoginIdx)]
-  -> [(registry.Login)]: profileWSID is ready
-  -> [/q.sys.InitiateEmailVerification/]
-  -> @Client: verification token
-  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]: verification token and code
-  -> [/q.sys.IssueVerifiedValueToken/]
-  -> [Token service]: issue verified value token
-  -> [/c.registry.ResetPasswordByEmail/]: verified value token and new password
-  -> [(registry.Login)]: write new password hash
+  - all 3 calls routed to sys/registry/pseudoWSID(Email); null auth
+  -> [/q.registry.InitiateResetPasswordByEmail/]: AppName, Email, Language
+      -> [(registry.LoginIdx)]: GetLoginHash(Email); CDocLoginID
+      -> [(registry.Login)]: CDocLoginID; ProfileWSID = Login.WSID
+      -> [/q.sys.InitiateEmailVerification/]: at loginApp/ProfileWSID; Email, TargetWSID=ProfileWSID, ForRegistry=true
+          - ForRegistry=true: token signed under sys/registry, WSID overridden to pseudoWSID(Email)
+          - code emailed via c.sys.SendEmailVerificationCode
+      -> out: InitiateResetPasswordByEmailResult
+          - VerificationToken: VerificationKind, WSID, ID, Entity, Field, Value, Hash256
+            - VerificationKind: EMail
+            - Entity: registry.ResetPasswordByEmailUnloggedParams; Field: Email; Value: Email
+            - WSID: pseudoWSID(Email)
+            - Hash256: hash of the code
+          - ProfileWSID
+
+  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]: AppName, VerificationToken, code, ProfileWSID
+      -> [/q.sys.IssueVerifiedValueToken/]: at loginApp/ProfileWSID; VerificationToken, code, ForRegistry=true
+          -> [Token service]: validate VerificationToken + hash(code); re-issue under sys/registry, strip Hash256
+      -> out: VerifiedValueToken
+          - VerifiedValueToken: VerificationKind, WSID, ID, Entity, Field, Value
+
+  -> [/c.registry.ResetPasswordByEmail/]: VerifiedValueToken, NewPwd (UNLOGGED), AppName
+      -> [(registry.Login)]: login = token.Value (= Email); write PwdHash
+      -> out: 200 OK
 ```
 
 #### Password change rejects malformed request
