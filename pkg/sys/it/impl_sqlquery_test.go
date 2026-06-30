@@ -586,9 +586,9 @@ func TestAuthnz(t *testing.T) {
 	require.NoError(t, err)
 	apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{apiRole},
 		ws.WSID, payloads.PrincipalPayload{
-			PresentedLogin: ws.Owner.Name,
-			SubjectKind:    istructs.SubjectKind_User,
-			ProfileWSID:    ws.Owner.ProfileWSID,
+			Login:       ws.Owner.Name,
+			SubjectKind: istructs.SubjectKind_User,
+			ProfileWSID: ws.Owner.ProfileWSID,
 		})
 	require.NoError(t, err)
 

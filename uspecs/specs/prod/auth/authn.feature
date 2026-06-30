@@ -93,6 +93,25 @@ Feature: Authentication
       Then the alias change is rejected
       And the response indicates incorrect login format
 
+  Rule: Login alias state visibility
+
+    Scenario Outline: Reading a login's alias state requires a System Principal Token
+      Given a user login exists with an active login alias
+      When <caller> reads the login's alias state
+      Then the read <result>
+
+      Examples:
+        | caller                                    | result      |
+        | System                                    | succeeds    |
+        | a caller without a System Principal Token | is rejected |
+
+    Scenario: A System read returns the login's alias lifecycle fields
+      Given a user login "jsmith" with active alias "j.smith", no alias change in progress, and no alias error
+      When System reads the login's alias state
+      Then Alias is "j.smith"
+      And AliasInProc is 0
+      And AliasError is empty
+
   Rule: Sign-in and profile readiness
 
     Scenario Outline: Subject signs in after profile workspace is ready
@@ -151,7 +170,7 @@ Feature: Authentication
       Given "<subject>" login exists
       And the profile workspace for "<subject>" is ready
       When Client signs in with login and password
-      Then the issued principal token identifies login, canonical login, subject kind, and profileWSID
+      Then the issued principal token identifies its login (the canonical login), subject kind, and profileWSID
 
       Examples:
         | subject |
@@ -173,25 +192,26 @@ Feature: Authentication
       Given Client has a valid principal token
       When Client refreshes the principal token
       Then the response contains a new principalToken
-      And the new principalToken preserves login, canonical login, subject kind, and profileWSID from the input token
+      And the new principalToken preserves the login (canonical), alias, subject kind, and profileWSID from the input token
 
-    Scenario: Principal token uses the active alias as login after alias sign-in
-      Given a user login exists with an active login alias
+    Scenario Outline: Principal token carries the canonical login and the active alias
+      Given a user login that <alias state>
       And the profile workspace for the user is ready
-      When Client signs in with alias and password
-      Then the issued principal token's login is the active alias and its canonical login is the original login
+      When Client signs in with <identifier> and password
+      Then the issued principal token's login is the canonical login
+      And its alias is <alias value>
 
-    Scenario: Principal token uses the active alias as login when signing in with the original login
-      Given a user login exists with an active login alias
-      And the profile workspace for the user is ready
-      When Client signs in with original login and password
-      Then the issued principal token's login is the active alias and its canonical login is the original login
+      Examples:
+        | alias state         | identifier     | alias value      |
+        | has an active alias | alias          | the active alias |
+        | has an active alias | original login | the active alias |
+        | has no active alias | original login | empty            |
 
-    Scenario: Existing principal token retains login and canonical login after alias changes
+    Scenario: Existing principal token retains login and alias after alias changes
       Given Client has a valid principal token issued while a login alias is active
       When System updates or clears that login alias
       Then the existing principal token remains valid until normal expiration
-      And the existing principal token retains the login and canonical login captured at issue time
+      And the existing principal token retains the login (canonical) and alias captured at issue time
 
   Rule: Password lifecycle
 

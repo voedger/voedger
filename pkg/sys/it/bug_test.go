@@ -5,12 +5,14 @@
 package sys_it
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,9 +20,13 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/bbolt"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	it "github.com/voedger/voedger/pkg/vit"
+	"github.com/voedger/voedger/pkg/vvm"
 )
 
 type rr struct {
@@ -146,4 +152,97 @@ func TestWSNameCausesMaxPseudoWSID(t *testing.T) {
 
 	// need to wait for init anyway, otherwise vit.Time.Add(1 day) on next test -> token expired during the device ws init
 	vit.SignIn(deviceLogin)
+}
+
+// AIR-4355: events read sequentially from the log (ReadToTheEnd) and retained after the read
+// transaction closed must own their bytes. The storage read callback hands the event a zero-copy
+// view that, with a bbolt-backed storage, aliases mmap pages unmapped once the file grows and
+// re-maps - reading a retained event afterwards yields garbage or SIGSEGV.
+func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
+	require := require.New(t)
+
+	cfg := getBboltVITCfg(t)
+	vit := it.NewVIT(t, &cfg)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	airTablePlan := appdef.NewQName("app1pkg", "air_table_plan")
+
+	const eventsCnt = 16
+	expected := make(map[string]bool, eventsCnt)
+	for i := range eventsCnt {
+		name := fmt.Sprintf("buyer-%d", i)
+		expected[name] = true
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":%q,"name":%q}}]}`, airTablePlan, name)
+		vit.PostWS(ws, "c.sys.CUD", body)
+	}
+
+	// sequentially read the whole WLog and retain the returned events
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	var events []istructs.IWLogEvent
+	require.NoError(as.Events().ReadWLog(context.Background(), ws.WSID, istructs.FirstOffset, istructs.ReadToTheEnd,
+		func(_ istructs.Offset, event istructs.IWLogEvent) error {
+			events = append(events, event)
+			return nil
+		}))
+
+	// churn the very same bbolt storage the events were read from (public storage API only) so the
+	// file grows and re-maps, unmapping the pages the retained events may still point into
+	storage, err := vit.IAppStorageProvider.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	small := bytes.Repeat([]byte{0xCD}, 96)
+	smallBatch := make([]istorage.BatchItem, 0, 8192)
+	for i := range 8192 {
+		smallBatch = append(smallBatch, istorage.BatchItem{
+			PKey: []byte("AIR4355-churn-small"), CCols: fmt.Appendf(nil, "%010d", i), Value: small,
+		})
+	}
+	require.NoError(storage.PutBatch(smallBatch))
+
+	large := bytes.Repeat([]byte{0xAB}, int(appdef.MaxFieldLength))
+	for round := range 2 {
+		largeBatch := make([]istorage.BatchItem, 0, 800)
+		for i := range 800 {
+			largeBatch = append(largeBatch, istorage.BatchItem{
+				PKey: fmt.Appendf(nil, "AIR4355-churn-large-%d", round), CCols: fmt.Appendf(nil, "%010d", i), Value: large,
+			})
+		}
+		require.NoError(storage.PutBatch(largeBatch))
+	}
+
+	// the retained events must still expose their original field values; with the bug they read
+	// freed/re-mapped memory here (mismatch or SIGSEGV)
+	found := make(map[string]bool, eventsCnt)
+	for _, event := range events {
+		event.CUDs(func(rec istructs.ICUDRow) bool {
+			if rec.QName() == airTablePlan {
+				found[rec.AsString("name")] = true
+			}
+			return true
+		})
+		event.Release()
+	}
+	for name := range expected {
+		require.True(found[name], name)
+	}
+}
+
+func getBboltVITCfg(t *testing.T) it.VITConfig {
+	dbDir, err := os.MkdirTemp("", "AIR-4355") //nolint:usetesting // bbolt driver does not close the connection so t.TempDir() fails
+	require.NoError(t, err)
+
+	return it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "pwd"),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.StorageFactory = func(time timeu.ITime) (istorage.IAppStorageFactory, error) {
+				return bbolt.Provide(bbolt.ParamsType{DBDir: dbDir}, time), nil
+			}
+		}),
+	)
 }

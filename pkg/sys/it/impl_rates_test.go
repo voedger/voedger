@@ -137,7 +137,7 @@ func TestQueryLimiter_BasicUsage(t *testing.T) {
 			resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/queries/sys.Echo?args=%s`, ws.WSID, url.QueryEscape(`{"Text":"Hello"}`)),
 				httpu.WithAuthorizeBy(sys.Token), httpu.Expect503(), httpu.WithNoRetryPolicy())
 			require.Equal(t, http.StatusServiceUnavailable, resp.HTTPResp.StatusCode)
-			require.Equal(t, strconv.Itoa(router.DefaultRetryAfterSecondsOn503), resp.HTTPResp.Header.Get("Retry-After"))
+			require.Equal(t, strconv.Itoa(router.DefaultRetryAfterSecondsOn503), resp.HTTPResp.Header.Get(httpu.RetryAfter))
 
 			vit.TimeAdd(10 * time.Second)
 			releaseQuerySlots(wg, okToFinish, limit)

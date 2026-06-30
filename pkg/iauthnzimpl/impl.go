@@ -91,11 +91,11 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	}
 
 	// read roles from cdoc.sys.Subjects from the current workspace
-	// resolve against both the presented and canonical logins so role assignment matches
+	// resolve against both the canonical login and the active alias so role assignment matches
 	// regardless of which identifier a subject was registered under
-	subjectLogins := []string{principalPayload.PresentedLogin}
-	if principalPayload.CanonicalLogin != "" && principalPayload.CanonicalLogin != principalPayload.PresentedLogin {
-		subjectLogins = append(subjectLogins, principalPayload.CanonicalLogin)
+	subjectLogins := []string{principalPayload.Login}
+	if principalPayload.Alias != "" && principalPayload.Alias != principalPayload.Login {
+		subjectLogins = append(subjectLogins, principalPayload.Alias)
 	}
 	for _, subjectLogin := range subjectLogins {
 		rolesFromSubjects, err := i.rolesFromSubjects(requestContext, subjectLogin, as, req.RequestWSID)
@@ -115,12 +115,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	switch principalPayload.SubjectKind {
 	case istructs.SubjectKind_User:
 		pkt = iauthnz.PrincipalKind_User
-		// keep internal identity on the canonical login; fall back to the presented login
-		// for legacy tokens (no CanonicalLogin claim) and the system principal
-		loginName = principalPayload.CanonicalLogin
-		if loginName == "" {
-			loginName = principalPayload.PresentedLogin
-		}
+		loginName = principalPayload.Login
 	case istructs.SubjectKind_Device:
 		pkt = iauthnz.PrincipalKind_Device
 	default:

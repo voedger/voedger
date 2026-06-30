@@ -8,7 +8,6 @@ package router
 import (
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -26,8 +25,7 @@ func (s *routerService) blobHTTPRequestHandler_Write(numsAppsWorkspaces map[appd
 			newBLOBOKResponseIniter(rw, http.StatusOK), req.Body, func(sysErr coreutils.SysError) {
 				writeCommonError_V1(rw, sysErr, sysErr.HTTPStatus)
 			}, s.requestSender) {
-			rw.WriteHeader(http.StatusServiceUnavailable)
-			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+			replyServiceUnavailable(rw)
 		}
 	})
 }
@@ -42,8 +40,7 @@ func (s *routerService) blobHTTPRequestHandler_Read(numsAppsWorkspaces map[appde
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
 				writeCommonError_V1(rw, sysErr, sysErr.HTTPStatus)
 			}, existingBLOBIDOrSUID, s.requestSender, iblobstoragestg.RLimiter_Null) {
-			rw.WriteHeader(http.StatusServiceUnavailable)
-			rw.Header().Add("Retry-After", strconv.Itoa(DefaultRetryAfterSecondsOn503))
+			replyServiceUnavailable(rw)
 		}
 	})
 }

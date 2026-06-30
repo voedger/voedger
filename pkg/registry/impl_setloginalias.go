@@ -154,7 +154,7 @@ func execCmdPutLoginAliasIndex(args istructs.ExecCommandArgs) error {
 		return err
 	}
 
-	existingAlias, _, err := getLoginAlias(args.State, args.WSID, appName, alias)
+	existingAlias, err := getLoginAlias(args.State, args.WSID, appName, alias)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func execCmdDeactivateLoginAliasIndex(args istructs.ExecCommandArgs) error {
 		return err
 	}
 
-	loginAlias, _, err := getActiveLoginAlias(args.State, args.WSID, appName, alias)
+	loginAlias, err := getActiveLoginAlias(args.State, args.WSID, appName, alias)
 	if err != nil || loginAlias == nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func assertIdentifierAvailable(st istructs.IState, appName, identifier string, t
 		return coreutils.NewHTTPErrorf(http.StatusConflict, "sign-in identifier already exists")
 	}
 
-	loginAlias, _, err := getActiveLoginAlias(st, targetAppWSID, appName, identifier)
+	loginAlias, err := getActiveLoginAlias(st, targetAppWSID, appName, identifier)
 	if err != nil || loginAlias == nil {
 		return err
 	}
@@ -264,36 +264,36 @@ func assertIdentifierAvailable(st istructs.IState, appName, identifier string, t
 	return coreutils.NewHTTPErrorf(http.StatusConflict, "sign-in identifier already exists")
 }
 
-func getActiveLoginAlias(st istructs.IState, wsid istructs.WSID, appName, alias string) (istructs.IStateValue, istructs.RecordID, error) {
-	loginAlias, recordID, err := getLoginAlias(st, wsid, appName, alias)
+func getActiveLoginAlias(st istructs.IState, wsid istructs.WSID, appName, alias string) (istructs.IStateValue, error) {
+	loginAlias, err := getLoginAlias(st, wsid, appName, alias)
 	if err != nil || loginAlias == nil {
-		return nil, recordID, err
+		return nil, err
 	}
 	if !loginAlias.AsBool(appdef.SystemField_IsActive) {
-		return nil, istructs.NullRecordID, nil
+		return nil, nil
 	}
-	return loginAlias, recordID, nil
+	return loginAlias, nil
 }
 
-func getLoginAlias(st istructs.IState, wsid istructs.WSID, appName, alias string) (istructs.IStateValue, istructs.RecordID, error) {
+func getLoginAlias(st istructs.IState, wsid istructs.WSID, appName, alias string) (istructs.IStateValue, error) {
 	recordID, err := uniques.GetRecordIDByUniqueCombination(wsid, QNameCDocLoginAlias, st.AppStructs(), map[string]interface{}{
 		field_AppName: appName,
 		field_Alias:   alias,
 	})
 	if err != nil || recordID == istructs.NullRecordID {
-		return nil, recordID, err
+		return nil, err
 	}
 
 	kb, err := st.KeyBuilder(sys.Storage_Record, QNameCDocLoginAlias)
 	if err != nil {
-		return nil, istructs.NullRecordID, err
+		return nil, err
 	}
 	kb.PutRecordID(sys.Storage_Record_Field_ID, recordID)
 	loginAlias, err := st.MustExist(kb)
 	if err != nil {
-		return nil, istructs.NullRecordID, err
+		return nil, err
 	}
-	return loginAlias, recordID, nil
+	return loginAlias, nil
 }
 
 func callRegistryFunc(fed federationCaller, tokens itokens.ITokens, appQName appdef.AppQName, wsid istructs.WSID, resource string, body string, optFuncs ...httpu.ReqOptFunc) (*federation.FuncResponse, error) {
@@ -341,7 +341,7 @@ func loginFromPrimaryCDoc(login string, cdocLogin istructs.IStateValue) signInLo
 }
 
 func resolveAliasSignInLogin(submittedLogin, appName string, st istructs.IState, wsid istructs.WSID, tokens itokens.ITokens, fed federationCaller) (signInLogin, bool, error) {
-	loginAlias, _, err := getActiveLoginAlias(st, wsid, appName, submittedLogin)
+	loginAlias, err := getActiveLoginAlias(st, wsid, appName, submittedLogin)
 	if err != nil || loginAlias == nil {
 		return signInLogin{}, false, err
 	}
