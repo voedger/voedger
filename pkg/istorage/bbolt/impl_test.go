@@ -125,11 +125,12 @@ func churnBboltStorage(t *testing.T, storage istorage.IAppStorage) {
 	for i := range large {
 		large[i] = byte(i)
 	}
+	base := time.Now()
 	batch := make([]istorage.BatchItem, 0, 256)
 	for i := range 256 {
 		batch = append(batch, istorage.BatchItem{
 			PKey:  []byte("stable-read-churn"),
-			CCols: []byte(time.Now().Add(time.Duration(i)).String()),
+			CCols: []byte(base.Add(time.Duration(i)).String()),
 			Value: large,
 		})
 	}
