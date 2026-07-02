@@ -34,7 +34,7 @@ func BuildPackageSchema(path string, asts []*FileSchemaAST) (*PackageSchemaAST, 
 // ParsePackageDir is a helper which parses all SQL schemas from specified FS and returns Package Schema.
 func ParsePackageDir(path string, fs filesu.IReadFS, subDir string) (ast *PackageSchemaAST, err error) {
 	ast, _, err = ParsePackageDirCollectingFiles(path, fs, subDir)
-	return
+	return ast, err
 }
 
 // ParsePackageDirCollectingFiles is a helper which parses all SQL schemas from specified FS

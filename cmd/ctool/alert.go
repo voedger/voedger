@@ -325,7 +325,7 @@ type customTime time.Time
 func (ct *customTime) MarshalJSON() ([]byte, error) {
 	t := time.Time(*ct)
 	formatted := t.Format("2006-01-02T15:04:05.99Z")
-	return []byte(fmt.Sprintf(`"%s"`, formatted)), nil
+	return fmt.Appendf(nil, "%q", formatted), nil
 }
 
 type eventType struct {

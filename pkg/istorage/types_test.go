@@ -142,7 +142,7 @@ func TestNewSafeAppNameErrors(t *testing.T) {
 	})
 
 	t.Run("unique func error", func(t *testing.T) {
-		testErr := errors.New("test error")
+		testErr := errors.New("test error") //nolint err113
 		_, err := NewSafeAppName(istructs.AppQName_test1_app1, func(name string) (bool, error) { return true, testErr })
 		require.ErrorIs(err, testErr)
 	})

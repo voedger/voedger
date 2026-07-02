@@ -41,7 +41,7 @@ func TestGetPseudoWSID(t *testing.T) {
 	}
 	const mask = uint64(0xFFFFFFFFFFFC0000)
 	var srcInstance src
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		fuzz.Fuzz(&srcInstance)
 		require.Zero(t, uint64(GetPseudoWSID(istructs.NullWSID, srcInstance.entity, srcInstance.clusterID))&mask)
 		require.Zero(t, uint64(GetPseudoWSID(istructs.NullWSID+1, srcInstance.entity, srcInstance.clusterID))&mask)

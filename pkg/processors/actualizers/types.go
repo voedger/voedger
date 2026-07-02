@@ -13,7 +13,6 @@ import (
 
 // Returns is projector triggered by event
 func ProjectorEvent(prj appdef.IProjector, event istructs.IPLogEvent) (triggeredBy appdef.QName) {
-
 	switch event.QName() {
 	case istructs.QNameForError:
 		if prj.WantErrors() {

@@ -46,11 +46,11 @@ func (cnt *Containers) ID(name string) (ContainerID, error) {
 
 // Loads all container from storage, add all known system and application containers and store if some changes. Must be called at application starts
 func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
-	if err = cnt.load(storage, versions); err != nil {
+	if err := cnt.load(storage, versions); err != nil {
 		return err
 	}
 
-	if err = cnt.collectAll(appDef); err != nil {
+	if err := cnt.collectAll(appDef); err != nil {
 		return err
 	}
 
@@ -65,7 +65,6 @@ func (cnt *Containers) Prepare(storage istorage.IAppStorage, versions *vers.Vers
 
 // Retrieves and stores IDs for all known containers in application types. Must be called then application starts
 func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
-
 	// system containers
 	cnt.collectSys("", NullContainerID)
 
@@ -90,13 +89,14 @@ func (cnt *Containers) collect(name string) (err error) {
 	}
 
 	for id := cnt.lastID + 1; id < MaxAvailableContainerID; id++ {
-		if _, ok := cnt.ids[id]; !ok {
-			cnt.containers[name] = id
-			cnt.ids[id] = name
-			cnt.lastID = id
-			cnt.changes++
-			return nil
+		if _, ok := cnt.ids[id]; ok {
+			continue
 		}
+		cnt.containers[name] = id
+		cnt.ids[id] = name
+		cnt.lastID = id
+		cnt.changes++
+		return nil
 	}
 
 	return ErrContainerIDsExceeds
@@ -110,7 +110,6 @@ func (cnt *Containers) collectSys(name string, id ContainerID) {
 
 // Loads all stored container from storage
 func (cnt *Containers) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
-
 	ver := versions.Get(vers.SysContainersVersion)
 	switch ver {
 	case vers.UnknownVersion: // no sys.Container storage exists
@@ -124,7 +123,6 @@ func (cnt *Containers) load(storage istorage.IAppStorage, versions *vers.Version
 
 // Loads all stored containers from storage version ver01
 func (cnt *Containers) load01(storage istorage.IAppStorage) error {
-
 	readName := func(cCols, value []byte) error {
 		name := string(cCols)
 		if ok, err := appdef.ValidIdent(name); !ok {
@@ -170,12 +168,12 @@ func (cnt *Containers) store(storage istorage.IAppStorage, versions *vers.Versio
 		batch = append(batch, item)
 	}
 
-	if err = storage.PutBatch(batch); err != nil {
+	if err := storage.PutBatch(batch); err != nil {
 		return fmt.Errorf("error store application container IDs to storage: %w", err)
 	}
 
 	if ver := versions.Get(vers.SysContainersVersion); ver != latestVersion {
-		if err = versions.Put(vers.SysContainersVersion, latestVersion); err != nil {
+		if err := versions.Put(vers.SysContainersVersion, latestVersion); err != nil {
 			return fmt.Errorf("error store system Containers view version: %w", err)
 		}
 	}

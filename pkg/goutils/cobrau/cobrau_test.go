@@ -6,7 +6,7 @@
 package cobrau
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"syscall"
 	"testing"
@@ -231,7 +231,7 @@ func TestExecCommandAndCatchInterrupt(t *testing.T) {
 	})
 
 	t.Run("command execution with error", func(t *testing.T) {
-		expectedErr := fmt.Errorf("test error")
+		expectedErr := errors.New("test error")
 		testCmd := &cobra.Command{
 			Use: "test",
 			RunE: func(cmd *cobra.Command, args []string) error {

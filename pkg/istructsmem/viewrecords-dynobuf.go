@@ -15,20 +15,19 @@ import (
 
 // istructs.IViewRecords.Put
 func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.IKeyBuilder, value istructs.IValueBuilder) (partKey, cCols, data []byte, err error) {
-
 	k := key.(*keyType)
-	if err = k.build(); err != nil {
+	if err := k.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = validateViewKey(k, false); err != nil {
+	if err := validateViewKey(k, false); err != nil {
 		return nil, nil, nil, err
 	}
 
 	v := value.(*valueType)
-	if err = v.build(); err != nil {
+	if err := v.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = validateViewValue(v); err != nil {
+	if err := validateViewValue(v); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -91,7 +90,7 @@ func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error)
 	if _, err = utils.ReadUInt16(buf); err != nil {
 		return enrichError(err, val.viewName, "error read value QNameID")
 	}
-	if err = loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
+	if err := loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
 		return err
 	}
 

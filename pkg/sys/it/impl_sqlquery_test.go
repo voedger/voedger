@@ -423,7 +423,7 @@ func TestSqlQuery_view_records(t *testing.T) {
 	t.Run("Should read view filtered by int8 and int16 key fields", func(t *testing.T) {
 		year := vit.NextNumber()
 		stringValue := fmt.Sprintf("year-%d", year)
-		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":%d,"Month":3,"Day":7,"StringValue":"%s"}}]}`, year, stringValue)
+		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.Daily","Year":%d,"Month":3,"Day":7,"StringValue":%q}}]}`, year, stringValue)
 		vit.PostWS(ws, "c.sys.CUD", body)
 
 		t.Run("filter by int16 partition key", func(t *testing.T) {
@@ -431,7 +431,7 @@ func TestSqlQuery_view_records(t *testing.T) {
 			body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = %d"},"elements":[{"fields":["Result"]}]}`, year)
 			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 			require.Len(resp.Sections[0].Elements, 1)
-			require.Contains(resp.SectionRow(0)[0].(string), fmt.Sprintf(`"StringValue":"%s"`, stringValue))
+			require.Contains(resp.SectionRow(0)[0].(string), fmt.Sprintf(`"StringValue":%q`, stringValue))
 		})
 
 		t.Run("filter by int16 and int8 keys", func(t *testing.T) {
@@ -439,7 +439,7 @@ func TestSqlQuery_view_records(t *testing.T) {
 			body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.DailyIdxSmall where Year = %d and Month = 3 and Day = 7"},"elements":[{"fields":["Result"]}]}`, year)
 			resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 			require.Len(resp.Sections[0].Elements, 1)
-			require.Contains(resp.SectionRow(0)[0].(string), fmt.Sprintf(`"StringValue":"%s"`, stringValue))
+			require.Contains(resp.SectionRow(0)[0].(string), fmt.Sprintf(`"StringValue":%q`, stringValue))
 		})
 
 		t.Run("no rows when key value does not match", func(t *testing.T) {
@@ -506,7 +506,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 	t.Run("wsid", func(t *testing.T) {
 		// create a record in one workspace of one app
 		categoryName := vit.NextName()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		categoryID := vit.PostWS(oneAppWS, "c.sys.CUD", body).NewID()
 
 		// create a workspace in another app
@@ -524,7 +524,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category.%d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
 		resp := vit.PostWS(anotherAppWS, "q.sys.SqlQuery", body)
 		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
-		require.Contains(resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
+		require.Contains(resStr, fmt.Sprintf(`"name":%q`, categoryName))
 	})
 
 	t.Run("app workspace number", func(t *testing.T) {
@@ -542,7 +542,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
 		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
-		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
+		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":%q`, loginHash))
 	})
 
 	t.Run("login hash", func(t *testing.T) {
@@ -554,7 +554,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.\"login\".registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, loginID)
 		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysPrincipal.Token))
 		loginHash := registry.GetLoginHash(prn.Login.Name)
-		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
+		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":%q`, loginHash))
 	})
 
 	t.Run("query forwarding", func(t *testing.T) {
@@ -925,7 +925,7 @@ func TestBlobFunctionsErrors(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, c.query)
+			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, c.query)
 			vit.PostWS(ws, "q.sys.SqlQuery", body, it.Expect400(c.err)).Println()
 		})
 	}

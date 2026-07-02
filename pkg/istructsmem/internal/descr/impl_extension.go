@@ -47,7 +47,7 @@ func (e *Extension) read(ex appdef.IExtension) {
 	e.Intents = e.readStorages(ex.Intents())
 }
 
-func (e Extension) readStorages(storages appdef.IStorages) map[appdef.QName]appdef.QNames {
+func (e *Extension) readStorages(storages appdef.IStorages) map[appdef.QName]appdef.QNames {
 	s := make(map[appdef.QName]appdef.QNames)
 	for _, n := range storages.Names() {
 		st := storages.Storage(n)

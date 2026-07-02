@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 	"time"
@@ -182,7 +183,7 @@ func (j *JWTSigner) CryptoHash256(data []byte) (hash [hashLength]byte) {
 	hasher.Write(data)
 	expectedHash := hasher.Sum(nil)
 	copy(hash[:], expectedHash)
-	return
+	return hash
 }
 
 //nolint:errorlint
@@ -197,7 +198,6 @@ func setErrorDescription(err error) error {
 }
 
 func (j *JWTSigner) sign(claims jwt.Claims) (token string, err error) {
-
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	if onSecretKeyMutate != nil {
 		return jwtToken.SignedString(onSecretKeyMutate())
@@ -217,12 +217,10 @@ func NewJWTSigner(secretKey SecretKeyType, iTime timeu.ITime) *JWTSigner {
 	return &JWTSigner{byteSecretKey, iTime}
 }
 
-func mergeClaimsMaps(maps ...map[string]interface{}) (result map[string]interface{}) {
+func mergeClaimsMaps(mapses ...map[string]interface{}) (result map[string]interface{}) {
 	result = make(map[string]interface{})
-	for _, m := range maps {
-		for k, v := range m {
-			result[k] = v
-		}
+	for _, m := range mapses {
+		maps.Copy(result, m)
 	}
 	return result
 }

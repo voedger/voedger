@@ -148,7 +148,7 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 
 	kb := key.(*federationBlobKeyBuilder)
 
-	for _, ec := range strings.Split(kb.expectedCodes, ",") {
+	for ec := range strings.SplitSeq(kb.expectedCodes, ",") {
 		if ec == "" {
 			continue
 		}

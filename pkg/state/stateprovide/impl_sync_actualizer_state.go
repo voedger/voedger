@@ -23,7 +23,7 @@ func (s *syncActualizerState) PLogEvent() istructs.IPLogEvent {
 	return s.eventFunc()
 }
 
-func implProvideSyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, partitionIDFunc state.PartitionIDFunc,
+func implProvideSyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, _ state.PartitionIDFunc,
 	wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc, secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, intentsLimit int, stateOpts state.StateOpts) state.IHostState {
 	hs := &syncActualizerState{
 		hostState: newHostState(ctx, "SyncActualizer", intentsLimit, appStructsFunc),

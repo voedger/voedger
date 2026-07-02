@@ -17,14 +17,11 @@ import (
 )
 
 func ExecCommandAndCatchInterrupt(cmd *cobra.Command) error {
-
 	cmdExec := func(ctx context.Context) (err error) {
-		err = cmd.ExecuteContext(ctx)
-		return
+		return cmd.ExecuteContext(ctx)
 	}
 
-	err := goAndCatchInterrupt(cmdExec)
-	return err
+	return  goAndCatchInterrupt(cmdExec)
 }
 
 type signalChKeyType string
@@ -32,7 +29,6 @@ type signalChKeyType string
 const signalChKey signalChKeyType = "signals"
 
 func goAndCatchInterrupt(f func(ctx context.Context) error) (err error) {
-
 	signals := make(chan os.Signal, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -44,12 +40,10 @@ func goAndCatchInterrupt(f func(ctx context.Context) error) (err error) {
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		err = f(ctx)
 		cancel()
-	}()
+	})
 
 	select {
 	case sig := <-signals:

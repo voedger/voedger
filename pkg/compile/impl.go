@@ -106,15 +106,15 @@ func compileSysPackage(dir string, loadedPkgs *loadedPackages, importedStmts map
 		if len(relPath) > 0 {
 			baseDir = dir[:len(dir)-len(relPath)]
 		}
-		sysPkgDir := filepath.Join(baseDir, "pkg/sys")
+		sysPkgDir := filepath.Join(baseDir, "pkg", "sys")
 		if dir == sysPkgDir {
 			isSysDir = true
 		}
 		pkgAsts, errs = compileDir(loadedPkgs, sysPkgDir, appdef.SysPackage, nil, importedStmts, pkgFiles, notFoundDeps)
-		return
+		return pkgAsts, errs, isSysDir
 	}
 	pkgAsts, errs = compileDependency(loadedPkgs, appdef.SysPackage, nil, importedStmts, pkgFiles, notFoundDeps)
-	return
+	return pkgAsts, errs, false
 }
 
 func hasAppSchema(packages []*parser.PackageSchemaAST) bool {
@@ -201,7 +201,7 @@ func checkImportedStmts(qpn string, alias *parser.Ident, importedStmts map[strin
 
 func compileDir(loadedPkgs *loadedPackages, dir, packagePath string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string, notFoundDeps map[string]struct{}) (packages []*parser.PackageSchemaAST, errs []error) {
 	if ok := checkImportedStmts(packagePath, alias, importedStmts); !ok {
-		return
+		return nil, nil
 	}
 	if logger.IsVerbose() {
 		logger.Verbose("compiling " + dir)
@@ -223,7 +223,7 @@ func compileDir(loadedPkgs *loadedPackages, dir, packagePath string, alias *pars
 		errs = append(errs, compileDepErrs...)
 	}
 	packages = append([]*parser.PackageSchemaAST{packageAst}, importedPackages...)
-	return
+	return packages, errs
 }
 
 func compileDependencies(loadedPkgs *loadedPackages, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string, notFoundDeps map[string]struct{}) (packages []*parser.PackageSchemaAST, errs []error) {
@@ -232,7 +232,7 @@ func compileDependencies(loadedPkgs *loadedPackages, imports []parser.ImportStmt
 		errs = append(errs, compileDepErrs...)
 		packages = append(packages, dependentPackages...)
 	}
-	return
+	return packages, errs
 }
 
 func compileDependency(loadedPkgs *loadedPackages, depURL string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string, notFoundDeps map[string]struct{}) (packages []*parser.PackageSchemaAST, errs []error) {
@@ -251,7 +251,7 @@ func compileDependency(loadedPkgs *loadedPackages, depURL string, alias *parser.
 	var compileDirErrs []error
 	packages, compileDirErrs = compileDir(loadedPkgs, path, depURL, alias, importedStmts, pkgFiles, notFoundDeps)
 	errs = append(errs, compileDirErrs...)
-	return
+	return packages, errs
 }
 
 func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages, error) {

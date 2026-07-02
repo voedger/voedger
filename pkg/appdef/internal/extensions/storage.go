@@ -64,11 +64,11 @@ func NewStorages(app appdef.IAppDef) *Storages {
 	}
 }
 
-func (ss Storages) Names() []appdef.QName {
+func (ss *Storages) Names() []appdef.QName {
 	return ss.ordered
 }
 
-func (ss Storages) Storage(name appdef.QName) appdef.IStorage {
+func (ss *Storages) Storage(name appdef.QName) appdef.IStorage {
 	if s, ok := ss.storages[name]; ok {
 		return s
 	}
@@ -103,7 +103,7 @@ func (ss *Storages) setComment(name appdef.QName, comment string) {
 	panic(appdef.ErrNotFound("storage «%v»", name))
 }
 
-func (ss Storages) Validate() (err error) {
+func (ss *Storages) Validate() (err error) {
 	for _, s := range ss.storages {
 		err = errors.Join(err, s.Validate())
 	}

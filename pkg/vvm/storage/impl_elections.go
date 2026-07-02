@@ -19,7 +19,7 @@ func (s *implIElectionsTTLStorage) buildKeys(key TTLStorageImplKey) (pKey, cCols
 	binary.BigEndian.PutUint32(pKey, pKeyPrefix_VVMLeader)
 	cCols = make([]byte, utils.Uint32Size)
 	binary.BigEndian.PutUint32(cCols, key)
-	return
+	return pKey, cCols
 }
 
 func (s *implIElectionsTTLStorage) InsertIfNotExist(key TTLStorageImplKey, val string, ttlSeconds int) (bool, error) {
@@ -37,10 +37,10 @@ func (s *implIElectionsTTLStorage) CompareAndDelete(key TTLStorageImplKey, val s
 	return s.sysVVMStorage.CompareAndDelete(pKey, cCols, []byte(val))
 }
 
-func (s *implIElectionsTTLStorage) Get(key TTLStorageImplKey) (bool, string, error) {
+func (s *implIElectionsTTLStorage) Get(key TTLStorageImplKey) (ok bool, dataStr string, err error) {
 	pKey, cCols := s.buildKeys(key)
 	data := []byte{}
-	ok, err := s.sysVVMStorage.Get(pKey, cCols, &data)
+	ok, err = s.sysVVMStorage.Get(pKey, cCols, &data)
 	if err != nil {
 		return false, "", err
 	}

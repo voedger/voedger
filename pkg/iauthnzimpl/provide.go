@@ -17,7 +17,7 @@ func NewDefaultAuthenticator(subjectRolesGetter SubjectGetterFunc, isDeviceAllow
 }
 
 var TestIsDeviceAllowedFuncs = IsDeviceAllowedFuncs{
-	istructs.AppQName_test1_app1: func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+	istructs.AppQName_test1_app1: func(istructs.IAppStructs, istructs.WSID, istructs.WSID) (ok bool, err error) {
 		return true, nil
 	},
 }

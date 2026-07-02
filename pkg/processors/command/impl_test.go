@@ -397,7 +397,7 @@ func TestCUDUpdate(t *testing.T) {
 	require.NotZero(newID)
 
 	t.Run("update", func(t *testing.T) {
-		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, newID))
+		req.Body = fmt.Appendf(nil, `{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, newID)
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(err)
 		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
@@ -405,7 +405,7 @@ func TestCUDUpdate(t *testing.T) {
 	})
 
 	t.Run("404 not found on update not existing", func(t *testing.T) {
-		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.NonExistingRecordID))
+		req.Body = fmt.Appendf(nil, `{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.NonExistingRecordID)
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.Error(err)
 		require.Equal(http.StatusNotFound, cmdRespMeta.StatusCode)
@@ -700,7 +700,7 @@ func TestRateLimit(t *testing.T) {
 	}
 
 	// first 2 calls are ok
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		cmdRespMeta, _, err := bus.GetCommandResponse(app.ctx, app.requestSender, request)
 		require.NoError(err)
 		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
@@ -911,7 +911,7 @@ func TestLogEventAndCUDs(t *testing.T) {
 
 		// update: newfields=world, oldfields=hello
 		logCap.Reset()
-		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.Article","Name":"world"}}]}`, newID))
+		req.Body = fmt.Appendf(nil, `{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.Article","Name":"world"}}]}`, newID)
 		cmdRespMeta, _, sysErr = bus.GetCommandResponse(app.ctx, app.requestSender, req)
 		require.NoError(sysErr)
 		require.Equal(http.StatusOK, cmdRespMeta.StatusCode)
@@ -993,7 +993,7 @@ func TestSyncProjectorLogging(t *testing.T) {
 
 		// let's find the sp.success line emitted by the cmd proc, not by sync acrualizer
 		cmdSuccessLine := ""
-		for _, line := range strings.Split(logCap.String(), "\n") {
+		for line := range strings.SplitSeq(logCap.String(), "\n") {
 			if strings.Contains(line, "stage=sp.success") &&
 				!strings.Contains(line, "extension="+projExtension) {
 				cmdSuccessLine = line

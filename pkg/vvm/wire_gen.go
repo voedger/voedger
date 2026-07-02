@@ -53,7 +53,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"

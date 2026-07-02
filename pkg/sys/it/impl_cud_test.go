@@ -348,7 +348,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 			oDoc := appdef.ODoc(app.Type, it.QNameODoc2)
 			for _, oDoc1RefField := range oDoc.RefFields() {
 				t.Run(oDoc1RefField.Name(), func(t *testing.T) {
-					body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":%d`, oDoc1RefField.Name(), istructs.NonExistingRecordID))
+					body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`%q:%d`, oDoc1RefField.Name(), istructs.NonExistingRecordID))
 					vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, it.Expect400(fmt.Sprintf("record ID %d referenced by app1pkg.odoc2.%s does not exist",
 						istructs.NonExistingRecordID, oDoc1RefField.Name()))).Println()
 				})
@@ -358,7 +358,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, app ap
 			oRecord := appdef.ORecord(app.Type, appdef.NewQName("app1pkg", "orecord1"))
 			for _, oRecord1RefField := range oRecord.RefFields() {
 				t.Run(oRecord1RefField.Name(), func(t *testing.T) {
-					body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"orecord1":[{"%s":%d,"sys.ID":3,"sys.ParentID":1}]`, oRecord1RefField.Name(), istructs.NonExistingRecordID))
+					body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"orecord1":[{%q:%d,"sys.ID":3,"sys.ParentID":1}]`, oRecord1RefField.Name(), istructs.NonExistingRecordID))
 					vit.PostWS(ws, "c.app1pkg.CmdODocOne", body, it.Expect400(fmt.Sprintf("record ID %d referenced by app1pkg.orecord1.%s does not exist",
 						istructs.NonExistingRecordID, oRecord1RefField.Name()))).Println()
 				})

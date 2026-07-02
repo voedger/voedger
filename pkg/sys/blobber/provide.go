@@ -23,7 +23,7 @@ func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
 }
 
 func ProvideBlobberCUDValidators(cfg *istructsmem.AppConfigType) {
-	cfg.AddEventValidators(func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) (validateErr error) {
+	cfg.AddEventValidators(func(_ context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) (validateErr error) {
 		// [~server.blobs/tuc.HandleBLOBReferences~impl]
 		usedBLOBIDs := map[istructs.RecordID]istructs.ICUDRow{}
 		rawEvent.CUDs(func(cudRow istructs.ICUDRow) bool {
@@ -104,11 +104,11 @@ func ubhExec(args istructs.ExecCommandArgs) (err error) {
 	// write a dummy WDoc<BLOB> to book an ID and then use it as a new BLOB ID
 	kb, err := args.State.KeyBuilder(sys.Storage_Record, QNameWDocBLOB)
 	if err != nil {
-		return
+		return err
 	}
 	vb, err := args.Intents.NewValue(kb)
 	if err != nil {
-		return
+		return err
 	}
 	vb.PutRecordID(appdef.SystemField_ID, 1)
 	vb.PutInt32(Field_status, int32(iblobstorage.BLOBStatus_Unknown))

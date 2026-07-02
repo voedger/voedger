@@ -270,7 +270,7 @@ func Test_NewStdLogBridge(t *testing.T) {
 		out := logCap.String()
 		require.Contains(out, `msg="first\nsecond"`)
 		nonEmpty := 0
-		for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		for line := range strings.SplitSeq(strings.TrimRight(out, "\n"), "\n") {
 			if len(line) > 0 {
 				nonEmpty++
 			}
@@ -308,16 +308,16 @@ func Test_NewStdLogBridge(t *testing.T) {
 
 func TestMultithread(t *testing.T) {
 	toLog := []string{}
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		toLog = append(toLog, strings.Repeat(strconv.Itoa(i), 10))
 	}
 
 	logCap := logger.StartCapture(t, logger.LogLevelInfo)
 	wg := sync.WaitGroup{}
 	wg.Add(1000)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		go func() {
-			for i := 0; i < 100; i++ {
+			for i := range 100 {
 				logger.Info(toLog[i])
 			}
 			wg.Done()

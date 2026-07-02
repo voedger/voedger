@@ -43,7 +43,6 @@ type appStructsProviderType struct {
 
 // istructs.IAppStructsProvider.BuiltIn
 func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (structs istructs.IAppStructs, err error) {
-
 	appCfg, ok := provider.configs[appName]
 	if !ok {
 		return nil, enrichError(istructs.ErrAppNotFound, appName)
@@ -59,7 +58,7 @@ func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (struct
 		if err != nil {
 			return nil, err
 		}
-		if err = appCfg.prepare(appStorage); err != nil {
+		if err := appCfg.prepare(appStorage); err != nil {
 			return nil, err
 		}
 		var appTTLStorage istructs.IAppTTLStorage
@@ -83,7 +82,7 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 	if err != nil {
 		return nil, err
 	}
-	if err = cfg.prepare(appStorage); err != nil {
+	if err := cfg.prepare(appStorage); err != nil {
 		return nil, err
 	}
 	var appTTLStorage istructs.IAppTTLStorage
@@ -91,7 +90,7 @@ func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAp
 		appTTLStorage = provider.appTTLStorageFactory(id)
 	}
 	app := newAppStructs(cfg, appTokens, provider.seqTrustLevel, appTTLStorage)
-	//provider.structures[name] = app
+	// provider.structures[name] = app
 	return app, nil
 }
 
@@ -431,7 +430,6 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 
 // istructs.IEvents.ReadPLog
 func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) error {
-
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
@@ -476,7 +474,6 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 
 // istructs.IEvents.ReadWLog
 func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, offset istructs.Offset, toReadCount int, cb istructs.WLogEventsReaderCallback) error {
-
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
@@ -553,7 +550,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 		batches[i] = &batch[len(batch)-1]
 	}
 	for idHi, batch := range plan {
-		if err = recs.app.config.storage.GetBatch([]byte(idHi), batch); err != nil {
+		if err := recs.app.config.storage.GetBatch([]byte(idHi), batch); err != nil {
 			return err
 		}
 	}
@@ -561,7 +558,7 @@ func (recs *appRecordsType) getRecordBatch(workspace istructs.WSID, ids []istruc
 		b := batches[i]
 		if b.Ok {
 			rec := newRecord(recs.app.config)
-			if err = rec.loadFromBytes(*b.Data); err != nil {
+			if err := rec.loadFromBytes(*b.Data); err != nil {
 				return err
 			}
 			ids[i].Record = rec
@@ -621,7 +618,6 @@ func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []r
 
 // validEvent returns error if event has non-committable data, such as singleton unique violations or non exists updated record id
 func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
-
 	load := func(id istructs.RecordID, rec *recordType) (exists bool, err error) {
 		data := make([]byte, 0)
 		if exists, err = recs.getRecord(ev.ws, id, &data); exists {
@@ -634,18 +630,20 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if singleton, ok := rec.typ.(appdef.ISingleton); ok && singleton.Singleton() {
-			id, err := recs.app.config.singletons.ID(rec.QName())
-			if err != nil {
-				return err
-			}
-			exists, err := load(id, nil)
-			if err != nil {
-				return enrichError(err, "error checking singleton «%v» record «%d» existence", rec.QName(), id)
-			}
-			if exists {
-				return ErrSingletonViolation(rec)
-			}
+		singleton, ok := rec.typ.(appdef.ISingleton)
+		if !ok || !singleton.Singleton() {
+			continue
+		}
+		id, err := recs.app.config.singletons.ID(rec.QName())
+		if err != nil {
+			return err
+		}
+		exists, err := load(id, nil)
+		if err != nil {
+			return enrichError(err, "error checking singleton «%v» record «%d» existence", rec.QName(), id)
+		}
+		if exists {
+			return ErrSingletonViolation(rec)
 		}
 	}
 
@@ -741,7 +739,7 @@ func (recs *appRecordsType) Get(workspace istructs.WSID, _ bool, id istructs.Rec
 }
 
 // istructs.IRecords.GetBatch
-func (recs *appRecordsType) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
+func (recs *appRecordsType) GetBatch(workspace istructs.WSID, _ bool, ids []istructs.RecordGetBatchItem) (err error) {
 	return recs.getRecordBatch(workspace, ids)
 }
 

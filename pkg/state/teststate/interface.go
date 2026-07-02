@@ -25,8 +25,8 @@ type QueryArgBuilderCallback func(arg istructs.IObjectBuilder)
 
 type ITestAPI interface {
 	// State
-	PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID)
-	PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID)
+	PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIDs []istructs.RecordID)
+	PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIDs []istructs.RecordID)
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
 	PutSecret(name string, secret []byte)
 	PutHTTPMock(HTTPHandlerFunc)

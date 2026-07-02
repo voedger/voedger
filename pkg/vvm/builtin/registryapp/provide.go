@@ -14,15 +14,13 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/registry"
-	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 )
 
 // for historical reason num partitions of sys/registry must be equal to numCP
-func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) builtinapps.Builder {
-	return func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
-
+func Provide(numCP istructs.NumCommandProcessors) builtinapps.Builder {
+	return func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
 		// sys package
 		sysPackageFS := sysprovide.Provide(cfg)
 

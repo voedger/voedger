@@ -26,7 +26,6 @@ func (s commandProcessorState) CommandPrepareArgs() istructs.CommandPrepareArgs 
 func implProvideCommandProcessorState(
 	ctx context.Context,
 	appStructsFunc state.AppStructsFunc,
-	partitionIDFunc state.PartitionIDFunc,
 	wsidFunc state.WSIDFunc,
 	secretReader isecrets.ISecretReader,
 	cudFunc state.CUDFunc,
@@ -40,7 +39,6 @@ func implProvideCommandProcessorState(
 	wlogOffsetFunc state.WLogOffsetFunc,
 	stateOpts state.StateOpts,
 	originFunc state.OriginFunc) state.IHostState {
-
 	state := &commandProcessorState{
 		hostState:          newHostState(ctx, "CommandProcessor", intentsLimit, appStructsFunc),
 		commandPrepareArgs: execCmdArgsFunc,

@@ -273,10 +273,8 @@ func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.
 }
 
 func (ts *testState) buildState(processorKind int) {
-
 	appFunc := func() istructs.IAppStructs { return ts.appStructs }
 	eventFunc := func() istructs.IPLogEvent { return ts.ipLogEvent }
-	partitionIDFunc := func() istructs.PartitionID { return TestPartition }
 	cudFunc := func() istructs.ICUD { return ts.cud }
 	commandPrepareArgs := func() istructs.CommandPrepareArgs {
 		return istructs.CommandPrepareArgs{
@@ -343,13 +341,13 @@ func (ts *testState) buildState(processorKind int) {
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
-		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
+		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
 			IntentsLimit, BundlesLimit, stateOpts, ts.emailSender, ts.httpClient)
 	case ProcKind_CommandProcessor:
 		stateOpts := state.StateOpts{
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
-		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
+		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, stateOpts, originFunc)
 	case ProcKind_QueryProcessor:
 		stateOpts := state.StateOpts{
@@ -357,7 +355,7 @@ func (ts *testState) buildState(processorKind int) {
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
-		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
+		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
 			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback, stateOpts, ts.httpClient)
 	}
 }
@@ -366,7 +364,6 @@ func (ts *testState) buildState(processorKind int) {
 var fsTestSys embed.FS
 
 func (ts *testState) buildAppDef(packagePath string, packageDir string, createWorkspaces ...TestWorkspace) {
-
 	absPath, err := filepath.Abs(packageDir)
 	if err != nil {
 		panic(err)
@@ -437,16 +434,17 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	for ext := range appdef.Extensions(ts.appDef.Types()) {
 		if ext.QName().Pkg() == PackageName {
-			if proj, ok := ext.(appdef.IProjector); ok {
-				if proj.Sync() {
+			switch typed := ext.(type) {
+			case appdef.IProjector:
+				if typed.Sync() {
 					cfg.AddSyncProjectors(istructs.Projector{Name: ext.QName()})
 				} else {
 					cfg.AddAsyncProjectors(istructs.Projector{Name: ext.QName()})
 				}
-			} else if cmd, ok := ext.(appdef.ICommand); ok {
-				cfg.Resources.Add(istructsmem.NewCommandFunction(cmd.QName(), istructsmem.NullCommandExec))
-			} else if q, ok := ext.(appdef.IQuery); ok {
-				cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
+			case appdef.ICommand:
+				cfg.Resources.Add(istructsmem.NewCommandFunction(typed.QName(), istructsmem.NullCommandExec))
+			case appdef.IQuery:
+				cfg.Resources.Add(istructsmem.NewCommandFunction(typed.QName(), istructsmem.NullCommandExec))
 			}
 		}
 	}
@@ -477,7 +475,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 }
 
 func (ts *testState) nextPLogOffs() istructs.Offset {
-	ts.plogOffset += 1
+	ts.plogOffset++
 	return ts.plogOffset
 }
 
@@ -486,7 +484,7 @@ func (ts *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	if !ok {
 		offs = istructs.Offset(0)
 	}
-	offs += 1
+	offs++
 	ts.wsOffsets[ws] = offs
 	return offs
 }
@@ -495,8 +493,8 @@ func (ts *testState) PutHTTPMock(handler HTTPHandlerFunc) {
 	ts.httpHandler = handler
 }
 
-func (ts *testState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
-	return ts.PutEvent(wsid, appdef.NewFullQName(istructs.QNameCommandCUD.Pkg(), istructs.QNameCommandCUD.Entity()), func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
+func (ts *testState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIDs []istructs.RecordID) {
+	return ts.PutEvent(wsid, appdef.NewFullQName(istructs.QNameCommandCUD.Pkg(), istructs.QNameCommandCUD.Entity()), func(_ istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
 		cb(cudBuilder)
 	})
 }
@@ -510,7 +508,7 @@ func (ts *testState) GetRecord(wsid istructs.WSID, id istructs.RecordID) istruct
 	return rec
 }
 
-func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
+func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIDs []istructs.RecordID) {
 	var localPkgName string
 	if name.PkgPath() == appdef.SysPackage {
 		localPkgName = name.PkgPath()
@@ -549,9 +547,9 @@ func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 		panic(err)
 	}
 
-	newRecordIds = make([]istructs.RecordID, 0)
+	newRecordIDs = make([]istructs.RecordID, 0)
 	err = ts.appStructs.Records().Apply2(ipLogEvent, func(r istructs.IRecord) {
-		newRecordIds = append(newRecordIds, r.ID())
+		newRecordIDs = append(newRecordIDs, r.ID())
 	})
 
 	if err != nil {
@@ -560,7 +558,7 @@ func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 
 	ts.ipLogEvent = ipLogEvent
 
-	return wLogOffs, newRecordIds
+	return wLogOffs, newRecordIDs
 }
 
 // nolint unusedwrite
@@ -632,12 +630,14 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 }
 
 func (ts *testState) RequireNoIntents(t *testing.T) {
+	t.Helper()
 	if ts.IntentsCount() > 0 {
 		require.Fail(t, "expected no intents")
 	}
 }
 
 func (ts *testState) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
+	t.Helper()
 	localPkgName := ts.appDef.PackageLocalName(entity.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, entity.Entity())
 	kb, err := ts.KeyBuilder(storage, localEntity)

@@ -568,14 +568,15 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			checked := false
 			for rec := range pLogEvent.CUDs {
-				if rec.QName() == test.tablePhotos {
-					require.False(rec.IsNew())
-					require.False(rec.IsActivated())
-					require.False(rec.IsDeactivated())
-					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
-					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
-					checked = true
+				if rec.QName() != test.tablePhotos {
+					continue
 				}
+				require.False(rec.IsNew())
+				require.False(rec.IsActivated())
+				require.False(rec.IsDeactivated())
+				require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
+				require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
+				checked = true
 			}
 
 			require.True(checked)
@@ -2019,7 +2020,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 		appdef.NewQName("invalid q name", ""),
 	}
 	eventBytes := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
-	for i := range len(eventName) {
+	for i := range eventName {
 		t.Run("load/store bad command name error event", func(t *testing.T) {
 			bld := app.Events().GetSyncRawEventBuilder(
 				istructs.SyncRawEventBuilderParams{
@@ -2063,7 +2064,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 			errMsg = "test build error message; エラーメッセージテスト; 🏐;"
 			maxLen = 0xFFFF
 		)
-		for testNo := 0; testNo < 3; testNo++ {
+		for testNo := range 3 {
 			var msg string
 			switch testNo {
 			case 0:

@@ -149,8 +149,8 @@ func Test_BasicUsage(t *testing.T) {
 	originFunc := func() string { return "" }
 
 	// Create states for Command processor and Actualizer
-	actualizerState := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
-	cmdProcState := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc, state.NullOpts, originFunc)
+	actualizerState := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
+	cmdProcState := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc, state.NullOpts, originFunc)
 
 	// Create extension package from WASM
 	ctx := context.Background()
@@ -581,7 +581,7 @@ func Test_RecoverEngine(t *testing.T) {
 			heapInUseAfterFirstInvoke, err := we.getHeapinuse(testPkg, context.Background())
 			require.NoError(err)
 
-			for recoverNo := 0; recoverNo < 10; recoverNo++ { // 10 recover cycles
+			for recoverNo := range 10 { // 10 recover cycles
 				for run := 1; mv(recoversTotal) == recoverNo; { // run until auto-recover is triggered{
 					require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 					totalRuns++
@@ -780,7 +780,7 @@ func Test_WithState(t *testing.T) {
 
 	// build app
 	appFunc := func() istructs.IAppStructs { return app }
-	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
+	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
 
 	// build packages
 	moduleURL := testModuleURL("./_testdata/basicusage/pkg.wasm")
@@ -853,7 +853,7 @@ func Test_StatePanic(t *testing.T) {
 			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
 		})
 	appFunc := func() istructs.IAppStructs { return app }
-	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
+	state := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit, state.NullOpts, nil, nil)
 
 	const extname = "wrongFieldName"
 	const undefinedPackage = "undefinedPackage"
@@ -953,7 +953,7 @@ func appStructsFromSQL(packagePath string, appdefSQL string, prepareAppCfg appCf
 	if err != nil {
 		panic(err)
 	}
-	if err = app.Records().Apply(wsEvent); err != nil {
+	if err := app.Records().Apply(wsEvent); err != nil {
 		panic(err)
 	}
 

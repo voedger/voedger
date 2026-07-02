@@ -22,10 +22,10 @@ import (
 
 // Voedger Integration Test
 type VIT struct {
-	lock sync.Mutex
-	T    testing.TB
 	*vvm.VoedgerVM
 	*vvm.VVMConfig
+	lock                 sync.Mutex
+	T                    testing.TB
 	cleanups             []func(vit *VIT)
 	isFinalized          bool
 	nextNumber           int

@@ -31,7 +31,7 @@ func BenchmarkRecordsGet(b *testing.B) {
 	k1.PutInt64(sys.Storage_Record_Field_WSID, 1)
 	withGet := storage.(state.IWithGet)
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		value, err := withGet.Get(k1)
 		if err != nil {
 			panic(err)
