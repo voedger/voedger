@@ -7,7 +7,6 @@
 package bbolt
 
 import (
-	"context"
 	"os"
 	"testing"
 	"time"
@@ -86,7 +85,7 @@ func Test_PutGet(t *testing.T) {
 	require.Equal("Molchanovsky Dmitry Anatolyevich", string(value))
 }
 
-func TestReturnedBytesAreStableAfterReadTransaction(t *testing.T) {
+func TestTTLGetReturnedBytesAreStableAfterReadTransaction(t *testing.T) {
 	require := require.New(t)
 
 	params := prepareTestData()
@@ -99,39 +98,14 @@ func TestReturnedBytesAreStableAfterReadTransaction(t *testing.T) {
 
 	const (
 		pKey       = "pKey"
-		readCCols  = "read-cCols"
 		ttlCCols   = "ttl-cCols"
-		readValue  = "read-value"
 		ttlValue   = "ttl-value"
 		ttlSeconds = 3600
 	)
 
-	require.NoError(appStorage.Put([]byte(pKey), []byte(readCCols), []byte(readValue)))
 	ok, err := appStorage.InsertIfNotExists([]byte(pKey), []byte(ttlCCols), []byte(ttlValue), ttlSeconds)
 	require.NoError(err)
 	require.True(ok)
-
-	var readCColsRetained, readValueRetained []byte
-	require.NoError(appStorage.Read(context.Background(), []byte(pKey), nil, nil, func(ccols, viewRecord []byte) error {
-		if string(ccols) == readCCols {
-			readCColsRetained = ccols
-			readValueRetained = viewRecord
-		}
-		return nil
-	}))
-	require.Equal(readCCols, string(readCColsRetained))
-	require.Equal(readValue, string(readValueRetained))
-
-	var ttlReadCColsRetained, ttlReadValueRetained []byte
-	require.NoError(appStorage.TTLRead(context.Background(), []byte(pKey), nil, nil, func(ccols, viewRecord []byte) error {
-		if string(ccols) == ttlCCols {
-			ttlReadCColsRetained = ccols
-			ttlReadValueRetained = viewRecord
-		}
-		return nil
-	}))
-	require.Equal(ttlCCols, string(ttlReadCColsRetained))
-	require.Equal(ttlValue, string(ttlReadValueRetained))
 
 	var ttlGetValueRetained []byte
 	ok, err = appStorage.TTLGet([]byte(pKey), []byte(ttlCCols), &ttlGetValueRetained)
@@ -141,10 +115,6 @@ func TestReturnedBytesAreStableAfterReadTransaction(t *testing.T) {
 
 	churnBboltStorage(t, appStorage)
 
-	require.Equal(readCCols, string(readCColsRetained))
-	require.Equal(readValue, string(readValueRetained))
-	require.Equal(ttlCCols, string(ttlReadCColsRetained))
-	require.Equal(ttlValue, string(ttlReadValueRetained))
 	require.Equal(ttlValue, string(ttlGetValueRetained))
 }
 

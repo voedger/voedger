@@ -471,9 +471,7 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 					return err
 				}
 
-				ccols := append([]byte(nil), unSafeKey(k)...)
-				data := append([]byte(nil), d.Data...)
-				if err := cb(ccols, data); err != nil {
+				if err := cb(unSafeKey(k), d.Data); err != nil {
 					return err
 				}
 			}
