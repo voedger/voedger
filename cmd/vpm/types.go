@@ -110,13 +110,7 @@ type ormField struct {
 }
 
 func isExecutableWithParam(p ormProjector) bool {
-	for _, item := range p.On {
-		if doesExecuteWithParam(item) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(p.On, doesExecuteWithParam)
 }
 
 func doesExecuteWithParam(p ormProjectorEventItem) bool {
@@ -138,6 +132,6 @@ func doesExecuteOn(p ormProjectorEventItem) bool {
 }
 
 func doesTriggerOnCUD(p ormProjectorEventItem) bool {
-	//nnv: Is OperationKind_Activate / OperationKind_Deactivate triggers CUD too?
+	// nnv: Is OperationKind_Activate / OperationKind_Deactivate triggers CUD too?
 	return slices.Contains(p.Ops, appdef.OperationKind_Insert) || slices.Contains(p.Ops, appdef.OperationKind_Update)
 }

@@ -21,7 +21,6 @@ import (
 //
 // If some error in arguments, (resource not found, operation is not applicable to resource, etc…) then error is returned.
 func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, rol []appdef.QName) (bool, error) {
-
 	t := ws.Type(res)
 	if t == appdef.NullType {
 		return false, appdef.ErrNotFound("resource «%s» in %v", res, ws)
@@ -30,11 +29,11 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 	var resFields appdef.IWithFields
 	switch op {
 	case appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select:
-		if wf, ok := t.(appdef.IWithFields); ok {
-			resFields = wf
-		} else {
+		wf, ok := t.(appdef.IWithFields)
+		if !ok {
 			return false, appdef.ErrIncompatible("%v has no fields", t)
 		}
+		resFields = wf
 		for _, f := range fld {
 			if resFields.Field(f) == nil {
 				return false, appdef.ErrNotFound("field «%s» in %v", f, t)
@@ -42,12 +41,12 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 		}
 	case appdef.OperationKind_Activate, appdef.OperationKind_Deactivate:
 		// #3148: appparts: ACTIVATE/DEACTIVATE in IsOperationAllowed
-		if rec, ok := t.(appdef.IRecord); ok {
-			if f := rec.Field(appdef.SystemField_IsActive); f == nil {
-				return false, appdef.ErrNotFound("field «%s» in %v", appdef.SystemField_IsActive, rec)
-			}
-		} else {
+		rec, ok := t.(appdef.IRecord)
+		if !ok {
 			return false, appdef.ErrIncompatible("%v is not a record", t)
+		}
+		if f := rec.Field(appdef.SystemField_IsActive); f == nil {
+			return false, appdef.ErrNotFound("field «%s» in %v", appdef.SystemField_IsActive, rec)
 		}
 	case appdef.OperationKind_Execute:
 		if _, ok := t.(appdef.IFunction); !ok {
@@ -103,7 +102,6 @@ func IsOperationAllowed(ws appdef.IWorkspace, op appdef.OperationKind, res appde
 //   - Commands and queries
 func PublishedTypes(ws appdef.IWorkspace, role appdef.QName) iter.Seq2[appdef.IType,
 	iter.Seq2[appdef.OperationKind, *[]appdef.FieldName]] {
-
 	roles := appdef.QNamesFrom(role)
 	if r := appdef.Role(ws.Type, role); r != nil {
 		roles = RecursiveRoleAncestors(r, ws)

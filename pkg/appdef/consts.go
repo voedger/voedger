@@ -65,17 +65,17 @@ const (
 
 // System data type names
 var (
-	SysData_int8     QName = SysDataName(DataKind_int8)  // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
-	SysData_int16    QName = SysDataName(DataKind_int16) // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
-	SysData_int32    QName = SysDataName(DataKind_int32)
-	SysData_int64    QName = SysDataName(DataKind_int64)
-	SysData_float32  QName = SysDataName(DataKind_float32)
-	SysData_float64  QName = SysDataName(DataKind_float64)
-	SysData_bytes    QName = SysDataName(DataKind_bytes)
-	SysData_String   QName = SysDataName(DataKind_string)
-	SysData_QName    QName = SysDataName(DataKind_QName)
-	SysData_bool     QName = SysDataName(DataKind_bool)
-	SysData_RecordID QName = SysDataName(DataKind_RecordID)
+	SysData_int8     = SysDataName(DataKind_int8)  // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+	SysData_int16    = SysDataName(DataKind_int16) // #3434 [~server.vsql.smallints/cmp.AppDef~impl]
+	SysData_int32    = SysDataName(DataKind_int32)
+	SysData_int64    = SysDataName(DataKind_int64)
+	SysData_float32  = SysDataName(DataKind_float32)
+	SysData_float64  = SysDataName(DataKind_float64)
+	SysData_bytes    = SysDataName(DataKind_bytes)
+	SysData_String   = SysDataName(DataKind_string)
+	SysData_QName    = SysDataName(DataKind_QName)
+	SysData_bool     = SysDataName(DataKind_bool)
+	SysData_RecordID = SysDataName(DataKind_RecordID)
 )
 
 // Maximum containers per one structured type

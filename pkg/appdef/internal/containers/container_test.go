@@ -109,7 +109,7 @@ func Test_ContainersPanics(t *testing.T) {
 		}, require.Is(appdef.ErrInvalidError), require.HasAll(objName, "CDoc"),
 			"if container type is incompatible")
 
-		for i := 0; i < int(appdef.MaxTypeContainerCount)-1; i++ {
+		for i := range int(appdef.MaxTypeContainerCount)-1 {
 			doc.AddContainer(fmt.Sprintf("rec%d", i), recName, 0, appdef.Occurs_Unbounded)
 		}
 		require.Panics(func() {
