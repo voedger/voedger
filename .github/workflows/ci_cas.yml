@@ -16,7 +16,7 @@ jobs:
 
     services:
       scylladb:
-        image: scylladb/scylla
+        image: scylladb/scylla:5.1.13
         ports:
           - 9042:9042
 
