@@ -32,21 +32,22 @@ func (l *Limiter) Exceeded(resource appdef.QName, operation appdef.OperationKind
 	if limits, ok := l.limits[resource]; ok {
 		keys := make([]irates.BucketKey, 0, len(limits))
 		for _, limit := range limits {
-			if limit.Op(operation) {
-				key := irates.BucketKey{
-					RateLimitName: limit.QName(),
-				}
-				if limit.Rate().Scope(appdef.RateScope_Workspace) {
-					key.Workspace = workspace
-				}
-				if limit.Rate().Scope(appdef.RateScope_IP) {
-					key.RemoteAddr = remoteAddr
-				}
-				if limit.Filter().Option() == appdef.LimitFilterOption_EACH {
-					key.QName = resource
-				}
-				keys = append(keys, key)
+			if !limit.Op(operation) {
+				continue
 			}
+			key := irates.BucketKey{
+				RateLimitName: limit.QName(),
+			}
+			if limit.Rate().Scope(appdef.RateScope_Workspace) {
+				key.Workspace = workspace
+			}
+			if limit.Rate().Scope(appdef.RateScope_IP) {
+				key.RemoteAddr = remoteAddr
+			}
+			if limit.Filter().Option() == appdef.LimitFilterOption_EACH {
+				key.QName = resource
+			}
+			keys = append(keys, key)
 		}
 		if len(keys) > 0 {
 			ok, excLimit := l.buckets.TakeTokens(keys, 1)

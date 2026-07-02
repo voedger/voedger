@@ -19,7 +19,7 @@ func MakeSingleton(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind
 	return SingletonDoc{Doc: MakeDoc(ws, name, kind)}
 }
 
-func (s SingletonDoc) Singleton() bool { return s.singleton }
+func (s *SingletonDoc) Singleton() bool { return s.singleton }
 
 func (s *SingletonDoc) setSingleton() { s.singleton = true }
 
