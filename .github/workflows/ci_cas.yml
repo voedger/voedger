@@ -27,7 +27,7 @@ jobs:
     - name: Wait for Scylla CQL
       run: |
         for attempt in {1..60}; do
-          if docker exec "${{ job.services.scylladb.id }}" cqlsh 127.0.0.1 9042 -e "DESCRIBE KEYSPACES"; then
+          if docker exec "${{ job.services.scylladb.id }}" cqlsh 127.0.0.1 9042 -e "DESCRIBE KEYSPACES" 2>/dev/null; then
             exit 0
           fi
           echo "Waiting for Scylla CQL readiness, attempt ${attempt}/60..."
