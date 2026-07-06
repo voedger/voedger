@@ -598,6 +598,16 @@ State and workspace lifecycle
       -> out: 200 OK
 ```
 
+**Alias rebind consistency note**:
+
+Control of alias email E proves ownership of E only. Binding E to an account also requires authority over that account.
+
+Case 1: alias is set by System only. In the current model alias writes are System-authorized, so alias rebind is not a normal end-user account-takeover path. The remaining concern is consistency with trusted alias updates: if System rebinds E from account A to account B between reset initiation and verified-token issue, Step 2 resolves the active `[(registry.LoginAlias)]` at token-issue time.
+
+Case 2: alias is set by a user who controls either the canonical account email/session or the alias email. If the user controls the canonical account, rebinding E from account A to account B also requires authority over B, so this is not a victim-account reset path unless the user can already manage B. If control of alias email E alone can bind E to arbitrary account B, the system is unsafe without any race; the owner of E could attach E to B and reset B. Alias-email verification may be required, but must never be sufficient without target-account authority.
+
+Sum-up: Step 2 currently issues the reset token for the current active owner of E, not necessarily the owner resolved at Step 1. This is safe only when the reset flow intentionally targets the current active owner of the alias, and every alias-binding path requires authority over the target account. Otherwise, Step 2 must reject if the alias binding changed during verification.
+
 #### Password change rejects malformed request
 
 ```text
