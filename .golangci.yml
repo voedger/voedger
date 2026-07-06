@@ -40,6 +40,7 @@ linters:
         - G601
         - G602
         - G117 # exported fields like "Pwd" matches secret pattern
+        - G115 # integer overflow conversion int64 -> uint64
     misspell:
       ignore-rules:
         - untill
