@@ -9,10 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 )
 
 func seNodeControllerFunction(n *nodeType) error {
-
 	if len(n.Error) > 0 && (n.DesiredNodeState == nil || n.DesiredNodeState.isEmpty()) {
 		n.DesiredNodeState = newNodeState(n.ActualNodeState.Address, n.ActualNodeState.NodeVersion)
 	}
@@ -23,30 +23,28 @@ func seNodeControllerFunction(n *nodeType) error {
 
 	n.newAttempt()
 
-	var err error
-
-	if err = seNodeValidate(n); err != nil {
+	if err := seNodeValidate(n); err != nil {
 		loggerError(err.Error())
 		n.Error = err.Error()
 		return err
 	}
 
-	if err = setHostname(n); err != nil {
+	if err := setHostname(n); err != nil {
 		loggerError(err.Error())
 		return err
 	}
 
-	if err = updateHosts(n); err != nil {
+	if err := updateHosts(n); err != nil {
 		loggerError(err.Error())
 		return err
 	}
 
-	if err = deployDocker(n); err != nil {
+	if err := deployDocker(n); err != nil {
 		loggerError(err.Error())
 		return err
 	}
 
-	if err = copyCtoolAndKeyToNode(n); err != nil {
+	if err := copyCtoolAndKeyToNode(n); err != nil {
 		loggerError(err.Error())
 		return err
 	}
@@ -72,14 +70,13 @@ func setHostname(node *nodeType) error {
 }
 
 // Update hosts file on all nodes in cluster with new value
-func updateHosts(node *nodeType) error {
-	var err error
+func updateHosts(node *nodeType) (err error) {
 	var addr string
 
 	hosts := node.cluster.hosts()
 
 	if node.cluster.Cmd.Kind == ckReplace {
-		for i := 0; i < len(node.cluster.Nodes); i++ {
+		for i := range len(node.cluster.Nodes) {
 			if node.cluster.Nodes[i].DesiredNodeState != nil && node.cluster.Nodes[i].DesiredNodeState.Address != "" {
 				addr = node.cluster.Nodes[i].DesiredNodeState.Address
 			} else {
@@ -104,7 +101,6 @@ func updateHosts(node *nodeType) error {
 	}
 
 	for hostname, host := range hosts {
-
 		if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
 			run("node-update-hosts.sh", addr, host, hostname); err != nil {
 			loggerError(err.Error())
@@ -137,10 +133,7 @@ func seNodeValidate(n *nodeType) error {
 	return nil
 }
 
-func seClusterControllerFunction(c *clusterType) error {
-
-	var err error
-
+func seClusterControllerFunction(c *clusterType) (err error) {
 	switch c.Cmd.Kind {
 	case ckInit, ckUpgrade:
 		err = initSeCluster(c)
@@ -167,7 +160,7 @@ func seClusterControllerFunction(c *clusterType) error {
 			err = setCronBackup(c, c.Cron.Backup)
 		}
 	case ckAcme:
-		if err = deploySeDockerStack(c); err != nil {
+		if err := deploySeDockerStack(c); err != nil {
 			return err
 		}
 	default:
@@ -182,18 +175,13 @@ func seClusterControllerFunction(c *clusterType) error {
 }
 
 func isSkipStack(skipList []string, stack string) bool {
-	for _, s := range skipList {
-		if s == stack {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(skipList, stack)
 }
 
 func initSeCluster(cluster *clusterType) error {
 	var err error
 
-	if err = deploySeSwarm(cluster); err != nil {
+	if err := deploySeSwarm(cluster); err != nil {
 		loggerError(err.Error)
 		return err
 	}
@@ -237,31 +225,26 @@ func boolToStr(value bool) string {
 }
 
 func deploySeSwarm(cluster *clusterType) error {
-
-	var err error
-
 	// Init swarm mode
 	node := cluster.Nodes[idxSENode1]
 	managerAddress := node.address()
 	managerHostname := node.hostNames()[0]
 
-	err = func() error {
-
+	err := func() error {
 		loggerInfo("Swarm init on", managerHostname)
-		if err = newScriptExecuter(cluster.sshKey, managerAddress).
+		if err := newScriptExecuter(cluster.sshKey, managerAddress).
 			run("swarm-init.sh", managerAddress); err != nil {
 			node.Error = err.Error()
 			return err
 		}
 
-		if err = setNodeSwarmLabels(cluster, &node, managerAddress); err != nil {
+		if err := setNodeSwarmLabels(cluster, &node, managerAddress); err != nil {
 			node.Error = err.Error()
 			return err
 		}
 
 		return nil
 	}()
-
 	if err != nil {
 		loggerError(err.Error())
 		return err
@@ -270,7 +253,7 @@ func deploySeSwarm(cluster *clusterType) error {
 	// Add remaining nodes to swarm cluster
 	conf := newSeConfigType(cluster)
 
-	for i := 0; i < len(cluster.Nodes); i++ {
+	for i := range len(cluster.Nodes) {
 		var dc string
 
 		if cluster.Nodes[i].hostNames()[0] == managerHostname {
@@ -280,12 +263,12 @@ func deploySeSwarm(cluster *clusterType) error {
 		err = func(n *nodeType) error {
 			var e error
 			loggerInfo("Swarm add node on ", n.ActualNodeState.Address)
-			if e = newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).
+			if e := newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).
 				run("swarm-add-node.sh", managerAddress, n.ActualNodeState.Address); e != nil {
 				return e
 			}
 
-			if e = setNodeSwarmLabels(cluster, n, managerAddress); e != nil {
+			if e := setNodeSwarmLabels(cluster, n, managerAddress); e != nil {
 				return e
 			}
 
@@ -296,7 +279,7 @@ func deploySeSwarm(cluster *clusterType) error {
 
 				loggerInfo("Use datacenter: ", dc)
 
-				if e = newScriptExecuter(cluster.sshKey, "localhost").
+				if e := newScriptExecuter(cluster.sshKey, "localhost").
 					run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); e != nil {
 					return e
 				}
@@ -314,7 +297,6 @@ func deploySeSwarm(cluster *clusterType) error {
 			loggerError(err.Error())
 			return err
 		}
-
 	}
 
 	loggerInfo("Swarm deployed successfully")
@@ -322,14 +304,12 @@ func deploySeSwarm(cluster *clusterType) error {
 }
 
 func deploySeDockerStack(cluster *clusterType) error {
-
 	loggerInfo("Starting a app docker stack deployment.")
 
 	conf := newSeConfigType(cluster)
 
 	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
 		run("se-cluster-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
-
 		return err
 	}
 
@@ -338,7 +318,6 @@ func deploySeDockerStack(cluster *clusterType) error {
 }
 
 func deployDbmsDockerStack(cluster *clusterType) error {
-
 	loggerInfo("Starting a DBMS docker stack deployment.")
 
 	conf := newSeConfigType(cluster)
@@ -435,42 +414,39 @@ func setNodeSwarmLabels(cluster *clusterType, node *nodeType, managerAddress str
 }
 
 func deployMonDockerStack(cluster *clusterType) error {
-
-	var err error
-
 	loggerInfo("Starting a mon docker stack deployment.")
 
 	conf := newSeConfigType(cluster)
 
-	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
 		//		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
 		run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		return err
 	}
 
-	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
 		//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
 		run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
 		return err
 	}
 
 	loggerInfo("Adding user voedger to Grafana on app-node-1")
-	if err = addGrafanUser(cluster.nodeByHost("app-node-1"), voedger); err != nil {
+	if err := addGrafanUser(cluster.nodeByHost("app-node-1"), voedger); err != nil {
 		return err
 	}
 
 	loggerInfo("Adding user voedger to Grafana on app-node-2")
-	if err = addGrafanUser(cluster.nodeByHost("app-node-2"), voedger); err != nil {
+	if err := addGrafanUser(cluster.nodeByHost("app-node-2"), voedger); err != nil {
 		return err
 	}
 
 	loggerInfo("Voedger's password resetting to monitoring stack")
-	if err = setMonPassword(cluster, voedger); err != nil {
+	if err := setMonPassword(cluster, voedger); err != nil {
 		return err
 	}
 
 	loggerInfo("Mon docker stack deployed successfully")
-	return err
+	return nil
 }
 
 type seConfigType struct {
@@ -576,7 +552,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	if err = newScriptExecuter(cluster.sshKey, "localhost").
+	if err := newScriptExecuter(cluster.sshKey, "localhost").
 		run("swarm-get-manager-token.sh", conf.AppNode1); err != nil {
 		return err
 	}
@@ -602,7 +578,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		return err
 	}
 
-	if err = setNodeSwarmLabels(cluster, cluster.nodeByHost(newAddr), conf.AppNode1); err != nil {
+	if err := setNodeSwarmLabels(cluster, cluster.nodeByHost(newAddr), conf.AppNode1); err != nil {
 		return err
 	}
 
@@ -611,9 +587,6 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 }
 
 func replaceSeAppNode(cluster *clusterType) error {
-
-	var err error
-
 	conf := newSeConfigType(cluster)
 
 	oldAddr := cluster.Cmd.Args[0]
@@ -636,26 +609,26 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	// nolint
-	if err = newScriptExecuter(cluster.sshKey, "localhost").
+	if err := newScriptExecuter(cluster.sshKey, "localhost").
 		run("swarm-get-manager-token.sh", conf.DBNode1); err != nil {
 		return err
 	}
 
 	loggerInfo("Swarm remove node ", oldAddr)
 	// nolint
-	if err = newScriptExecuter(cluster.sshKey, oldAddr).
+	if err := newScriptExecuter(cluster.sshKey, oldAddr).
 		run("swarm-rm-node.sh", conf.DBNode1, oldAddr); err != nil {
 		return err
 	}
 
 	loggerInfo("Swarm add node on ", newAddr)
 	// nolint
-	if err = newScriptExecuter(cluster.sshKey, newAddr).
+	if err := newScriptExecuter(cluster.sshKey, newAddr).
 		run("swarm-add-node.sh", conf.DBNode1, newAddr); err != nil {
 		return err
 	}
 
-	if err = setNodeSwarmLabels(cluster, newNode, conf.DBNode1); err != nil {
+	if err := setNodeSwarmLabels(cluster, newNode, conf.DBNode1); err != nil {
 		return err
 	}
 
@@ -667,7 +640,7 @@ func replaceSeAppNode(cluster *clusterType) error {
 
 	args := []string{password, hash, liveOldHost}
 
-	if err = newScriptExecuter(cluster.sshKey, "").
+	if err := newScriptExecuter(cluster.sshKey, "").
 		run("prometheus-voedger-password.sh", args...); err != nil {
 		return err
 	}
@@ -686,19 +659,19 @@ func replaceSeAppNode(cluster *clusterType) error {
 		return err
 	}
 
-	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
 		//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
 		run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
 		return err
 	}
 
 	loggerInfo("Adding user voedger to Grafana on ", newNode.nodeName(), newNode.address())
-	if err = addGrafanUser(newNode, voedger); err != nil {
+	if err := addGrafanUser(newNode, voedger); err != nil {
 		return err
 	}
 
 	loggerInfo("Voedger's password resetting to monitoring stack")
-	if err = setMonPassword(cluster, voedger); err != nil {
+	if err := setMonPassword(cluster, voedger); err != nil {
 		return err
 	}
 
@@ -709,11 +682,8 @@ func replaceSeAppNode(cluster *clusterType) error {
 // check host Available
 // pinging the address of the host
 func hostIsAvailable(cluster *clusterType, host string) error {
-	if err := newScriptExecuter(cluster.sshKey, host).
-		run("host-check.sh", host, "only-ping"); err != nil {
-		return err
-	}
-	return nil
+	return newScriptExecuter(cluster.sshKey, host).
+		run("host-check.sh", host, "only-ping")
 }
 
 // node is down
@@ -729,13 +699,11 @@ func nodeIsDown(node *nodeType) error {
 			run("host-is-down.sh", node.hostNames()[0], node.nodeName()); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
 func copyCtoolAndKeyToNode(node *nodeType) error {
-
 	ctoolPath, err := os.Executable()
 
 	if err != nil {
@@ -754,7 +722,6 @@ func copyCtoolAndKeyToNode(node *nodeType) error {
 }
 
 func setCronBackup(cluster *clusterType, backupTime string) error {
-
 	loggerInfo("Setting a cron schedule for database backup ", backupTime)
 
 	if cluster.Edition == clusterEditionN1 {

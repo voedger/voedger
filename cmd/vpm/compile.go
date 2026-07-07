@@ -21,9 +21,9 @@ func newCompileCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "compile voedger application",
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(*cobra.Command, []string) (err error) {
 			_, err = compile.Compile(params.Dir)
-			return
+			return err
 		},
 	}
 	return cmd
@@ -60,7 +60,7 @@ func prepareParams(cmd *cobra.Command, params *vpmParams, args []string) (err er
 	}
 	params.Dir, err = makeAbsPath(params.Dir)
 	if err != nil {
-		return
+		return err
 	}
 	if params.IgnoreFile != "" {
 		params.IgnoreFile = filepath.Clean(params.IgnoreFile)

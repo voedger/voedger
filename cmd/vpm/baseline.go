@@ -27,7 +27,7 @@ func newBaselineCmd(params *vpmParams) *cobra.Command {
 		Use:   "baseline folder",
 		Short: "create baseline schemas",
 		Args:  exactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(*cobra.Command, []string) (err error) {
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
@@ -49,10 +49,7 @@ func baseline(compileRes *compile.Result, dir, targetDir string) error {
 		return err
 	}
 
-	if err := saveBaselineInfo(compileRes, dir, targetDir); err != nil {
-		return err
-	}
-	return nil
+	return saveBaselineInfo(compileRes, dir, targetDir)
 }
 
 // saveBaselineInfo saves baseline info into target dir

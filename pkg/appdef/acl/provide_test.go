@@ -26,6 +26,7 @@ type aclFieldsNames struct {
 }
 
 func buildAppWithFieldACL(t *testing.T, n aclFieldsNames) appdef.IAppDef {
+	t.Helper()
 	require := require.New(t)
 
 	adb := builder.New()
@@ -159,6 +160,7 @@ type aclAncestorsNames struct {
 }
 
 func buildAppWithAncestors(t *testing.T, n aclAncestorsNames) appdef.IAppDef {
+	t.Helper()
 	require := require.New(t)
 
 	adb := builder.New()
