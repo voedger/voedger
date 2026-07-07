@@ -56,7 +56,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	ws := vit.CreateWorkspace(wsParams, prn)
 
 	initiateUpdateInviteRoles := func(inviteID istructs.RecordID) {
-		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`, inviteID, updatedRoles, updateRolesEmailTemplate, updateRolesEmailSubject))
+		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":%q,"EmailTemplate":%q,"EmailSubject":%q}}`, inviteID, updatedRoles, updateRolesEmailTemplate, updateRolesEmailSubject))
 	}
 
 	findCDocInviteByID := func(inviteID istructs.RecordID) []interface{} {
@@ -90,7 +90,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 				"sys.ID",
 				"sys.IsActive"
 			]}],
-			"filters":[{"expr":"eq","args":{"field":"Login","value":"%s"}}]}`, login)).SectionRow(0)
+			"filters":[{"expr":"eq","args":{"field":"Login","value":%q}}]}`, login)).SectionRow(0)
 	}
 
 	//Invite existing users
@@ -177,7 +177,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 	require.NotEqual(float64(0), cDocInvite[9], "SubjectID must be set after join")
 
-	cDocJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, login2Prn)
+	cDocJoinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, login2Prn)
 
 	require.Equal(initialRoles, cDocJoinedWorkspace.roles)
 	require.Equal(wsName, cDocJoinedWorkspace.wsName)
@@ -189,7 +189,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(newRoles, cDocSubject[2]) // overwritten
 
 	t.Run("re-inivite the joined already -> error", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+		body := fmt.Sprintf(`{"args":{"Email":%q,"Roles":%q,"ExpireDatetime":%d,"EmailTemplate":%q,"EmailSubject":%q}}`,
 			email1, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
 		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body,
 			it.Expect400("re-invite not allowed for state State_Joined"))
@@ -299,7 +299,7 @@ func TestInactiveCDocSubject(t *testing.T) {
 	vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.Expect403(), httpu.WithAuthorizeBy(newPrn.Token))
 
 	// make this new foreign login a subject in the existing workspace
-	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
+	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": %q,"SubjectKind":%d,"Roles": %q,"ProfileWSID":%d}}]}`,
 		newLoginName, istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceOwner, newPrn.ProfileWSID)
 	cdocSubjectID := vit.PostWS(parentWS, "c.sys.CUD", body).NewID()
 
@@ -364,7 +364,7 @@ func TestWrongEmail(t *testing.T) {
 		"@sdsd",
 	}
 	for _, wrongEmail := range wrongEmails {
-		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+		body := fmt.Sprintf(`{"args":{"Email":%q,"Roles":%q,"ExpireDatetime":%d,"EmailTemplate":%q,"EmailSubject":%q}}`,
 			wrongEmail, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
 		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, httpu.Expect400()).Println()
 	}
@@ -413,7 +413,7 @@ func TestReinviteAfterCancelAcceptedInvite(t *testing.T) {
 	cDocSubject := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.Subject"},
 		"elements":[{"fields":["Login","sys.IsActive"]}],
-		"filters":[{"expr":"eq","args":{"field":"Login","value":"%s"}}]}`, email)).SectionRow(0)
+		"filters":[{"expr":"eq","args":{"field":"Login","value":%q}}]}`, email)).SectionRow(0)
 	require.Equal(email, cDocSubject[0])
 	require.True(cDocSubject[1].(bool))
 }
@@ -533,7 +533,7 @@ func TestInvite_RolesValidation(t *testing.T) {
 	postInvite := func(roles string, opts ...httpu.ReqOptFunc) {
 		vit.T.Helper()
 		email := fmt.Sprintf("rolesvalid_%d@123.com", vit.NextNumber())
-		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+		body := fmt.Sprintf(`{"args":{"Email":%q,"Roles":%q,"ExpireDatetime":%d,"EmailTemplate":%q,"EmailSubject":%q}}`,
 			email, roles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
 		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, opts...)
 	}
@@ -567,7 +567,7 @@ func TestInvite_RolesValidation(t *testing.T) {
 
 		postUpdate := func(roles string, opts ...httpu.ReqOptFunc) {
 			vit.T.Helper()
-			body := fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			body := fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":%q,"EmailTemplate":%q,"EmailSubject":%q}}`,
 				inviteID, roles, inviteEmailTemplate, inviteEmailSubject)
 			vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", body, opts...)
 		}
@@ -640,7 +640,7 @@ func TestInvite_VersionMarker(t *testing.T) {
 
 		// 5. InitiateUpdateInviteRoles (state stays Joined)
 		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(
-			`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			`{"args":{"InviteID":%d,"Roles":%q,"EmailTemplate":%q,"EmailSubject":%q}}`,
 			inviteID, newRoles, inviteEmailTemplate, inviteEmailSubject))
 		vit.CaptureEmail()
 		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateUpdateInviteRoles")

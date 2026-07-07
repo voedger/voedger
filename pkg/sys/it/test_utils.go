@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"time"
 
-	"golang.org/x/exp/slices"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -26,7 +26,7 @@ const awaitTime = 100 * time.Millisecond
 
 func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...httpu.ReqOptFunc) (token, code string) {
 	return InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, entity, field, email, targetWSID)
+		body := fmt.Sprintf(`{"args":{"Entity":%q,"Field":%q,"Email":%q,"TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, entity, field, email, targetWSID)
 		return vit.PostApp(prn.AppQName, prn.ProfileWSID, "q.sys.InitiateEmailVerification", body, opts...)
 	})
 }
@@ -38,7 +38,7 @@ func InitiateEmailVerificationFunc(vit *it.VIT, f func() *federation.FuncRespons
 	matches := r.FindStringSubmatch(emailMessage.Body)
 	code = matches[0]
 	token = resp.SectionRow()[0].(string)
-	return
+	return token, code
 }
 
 func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, offset istructs.Offset) {
@@ -72,7 +72,7 @@ func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, of
 
 func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID istructs.RecordID) {
 	vit.T.Helper()
-	body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
+	body := fmt.Sprintf(`{"args":{"Email":%q,"Roles":%q,"ExpireDatetime":%d,"EmailTemplate":%q,"EmailSubject":%q}}`,
 		email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
 	return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
 }
@@ -80,7 +80,7 @@ func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime 
 func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, login *it.Principal, verificationCode string, opts ...httpu.ReqOptFunc) {
 	vit.T.Helper()
 	opts = append(opts, httpu.WithAuthorizeBy(login.Token))
-	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), opts...)
+	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":%q}}`, inviteID, verificationCode), opts...)
 }
 
 func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID istructs.RecordID, inviteStatesSeq ...invite.State) {
@@ -111,7 +111,7 @@ type joinedWorkspaceDesc struct {
 	wsName                string
 }
 
-func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login *it.Principal) joinedWorkspaceDesc {
+func findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login *it.Principal) joinedWorkspaceDesc {
 	vit.T.Helper()
 	resp := vit.PostProfile(login, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.JoinedWorkspace"},

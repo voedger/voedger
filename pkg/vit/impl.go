@@ -51,10 +51,11 @@ import (
 // caches schemas for apps that are not test apps (i.e., not test1_app1, test1_app2, test2_app1, or test2_app2)
 var nonTestAppsSchemasCache = &implISchemasCache_nonTestApps{schemas: map[appdef.AppQName]*parser.AppSchemaAST{}}
 
-func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
+func NewVIT(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
+	tb.Helper()
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
-		vit = newVit(t, vitCfg, useCas, false)
+		vit = newVit(tb, vitCfg, useCas, false)
 	} else {
 		ok := false
 		if vit, ok = vits[vitCfg]; ok {
@@ -63,7 +64,7 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 			}
 			vit.isFinalized = false
 		} else {
-			vit = newVit(t, vitCfg, useCas, false)
+			vit = newVit(tb, vitCfg, useCas, false)
 			vits[vitCfg] = vit
 		}
 	}
@@ -72,9 +73,9 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 		opt.applyVITOpt(vit)
 	}
 
-	vit.emailCaptor.checkEmpty(t)
+	vit.emailCaptor.checkEmpty(tb)
 
-	vit.T = t
+	vit.T = tb
 
 	// run each test in the next day to mostly prevent previous tests impact and\or workspace initialization
 	vit.TimeAdd(day)
@@ -84,7 +85,8 @@ func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	return vit
 }
 
-func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *VIT {
+func newVit(tb testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *VIT {
+	tb.Helper()
 	cfg := vvmpkg.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
@@ -139,7 +141,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	cfg.PolicyOptsForFederationWithRetry = policyOptsForWithRetry
 
 	vvm, err := vvmpkg.Provide(&cfg)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	// register workspace templates
 	for _, app := range vitPreConfig.vitApps {
@@ -152,7 +154,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	vit := &VIT{
 		VoedgerVM:            vvm,
 		VVMConfig:            &cfg,
-		T:                    t,
+		T:                    tb,
 		appWorkspaces:        map[appdef.AppQName]map[string]*AppWorkspace{},
 		principals:           map[appdef.AppQName]map[string]*Principal{},
 		lock:                 sync.Mutex{},
@@ -165,9 +167,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
-	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
+	vit.cleanups = append(vit.cleanups, func(*VIT) { httpClientCleanup() })
 
-	// get rid of huge amount of logs reporting about workspaces init process
+	// get rid of huge amount of logs reporting about  init process
 	defer logger.SetLogLevelWithRestore(logger.LogLevelWarning)()
 
 	// launch the server
@@ -213,7 +215,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 			createSubjects(vit, prn.Token, login.subjects, login.AppQName, prn.ProfileWSID)
 
 			for doc, dataFactory := range login.docs {
-				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
+				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":%q}}`, doc)).IsEmpty() {
 					continue
 				}
 				data := dataFactory(verifiedValues)
@@ -221,7 +223,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 				data[appdef.SystemField_QName] = doc.String()
 
 				bb, err := json.Marshal(data)
-				require.NoError(t, err)
+				require.NoError(tb, err)
 
 				vit.PostProfile(prn, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
 			}
@@ -254,7 +256,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *V
 
 func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string, token string) {
 	for doc, dataFactory := range appWS.docs {
-		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc), httpu.WithAuthorizeBy(token)).IsEmpty() {
+		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":%q}}`, doc), httpu.WithAuthorizeBy(token)).IsEmpty() {
 			continue
 		}
 		data := dataFactory(verifiedValues)
@@ -285,20 +287,21 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 
 func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.AppQName, wsid istructs.WSID) {
 	for _, subject := range subjects {
-		roles := ""
+		var roles strings.Builder
 		for i, role := range subject.roles {
 			if i > 0 {
-				roles += ","
+				roles.WriteString(",")
 			}
-			roles += role.String()
+			roles.WriteString(role.String())
 		}
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-			subject.login, roles, subject.subjectKind, vit.principals[appQName][subject.login].ProfileWSID)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":%q,"Roles":%q,"SubjectKind":%d,"ProfileWSID":%d}}]}`,
+			subject.login, roles.String(), subject.subjectKind, vit.principals[appQName][subject.login].ProfileWSID)
 		vit.PostApp(appQName, wsid, "c.sys.CUD", body, httpu.WithAuthorizeBy(token))
 	}
 }
 
 func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
+	tb.Helper()
 	vit = newVit(tb, vitCfg, true, false)
 	for _, opt := range opts {
 		opt.applyVITOpt(vit)
@@ -425,9 +428,8 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 }
 
 func (vit *VIT) SQLQueryRows(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) []map[string]interface{} {
-
 	vit.T.Helper()
-	body := fmt.Sprintf(`{"args":{"Query":"%s"},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
+	body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, fmt.Sprintf(sqlQuery, fmtArgs...))
 	resp := vit.PostWS(ws, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(ws.Owner.Token))
 	res := []map[string]interface{}{}
 	for _, elem := range resp.Sections[0].Elements {
@@ -556,7 +558,7 @@ func (vit *VIT) satisfySysErrorExpectations(funcResp *federation.FuncResponse, o
 	}
 	index := 0
 	for _, expectedMes := range vitOpts.expectedMessages {
-		require.Containsf(vit.T, sysError.Message[index:], expectedMes, `actual message "%s", ordered expected %#v`, sysError.Message, vitOpts.expectedMessages)
+		require.Containsf(vit.T, sysError.Message[index:], expectedMes, "actual message %q, ordered expected %#v", sysError.Message, vitOpts.expectedMessages)
 		index = strings.Index(sysError.Message[index:], expectedMes) + len(expectedMes)
 	}
 }
@@ -653,7 +655,7 @@ func (vit *VIT) CaptureEmail() (msg state.EmailMessage) {
 	case <-tmr.C:
 		vit.T.Fatal("no email messages")
 	}
-	return
+	return msg
 }
 
 // sets delay on IAppStorage.Get() in mem implementation
@@ -663,7 +665,7 @@ func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
 		delaySetter.SetTestDelayGet(delay)
-		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+		vit.cleanups = append(vit.cleanups, func(_ *VIT) {
 			delaySetter.SetTestDelayGet(0)
 		})
 	})
@@ -676,7 +678,7 @@ func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 	vit.T.Helper()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
 		delaySetter.SetTestDelayPut(delay)
-		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+		vit.cleanups = append(vit.cleanups, func(*VIT) {
 			delaySetter.SetTestDelayPut(0)
 		})
 	})
@@ -722,17 +724,18 @@ func (vit *VIT) checkVVMProblemCtx() {
 	}
 }
 
-func (c *implIEmailSender_captor) Send(host string, msg state.EmailMessage, opts ...mail.Option) error {
+func (c *implIEmailSender_captor) Send(_ string, msg state.EmailMessage, _ ...mail.Option) error {
 	c.emailCaptorCh <- msg
 	return nil
 }
 
-func (c *implIEmailSender_captor) checkEmpty(t testing.TB) {
+func (c *implIEmailSender_captor) checkEmpty(tb testing.TB) {
+	tb.Helper()
 	select {
 	case _, ok := <-c.emailCaptorCh:
 		if ok {
-			t.Log("unexpected email message received")
-			t.Fail()
+			tb.Log("unexpected email message received")
+			tb.Fail()
 		}
 	default:
 	}

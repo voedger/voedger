@@ -5,11 +5,12 @@
 package query2
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"html"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -23,7 +24,7 @@ func schemasHandler() apiPathHandler {
 	}
 }
 
-func schemasExec(ctx context.Context, qw *queryWork) (err error) {
+func schemasExec(_ context.Context, qw *queryWork) (err error) {
 	var sb strings.Builder
 	appStr := qw.msg.AppQName().String()
 	fmt.Fprintf(&sb, "<html><head><title>App %s schema</title></head><body>", appStr)
@@ -65,7 +66,7 @@ func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 		for pkg := range packages {
 			pkgNames = append(pkgNames, pkg)
 		}
-		sort.Strings(pkgNames)
+		slices.Sort(pkgNames)
 
 		for _, pkg := range pkgNames {
 			fmt.Fprintf(&sb, "<h2>Package %s</h2>", pkg)
@@ -73,15 +74,15 @@ func schemasExec(ctx context.Context, qw *queryWork) (err error) {
 
 			// Sort workspaces by QName for consistent ordering
 			workspaces := packages[pkg]
-			sort.Slice(workspaces, func(i, j int) bool {
-				return workspaces[i].QName().String() < workspaces[j].QName().String()
+			slices.SortFunc(workspaces, func(a, b appdef.IWorkspace) int {
+				return cmp.Compare(a.QName().String(), b.QName().String())
 			})
 
 			appOwnerStr := qw.msg.AppQName().Owner()
 			appNameStr := qw.msg.AppQName().Name()
 			for _, ws := range workspaces {
 				ref := fmt.Sprintf("/api/v2/apps/%s/%s/schemas/%s/roles", appOwnerStr, appNameStr, ws.QName().String())
-				fmt.Fprintf(&sb, `<li><a href="%s">%s</a></li>`, html.EscapeString(ref), html.EscapeString(ws.QName().String()))
+				fmt.Fprintf(&sb, `<li><a href=%q>%s</a></li>`, html.EscapeString(ref), html.EscapeString(ws.QName().String()))
 			}
 			sb.WriteString("</ul>")
 		}

@@ -50,7 +50,7 @@ func (r *vSqlUpdate2Result) QName() appdef.QName { return qNameVSqlUpdate2Result
 
 func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime,
 	asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
-	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 		query := args.ArgumentObject.AsString(field_Query)
 		update, err := parseAndValidateQuery(args.Workpiece, query, asp)
 		if err != nil {
@@ -62,7 +62,7 @@ func provideExecQryVSqlUpdate2(federation federation.IFederation, itokens itoken
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}
 
-		cudWLogOffset, newID, err := dispatchDML(update, federation, itokens, time)
+		cudWLogOffset, newID, err := dispatchDML(ctx, update, federation, itokens, time)
 		if err != nil {
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}

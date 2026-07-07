@@ -90,12 +90,12 @@ type TypeRef struct {
 }
 
 // Returns referenced type name
-func (r TypeRef) Name() appdef.QName { return r.name }
+func (r *TypeRef) Name() appdef.QName { return r.name }
 
 // Returns type by reference.
 //
 // If type is not found then returns nil.
-func (r TypeRef) Target(find appdef.FindType) appdef.IType {
+func (r *TypeRef) Target(find appdef.FindType) appdef.IType {
 	switch r.name {
 	case appdef.NullQName:
 		return nil
@@ -189,7 +189,7 @@ func (tt *WithTypes) AppendType(t appdef.IType) {
 	tt.types.Add(t)
 }
 
-func (tt WithTypes) Type(name appdef.QName) appdef.IType {
+func (tt *WithTypes) Type(name appdef.QName) appdef.IType {
 	switch name {
 	case appdef.NullQName:
 		return appdef.NullType
@@ -199,7 +199,7 @@ func (tt WithTypes) Type(name appdef.QName) appdef.IType {
 	return tt.types.Find(name)
 }
 
-func (tt WithTypes) Types() []appdef.IType { return tt.types.AsArray() }
+func (tt *WithTypes) Types() []appdef.IType { return tt.types.AsArray() }
 
 // Propagate type to workspace and app.
 func Propagate(t appdef.IType) {

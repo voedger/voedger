@@ -9,8 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"reflect"
-	"sort"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -152,11 +153,11 @@ func (s *MockedStorage) ProvideValueBuilderForUpdate(
 }
 
 func (s *MockedStorage) Validate([]state.ApplyBatchItem) (err error) {
-	return
+	return nil
 }
 
 func (s *MockedStorage) ApplyBatch([]state.ApplyBatchItem) (err error) {
-	return
+	return nil
 }
 
 func (s *MockedStorage) PutViewRecord(kb istructs.IStateKeyBuilder, value *coreutils.TestObject) error {
@@ -202,9 +203,9 @@ func NewMockedStorage(storageQName appdef.QName) *MockedStorage {
 }
 
 type mockedKeyBuilder struct {
+	coreutils.TestObject
 	baseKeyBuilder
 	mockedStorage *MockedStorage
-	coreutils.TestObject
 }
 
 func newMockedKeyBuilder(mockedStorage *MockedStorage, entity appdef.QName) *mockedKeyBuilder {
@@ -225,23 +226,15 @@ func newMockedKeyBuilder(mockedStorage *MockedStorage, entity appdef.QName) *moc
 // It is used to identify a value associated to key builder in the storage.
 func (mkb *mockedKeyBuilder) HashCode() (uint64, error) {
 	if mkb.ID_ == 0 && len(mkb.Data) > 0 {
-		// Convert map to a sorted slice of key-value pairs to ensure consistent ordering
-		pairs := make([]struct {
+		type kv struct {
 			Key   string
 			Value any
-		}, 0, len(mkb.Data))
-		for k, v := range mkb.Data {
-			pairs = append(pairs, struct {
-				Key   string
-				Value any
-			}{Key: k, Value: v})
+		}
+		pairs := make([]kv, 0, len(mkb.Data))
+		for _, k := range slices.Sorted(maps.Keys(mkb.Data)) {
+			pairs = append(pairs, kv{Key: k, Value: mkb.Data[k]})
 		}
 
-		sort.Slice(pairs, func(i, j int) bool {
-			return pairs[i].Key < pairs[j].Key
-		})
-
-		// Serialize to JSON
 		data, err := json.Marshal(pairs)
 		if err != nil {
 			return 0, fmt.Errorf("json.Marshal(): %w", err)
@@ -296,37 +289,30 @@ func (mkb *mockedKeyBuilder) Equals(kb istructs.IKeyBuilder) bool {
 		}
 
 		if jsonNumber, ok := v2.(json.Number); ok {
-			v2, err := jsonNumber.Int64()
-			if err != nil {
-				panic(fmt.Errorf("jsonNumber.Int64(): %w", err))
-			}
-
-			switch t1 := v1.(type) {
+			var dataKind appdef.DataKind
+			switch v1.(type) {
 			case int8:
-				//nolint:gosec
-				if t1 != int8(v2) {
-					return false
-				}
+				dataKind = appdef.DataKind_int8
 			case int16:
-				//nolint:gosec
-				if t1 != int16(v2) {
-					return false
-				}
+				dataKind = appdef.DataKind_int16
 			case int32:
-				//nolint:gosec
-				if t1 != int32(v2) {
-					return false
-				}
+				dataKind = appdef.DataKind_int32
 			case int64:
-				if t1 != v2 {
-					return false
-				}
+				dataKind = appdef.DataKind_int64
 			default:
-				if !reflect.DeepEqual(t1, v2) {
+				if !reflect.DeepEqual(v1, v2) {
 					return false
 				}
+				continue
 			}
-
+			clarified, err := coreutils.ClarifyJSONNumber(jsonNumber, dataKind)
+			if err != nil {
+				// notest
+				panic(err)
+			}
+			if v1 != clarified {
+				return false
+			}
 			continue
 		}
 
@@ -346,7 +332,9 @@ func (mkb *mockedKeyBuilder) String() string {
 	)
 }
 
-func (mkb *mockedKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { return nil, nil, nil }
+func (mkb *mockedKeyBuilder) ToBytes(istructs.WSID) (pk []byte, cc []byte, err error) {
+	return nil, nil, nil
+}
 
 func (mkb *mockedKeyBuilder) PutInt8(field appdef.FieldName, value int8) {
 	mkb.TestObject.Data[field] = value
@@ -395,9 +383,7 @@ func (mkb *mockedKeyBuilder) PutBool(field appdef.FieldName, value bool) {
 
 func (mkb *mockedKeyBuilder) PutRecordID(field appdef.FieldName, value istructs.RecordID) {
 	if field == sys.Storage_Record_Field_ID {
-		//nolint:gosec
 		mkb.TestObject.ID_ = value
-
 		return
 	}
 
@@ -413,9 +399,7 @@ func (mkb *mockedKeyBuilder) PutChars(field appdef.FieldName, value string) {
 }
 
 func (mkb *mockedKeyBuilder) PutFromJSON(value map[appdef.FieldName]any) {
-	for k, v := range value {
-		mkb.TestObject.Data[k] = v
-	}
+	maps.Copy(mkb.TestObject.Data, value)
 }
 
 type mockedValueBuilder struct {
@@ -436,9 +420,12 @@ func (mvb *mockedValueBuilder) PutInt32(name appdef.FieldName, i int32) {
 
 func (mvb *mockedValueBuilder) PutInt64(name appdef.FieldName, i int64) {
 	if name == appdef.SystemField_ID {
-		//nolint:gosec
-		mvb.value.TestObjects[0].ID_ = istructs.RecordID(i)
-
+		recID, err := coreutils.Int64ToRecordID(i)
+		if err != nil {
+			// notest
+			panic(err)
+		}
+		mvb.value.TestObjects[0].ID_ = recID
 		return
 	}
 
@@ -486,9 +473,7 @@ func (mvb *mockedValueBuilder) PutChars(name appdef.FieldName, s string) {
 }
 
 func (mvb *mockedValueBuilder) PutFromJSON(m map[appdef.FieldName]any) {
-	for name, value := range m {
-		mvb.value.TestObjects[0].Data[name] = value
-	}
+	maps.Copy(mvb.value.TestObjects[0].Data, m)
 }
 
 func newMockedValueBuilder(value istructs.IStateValue) (mvb *mockedValueBuilder) {
@@ -529,7 +514,7 @@ func newMockedStateValue(value []*coreutils.TestObject) *mockedStateValue {
 		TestObjects: make([]*coreutils.TestObject, len(value)),
 	}
 
-	for i := 0; i < len(value); i++ {
+	for i := range value {
 		newValue.TestObjects[i] = &coreutils.TestObject{
 			Data:        make(map[string]any),
 			Containers_: make(map[string][]*coreutils.TestObject),
@@ -542,9 +527,7 @@ func newMockedStateValue(value []*coreutils.TestObject) *mockedStateValue {
 			newValue.TestObjects[i].IsNew_ = value[i].IsNew_
 
 			if value[i].Data != nil {
-				for k, v := range value[i].Data {
-					newValue.TestObjects[i].Data[k] = v
-				}
+				maps.Copy(newValue.TestObjects[i].Data, value[i].Data)
 			}
 
 			if value[i].Containers_ != nil {
@@ -554,7 +537,6 @@ func newMockedStateValue(value []*coreutils.TestObject) *mockedStateValue {
 				}
 			}
 		}
-
 	}
 
 	return newValue
@@ -623,10 +605,10 @@ func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
 	case int64:
 		return t
 	case istructs.Offset:
-		//nolint:gosec
+		// nolint gosec
 		return int64(t)
 	case istructs.RecordID:
-		//nolint:gosec
+		// nolint gosec
 		return int64(t)
 	case json.Number:
 		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int64)
@@ -680,7 +662,7 @@ func (m *mockedStateValue) AsString(name appdef.FieldName) string {
 	return m.TestObjects[0].Data[name].(string)
 }
 
-func (m *mockedStateValue) AsQName(name appdef.FieldName) appdef.QName {
+func (m *mockedStateValue) AsQName(appdef.FieldName) appdef.QName {
 	return m.TestObjects[0].Name
 }
 
@@ -710,15 +692,15 @@ func (m *mockedStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	}
 }
 
-func (m *mockedStateValue) RecordIDs(includeNulls bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
+func (m *mockedStateValue) RecordIDs(bool) func(func(appdef.FieldName, istructs.RecordID) bool) {
 	panic(errNotImplemented)
 }
 
-func (m *mockedStateValue) SpecifiedValues(f func(appdef.IField, any) bool) {
+func (m *mockedStateValue) SpecifiedValues(func(appdef.IField, any) bool) {
 	panic(errNotImplemented)
 }
 
-func (m *mockedStateValue) Fields(f func(appdef.IField) bool) {
+func (m *mockedStateValue) Fields(func(appdef.IField) bool) {
 	panic(errNotImplemented)
 }
 
@@ -741,7 +723,7 @@ func (m *mockedStateValue) Length() int {
 	return len(m.TestObjects)
 }
 
-func (m mockedStateValue) GetAsString(index int) string {
+func (m *mockedStateValue) GetAsString(index int) string {
 	if index < 0 || index >= len(m.TestObjects) {
 		panic(fmt.Sprintf("mockedStateValue.GetAsString(%d): index out of range", index))
 	}
@@ -749,35 +731,35 @@ func (m mockedStateValue) GetAsString(index int) string {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsBytes(index int) []byte {
+func (m *mockedStateValue) GetAsBytes(int) []byte {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsInt32(index int) int32 {
+func (m *mockedStateValue) GetAsInt32(int) int32 {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsInt64(index int) int64 {
+func (m *mockedStateValue) GetAsInt64(int) int64 {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsFloat32(index int) float32 {
+func (m *mockedStateValue) GetAsFloat32(int) float32 {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsFloat64(index int) float64 {
+func (m *mockedStateValue) GetAsFloat64(int) float64 {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsQName(index int) appdef.QName {
+func (m *mockedStateValue) GetAsQName(int) appdef.QName {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsBool(index int) bool {
+func (m *mockedStateValue) GetAsBool(int) bool {
 	panic(errNotImplemented)
 }
 
-func (m mockedStateValue) GetAsValue(index int) istructs.IStateValue {
+func (m *mockedStateValue) GetAsValue(index int) istructs.IStateValue {
 	if index < 0 || index >= len(m.TestObjects) {
 		panic(fmt.Sprintf("mockedStateValue.GetAsValue(%d): index out of range", index))
 	}

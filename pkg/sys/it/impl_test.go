@@ -176,19 +176,15 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 	body := `{"args":{"Input":"Str"}}`
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 	postDone := sync.WaitGroup{}
-	postDone.Add(1)
-	go func() {
-		defer postDone.Done()
+	postDone.Go(func() {
 		vit.PostWS(ws, "c.app1pkg.MockCmd", body, httpu.WithAuthorizeBy(sys.Token))
-	}()
+	})
 	<-funcStarted
 
 	got503 := atomic.Int32{}
 	extras := int(vit.VVMConfig.CommandProcessorChannelBufferSize) + 1
 	for range extras {
-		postDone.Add(1)
-		go func() {
-			defer postDone.Done()
+		postDone.Go(func() {
 			resp := vit.PostWS(ws, "c.app1pkg.MockCmd", body,
 				httpu.WithAuthorizeBy(sys.Token),
 				httpu.WithNoRetryPolicy(),
@@ -197,7 +193,7 @@ func Test503OnNoCommandProcessorsAvailable(t *testing.T) {
 			if resp.HTTPResp.StatusCode == http.StatusServiceUnavailable {
 				got503.Add(1)
 			}
-		}()
+		})
 	}
 
 	require.Eventually(func() bool { return got503.Load() == 1 }, 10*time.Second, 10*time.Millisecond)
@@ -237,12 +233,10 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	postDone := sync.WaitGroup{}
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-	for i := 0; i < int(vit.VVMConfig.NumCommandProcessors); i++ {
-		postDone.Add(1)
-		go func() {
-			defer postDone.Done()
+	for range int(vit.VVMConfig.NumCommandProcessors) {
+		postDone.Go(func() {
 			vit.PostWS(ws, "q.app1pkg.MockQry", body, httpu.WithAuthorizeBy(sys.Token))
-		}()
+		})
 
 		<-funcStarted
 	}
@@ -251,7 +245,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 
 	logCap.HasLine("stage=vvm.submit", "no query processors v1 available")
 
-	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
+	for range int(vit.VVMConfig.NumQueryProcessors) {
 		okToFinish <- nil
 	}
 	postDone.Wait()

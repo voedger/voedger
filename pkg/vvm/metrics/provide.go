@@ -18,7 +18,7 @@ func ProvideMetricsService(vvmCtx context.Context, metricsServicePort MetricsSer
 	return &metricsService{
 		Server: &http.Server{
 			Handler: provideHandler(imetrics),
-			BaseContext: func(l net.Listener) context.Context {
+			BaseContext: func(net.Listener) context.Context {
 				return vvmCtx
 			},
 			ReadHeaderTimeout: router2.DefaultRouterReadTimeout * time.Second, // avoiding potential Slowloris attack (G112 linter rule)

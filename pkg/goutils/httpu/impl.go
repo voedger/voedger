@@ -36,7 +36,7 @@ func newRequest(ctx context.Context, method, url, body string, bodyReader io.Rea
 		req.Header.Add(k, v)
 	}
 	for k, v := range cookies {
-		req.AddCookie(&http.Cookie{
+		req.AddCookie(&http.Cookie{ // nolint G124 outgoing client cookie: Secure/HttpOnly/SameSite are server-side response directives, ignored by req.AddCookie serialization
 			Name:  k,
 			Value: v,
 		})
@@ -133,7 +133,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 	}
 
 	retrierCfg := retrier.NewConfig(httpBaseRetryDelay, httpMaxRetryDelay)
-	retrierCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, abortErr error) {
+	retrierCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, abortErr error) {
 		for _, matcher := range opts.retryOnErr {
 			if matcher(opErr) {
 				return true, nil
@@ -222,11 +222,12 @@ func (resp *HTTPResponse) PrintJSON() {
 	obj := make(map[string]interface{})
 	err := json.Unmarshal([]byte(resp.Body), &obj)
 	if err != nil {
-		log.Fatalln(err)
+		panic(err)
 	}
 	bb, err := json.MarshalIndent(obj, "", "	")
 	if err != nil {
-		log.Fatalln(err)
+		// notest
+		panic(err)
 	}
 	log.Println("\n", string(bb))
 }

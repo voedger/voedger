@@ -162,7 +162,7 @@ func TestDeployAppErrors(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("sys/cluster can not be deployed by c.cluster.DeployApp", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":1,"NumAppWorkspaces":1}}`, istructs.AppQName_sys_cluster)
+		body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":1,"NumAppWorkspaces":1}}`, istructs.AppQName_sys_cluster)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,
 			httpu.WithAuthorizeBy(sysToken), httpu.Expect400()).Println()
 	})
@@ -176,7 +176,7 @@ func TestDeployAppErrors(t *testing.T) {
 	}
 
 	t.Run("409 conflict on try to deploy with different NumPartitions", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`,
+		body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d,"NumAppWorkspaces":%d}}`,
 			istructs.AppQName_test1_app1,
 			test1App1DeploymentDescriptor.NumParts+1, test1App1DeploymentDescriptor.NumAppWorkspaces)
 		resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,
@@ -188,7 +188,7 @@ func TestDeployAppErrors(t *testing.T) {
 	})
 
 	t.Run("409 conflict on try to deploy with different NumAppPartitions", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`,
+		body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d,"NumAppWorkspaces":%d}}`,
 			istructs.AppQName_test1_app1,
 			test1App1DeploymentDescriptor.NumParts, test1App1DeploymentDescriptor.NumAppWorkspaces+1)
 		resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,

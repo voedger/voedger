@@ -85,22 +85,22 @@ func (uu *WithUniques) setUniqueField(name appdef.FieldName) {
 	uu.field = fld
 }
 
-func (uu WithUniques) UniqueByName(name appdef.QName) appdef.IUnique {
+func (uu *WithUniques) UniqueByName(name appdef.QName) appdef.IUnique {
 	if u, ok := uu.uniques[name]; ok {
 		return u
 	}
 	return nil
 }
 
-func (uu WithUniques) UniqueCount() int {
+func (uu *WithUniques) UniqueCount() int {
 	return len(uu.uniques)
 }
 
-func (uu WithUniques) UniqueField() appdef.IField {
+func (uu *WithUniques) UniqueField() appdef.IField {
 	return uu.field
 }
 
-func (uu WithUniques) Uniques() map[appdef.QName]appdef.IUnique {
+func (uu *WithUniques) Uniques() map[appdef.QName]appdef.IUnique {
 	return uu.uniques
 }
 

@@ -383,7 +383,7 @@ func TestUsersCreate(t *testing.T) {
 	}
 	verifiedEmailToken, err := vit.ITokens.IssueToken(istructs.AppQName_sys_registry, 10*time.Minute, &p)
 	require.NoError(err)
-	body := fmt.Sprintf(`{"verifiedEmailToken": "%s","password": "123","displayName": "%s"}`, verifiedEmailToken, login)
+	body := fmt.Sprintf(`{"verifiedEmailToken": %q,"password": "123","displayName": %q}`, verifiedEmailToken, login)
 	vit.POST("api/v2/apps/test1/app1/users", body).Println()
 
 	// try to sign in

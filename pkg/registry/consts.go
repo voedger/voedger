@@ -42,7 +42,7 @@ const (
 )
 
 var (
-	validLoginRegexp                                  = regexp.MustCompile(`^[a-z0-9!#$%&'*+\-\/=.?^_{|}~@]+$`) // https://dev.untill.com/projects/#!537026
+	validLoginRegexp                                  = regexp.MustCompile(`^[a-z0-9!#$%&'*+\-/=.?^_{|}~@]+$`) // https://dev.untill.com/projects/#!537026
 	QNameViewLoginIdx                                 = appdef.NewQName(RegistryPackage, "LoginIdx")
 	qNameCmdChangePassword                            = appdef.NewQName(RegistryPackage, "ChangePassword")
 	QNameProjectorLoginIdx                            = appdef.NewQName(RegistryPackage, "ProjectorLoginIdx")

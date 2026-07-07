@@ -23,7 +23,7 @@ type extensionEngine struct {
 	statelessFuncs iextengine.BuiltInExtFuncs
 }
 
-func (e extensionEngine) SetLimits(limits iextengine.ExtensionLimits) {}
+func (e extensionEngine) SetLimits(iextengine.ExtensionLimits) {}
 
 func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 	defer func() {
@@ -42,14 +42,14 @@ func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, i
 	return undefinedExtension(e.app, extName.String())
 }
 
-func (e extensionEngine) Close(ctx context.Context) {}
+func (e extensionEngine) Close(context.Context) {}
 
 func (f extensionEngineFactory) New(_ context.Context, app appdef.AppQName, _ []iextengine.ExtensionModule, _ *iextengine.ExtEngineConfig, numEngines uint) (result []iextengine.IExtensionEngine, err error) {
 	result = make([]iextengine.IExtensionEngine, numEngines)
-	for i := uint(0); i < numEngines; i++ {
+	for i := range numEngines {
 		result[i] = &extensionEngine{app, f.funcs, f.statelessFuncs}
 	}
-	return
+	return result, nil
 }
 
 func (f extensionEngineFactory) AppFuncs() iextengine.BuiltInAppExtFuncs { return f.funcs }

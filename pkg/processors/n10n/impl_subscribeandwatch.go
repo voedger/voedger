@@ -42,7 +42,7 @@ func subscribeAndWatchPipeline(requestCtx context.Context, p *implIN10NProc) pip
 	)
 }
 
-func (p *implIN10NProc) validateToken(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) validateToken(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	n10nWP.appTokens = p.appTokensFactory.New(n10nWP.appQName)
 	_, err = n10nWP.appTokens.ValidateToken(n10nWP.token, &n10nWP.principalPayload)
 
@@ -52,13 +52,13 @@ func (p *implIN10NProc) validateToken(ctx context.Context, n10nWP *n10nWorkpiece
 	return coreutils.WrapSysError(err, http.StatusUnauthorized)
 }
 
-func (p *implIN10NProc) getSubjectLogin(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) getSubjectLogin(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	subjectLogin := n10nWP.principalPayload.Login
 	n10nWP.subjectLogin = istructs.SubjectLogin(subjectLogin)
 	return nil
 }
 
-func parseSubscribeAndWatchArgs(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func parseSubscribeAndWatchArgs(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	subscribeAndWatchArgs := n10nArgs{}
 	if err := coreutils.JSONUnmarshalDisallowUnknownFields(n10nWP.body, &subscribeAndWatchArgs); err != nil {
 		return fmt.Errorf("failed to unmarshal request body: %w", err)
@@ -92,7 +92,7 @@ func parseSubscribeAndWatchArgs(ctx context.Context, n10nWP *n10nWorkpiece) (err
 	return nil
 }
 
-func (p *implIN10NProc) getAppStructs(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) getAppStructs(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	n10nWP.appStructs, err = p.appStructsProvider.BuiltIn(n10nWP.appQName)
 	return err
 }
@@ -131,7 +131,7 @@ func (p *implIN10NProc) authnzEntities(ctx context.Context, n10nWP *n10nWorkpiec
 	return nil
 }
 
-func (p *implIN10NProc) newChannel(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) newChannel(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	n10nWP.channelID, n10nWP.channelCleanup, err = p.n10nBroker.NewChannel(n10nWP.subjectLogin, n10nWP.expiresIn)
 	if err == nil {
 		n10nWP.logCtx = logger.WithContextAttrs(n10nWP.logCtx, map[string]any{
@@ -141,23 +141,23 @@ func (p *implIN10NProc) newChannel(ctx context.Context, n10nWP *n10nWorkpiece) (
 	return err
 }
 
-func initResponse(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func initResponse(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	n10nWP.responseWriter = n10nWP.responder.StreamEvents()
 	return nil
 }
 
-func sendChannelIDSSEEvent(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func sendChannelIDSSEEvent(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	return n10nWP.responseWriter.Write(fmt.Sprintf("event: channelId\ndata: %s\n\n", n10nWP.channelID))
 }
 
-func (p *implIN10NProc) subscribe(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) subscribe(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	for _, sub := range n10nWP.subscriptions {
 		projectionKey := in10n.ProjectionKey{
 			App:        n10nWP.appQName,
 			Projection: sub.entity,
 			WS:         sub.wsid,
 		}
-		if err = p.n10nBroker.Subscribe(n10nWP.channelID, projectionKey); err != nil {
+		if err := p.n10nBroker.Subscribe(n10nWP.channelID, projectionKey); err != nil {
 			logger.ErrorCtx(n10nProjectionLogCtx(n10nWP.logCtx, projectionKey), "n10n.subscribe.error", err)
 			return fmt.Errorf("subscribe failed: %w", err)
 		}
@@ -166,7 +166,7 @@ func (p *implIN10NProc) subscribe(ctx context.Context, n10nWP *n10nWorkpiece) (e
 	return nil
 }
 
-func logSubscribeAndWatchSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func logSubscribeAndWatchSuccess(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	if logger.IsVerbose() {
 		for _, pk := range n10nWP.subscribedProjectionKeys {
 			logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.subscribe&watch.success")
@@ -175,13 +175,14 @@ func logSubscribeAndWatchSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (er
 	return nil
 }
 
-func (p *implIN10NProc) watchChannel(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) watchChannel(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	p.goroutinesWG.Add(1)
 	watchChannelCtx, cancel := context.WithCancel(n10nWP.requestCtx)
 	go func() {
 		defer p.goroutinesWG.Done()
 		defer cancel()
 		// unsubscribe and channel cleanup is done within WatchChannel
+		//nolint:contextcheck // callback signature is fixed by IN10NBroker.WatchChannel; uses captured watchChannelCtx by design
 		p.n10nBroker.WatchChannel(watchChannelCtx, n10nWP.channelID, func(projection in10n.ProjectionKey, offset istructs.Offset) {
 			sseMessage := fmt.Sprintf("event: %s\ndata: %d\n\n", projection.ToJSON(), offset)
 			projCtx := n10nProjectionLogCtx(n10nWP.logCtx, projection)

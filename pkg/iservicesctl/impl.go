@@ -19,7 +19,6 @@ type servicesController struct {
 }
 
 func (sc *servicesController) PrepareAndRun(ctx context.Context, services map[string]iservices.IService) (join func(ctx context.Context), err error) {
-
 	sc.numOfServices += len(services)
 
 	prepared := make(map[string]iservices.IService)
@@ -68,7 +67,6 @@ func (sc *servicesController) PrepareAndRun(ctx context.Context, services map[st
 			service.Run(ctx)
 			logger.Info("service stopped:", serviceName)
 		}(k, s)
-
 	}
 
 	join = func(ctx context.Context) { joinServices(ctx, runningServices) }
@@ -77,7 +75,6 @@ func (sc *servicesController) PrepareAndRun(ctx context.Context, services map[st
 
 //go:noinline
 func joinServices(ctx context.Context, runningServices *sync.WaitGroup) {
-
 	logger.Info("waiting for ctx...")
 	<-ctx.Done()
 
@@ -85,5 +82,4 @@ func joinServices(ctx context.Context, runningServices *sync.WaitGroup) {
 	runningServices.Wait()
 
 	logger.Info("all services stopped")
-
 }

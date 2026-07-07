@@ -11,11 +11,10 @@ import (
 
 // Extract IService fields of a struct which is supposed to be a result of wire to a map[string]IService
 func WiredStructPtrToMap(addresOfWiredStruct interface{}) (res map[string]IService) {
-
 	res = make(map[string]IService)
 	val := reflect.ValueOf(addresOfWiredStruct).Elem()
 
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		valueField := val.Field(i)
 		typeField := val.Type().Field(i)
 		service, ok := valueField.Interface().(IService)

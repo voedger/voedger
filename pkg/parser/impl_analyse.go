@@ -7,6 +7,7 @@ package parser
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/alecthomas/participle/v2/lexer"
@@ -442,7 +443,6 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 			// Store the operation-to-columns mapping in the grant
 			grant.opColumns = opColumns
 		}
-
 	}
 
 	grant.workspace = c.mustCurrentWorkspace()
@@ -508,10 +508,8 @@ func analyzeStorage(u *StorageStmt, c *iterateCtx) {
 }
 
 func analyzeRate(r *RateStmt, c *iterateCtx) {
-
 	if r.Value.Variable != nil {
 		resolve := func(d *DeclareStmt, p *PackageSchemaAST) error {
-
 			var count int32
 			var resolved bool
 			if c.variableResolver != nil {
@@ -633,13 +631,12 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	}
 
 	if limit.AllItems != nil {
-		if limit.AllItems.Commands {
+		switch {
+		case limit.AllItems.Commands, limit.AllItems.Queries:
 			allowedOps(set.From(appdef.OperationKind_Execute))
-		} else if limit.AllItems.Queries {
-			allowedOps(set.From(appdef.OperationKind_Execute))
-		} else if limit.AllItems.Views {
+		case limit.AllItems.Views:
 			allowedOps(set.From(appdef.OperationKind_Select))
-		} else {
+		default:
 			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 		}
 		if limit.AllItems.WithTag != nil {
@@ -653,13 +650,12 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	}
 
 	if limit.EachItem != nil {
-		if limit.EachItem.Commands {
+		switch {
+		case limit.EachItem.Commands, limit.EachItem.Queries:
 			allowedOps(set.From(appdef.OperationKind_Execute))
-		} else if limit.EachItem.Queries {
-			allowedOps(set.From(appdef.OperationKind_Execute))
-		} else if limit.EachItem.Views {
+		case limit.EachItem.Views:
 			allowedOps(set.From(appdef.OperationKind_Select))
-		} else {
+		default:
 			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 		}
 		if limit.EachItem.WithTag != nil {
@@ -690,14 +686,12 @@ func analyzeDatatype(dt *DataType, c *iterateCtx, isTable bool) {
 			c.stmtErr(&bb.Pos, ErrMaxFieldLengthTooLarge)
 		}
 	}
-
 }
 
 func analyzeView(view *ViewStmt, c *iterateCtx) {
 	view.pkRef = nil
 	fields := make(map[string]int)
 	for i := range view.Items {
-
 		fe := &view.Items[i]
 		if fe.PrimaryKey != nil {
 			if view.pkRef != nil {
@@ -869,7 +863,6 @@ func analyzeTag(tag *TagStmt, c *iterateCtx) {
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
-
 	resolve := func(qn DefQName) {
 		typ, _, err := lookupInCtx[*TypeStmt](qn, c)
 		if typ == nil && err == nil {
@@ -913,7 +906,6 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 		if err := resolveInCtx(*query.Param.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&query.Param.Def.Pos, err)
 		}
-
 	}
 
 	if query.Returns == nil {
@@ -1054,7 +1046,6 @@ func analyzeProjector(prj *ProjectorStmt, c *iterateCtx) {
 		for i := range trigger.QNames {
 			defQName := &trigger.QNames[i]
 			if len(trigger.TableActions) > 0 {
-
 				wd, pkg, err := lookupInCtx[*WsDescriptorStmt](*defQName, c)
 				if err != nil {
 					c.stmtErr(&defQName.Pos, err)
@@ -1218,7 +1209,6 @@ func analyzeType(v *TypeStmt, c *iterateCtx) {
 }
 
 func analyzeWorkspace(v *WorkspaceStmt, c *iterateCtx) {
-
 	wsc := &wsCtx{
 		pkg:  c.pkg,
 		ws:   v,
@@ -1230,14 +1220,12 @@ func analyzeWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	var checkChain func(qn DefQName) error
 
 	checkChain = func(qn DefQName) error {
-		resolveFunc := func(w *WorkspaceStmt, wp *PackageSchemaAST) error {
+		resolveFunc := func(w *WorkspaceStmt, _ *PackageSchemaAST) error {
 			if !w.Abstract {
 				return ErrBaseWorkspaceMustBeAbstract
 			}
-			for i := range chain {
-				if chain[i] == qn {
-					return ErrCircularReferenceInInherits
-				}
+			if slices.Contains(chain, qn) {
+				return ErrCircularReferenceInInherits
 			}
 			chain = append(chain, qn)
 			for _, w := range w.Inherits {
@@ -1285,7 +1273,6 @@ func analyzeWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 		if s.Grant != nil && revokeFound {
 			c.stmtErr(&s.Grant.Pos, ErrGrantFollowsRevoke)
 		}
-
 	}
 }
 
@@ -1319,10 +1306,8 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 				c.stmtErr(&ws.Pos, err)
 				return
 			}
-			for _, item := range added {
-				if item == baseWs {
-					return // circular reference
-				}
+			if slices.Contains(added, baseWs) {
+				return // circular reference
 			}
 
 			addFromInheritedWs(baseWs, wsctx)
@@ -1390,7 +1375,6 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 			nestedTable.workspace = getCurrentWorkspace(c)
 			analyseWith(&nestedTable.With, nestedTable, c)
 			analyseNestedTables(nestedTable.Items, rootTableKind, c)
-
 		}
 	}
 }
@@ -1428,7 +1412,7 @@ func lookupField(items []TableItemExpr, name Ident, c *iterateCtx) (found bool) 
 			}
 		}
 		if item.FieldSet != nil {
-			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, schema *PackageSchemaAST) error {
+			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, _ *PackageSchemaAST) error {
 				found = lookupField(t.Items, name, c)
 				return nil
 			}); err != nil {
@@ -1566,7 +1550,7 @@ func analyseViewRefFields(items []ViewItemExpr, c *iterateCtx) {
 		if item.RefField != nil {
 			rf := item.RefField
 			for i := range rf.RefDocs {
-				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, tblPkg *PackageSchemaAST) error {
+				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
@@ -1614,12 +1598,10 @@ func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []tableNod
 		}
 		return nil
 	}
-	err = vf(table)
-	return
+	return chain, vf(table)
 }
 
 func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (kind appdef.TypeKind, singleton bool, err error) {
-
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
 		if node.pkg.Path == appdef.SysPackage {

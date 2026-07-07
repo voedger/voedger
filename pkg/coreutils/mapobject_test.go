@@ -99,7 +99,7 @@ func TestMapObject(t *testing.T) {
 
 	t.Run("wrong types", func(t *testing.T) {
 		mo := MapObject{
-			"fld": reflect.TypeOf(0),
+			"fld": reflect.TypeFor[int](),
 		}
 
 		cases := []struct {

@@ -31,7 +31,7 @@ func docsHandler() apiPathHandler {
 		exec:            docsExec,
 	}
 }
-func docsSetRequestType(ctx context.Context, qw *queryWork) error {
+func docsSetRequestType(_ context.Context, qw *queryWork) error {
 	if qw.iDoc = appdef.CDoc(qw.iWorkspace.Type, qw.msg.QName()); qw.iDoc != nil {
 		return nil
 	}
@@ -52,14 +52,14 @@ func docsSetRequestType(ctx context.Context, qw *queryWork) error {
 	}
 	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
 }
-func docsSetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
+func docsSetResultType(_ context.Context, qw *queryWork, _ istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iDoc
 	if qw.resultType == nil {
 		qw.resultType = qw.iRecord
 	}
 	return nil
 }
-func docsAuthorizeResult(ctx context.Context, qw *queryWork) (err error) {
+func docsAuthorizeResult(_ context.Context, qw *queryWork) (err error) {
 	ws := qw.iWorkspace
 	if ws == nil {
 		return errWorkspaceIsNil
@@ -108,7 +108,7 @@ func docsRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	sender := qw.getObjectSender()
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
-	return
+	return nil
 }
 
 func docsExec(_ context.Context, qw *queryWork) (err error) {

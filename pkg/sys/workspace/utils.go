@@ -24,11 +24,11 @@ func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]i
 	aob := reb.ArgumentObjectBuilder()
 	aob.PutQName(appdef.SystemField_QName, t.QName())
 	aob.PutRecordID(appdef.SystemField_ID, 1)
-	if err = coreutils.MapToObject(data, aob); err != nil {
+	if err := coreutils.MapToObject(data, aob); err != nil {
 		return err
 	}
 	_, err = aob.Build()
-	return
+	return err
 }
 
 // TODO: works correct in Community Edition only. Have >1 VVM -> need to lock in a different way
@@ -40,7 +40,7 @@ func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID
 	nextBaseWSID := istructs.FirstBaseUserWSID
 	nextWSIDGlobalLock.Lock()
 	defer nextWSIDGlobalLock.Unlock()
-	err := vr.Read(ctx, istructs.NullWSID, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
+	err := vr.Read(ctx, istructs.NullWSID, kb, func(_ istructs.IKey, value istructs.IValue) (err error) {
 		if nextBaseWSID != istructs.FirstBaseUserWSID {
 			panic(">1 records in view NextBaseWSID")
 		}

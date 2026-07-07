@@ -8,7 +8,6 @@ package istructsmem
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -436,7 +435,7 @@ func Test_fieldValue(t *testing.T) {
 
 	t.Run("should return correct field values", func(t *testing.T) {
 
-		t.Run(fmt.Sprint(test.testCDoc), func(t *testing.T) {
+		t.Run(test.testCDoc.String(), func(t *testing.T) {
 			rec := test.newTestCDoc(100500)
 			tests := []struct {
 				f appdef.FieldName
@@ -466,7 +465,7 @@ func Test_fieldValue(t *testing.T) {
 			}
 		})
 
-		t.Run(fmt.Sprint(test.testViewRecord.name), func(t *testing.T) {
+		t.Run(test.testViewRecord.name.String(), func(t *testing.T) {
 			vv := test.newTestViewValue()
 			tests := []struct {
 				f appdef.FieldName

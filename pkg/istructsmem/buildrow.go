@@ -12,28 +12,19 @@ import (
 )
 
 func buildRow(w istructs.IRowWriter) (reader istructs.IRowReader, err error) {
-
-	if r, ok := w.(*rowType); ok {
-		reader = r
-		err = r.build()
-	} else if r, ok := w.(*recordType); ok {
-		reader = r
-		err = r.build()
-	} else if r, ok := w.(*objectType); ok {
-		reader = r
-		err = r.build()
-	} else if r, ok := w.(*keyType); ok {
-		reader = r
-		err = r.build()
-	} else if r, ok := w.(*valueType); ok {
-		reader = r
-		err = r.build()
-	} else {
+	switch r := w.(type) {
+	case *rowType:
+		reader, err = r, r.build()
+	case *recordType:
+		reader, err = r, r.build()
+	case *objectType:
+		reader, err = r, r.build()
+	case *keyType:
+		reader, err = r, r.build()
+	case *valueType:
+		reader, err = r, r.build()
+	default:
 		err = errors.ErrUnsupported
-	}
-
-	if err != nil {
-		reader = nil
 	}
 	return reader, err
 }

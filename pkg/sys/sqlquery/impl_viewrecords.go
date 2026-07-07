@@ -5,6 +5,7 @@
 package sqlquery
 
 import (
+	"maps"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -99,9 +100,7 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 
 	return appStructs.ViewRecords().Read(ctx, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 		data := coreutils.FieldsToMap(key, appStructs.AppDef(), getFilter(f.filter))
-		for k, v := range coreutils.FieldsToMap(value, appStructs.AppDef(), getFilter(f.filter)) {
-			data[k] = v
-		}
+		maps.Copy(data, coreutils.FieldsToMap(value, appStructs.AppDef(), getFilter(f.filter)))
 		bb, err := json.Marshal(data)
 		if err != nil {
 			return err

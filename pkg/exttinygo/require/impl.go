@@ -39,7 +39,7 @@ func EqualBytes(expected, actual []byte) {
 	if len(expected) != len(actual) {
 		panic("Byte array lengths not equal")
 	}
-	for i := 0; i < len(expected); i++ {
+	for i := range expected {
 		if expected[i] != actual[i] {
 			panic("Byte arrays not equal")
 		}

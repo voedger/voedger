@@ -66,7 +66,7 @@ func Test_Storages(t *testing.T) {
 
 	t.Run("should be ok to find builded projectors", func(t *testing.T) {
 
-		t.Run(fmt.Sprint(prjName), func(t *testing.T) {
+		t.Run(prjName.String(), func(t *testing.T) {
 			prj := appdef.Projector(app.Type, prjName)
 			require.NotNil(prj)
 

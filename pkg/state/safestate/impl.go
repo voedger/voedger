@@ -22,7 +22,6 @@ type safeState struct {
 }
 
 func (s *safeState) KeyBuilder(storage, entityFull string) safe.TKeyBuilder {
-
 	storageQname := appdef.MustParseQName(storage)
 	var entityQname appdef.QName
 	if entityFull == "" {
@@ -115,7 +114,7 @@ func (s *safeState) ReadValues(kb safe.TKeyBuilder, callback func(safe.TKey, saf
 	if err != nil {
 		panic(err)
 	}
-	//TODO: cleanup keys and values
+	// TODO: cleanup keys and values
 }
 
 // Key Builder
@@ -128,7 +127,7 @@ func (s *safeState) KeyBuilderPutInt64(key safe.TKeyBuilder, name string, value 
 }
 
 func (s *safeState) KeyBuilderPutRecordID(key safe.TKeyBuilder, name string, value int64) {
-	//nolint:gosec
+	// nolint gosec
 	s.kb(key).PutRecordID(name, istructs.RecordID(value))
 }
 

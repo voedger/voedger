@@ -20,12 +20,14 @@ func NewTestAPI(processorKind int, packagePath string, createWorkspaces ...tests
 }
 
 func NewCommandTest(t *testing.T, iCommand teststate.ICommand, extensionFunc func()) *teststate.CommandTestState {
+	t.Helper()
 	ts := teststate.NewCommandTestState(t, iCommand, extensionFunc)
 	internal.SafeStateAPI = safestate.Provide(ts, nil)
 	return ts
 }
 
 func NewProjectorTest(t *testing.T, extensionFunc func()) *teststate.ProjectorTestState {
+	t.Helper()
 	ts := teststate.NewProjectorTestState(t, extensionFunc)
 	internal.SafeStateAPI = safestate.Provide(ts, nil)
 	return ts

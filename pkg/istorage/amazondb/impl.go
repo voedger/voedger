@@ -188,10 +188,7 @@ func (s *implIAppStorage) QueryTTL(pKey []byte, cCols []byte) (ttlInSeconds int,
 	}
 
 	// Return remaining TTL in seconds
-	ttlInSeconds = int(expireAt.Sub(now).Seconds())
-	if ttlInSeconds < 0 {
-		ttlInSeconds = 0
-	}
+	ttlInSeconds = max(int(expireAt.Sub(now).Seconds()), 0)
 
 	return ttlInSeconds, true, nil
 }
@@ -441,7 +438,7 @@ func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, fin
 	if len(result.Items) > 0 {
 		for _, item := range result.Items {
 			if ctx.Err() != nil {
-				return nil // TCK contract
+				return nil //nolint:nilerr // TCK contract
 			}
 
 			if checkTTL && isExpired(item[expireAtAttributeName], now) {

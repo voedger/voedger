@@ -93,11 +93,14 @@ func (b *httpStorageKeyBuilder) PutString(name, value string) {
 }
 
 func (b *httpStorageKeyBuilder) String() string {
-	ss := make([]string, 0, httpStorageKeyBuilderStringerSliceCap)
-	ss = append(ss, b.method)
-	ss = append(ss, b.url)
-	ss = append(ss, string(b.body))
-	return strings.Join(ss, " ")
+	var sb strings.Builder
+	sb.Grow(len(b.method) + 1 + len(b.url) + 1 + len(b.body))
+	sb.WriteString(b.method)
+	sb.WriteByte(' ')
+	sb.WriteString(b.url)
+	sb.WriteByte(' ')
+	sb.Write(b.body)
+	return sb.String()
 }
 
 func (b *httpStorageKeyBuilder) PutBool(name string, value bool) {

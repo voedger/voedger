@@ -54,11 +54,11 @@ func WireSyncOperator(name string, op ISyncOperator) *WiredOperator {
 	}
 }
 
-func (wo WiredOperator) isActive() bool {
+func (wo *WiredOperator) isActive() bool {
 	return wo.ctx.Err() == nil && wo.err == nil
 }
 
-func (wo WiredOperator) forwardIfErrorAsync(work IWorkpiece) bool {
+func (wo *WiredOperator) forwardIfErrorAsync(work IWorkpiece) bool {
 	if work == nil {
 		pipelinePanic("nil in puller_async stdin", wo.name, wo.wctx)
 	}
@@ -71,7 +71,7 @@ func (wo WiredOperator) forwardIfErrorAsync(work IWorkpiece) bool {
 	return false
 }
 
-func (wo WiredOperator) String() string {
+func (wo *WiredOperator) String() string {
 	return "operator: " + wo.name
 }
 

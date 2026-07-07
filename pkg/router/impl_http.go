@@ -53,7 +53,7 @@ func (s *httpsService) RunEx(ctx context.Context, started func()) {
 }
 
 // pipeline.IServiceBase
-func (s *routerService) Prepare(work interface{}) error {
+func (s *routerService) Prepare(interface{}) error {
 	s.router = mux.NewRouter()
 
 	// https://dev.untill.com/projects/#!627072
@@ -89,11 +89,12 @@ func (s *routerService) Stop() {
 }
 
 func (s *httpServer) prepareBasicServer(handler http.Handler) (err error) {
+	//nolint:noctx // lifetime is managed by IServer engine
 	if s.listener, err = net.Listen("tcp", s.listenAddress); err != nil {
 		return err
 	}
 
-	s.listeningPort.Store(uint32(s.listener.Addr().(*net.TCPAddr).Port)) // nolint G115
+	s.listeningPort.Store(uint32(s.listener.Addr().(*net.TCPAddr).Port)) //nolint G115
 
 	if s.UseProxyProtocol {
 		s.listener = &proxyproto.Listener{Listener: s.listener}
@@ -117,7 +118,7 @@ func (s *httpServer) preRun(ctx context.Context) {
 		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
 		logger.LogAttr_Extension: s.name,
 	})
-	s.server.BaseContext = func(l net.Listener) context.Context {
+	s.server.BaseContext = func(net.Listener) context.Context {
 		return s.rootLogCtx // need to track both client disconnect and app finalize
 	}
 	s.server.ErrorLog = logger.NewStdErrorLogBridge(s.rootLogCtx, "endpoint.http.error", logger.WithFilter(skipAnnoyingErrors...))
@@ -272,7 +273,7 @@ func corsHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Blob-Name")
-		if r.Method == "OPTIONS" {
+		if r.Method == http.MethodOptions {
 			return
 		}
 		h.ServeHTTP(w, r)
@@ -280,7 +281,7 @@ func corsHandler(h http.Handler) http.HandlerFunc {
 }
 
 func checkHandler() http.HandlerFunc {
-	return func(resp http.ResponseWriter, req *http.Request) {
+	return func(resp http.ResponseWriter, _ *http.Request) {
 		if _, err := resp.Write([]byte("ok")); err != nil {
 			log.Println("failed to write 'ok' response:", err)
 		}

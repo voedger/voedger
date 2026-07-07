@@ -43,14 +43,14 @@ func cdocsSetRequestType(_ context.Context, qw *queryWork) (err error) {
 	} else {
 		f = qw.iWorkspace.Type
 	}
-	if qw.iDoc = appdef.CDoc(f, qw.msg.QName()); qw.iDoc != nil {
-		return
+	if qw.iDoc = appdef.CDoc(f, qw.msg.QName()); qw.iDoc == nil {
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
 	}
-	return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("document or record %s is not defined in %v", qw.msg.QName(), qw.iWorkspace))
+	return nil
 }
 func cdocsSetResultType(_ context.Context, qw *queryWork, _ istructsmem.IStatelessResources) (err error) {
 	qw.resultType = qw.iDoc
-	return
+	return nil
 }
 func cdocsAuthorizeResult(_ context.Context, qw *queryWork) (err error) {
 	ws := qw.iWorkspace
@@ -99,7 +99,7 @@ func cdocsRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "CDocs rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = respWriterGetter
-	return
+	return nil
 }
 func cdocsExec(ctx context.Context, qw *queryWork) (err error) {
 	kb := qw.appStructs.ViewRecords().KeyBuilder(collection.QNameCollectionView)
@@ -108,7 +108,7 @@ func cdocsExec(ctx context.Context, qw *queryWork) (err error) {
 	return qw.appStructs.ViewRecords().Read(ctx, qw.msg.WSID(), kb, func(_ istructs.IKey, value istructs.IValue) (err error) {
 		r := value.AsRecord(collection.Field_Record)
 		if r.QName() != qw.msg.QName() {
-			return
+			return nil
 		}
 		obj := objectBackedByMap{}
 		obj.data = coreutils.FieldsToMap(r, qw.appStructs.AppDef())

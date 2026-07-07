@@ -487,7 +487,6 @@ func TestOrderOperator_Flush(t *testing.T) {
 }
 
 func TestOrderOperator_DoAsync(t *testing.T) {
-	//TODO
 	require := require.New(t)
 	release := false
 	work := testWorkpiece{

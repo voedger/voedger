@@ -39,11 +39,11 @@ func (o *CounterOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece) (
 	}()
 	if o.counter >= o.startFrom && o.limiter < o.count {
 		outWork = work
-		o.limiter += 1
+		o.limiter++
 	}
-	o.counter += 1
+	o.counter++
 	if outWork == nil {
 		work.Release()
 	}
-	return
+	return outWork, nil
 }

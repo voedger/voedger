@@ -52,17 +52,17 @@ func (id RecordID) IsRaw() bool {
 // Implements IRowReader
 type NullRowReader struct{}
 
-func (*NullRowReader) AsInt8(string) int8               { return 0 } // #3435 [~server.vsql.smallints/cmp.istructs~impl]
-func (*NullRowReader) AsInt16(string) int16             { return 0 } // #3435 [~server.vsql.smallints/cmp.istructs~impl]
-func (*NullRowReader) AsInt32(name string) int32        { return 0 }
-func (*NullRowReader) AsInt64(name string) int64        { return 0 }
-func (*NullRowReader) AsFloat32(name string) float32    { return 0 }
-func (*NullRowReader) AsFloat64(name string) float64    { return 0 }
-func (*NullRowReader) AsBytes(name string) []byte       { return nil }
-func (*NullRowReader) AsString(name string) string      { return "" }
-func (*NullRowReader) AsRecordID(name string) RecordID  { return NullRecordID }
-func (*NullRowReader) AsQName(name string) appdef.QName { return appdef.NullQName }
-func (*NullRowReader) AsBool(name string) bool          { return false }
+func (*NullRowReader) AsInt8(string) int8          { return 0 } // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+func (*NullRowReader) AsInt16(string) int16        { return 0 } // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+func (*NullRowReader) AsInt32(string) int32        { return 0 }
+func (*NullRowReader) AsInt64(string) int64        { return 0 }
+func (*NullRowReader) AsFloat32(string) float32    { return 0 }
+func (*NullRowReader) AsFloat64(string) float64    { return 0 }
+func (*NullRowReader) AsBytes(string) []byte       { return nil }
+func (*NullRowReader) AsString(string) string      { return "" }
+func (*NullRowReader) AsRecordID(string) RecordID  { return NullRecordID }
+func (*NullRowReader) AsQName(string) appdef.QName { return appdef.NullQName }
+func (*NullRowReader) AsBool(string) bool          { return false }
 func (*NullRowReader) RecordIDs(bool) func(func(string, RecordID) bool) {
 	return func(func(string, RecordID) bool) {}
 }

@@ -33,6 +33,7 @@ func Benchmark_BasicUsage(b *testing.B) {
 }
 
 func testValues(b *testing.B) []byte {
+	b.Helper()
 	b.StopTimer()
 
 	values := make([]byte, 0, 256)
@@ -47,11 +48,12 @@ func testValues(b *testing.B) []byte {
 }
 
 func checkResult(b *testing.B, r []byte) {
+	b.Helper()
 	b.StopTimer()
 
 	require.Len(b, r, 256)
 
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		require.Equal(b, byte(i), r[i])
 	}
 
@@ -59,7 +61,8 @@ func checkResult(b *testing.B, r []byte) {
 }
 
 func bench_Set(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	for range b.N {
 		v := testValues(b)
 
 		set := From(v...)
@@ -70,7 +73,8 @@ func bench_Set(b *testing.B) {
 }
 
 func bench_Map(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	for range b.N {
 		v := testValues(b)
 
 		set := make(map[byte]struct{})
@@ -90,7 +94,8 @@ func bench_Map(b *testing.B) {
 }
 
 func bench_Slice(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	for range b.N {
 		v := testValues(b)
 
 		set := make([]byte, 0, 256)
@@ -128,11 +133,12 @@ func Benchmark_WithClear(b *testing.B) {
 }
 
 func checkClearResult(b *testing.B, r []byte) {
+	b.Helper()
 	b.StopTimer()
 
 	require.Len(b, r, 128)
 
-	for i := 0; i < 128; i++ {
+	for i := range 128 {
 		require.Equal(b, 2*byte(i), r[i])
 	}
 
@@ -140,7 +146,8 @@ func checkClearResult(b *testing.B, r []byte) {
 }
 
 func bench_SetWithClear(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	for range b.N {
 		v := testValues(b)
 
 		set := From(v...)
@@ -156,7 +163,8 @@ func bench_SetWithClear(b *testing.B) {
 }
 
 func bench_MapWithClear(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	for range b.N {
 		v := testValues(b)
 
 		set := make(map[byte]struct{})
@@ -182,7 +190,8 @@ func bench_MapWithClear(b *testing.B) {
 }
 
 func bench_SliceWithClear(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.Helper()
+	for range b.N {
 		v := testValues(b)
 
 		set := make([]byte, 0, 256)

@@ -50,11 +50,10 @@ func NewAsyncPipeline(ctx context.Context, name string, first *WiredOperator, ot
 		op.wctx = pipeline.wctx
 	}
 	for _, op := range pipeline.operators {
-		if _, ok := op.Operator.(IAsyncOperator); ok {
-			go puller_async(op)
-		} else {
+		if _, ok := op.Operator.(IAsyncOperator); !ok {
 			panic("WiredOperator<ISyncOperator> not allowed in async pipeline")
 		}
+		go puller_async(op)
 	}
 	return pipeline
 }
@@ -80,7 +79,7 @@ func (p AsyncPipeline) Close() {
 func releaser() *WiredOperator {
 	return WireAsyncOperator(
 		"releaser",
-		NewAsyncOp(func(ctx context.Context, work IWorkpiece) (outWork IWorkpiece, err error) {
+		NewAsyncOp(func(_ context.Context, work IWorkpiece) (outWork IWorkpiece, err error) {
 			work.Release()
 			return nil, nil
 		}))

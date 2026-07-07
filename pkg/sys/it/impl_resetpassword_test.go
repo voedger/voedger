@@ -26,7 +26,7 @@ func TestBasicUsage_ResetPassword(t *testing.T) {
 
 	profileWSID := istructs.WSID(0)
 	token, code := InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, login.Name)
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, login.Name)
 		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body) // null auth policy
 
 		// here in test we're actually know the profileWSID. But in the realife we don't. So let's show how it should be got
@@ -35,14 +35,14 @@ func TestBasicUsage_ResetPassword(t *testing.T) {
 	})
 
 	// sys/registry/pseudo-profile-wsid/q.registry.IssueVerifiedValueTokenForResetPassword
-	body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
+	body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
 		istructs.AppQName_test1_app1)
 	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", body) // null auth policy
 	verifiedValueToken := resp.SectionRow()[0].(string)
 
 	// sys/registry/pseudo-profile-wsid/c.registry.ResetPasswordByEmail
 	newPwd := "newPwd"
-	body = fmt.Sprintf(`{"args":{"AppName":"%s"},"unloggedArgs":{"Email":"%s","NewPwd":"%s"}}`, istructs.AppQName_test1_app1, verifiedValueToken, newPwd)
+	body = fmt.Sprintf(`{"args":{"AppName":%q},"unloggedArgs":{"Email":%q,"NewPwd":%q}}`, istructs.AppQName_test1_app1, verifiedValueToken, newPwd)
 	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.ResetPasswordByEmail", body) // null auth policy
 
 	// expect no errors on login with new password
@@ -131,14 +131,14 @@ func TestIntiateResetPasswordErrors(t *testing.T) {
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 
 	t.Run("400 bad request on bad appQName", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"AppName":"wrong app","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, prn.Name)
+		body := fmt.Sprintf(`{"args":{"AppName":"wrong app","Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, prn.Name)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect400()).Println()
 	})
 
 	// note: test "called in non-AppWS" is senceless because now func is taken from the workspace -> 400 bad request + "func does not exist in the workspace" anyway
 
 	t.Run("400 bad request on an unknown login", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"unknown"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1)
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":"unknown"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, coreutils.GetPseudoWSID(istructs.NullWSID, "unknown", istructs.CurrentClusterID()), "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect400()).Println()
 	})
 }
@@ -205,20 +205,20 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 	t.Run("400 bad request on an unknown login", func(t *testing.T) {
 		unknownLogin := "unknown"
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, unknownLogin, istructs.CurrentClusterID())
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, unknownLogin)
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, unknownLogin)
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect400()).Println()
 	})
 
 	profileWSID := istructs.WSID(0)
 	token, code := InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 		resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 		profileWSID = istructs.WSID(resp.SectionRow()[1].(float64))
 		return resp
 	})
 
 	t.Run("400 bad request on bad appQName", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"wrong app"},"elements":[{"fields":["VerifiedValueToken"]}]}`,
+		body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":"wrong app"},"elements":[{"fields":["VerifiedValueToken"]}]}`,
 			token, code, profileWSID)
 		// note: was at profileWSID. It does not works since https://github.com/voedger/voedger/issues/1311
 		// because sys/registry:profileWSID workspace is not initialized -> call at pseudoProfileWSID
@@ -243,13 +243,13 @@ func TestResetPasswordLimits(t *testing.T) {
 		// deplete the real bucket
 		for range verifierRateMaxAllowed {
 			_, _ = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-				body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+				body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 				return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 			})
 		}
 
 		// next call -> limit exceeded
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect429())
 
 		// proceed to the next period to restore rates
@@ -257,7 +257,7 @@ func TestResetPasswordLimits(t *testing.T) {
 
 		// call again to get actual token and code
 		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+			body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 			resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 
 			// here in test we're actually know the profileWSID. But in the realife we don't. So let's show how it should be got:
@@ -269,7 +269,7 @@ func TestResetPasswordLimits(t *testing.T) {
 
 	t.Run("IssueVerifiedValueTokenForResetPassword", func(t *testing.T) {
 		wrongCode := code + "1"
-		wrongCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, wrongCode, profileWSID,
+		wrongCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, wrongCode, profileWSID,
 			istructs.AppQName_test1_app1)
 
 		// deplete the real bucket with wrong code calls
@@ -278,7 +278,7 @@ func TestResetPasswordLimits(t *testing.T) {
 		}
 
 		// next call with correct code -> 429 anyway because limit is exceeded
-		goodCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
+		goodCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
 			istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", goodCodeBody, httpu.Expect429())
 
@@ -287,10 +287,10 @@ func TestResetPasswordLimits(t *testing.T) {
 
 		// regenerate token and code because previous ones are expired already
 		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+			body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 			return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 		})
-		goodCodeBody = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
+		goodCodeBody = fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
 			istructs.AppQName_test1_app1)
 
 		// expect no errors now
