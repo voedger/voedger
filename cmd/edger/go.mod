@@ -1,6 +1,6 @@
 module github.com/voedger/voedger/cmd/edger
 
-go 1.26.4
+go 1.26.5
 
 replace github.com/voedger/voedger => ../..
 
