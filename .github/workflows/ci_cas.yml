@@ -28,9 +28,19 @@ jobs:
       shell: bash
       run: |
         container="${{ job.services.scylladb.id }}"
-        scylla_ip="$(docker inspect \
-          --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
-          "$container")"
+        if ! scylla_ip="$(docker inspect \
+            --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
+            "$container")"; then
+          echo "::error::Failed to inspect the Scylla service container"
+          docker ps -a --filter "id=$container"
+          exit 1
+        fi
+
+        if [[ -z "$scylla_ip" ]]; then
+          echo "::error::Failed to extract Scylla container IP address"
+          docker inspect "$container"
+          exit 1
+        fi
 
         echo "Scylla container IP: $scylla_ip"
 
