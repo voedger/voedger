@@ -5,6 +5,7 @@
 package coreutils
 
 import (
+	"maps"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -21,9 +22,9 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 		}
 	}()
 	switch kind {
-	case appdef.DataKind_int8: //#3435 small integer types
+	case appdef.DataKind_int8: // #3435 small integer types
 		return rr.AsInt8(name)
-	case appdef.DataKind_int16: //#3435 small integer types
+	case appdef.DataKind_int16: // #3435 small integer types
 		return rr.AsInt16(name)
 	case appdef.DataKind_int32:
 		return rr.AsInt32(name)
@@ -44,7 +45,7 @@ func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowRea
 	case appdef.DataKind_bool:
 		return rr.AsBool(name)
 	default:
-		panic("unsupported kind " + fmt.Sprint(kind) + " for field " + name)
+		panic("unsupported kind " + kind.String() + " for field " + name)
 	}
 }
 
@@ -74,7 +75,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 
 	qn := obj.AsQName(appdef.SystemField_QName)
 	if qn == appdef.NullQName {
-		return
+		return res
 	}
 	t := appDef.Type(qn)
 
@@ -90,11 +91,11 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 			}
 		}
 		if kind == appdef.DataKind_Record {
-			if v, ok := obj.(istructs.IValue); ok {
-				res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
-			} else {
+			v, ok := obj.(istructs.IValue)
+			if !ok {
 				panic("DataKind_Record field met -> IValue must be provided")
 			}
+			res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
 		} else {
 			res[fieldName] = ReadByKind(fieldName, kind, obj)
 		}
@@ -103,9 +104,10 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	if fields, ok := t.(appdef.IWithFields); ok {
 		var iFieldsToProcess []appdef.IField
 		if view, ok := t.(appdef.IView); ok {
-			if _, ok := obj.(istructs.IValue); ok {
+			switch obj.(type) {
+			case istructs.IValue:
 				iFieldsToProcess = view.Value().Fields()
-			} else if _, ok := obj.(istructs.IKey); ok {
+			case istructs.IKey:
 				iFieldsToProcess = view.Key().Fields()
 			}
 		} else if opts.allFields {
@@ -190,9 +192,7 @@ func JSONMapToCUDBody(data []map[string]interface{}) string {
 		c := CUD{
 			Fields: make(map[string]interface{}),
 		}
-		for field, value := range record {
-			c.Fields[field] = value
-		}
+		maps.Copy(c.Fields, record)
 		cuds = append(cuds, c)
 	}
 	return cuds.ToJSON()

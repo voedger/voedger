@@ -50,7 +50,7 @@ func GetCommandResponse(ctx context.Context, requestSender IRequestSender, req R
 		return responseMeta, cmdResp, coreutils.WrapSysErrorToExact(*responseErr, http.StatusInternalServerError)
 	}
 	var fe federation.FuncResponse
-	if err = json.Unmarshal([]byte(body), &fe); err != nil {
+	if err := json.Unmarshal([]byte(body), &fe); err != nil {
 		// notest
 		panic(err)
 	}

@@ -36,7 +36,6 @@ func New(cfg Config) (*Retrier, error) {
 // NextDelay computes the next delay using [Full Jitter algorithm from AWS](https://aws.amazon.com/ru/blogs/architecture/exponential-backoff-and-jitter/):
 // sleep = random_between(0, min(cap, base*2^attempt))
 func (r *Retrier) NextDelay() time.Duration {
-
 	// Saturating exponential: base * 2^attempt, capping at MaxInt64 on overflow.
 	nextDelay := saturatingMulPow2(r.cfg.BaseDelay, r.attempt)
 
