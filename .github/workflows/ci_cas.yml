@@ -24,6 +24,18 @@ jobs:
     - name: Checkout and Setup go
       uses: untillpro/ci-action/checkout-and-setup-go@main
 
+    - name: Wait for Scylla CQL
+      run: |
+        for attempt in {1..60}; do
+          if docker exec "${{ job.services.scylladb.id }}" cqlsh 127.0.0.1 9042 -e "DESCRIBE KEYSPACES" 2>/dev/null; then
+            exit 0
+          fi
+          echo "Waiting for Scylla CQL readiness, attempt ${attempt}/60..."
+          sleep 1
+        done
+        docker logs "${{ job.services.scylladb.id }}"
+        exit 1
+
     - name: Run Cassandra Implementation Tests
       working-directory: pkg/istorage/cas
       run: go test ./... -v -race
