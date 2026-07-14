@@ -178,22 +178,6 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 	return nil
 }
 
-// newStoredEvent builds a stored event that owns a private copy of data.
-//
-// The storage read callback provides data valid only during the call (it may
-// reference memory-mapped storage), whereas the returned event keeps zero-copy
-// views into its bytes for its whole lifetime, so the event must own the bytes.
-func newStoredEvent(appCfg *AppConfigType, data []byte) (*eventType, error) {
-	ev := newEvent(appCfg)
-	ev.buffer = bytespool.Get()
-	ev.buffer.B = append(ev.buffer.B[:0], data...)
-	if err := ev.loadFromBytes(ev.buffer.B); err != nil {
-		ev.Free()
-		return nil, err
-	}
-	return ev, nil
-}
-
 // Retrieves ID for event command name
 func (ev *eventType) QNameID() (id istructs.QNameID) {
 	if id, err := ev.appCfg.qNames.ID(ev.QName()); err == nil {
