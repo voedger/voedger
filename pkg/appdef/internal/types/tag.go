@@ -26,7 +26,7 @@ func NewTag(ws appdef.IWorkspace, name appdef.QName, feature string) *Tag {
 	return t
 }
 
-func (t Tag) Feature() string { return t.feature }
+func (t *Tag) Feature() string { return t.feature }
 
 // # Supports:
 //   - IWithTags
@@ -39,11 +39,11 @@ func MakeWithTags(find appdef.FindType) WithTags {
 	return WithTags{find, NewTypes[appdef.ITag]()}
 }
 
-func (t WithTags) HasTag(name appdef.QName) bool {
+func (t *WithTags) HasTag(name appdef.QName) bool {
 	return t.list.Find(name) != appdef.NullType
 }
 
-func (t WithTags) Tags() []appdef.ITag {
+func (t *WithTags) Tags() []appdef.ITag {
 	return t.list.AsArray()
 }
 

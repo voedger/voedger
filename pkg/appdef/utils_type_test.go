@@ -18,6 +18,7 @@ import (
 )
 
 func testFind[T appdef.IType](t *testing.T, name string, find func(f appdef.FindType, name appdef.QName) T, app appdef.IAppDef) {
+	t.Helper()
 	require := require.New(t)
 
 	for i := 1; i <= 2; i++ {
