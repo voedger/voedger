@@ -36,7 +36,9 @@ func newRequest(ctx context.Context, method, url, body string, bodyReader io.Rea
 		req.Header.Add(k, v)
 	}
 	for k, v := range cookies {
-		req.AddCookie(&http.Cookie{ // nolint G124 outgoing client cookie: Secure/HttpOnly/SameSite are server-side response directives, ignored by req.AddCookie serialization
+		// outgoing client cookie: Secure/HttpOnly/SameSite are server-side response directives, ignored by req.AddCookie serialization
+		// nolint G124
+		req.AddCookie(&http.Cookie{
 			Name:  k,
 			Value: v,
 		})
