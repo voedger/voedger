@@ -25,15 +25,33 @@ jobs:
       uses: untillpro/ci-action/checkout-and-setup-go@main
 
     - name: Wait for Scylla CQL
+      shell: bash
       run: |
-        for attempt in {1..60}; do
-          if docker exec "${{ job.services.scylladb.id }}" cqlsh 127.0.0.1 9042 -e "DESCRIBE KEYSPACES" 2>/dev/null; then
+        container="${{ job.services.scylladb.id }}"
+        scylla_ip="$(docker inspect \
+          --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' \
+          "$container")"
+
+        echo "Scylla container IP: $scylla_ip"
+
+        for attempt in {1..90}; do
+          if docker exec "$container" \
+              cqlsh "$scylla_ip" 9042 \
+              -e "DESCRIBE KEYSPACES" >/dev/null 2>&1; then
+            echo "Scylla CQL is ready"
             exit 0
           fi
-          echo "Waiting for Scylla CQL readiness, attempt ${attempt}/60..."
+
+          echo "Waiting for Scylla CQL readiness, attempt ${attempt}/90..."
           sleep 1
         done
-        docker logs "${{ job.services.scylladb.id }}"
+
+        echo "::error::Scylla CQL did not become ready"
+        docker exec "$container" \
+          cqlsh "$scylla_ip" 9042 \
+          -e "DESCRIBE KEYSPACES" || true
+        docker ps -a --filter "id=$container"
+        docker logs "$container"
         exit 1
 
     - name: Run Cassandra Implementation Tests
