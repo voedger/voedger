@@ -21,7 +21,7 @@ func ExecCommandAndCatchInterrupt(cmd *cobra.Command) error {
 		return cmd.ExecuteContext(ctx)
 	}
 
-	return  goAndCatchInterrupt(cmdExec)
+	return goAndCatchInterrupt(cmdExec)
 }
 
 type signalChKeyType string
