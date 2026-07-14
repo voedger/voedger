@@ -1,0 +1,1 @@
+{"version":"1.0","branch_type":2,"description":"voedger: use \"wait for scylla deploy\" reusable workflow from ci-action","issue_url":"https://untill.atlassian.net/browse/AIR-4510"}
