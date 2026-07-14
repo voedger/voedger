@@ -49,7 +49,7 @@ func (ww *WithWorkspaces) Changed() {
 	}
 }
 
-func (ww WithWorkspaces) Workspace(name appdef.QName) appdef.IWorkspace {
+func (ww *WithWorkspaces) Workspace(name appdef.QName) appdef.IWorkspace {
 	ws := ww.list.Find(name)
 	if ws != appdef.NullType {
 		return ws.(appdef.IWorkspace)
@@ -57,7 +57,7 @@ func (ww WithWorkspaces) Workspace(name appdef.QName) appdef.IWorkspace {
 	return nil
 }
 
-func (ww WithWorkspaces) WorkspaceByDescriptor(desc appdef.QName) appdef.IWorkspace {
+func (ww *WithWorkspaces) WorkspaceByDescriptor(desc appdef.QName) appdef.IWorkspace {
 	for _, ws := range ww.Workspaces() {
 		if ws.Descriptor() == desc {
 			return ws
@@ -66,7 +66,7 @@ func (ww WithWorkspaces) WorkspaceByDescriptor(desc appdef.QName) appdef.IWorksp
 	return nil
 }
 
-func (ww WithWorkspaces) Workspaces() []appdef.IWorkspace { return ww.list.AsArray() }
+func (ww *WithWorkspaces) Workspaces() []appdef.IWorkspace { return ww.list.AsArray() }
 
 // # Supports:
 //   - appdef.IWorkspacesBuilder

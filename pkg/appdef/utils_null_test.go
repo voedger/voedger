@@ -6,7 +6,6 @@
 package appdef_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -30,7 +29,7 @@ func Test_NullType(t *testing.T) {
 	require.Equal(appdef.TypeKind_null, appdef.NullType.Kind())
 	require.False(appdef.NullType.IsSystem())
 
-	require.Contains(fmt.Sprint(appdef.NullType), "null type")
+	require.Contains(appdef.NullType.String(), "null type")
 }
 
 func TestNullFields(t *testing.T) {

@@ -141,7 +141,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			if err != nil {
 				panic(errExtensionEngineDeploy(a.name, extEngineKind, err))
 			}
-			for i := uint(0); i < processorsCountPerKind; i++ {
+			for i := range processorsCountPerKind {
 				if ee[i] == nil {
 					ee[i] = map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{}
 				}
