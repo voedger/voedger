@@ -609,7 +609,7 @@ func (s *appStorageType) backgroundCleaner(ctx context.Context, wg *sync.WaitGro
 				k, _ := cr.First()
 				for k != nil && ctx.Err() == nil {
 					// extract expireAt from the key and check if it is expired
-					expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(k[:utils.Uint64Size]))) // nolint gosec
+					expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(k[:utils.Uint64Size]))) // nolint G115
 					if expireAt.After(s.iTime.Now()) {
 						break
 					}
