@@ -19,6 +19,7 @@ import (
 )
 
 // TechnologyCompatibilityKit test suit
+//nolint:thelper
 func TechnologyCompatibilityKit(t *testing.T, storageFactory IAppStorageFactory) {
 	testAppQName := appdef.NewAppQName("tcktest", uuid.NewString())
 	testIAppStorage := testAppStorageFactory(t, storageFactory, testAppQName)
@@ -27,6 +28,7 @@ func TechnologyCompatibilityKit(t *testing.T, storageFactory IAppStorageFactory)
 }
 
 // need to test e.g. istoragecache
+//nolint:thelper
 func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("TestAppStorage_GetPutRead", func(t *testing.T) { testAppStorage_GetPutRead(t, storage) })
 	t.Run("TestAppStorage_PutBatch", func(t *testing.T) { testAppStorage_PutBatch(t, storage) })
@@ -39,10 +41,11 @@ func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage, iTime
 	t.Run("TestAppStorage_QueryTTL", func(t *testing.T) { testAppStorage_QueryTTL(t, storage, iTime) })
 }
 
+//nolint:thelper
 func testAppStorageFactory(t *testing.T, sf IAppStorageFactory, testAppQName appdef.AppQName) IAppStorage {
 	require := require.New(t)
 
-	san, err := NewSafeAppName(testAppQName, func(name string) (bool, error) { return true, nil })
+	san, err := NewSafeAppName(testAppQName, func(string) (bool, error) { return true, nil })
 	require.NoError(err)
 	t.Run("ErrStorageNotFound", func(t *testing.T) {
 		s, err := sf.AppStorage(san)
@@ -62,13 +65,11 @@ func testAppStorageFactory(t *testing.T, sf IAppStorageFactory, testAppQName app
 	return storage
 }
 
-// nolint
 func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
-
 	t.Run("Should read not existing", func(t *testing.T) {
 		ctx := context.Background()
 		err := storage.Read(ctx, []byte{1}, nil, nil, nil)
-		require.NoError(t, err, err)
+		require.NoError(t, err)
 	})
 	t.Run("Should get not existing", func(t *testing.T) {
 		require := require.New(t)
@@ -124,9 +125,9 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 		t.Run("read closed range", func(t *testing.T) {
 			viewRecords := make([]string, 0, 5)
-			reader := func(ccols, viewRecord []byte) (err error) {
+			reader := func(_, viewRecord []byte) error {
 				viewRecords = append(viewRecords, string(viewRecord))
-				return err
+				return nil
 			}
 
 			err := storage.Read(ctx, []byte{0x0}, []byte{0x10, 0x10, 0x00}, []byte{0x10, 0x11, 0xff}, reader)
@@ -140,9 +141,9 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 		t.Run("read left-open range", func(t *testing.T) {
 			viewRecords := make([]string, 0, 5)
-			reader := func(ccols, viewRecord []byte) (err error) {
+			reader := func(_, viewRecord []byte) error {
 				viewRecords = append(viewRecords, string(viewRecord))
-				return err
+				return nil
 			}
 
 			err := storage.Read(ctx, []byte{0x0}, nil, []byte{0x10, 0x11, 0xff}, reader)
@@ -157,9 +158,9 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 		t.Run("read right-open range", func(t *testing.T) {
 			viewRecords := make([]string, 0, 5)
-			reader := func(ccols, viewRecord []byte) (err error) {
+			reader := func(_, viewRecord []byte) error {
 				viewRecords = append(viewRecords, string(viewRecord))
-				return err
+				return nil
 			}
 
 			err := storage.Read(ctx, []byte{0x0}, []byte{0x10, 0x11, 0x00}, nil, reader)
@@ -173,9 +174,9 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 		t.Run("read open range", func(t *testing.T) {
 			viewRecords := make([]string, 0, 5)
-			reader := func(ccols, viewRecord []byte) (err error) {
+			reader := func(_, viewRecord []byte) error {
 				viewRecords = append(viewRecords, string(viewRecord))
-				return err
+				return nil
 			}
 
 			err := storage.Read(ctx, []byte{0x0}, nil, nil, reader)
@@ -191,7 +192,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 		t.Run("read absurd range", func(t *testing.T) {
 			times := 0
-			reader := func(ccols, viewRecord []byte) (err error) {
+			reader := func(_, _ []byte) error {
 				times++
 				return nil
 			}
@@ -204,7 +205,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 
 		t.Run("read not exists pKey", func(t *testing.T) {
 			times := 0
-			reader := func(ccols, viewRecord []byte) (err error) {
+			reader := func(_, _ []byte) error {
 				times++
 				return nil
 			}
@@ -220,7 +221,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		require := require.New(t)
 		errCb := errors.New("callback error")
 		var times int
-		reader := func(ccols, viewRecord []byte) (err error) {
+		reader := func(_, _ []byte) error {
 			times++
 			return errCb
 		}
@@ -276,10 +277,10 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		require := require.New(t)
 		var times int
 		var cancel context.CancelFunc
-		reader := func(ccols, viewRecord []byte) (err error) {
+		reader := func(_, _ []byte) error {
 			times++
 			cancel()
-			return err
+			return nil
 		}
 		require.NoError(storage.Put([]byte("1-1"), []byte("20"), []byte("150$")))
 		require.NoError(storage.Put([]byte("1-1"), []byte("21"), []byte("20$")))
@@ -300,7 +301,8 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		require := require.New(t)
 
 		viewRecords := make(map[string][]byte)
-		reader := func(clustCols, viewRecord []byte) (err error) { // This err is used on IAppStorage.Read invocation
+		// nolint unparam // This err is used on IAppStorage.Read invocation
+		reader := func(clustCols, viewRecord []byte) (err error) {
 			viewRecords[string(viewRecord)] = append(clustCols[:0:0], clustCols...)
 			return err
 		}
@@ -314,7 +316,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		require.Equal([]byte("33"), viewRecords["Pepsi"])
 		k, ok := viewRecords["Cola"]
 		require.True(ok)
-		require.Equal(0, len(k))
+		require.Empty(k)
 
 		var data []byte
 		ok, err = storage.Get([]byte{0xaa}, nil, &data)
@@ -333,7 +335,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 			require.Equal([]byte("33"), viewRecords["Pepsi"])
 			k, ok := viewRecords["Baikal"]
 			require.True(ok)
-			require.Equal(0, len(k))
+			require.Empty(k)
 
 			// Read as []byte{}
 			{
@@ -355,7 +357,6 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 	})
 }
 
-// nolint
 func testAppStorage_PutBatch(t *testing.T, storage IAppStorage) {
 	require := require.New(t)
 	type record struct {
@@ -407,7 +408,6 @@ func testAppStorage_PutBatch(t *testing.T, storage IAppStorage) {
 	require.Equal(items[2].Value, rr[2].value)
 }
 
-// nolint:revive
 func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 	t.Run("Should get batch of existing records", func(t *testing.T) {
 		require := require.New(t)
@@ -618,12 +618,9 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 		require.NoError(storage.GetBatch(nePKey, items))
 		require.False(items[0].Ok)
 		require.False(items[1].Ok)
-
 	})
-
 }
 
-//nolint:revive,goconst
 func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should insert if not exists", func(t *testing.T) {
 		require := require.New(t)
@@ -699,7 +696,6 @@ func testAppStorage_InsertIfNotExists(t *testing.T, storage IAppStorage, iTime t
 	})
 }
 
-//nolint:revive,goconst
 func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should swap if exists", func(t *testing.T) {
 		require := require.New(t)
@@ -796,7 +792,6 @@ func testAppStorage_CompareAndSwap(t *testing.T, storage IAppStorage, iTime time
 	})
 }
 
-//nolint:revive,goconst
 func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should delete if exists", func(t *testing.T) {
 		require := require.New(t)
@@ -863,7 +858,6 @@ func testAppStorage_CompareAndDelete(t *testing.T, storage IAppStorage, iTime ti
 	})
 }
 
-//nolint:revive,goconst
 func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should get ttl record if exists", func(t *testing.T) {
 		require := require.New(t)
@@ -917,7 +911,6 @@ func testAppStorage_TTLGet(t *testing.T, storage IAppStorage, iTime timeu.ITime)
 	})
 }
 
-//nolint:revive,goconst
 func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should read ttl records", func(t *testing.T) {
 		require := require.New(t)
@@ -942,7 +935,7 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime timeu.ITime
 
 		subjects := make([][]byte, 0)
 		data := make([]byte, 0)
-		err = storage.TTLRead(context.Background(), pKey, nil, nil, func(ccols []byte, viewRecord []byte) (err error) {
+		err = storage.TTLRead(context.Background(), pKey, nil, nil, func(_ []byte, viewRecord []byte) error {
 			subjects = append(subjects, viewRecord)
 			data = append(data[:0], viewRecord...)
 
@@ -973,7 +966,7 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime timeu.ITime
 
 		subjects := make([][]byte, 0)
 		data := make([]byte, 0)
-		err = storage.TTLRead(context.Background(), pKey, nil, nil, func(ccols []byte, viewRecord []byte) (err error) {
+		err = storage.TTLRead(context.Background(), pKey, nil, nil, func(_ []byte, viewRecord []byte) error {
 			subjects = append(subjects, viewRecord)
 			data = append(data[:0], viewRecord...)
 
@@ -984,7 +977,6 @@ func testAppStorage_TTLRead(t *testing.T, storage IAppStorage, iTime timeu.ITime
 	})
 }
 
-//nolint:revive,goconst
 func testAppStorage_QueryTTL(t *testing.T, storage IAppStorage, iTime timeu.ITime) {
 	t.Run("Should return TTL for TTL records", func(t *testing.T) {
 		require := require.New(t)

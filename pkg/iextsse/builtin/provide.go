@@ -5,7 +5,7 @@
 
 package builtin
 
-import iextsse "github.com/voedger/voedger/pkg/iextsse"
+import "github.com/voedger/voedger/pkg/iextsse"
 
 type LRUCache struct {
 	// MaxSize in bytes

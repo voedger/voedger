@@ -27,10 +27,9 @@ func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 	return s.eventFunc()
 }
 
-func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, partitionIDFunc state.PartitionIDFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
+func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
 	secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
 	intentsLimit, bundlesLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender, httpClient httpu.IHTTPClient) state.IBundledHostState {
-
 	state := &asyncActualizerState{
 		bundledHostState: &bundledHostState{
 			hostState:    newHostState(ctx, "AsyncActualizer", intentsLimit, appStructsFunc),

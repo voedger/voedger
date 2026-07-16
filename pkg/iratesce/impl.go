@@ -32,7 +32,7 @@ func (bucket *bucketType) resetToState(state irates.BucketState, now time.Time) 
 	bucket.reset(now)
 }
 
-// recalculates the number of bucket.state tokens.TakenTokens for the time time
+// recalculates the number of bucket.state tokens.TakenTokens for the time
 func (bucket *bucketType) recalcBuketState(now time.Time) {
 	_, _, tokens := bucket.limiter.advance(now)
 	value := float64(bucket.limiter.burst) - tokens
@@ -62,7 +62,7 @@ func (b *bucketsType) TakeTokens(buckets []irates.BucketKey, n int) (ok bool, ex
 	excLimit = appdef.NullQName
 	t := b.time.Now()
 	// let's check the presence of a token using the requested keys
-	for keyIdx = 0; keyIdx < len(buckets); keyIdx++ {
+	for keyIdx = range buckets {
 		bucket := b.bucketByKey(&buckets[keyIdx])
 		// if for some reason the bucket for the next key is not found, then its absence should not affect the overall result of the check
 		// the key may contain the name of the action for which the restriction was not set. In this case, the restriction of this action is not performed
@@ -76,12 +76,11 @@ func (b *bucketsType) TakeTokens(buckets []irates.BucketKey, n int) (ok bool, ex
 			excLimit = buckets[keyIdx].RateLimitName
 			break
 		}
-
 	}
 
 	// if we have not received tokens for all keys, then we will return the tokens taken back to the buckets
 	if !ok {
-		for i := 0; i < keyIdx; i++ {
+		for i := range keyIdx {
 			if bucket := b.bucketByKey(&buckets[i]); bucket != nil {
 				bucket.limiter.allowN(t, -n)
 			}

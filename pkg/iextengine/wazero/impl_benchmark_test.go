@@ -14,6 +14,7 @@ import (
 )
 
 func bench_purecall(b *testing.B) {
+	b.Helper()
 	ctx := context.Background()
 	const simple = "simple"
 	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
@@ -24,7 +25,7 @@ func bench_purecall(b *testing.B) {
 	//ee.SetLimits(limits)
 
 	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		if e := ee.Invoke(context.Background(), appdef.NewFullQName("test", simple), extIO); e != nil {
 			panic(e)
 		}
@@ -34,7 +35,7 @@ func bench_purecall(b *testing.B) {
 }
 
 func bench_gc(b *testing.B, cycles int) {
-
+	b.Helper()
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
 	ctx := context.Background()
@@ -46,9 +47,9 @@ func bench_gc(b *testing.B, cycles int) {
 	//ee.SetLimits(limits)
 
 	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		b.StopTimer()
-		for i := 0; i < cycles; i++ {
+		for range cycles {
 			if e := ee.Invoke(context.Background(), appdef.NewFullQName("test", arrAppend), extIO); e != nil {
 				panic(e)
 			}
@@ -92,7 +93,7 @@ func Benchmark_GarbageCollection(b *testing.B) {
 }
 
 func bench_extensions(b *testing.B, gc bool, compile bool) {
-
+	b.Helper()
 	funcs := []string{"oneGetOneIntent5calls", "oneGetNoIntents2calls", "oneGetLongStr3calls", "oneKey1call", "doNothing"}
 
 	ctx := context.Background()
@@ -110,7 +111,7 @@ func bench_extensions(b *testing.B, gc bool, compile bool) {
 		ext := appdef.NewFullQName(testPkg, extname)
 		b.Run(extname, func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				err := ee.Invoke(context.Background(), ext, extIO)
 				if err != nil {
 					panic(err)
@@ -144,10 +145,12 @@ func Benchmark_Extensions_NoGc(b *testing.B) {
 	})
 }
 func Skip_Benchmark_Extensions_WithGc(b *testing.B) {
+	b.Helper()
 	bench_extensions(b, true, true)
 }
 
 func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
+	b.Helper()
 	const arrAppend2 = "arrAppend2"
 	ctx := context.Background()
 	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
@@ -161,7 +164,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	we.autoRecover = false
 
 	ext := appdef.NewFullQName(testPkg, arrAppend2)
-	for runs := 0; runs < expectedRuns; runs++ {
+	for range expectedRuns {
 		if err := ee.Invoke(context.Background(), ext, extIO); err != nil {
 			panic(err)
 		}
@@ -175,12 +178,13 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		we.recover(context.Background())
 	}
 }
 
 func benchmarkRecoverClean(b *testing.B, limitPages uint) {
+	b.Helper()
 	ctx := context.Background()
 	moduleURL := testModuleURL("./_testdata/allocs/pkg.wasm")
 	ee, err := testFactoryHelper(ctx, moduleURL, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, true)
@@ -194,7 +198,7 @@ func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 		panic(err)
 	}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		we.recover(context.Background())
 	}
 }
@@ -227,7 +231,7 @@ func Benchmark_ArrayCopy(b *testing.B) {
 	_ = append(heap, 1)
 	b.Run("recommended", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			//_ = append(heap[0:0], backup...)
 			heap = make([]byte, len(backup))
 			copy(heap, backup)
@@ -239,7 +243,7 @@ func Benchmark_ArrayCopy(b *testing.B) {
 	})
 	b.Run("shrink", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			heap = heap[0:len(backup)]
 			copy(heap[0:len(backup)], backup[0:])
 			b.StopTimer()

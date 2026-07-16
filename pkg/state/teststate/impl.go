@@ -343,13 +343,13 @@ func (ts *testState) buildState(processorKind int) {
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
-		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
+		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
 			IntentsLimit, BundlesLimit, stateOpts, ts.emailSender, ts.httpClient)
 	case ProcKind_CommandProcessor:
 		stateOpts := state.StateOpts{
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
-		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
+		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, stateOpts, originFunc)
 	case ProcKind_QueryProcessor:
 		stateOpts := state.StateOpts{
