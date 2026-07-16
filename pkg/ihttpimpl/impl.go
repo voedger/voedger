@@ -80,13 +80,13 @@ func (p *httpProcessor) Prepare() (err error) {
 			WriteTimeout: defaultACMEServerWriteTimeout,
 			Handler:      p.certManager.HTTPHandler(nil),
 		}
-		//nolint:noctx // lefitime is controlled by IService engine
+		//nolint:noctx // lifetime is controlled by IService engine
 		if p.acmeListener, err = net.Listen("tcp", acmeAddr); err == nil {
 			logger.Info("listening port ", p.acmeListener.Addr().(*net.TCPAddr).Port, " for acme server")
 		}
 	}
 
-	//nolint:noctx // lefitime is controlled by IService engine
+	//nolint:noctx // lifetime is controlled by IService engine
 	if p.listener, err = net.Listen("tcp", httpu.ListenAddr(p.params.Port)); err != nil {
 		return err
 	}
