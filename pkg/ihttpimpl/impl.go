@@ -87,13 +87,14 @@ func (p *httpProcessor) Prepare() (err error) {
 	}
 
 	//nolint:noctx // lefitime is controlled by IService engine
-	if p.listener, err = net.Listen("tcp", httpu.ListenAddr(p.params.Port)); err == nil {
-		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
+	if p.listener, err = net.Listen("tcp", httpu.ListenAddr(p.params.Port)); err != nil {
+		return err
 	}
+	logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 
 	p.registerRoutes()
 
-	return nil
+	return err
 }
 
 func (p *httpProcessor) Run(ctx context.Context) {
