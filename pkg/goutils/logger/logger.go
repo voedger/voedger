@@ -29,8 +29,7 @@ const (
 )
 
 func SetLogLevel(logLevel TLogLevel) (old TLogLevel) {
-	old = TLogLevel(atomic.SwapInt32((*int32)(&globalLogPrinter.logLevel), int32(logLevel)))
-	return
+	return TLogLevel(atomic.SwapInt32((*int32)(&globalLogPrinter.logLevel), int32(logLevel)))
 }
 
 func SetLogLevelWithRestore(logLevel TLogLevel) (restore func()) {
@@ -85,7 +84,7 @@ func IsTrace() bool {
 	return isEnabled(LogLevelTrace)
 }
 
-var PrintLine func(level TLogLevel, line string) = DefaultPrintLine
+var PrintLine = DefaultPrintLine
 
 var legacyOut io.Writer = os.Stdout
 var legacyErr io.Writer = os.Stderr

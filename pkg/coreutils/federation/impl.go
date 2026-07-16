@@ -138,7 +138,7 @@ func (f *implIFederation) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.W
 }
 
 func (f *implIFederation) readBLOB(url string, optFuncs ...httpu.ReqOptFunc) (res iblobstorage.BLOBReader, err error) {
-	optFuncs = append(optFuncs, httpu.WithResponseHandler(func(httpResp *http.Response) {}))
+	optFuncs = append(optFuncs, httpu.WithResponseHandler(func(_ *http.Response) {}))
 	resp, err := f.get(url, optFuncs...)
 	if err != nil {
 		return res, err
@@ -244,8 +244,8 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey, optFu
 			"SubjectLogin": "test_%d",
 			"ProjectionKey": [
 				{
-					"App":"%s",
-					"Projection":"%s",
+					"App":%q,
+					"Projection":%q,
 					"WS":%d
 				}
 			]
@@ -264,11 +264,11 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey, optFu
 	unsubscribe = func() {
 		body := fmt.Sprintf(`
 			{
-				"Channel": "%s",
+				"Channel": %q,
 				"ProjectionKey":[
 					{
-						"App": "%s",
-						"Projection":"%s",
+						"App": %q,
+						"Projection":%q,
 						"WS":%d
 					}
 				]
@@ -285,7 +285,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey, optFu
 		}
 		waitForDone()
 	}
-	return
+	return offsetsChan, unsubscribe, nil
 }
 
 func (f *implIFederation) dummy() {}

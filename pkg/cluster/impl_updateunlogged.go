@@ -27,7 +27,7 @@ func updateUnlogged_View(update update) (err error) {
 	kb := update.appStructs.ViewRecords().KeyBuilder(update.QName)
 	if update.Kind == dml.OpKind_UnloggedInsert {
 		kb.PutFromJSON(update.setFields)
-	} else if err = coreutils.MapToObject(update.key, kb); err != nil {
+	} else if err := coreutils.MapToObject(update.key, kb); err != nil {
 		return err
 	}
 

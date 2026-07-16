@@ -88,20 +88,20 @@ func TestMockTimer(t *testing.T) {
 
 func BenchmarkMockTimers(b *testing.B) {
 	b.Run("create only", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = MockTime.NewTimerChan(time.Hour)
 		}
 	})
 
 	b.Run("create and fire", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = MockTime.NewTimerChan(time.Hour)
 			MockTime.Add(time.Hour)
 		}
 	})
 
 	b.Run("create, fire and read", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			timerChan := MockTime.NewTimerChan(time.Hour)
 			MockTime.Add(time.Hour)
 			<-timerChan

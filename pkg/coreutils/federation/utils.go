@@ -33,10 +33,8 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 	offsetsChan = make(OffsetsChan)
 	subscribed := make(chan interface{})
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		defer close(offsetsChan)
-		defer wg.Done()
 		scanner := bufio.NewScanner(body)
 		scanner.Split(coreutils.ScanSSE) // split by sse frames, separator is "\n\n"
 		for scanner.Scan() {
@@ -46,11 +44,11 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 			messages := strings.Split(scanner.Text(), "\n") // split the frame by ecent and data
 			var event, data string
 			for _, str := range messages { // read out
-				if strings.HasPrefix(str, "event: ") {
-					event = strings.TrimPrefix(str, "event: ")
+				if after, ok := strings.CutPrefix(str, "event: "); ok {
+					event = after
 				}
-				if strings.HasPrefix(str, "data: ") {
-					data = strings.TrimPrefix(str, "data: ")
+				if after, ok := strings.CutPrefix(str, "data: "); ok {
+					data = after
 				}
 			}
 			if logger.IsVerbose() {
@@ -63,12 +61,12 @@ func ListenSSEEvents(ctx context.Context, body io.Reader) (offsetsChan OffsetsCh
 				offset, err := strconvu.ParseUint64(data)
 				if err != nil {
 					// notest
-					panic(fmt.Sprint("failed to parse offset", data, err))
+					panic(fmt.Sprint("failed to parse offset", data, err)) // nolint
 				}
 				offsetsChan <- istructs.Offset(offset)
 			}
 		}
-	}()
+	})
 
 	<-subscribed
 	return offsetsChan, channelID, func() { wg.Wait() }
@@ -91,7 +89,7 @@ func HTTPRespToFuncResp(httpResp *httpu.HTTPResponse, httpRespErr error) (funcRe
 		HTTPResponse: *httpResp,
 	}
 	if len(httpResp.Body) > 0 {
-		if err = json.Unmarshal([]byte(httpResp.Body), &funcResp); err != nil {
+		if err := json.Unmarshal([]byte(httpResp.Body), &funcResp); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal response body: %w. Body:\n%s", err, httpResp.Body)
 		}
 	}
