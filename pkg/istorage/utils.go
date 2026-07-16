@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -31,11 +32,11 @@ func NewSafeAppName(appQName appdef.AppQName, uniqueFunc func(name string) (bool
 		appName = appName[:MaxSafeNameLength]
 	}
 
-	if unicode.IsDigit([]rune(appName)[0]) {
-		appName = "a" + string([]rune(appName)[1:]) // replace the first letter for the case if the entire name is uuid to make tests work expecting the string length is 32 bytes
+	if r, size := utf8.DecodeRuneInString(appName); unicode.IsDigit(r) {
+		appName = "a" + appName[size:] // replace the first letter for the case if the entire name is uuid to make tests work expecting the string length is 32 bytes
 	}
 
-	for i := 0; i < maxMatchedOccurances; i++ {
+	for range maxMatchedOccurances {
 		ok, err := uniqueFunc(appName)
 		if err != nil {
 			return san, err
@@ -65,13 +66,11 @@ func (san SafeAppName) String() string {
 	return san.name
 }
 
-// nolint
 func (san SafeAppName) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.Quote(san.name)), nil
 }
 
-// need to marshal map[SafeAppName]any
-// nolint
+// need to marshal map[SafeAppName]any: encoding/json checks TextMarshaler on the key type itself (map keys are not addressable)
 func (san SafeAppName) MarshalText() (text []byte, err error) {
 	return []byte(san.name), nil
 }
@@ -89,7 +88,7 @@ func (san *SafeAppName) UnmarshalJSON(text []byte) (err error) {
 // golang json looks on UnmarshalText presence only on unmarshal map[SafeAppName]any. UnmarshalJSON() will be used anyway
 // but no UnmarshalText -> fail to unmarshal map[SafeAppName]any
 // see https://github.com/golang/go/issues/29732
-func (san *SafeAppName) UnmarshalText(text []byte) error {
+func (san *SafeAppName) UnmarshalText([]byte) error {
 	// notest
 	return nil
 }

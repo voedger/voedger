@@ -276,9 +276,7 @@ func (s *sequencer) Flush() {
 	// Lock toBeFlushed while copying values
 	s.toBeFlushedMu.Lock()
 	// Copy s.inproc to s.toBeFlushed
-	for key, value := range s.inproc {
-		s.toBeFlushed[key] = value
-	}
+	maps.Copy(s.toBeFlushed, s.inproc)
 
 	// Copy s.nextOffset to s.toBeFlushedOffset
 	s.toBeFlushedOffset = s.nextOffset

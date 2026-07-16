@@ -43,15 +43,15 @@ type IHTTPProcessor interface {
 		Usage: (SetAppPartitionsNumber ( DeployAppPartition | UndeployAppPartition )*  UndeployAllAppPartitions)*
 	*/
 
-	//--	SetAppPartitionsNumber(app appdef.AppQName, partNo istructs.PartitionID, numPartitions istructs.PartitionID) (err error)
+	// --	SetAppPartitionsNumber(app appdef.AppQName, partNo istructs.PartitionID, numPartitions istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
 	DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler bus.RequestHandler) (err error)
 	// ErrUnknownAppPartition
-	//--	UndeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID) (err error)
+	// --	UndeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
-	//--	UndeployAllAppPartitions(app appdef.AppQName)
+	// --	UndeployAllAppPartitions(app appdef.AppQName)
 	DeployApp(app appdef.AppQName, numPartitions istructs.NumAppPartitions, numAppWS istructs.NumAppWorkspaces) (err error)
 	UndeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID) (err error)
 	UndeployApp(app appdef.AppQName) (err error)
