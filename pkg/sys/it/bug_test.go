@@ -168,6 +168,12 @@ func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	airTablePlan := appdef.NewQName("app1pkg", "air_table_plan")
 
+	// Scenario:
+	// 1. Store several WLog events in bbolt-backed storage.
+	// 2. Read them through the batched ReadToTheEnd path and retain the returned events.
+	// 3. Grow the same bbolt database enough to force mmap remapping.
+	// 4. Verify retained events still read their original CUD field values.
+	// Arrange: write enough WLog events to exercise the batched ReadToTheEnd path.
 	const eventsCnt = 16
 	expected := make(map[string]bool, eventsCnt)
 	for i := range eventsCnt {
@@ -177,7 +183,7 @@ func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body)
 	}
 
-	// sequentially read the whole WLog and retain the returned events
+	// Act: sequentially read the whole WLog and retain the returned events.
 	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -188,8 +194,7 @@ func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 			return nil
 		}))
 
-	// churn the very same bbolt storage the events were read from (public storage API only) so the
-	// file grows and re-maps, unmapping the pages the retained events may still point into
+	// Act: churn the same bbolt storage through the public API so the file can grow and re-map.
 	storage, err := vit.IAppStorageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
@@ -213,8 +218,7 @@ func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 		require.NoError(storage.PutBatch(largeBatch))
 	}
 
-	// the retained events must still expose their original field values; with the bug they read
-	// freed/re-mapped memory here (mismatch or SIGSEGV)
+	// Assert: retained events must still expose their original field values.
 	found := make(map[string]bool, eventsCnt)
 	for _, event := range events {
 		event.CUDs(func(rec istructs.ICUDRow) bool {

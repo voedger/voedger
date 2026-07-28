@@ -249,8 +249,7 @@ func (s *appStorageType) TTLGet(pKey []byte, cCols []byte, data *[]byte) (ok boo
 			return nil
 		}
 
-		*data = (*data)[:0]
-		*data = d.Data
+		*data = append((*data)[:0], d.Data...)
 		ok = true
 
 		return nil
@@ -461,7 +460,9 @@ func (s *appStorageType) read(ctx context.Context, pKey []byte, startCCols, fini
 					return err
 				}
 
-				if err := cb(unSafeKey(k), d.Data); err != nil {
+				ccols := append([]byte(nil), unSafeKey(k)...)
+				data := append([]byte(nil), d.Data...)
+				if err := cb(ccols, data); err != nil {
 					return err
 				}
 			}
@@ -608,7 +609,7 @@ func (s *appStorageType) backgroundCleaner(ctx context.Context, wg *sync.WaitGro
 				k, _ := cr.First()
 				for k != nil && ctx.Err() == nil {
 					// extract expireAt from the key and check if it is expired
-					expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(k[:utils.Uint64Size]))) // nolint gosec
+					expireAt := time.UnixMilli(int64(binary.BigEndian.Uint64(k[:utils.Uint64Size]))) // nolint G115
 					if expireAt.After(s.iTime.Now()) {
 						break
 					}

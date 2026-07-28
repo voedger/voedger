@@ -67,6 +67,7 @@ Token and verification operations
     +-- [/q.sys.RefreshPrincipalToken/]
     +-- [/q.sys.InitiateEmailVerification/]
     +-- [/q.sys.IssueVerifiedValueToken/]
+    +-- [/q.sys.GetCDoc/]
     |
     v
 State and workspace lifecycle
@@ -180,17 +181,17 @@ State and workspace lifecycle
   - impl: [pkg/registry/impl_changepassword.go#cmdChangePasswordExec](../../../../pkg/registry/impl_changepassword.go)
 
 - `[/q.registry.InitiateResetPasswordByEmail/]`
-  - Finds a ready login profile and starts email verification for password reset.
+  - Resolves password-reset identity by primary login first, then by active `[(registry.LoginAlias)]` in the submitted email's pseudo workspace. Starts email verification for the submitted email and returns the ready profile workspace plus the canonical login pseudo workspace selected for the final reset command.
   - decl: [pkg/registry/appws.vsql#InitiateResetPasswordByEmail](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_resetpassword.go#provideQryInitiateResetPasswordByEmailExec](../../../../pkg/registry/impl_resetpassword.go)
 
 - `[/q.registry.IssueVerifiedValueTokenForResetPassword/]`
-  - Exchanges a reset verification code for a verified value token.
+  - Exchanges a reset verification code for a verified value token. On the alias path, the verifier proves the submitted alias email and registry re-issues the token with the canonical login as the verified value, keeping the original entity, field, and verification kind.
   - decl: [pkg/registry/appws.vsql#IssueVerifiedValueTokenForResetPassword](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_resetpassword.go#provideIssueVerifiedValueTokenForResetPasswordExec](../../../../pkg/registry/impl_resetpassword.go)
 
 - `[/c.registry.ResetPasswordByEmail/]`
-  - Applies a password reset after verified value token validation.
+  - Applies a password reset locally after verified value token validation. It writes the password for the login carried by the token value and relies on the client routing the command to the returned canonical pseudo workspace.
   - decl: [pkg/registry/appws.vsql#ResetPasswordByEmail](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_resetpassword.go#cmdResetPasswordByEmailExec](../../../../pkg/registry/impl_resetpassword.go)
 
@@ -214,6 +215,11 @@ State and workspace lifecycle
   - decl: [pkg/sys/sys.vsql#IssueVerifiedValueToken](../../../../pkg/sys/sys.vsql)
   - impl: [pkg/sys/verifier/impl.go#provideQryIssueVerifiedValueToken](../../../../pkg/sys/verifier/impl.go)
 
+- `[/q.sys.GetCDoc/]`
+  - Reads a CDoc by ID from the target workspace; alias flows use it to fetch the canonical `[(registry.Login)]` after a local alias-index hit.
+  - decl: [pkg/sys/sys.vsql#GetCDoc](../../../../pkg/sys/sys.vsql)
+  - impl: [pkg/sys/collection/cdoc_func.go#execQryCDoc](../../../../pkg/sys/collection/cdoc_func.go)
+
 ### State and workspace lifecycle
 
 - `[(registry.Login)]`
@@ -225,7 +231,7 @@ State and workspace lifecycle
   - impl: [pkg/registry/impl_createlogin.go#projectorLoginIdx](../../../../pkg/registry/impl_createlogin.go)
 
 - `[(registry.LoginAlias)]`
-  - Per-alias registry CDoc used as the alias lookup index. Its uniqueness and reactivation semantics are owned by [arch-authn.md](./arch-authn.md#registry-records-and-indexes); referenced here as the record consumed during sign-in by alias and written by `[/c.registry.PutLoginAliasIndex/]` / `[/c.registry.DeactivateLoginAliasIndex/]`.
+  - Per-alias registry CDoc used as the alias lookup index. Its uniqueness and reactivation semantics are owned by [arch-authn.md](./arch-authn.md#registry-records-and-indexes); referenced here as the record consumed during sign-in by alias and reset-password-by-alias flows, and written by `[/c.registry.PutLoginAliasIndex/]` / `[/c.registry.DeactivateLoginAliasIndex/]`.
 
 - `[[Profile workspace lifecycle]]`
   - Asynchronous profile workspace creation path triggered by login records and reflected back into `[(registry.Login)]` readiness fields.
@@ -548,17 +554,59 @@ State and workspace lifecycle
             - WSID: pseudoWSID(Email)
             - Hash256: hash of the code
           - ProfileWSID
+          - CanonicalPseudoWSID = pseudoWSID(Email)
 
   -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]: AppName, VerificationToken, code, ProfileWSID
       -> [/q.sys.IssueVerifiedValueToken/]: at loginApp/ProfileWSID; VerificationToken, code, ForRegistry=true
           -> [Token service]: validate VerificationToken + hash(code); re-issue under sys/registry, strip Hash256
       -> out: VerifiedValueToken
-          - VerifiedValueToken: VerificationKind, WSID, ID, Entity, Field, Value
+          - VerifiedValueToken: VerificationKind, WSID, ID, Entity, Field, Value=Email
 
-  -> [/c.registry.ResetPasswordByEmail/]: VerifiedValueToken, NewPwd (UNLOGGED), AppName
+  -> [/c.registry.ResetPasswordByEmail/]: at CanonicalPseudoWSID; VerifiedValueToken, NewPwd (UNLOGGED), AppName
       -> [(registry.Login)]: login = token.Value (= Email); write PwdHash
       -> out: 200 OK
 ```
+
+#### Client resets password by verified alias email
+
+```text
+@Client
+  - steps 1 and 2 routed to sys/registry/pseudoWSID(alias); null auth
+  -> [/q.registry.InitiateResetPasswordByEmail/]: AppName, alias, Language
+      -> [(registry.LoginIdx)]: GetLoginHash(alias); primary-login miss
+      -> [(registry.LoginAlias)]: (AppName, Alias=alias); active alias hit
+          - canonicalLogin = LoginAlias.Login
+          - SourceAppWSID = LoginAlias.SourceAppWSID
+          - CanonicalPseudoWSID = pseudoWSID(canonicalLogin)
+      -> [/q.sys.GetCDoc/]: read canonical [(registry.Login)] at SourceAppWSID; ProfileWSID = Login.WSID
+      -> [/q.sys.InitiateEmailVerification/]: at loginApp/ProfileWSID; alias, TargetWSID=ProfileWSID, ForRegistry=true
+          - code emailed to the alias inbox
+          - VerificationToken Value = alias
+      -> out: InitiateResetPasswordByEmailResult
+          - VerificationToken, ProfileWSID
+          - CanonicalPseudoWSID
+
+  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]: AppName, VerificationToken, code, ProfileWSID
+      -> [/q.sys.IssueVerifiedValueToken/]: at loginApp/ProfileWSID; VerificationToken, code, ForRegistry=true
+          -> [Token service]: validate VerificationToken + hash(code); VerifiedValueToken Value = alias
+      -> [(registry.LoginAlias)]: (AppName, Alias=alias); active alias hit
+      -> [Token service]: re-issue registry VerifiedValueToken with original Entity, Field, and VerificationKind; Value = canonicalLogin
+      -> out: VerifiedValueToken (Value = canonicalLogin)
+
+  -> [/c.registry.ResetPasswordByEmail/]: at CanonicalPseudoWSID; VerifiedValueToken, NewPwd (UNLOGGED), AppName
+      -> [(registry.Login)]: login = token.Value (= canonicalLogin); write PwdHash
+      -> out: 200 OK
+```
+
+**Alias rebind consistency note**:
+
+Control of alias email E proves ownership of E only. Binding E to an account also requires authority over that account.
+
+Case 1: alias is set by System only. In the current model alias writes are System-authorized, so alias rebind is not a normal end-user account-takeover path. The remaining concern is consistency with trusted alias updates: if System rebinds E from account A to account B between reset initiation and verified-token issue, Step 2 resolves the active `[(registry.LoginAlias)]` at token-issue time.
+
+Case 2: alias is set by a user who controls either the canonical account email/session or the alias email. If the user controls the canonical account, rebinding E from account A to account B also requires authority over B, so this is not a victim-account reset path unless the user can already manage B. If control of alias email E alone can bind E to arbitrary account B, the system is unsafe without any race; the owner of E could attach E to B and reset B. Alias-email verification may be required, but must never be sufficient without target-account authority.
+
+Sum-up: Step 2 currently issues the reset token for the current active owner of E, not necessarily the owner resolved at Step 1. This is safe only when the reset flow intentionally targets the current active owner of the alias, and every alias-binding path requires authority over the target account. Otherwise, Step 2 must reject if the alias binding changed during verification.
 
 #### Password change rejects malformed request
 
@@ -580,12 +628,23 @@ State and workspace lifecycle
   -> @Client: 401 Unauthorized
 ```
 
+#### Password reset initiation rejects an inactive alias
+
+```text
+@Client
+  -> [/q.registry.InitiateResetPasswordByEmail/]: AppName, previous-or-cleared-alias, Language
+  -> [(registry.LoginIdx)]: primary-login miss
+  -> [(registry.LoginAlias)]: alias row missing or inactive
+  -> @Client: 400 Bad Request
+```
+
 #### Password reset initiation rejects unknown login
 
 ```text
 @Client
   -> [/q.registry.InitiateResetPasswordByEmail/]
   -> [(registry.LoginIdx)]: login missing
+  -> [(registry.LoginAlias)]: alias row missing or inactive
   -> @Client: 400 Bad Request
 ```
 
@@ -662,12 +721,14 @@ error-handling rules from [auth architecture](./arch.md).
 ### Consistency
 
 - Every `[[Profile workspace lifecycle]]` update is asynchronous; login creation can return `201 Created` before sign-in can issue a usable principal token.
-- Every `[(registry.LoginIdx)]` lookup used by sign-in, password change, and password reset resolves to the active `[(registry.Login)]` for the requested app and login hash.
+- Every `[(registry.LoginIdx)]` lookup used by sign-in, password change, and primary-login password reset resolves to the active `[(registry.Login)]` for the requested app and login hash.
+- Every alias password reset proves the submitted alias email through the verifier, then carries the canonical login in the verified value token so the final password write remains local to `CanonicalPseudoWSID`.
 - Every password change or reset updates future credential checks but does not revoke already issued principal tokens.
 
 ### Testing
 
 - Every Scenario in [authn.feature](./authn.feature) has integration coverage or must gain integration coverage before authn behavior changes.
 - Every login-alias Scenario has registry integration coverage, including alias management, cross-namespace uniqueness, alias sign-in, stale-alias rejection, and token alias snapshots.
+- Every password reset by alias Scenario has registry integration coverage for alias-to-canonical reset, alias inbox code delivery, and inactive-alias rejection.
 - Every Component in `Public API endpoints` that maps a public status code has API-level integration coverage for success and rejection paths.
 - Every token contract Scenario validates the emitted token payload or returned authn response fields at API or registry integration level.

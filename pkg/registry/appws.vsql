@@ -102,7 +102,8 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 
 	TYPE InitiateResetPasswordByEmailResult (
 		VerificationToken text NOT NULL,
-		ProfileWSID int64 NOT NULL
+		ProfileWSID int64 NOT NULL,
+		CanonicalPseudoWSID int64 NOT NULL
 	);
 
 	TYPE IssueVerifiedValueTokenForResetPasswordParams (

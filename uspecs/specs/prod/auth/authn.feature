@@ -236,6 +236,24 @@ Feature: Authentication
       And Client resets the password with the verified value token
       Then Client can sign in with the new password
 
+    Scenario: Client resets password by verified alias email
+      Given User Login "jsmith" has active Login Alias "j.smith@example.com"
+      When Client initiates password reset using Login Alias "j.smith@example.com"
+      And Client verifies the reset code sent to "j.smith@example.com"
+      And Client resets the password with the verified value token
+      Then Client can sign in as User Login "jsmith" with the new password
+
+    Scenario Outline: Password reset initiation rejects an inactive alias
+      Given User Login "jsmith" had Login Alias "j.smith@example.com"
+      And System <operation> that Login Alias
+      When Client initiates password reset using Login Alias "j.smith@example.com"
+      Then the response status is "400 Bad Request"
+
+      Examples:
+        | operation             |
+        | replaced              |
+        | cleared               |
+
     Scenario: Password reset initiation rejects unknown login
       When Client initiates password reset for an unknown login
       Then the response status is "400 Bad Request"

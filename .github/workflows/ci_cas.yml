@@ -16,13 +16,18 @@ jobs:
 
     services:
       scylladb:
-        image: scylladb/scylla
+        image: scylladb/scylla:5.1.13
         ports:
           - 9042:9042
 
     steps:
     - name: Checkout and Setup go
       uses: untillpro/ci-action/checkout-and-setup-go@main
+
+    - name: Wait for Scylla CQL
+      uses: untillpro/ci-action/wait-for-scylla@main
+      with:
+        container-id: ${{ job.services.scylladb.id }}
 
     - name: Run Cassandra Implementation Tests
       working-directory: pkg/istorage/cas

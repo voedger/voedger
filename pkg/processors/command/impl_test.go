@@ -151,7 +151,7 @@ func TestBasicUsage(t *testing.T) {
 		<-check
 		<-check
 
-		logCap.HasLine("stage=cp.success")
+		logCap.EventuallyHasLine("stage=cp.success")
 	})
 
 	t.Run("500 internal server error command exec error", func(t *testing.T) {

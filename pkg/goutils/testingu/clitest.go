@@ -101,11 +101,16 @@ func CaptureStdoutStderr(f func() error) (stdout string, stderr string, err erro
 		// notestdept
 		return "", "", err
 	}
+	defer stdoutReader.Close()
+	defer stdoutWriter.Close()
+
 	stderrReader, stderrWriter, err := os.Pipe()
 	if err != nil {
 		// notestdept
 		return "", "", err
 	}
+	defer stderrReader.Close()
+	defer stderrWriter.Close()
 
 	{
 		origStdout := os.Stdout

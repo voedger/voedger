@@ -7,6 +7,7 @@
 package bbolt
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -83,6 +84,87 @@ func Test_PutGet(t *testing.T) {
 	require.NoError(err)
 	require.True(ok)
 	require.Equal("Molchanovsky Dmitry Anatolyevich", string(value))
+}
+
+func TestReturnedBytesAreStableAfterReadTransaction(t *testing.T) {
+	require := require.New(t)
+
+	params := prepareTestData()
+	defer cleanupTestData(params)
+
+	factory := Provide(params, testingu.MockTime)
+	storageProvider := istorageimpl.Provide(factory)
+	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	const (
+		pKey       = "pKey"
+		readCCols  = "read-cCols"
+		ttlCCols   = "ttl-cCols"
+		readValue  = "read-value"
+		ttlValue   = "ttl-value"
+		ttlSeconds = 3600
+	)
+
+	require.NoError(appStorage.Put([]byte(pKey), []byte(readCCols), []byte(readValue)))
+	ok, err := appStorage.InsertIfNotExists([]byte(pKey), []byte(ttlCCols), []byte(ttlValue), ttlSeconds)
+	require.NoError(err)
+	require.True(ok)
+
+	var readCColsRetained, readValueRetained []byte
+	require.NoError(appStorage.Read(context.Background(), []byte(pKey), nil, nil, func(ccols, viewRecord []byte) error {
+		if string(ccols) == readCCols {
+			readCColsRetained = ccols
+			readValueRetained = viewRecord
+		}
+		return nil
+	}))
+	require.Equal(readCCols, string(readCColsRetained))
+	require.Equal(readValue, string(readValueRetained))
+
+	var ttlReadCColsRetained, ttlReadValueRetained []byte
+	require.NoError(appStorage.TTLRead(context.Background(), []byte(pKey), nil, nil, func(ccols, viewRecord []byte) error {
+		if string(ccols) == ttlCCols {
+			ttlReadCColsRetained = ccols
+			ttlReadValueRetained = viewRecord
+		}
+		return nil
+	}))
+	require.Equal(ttlCCols, string(ttlReadCColsRetained))
+	require.Equal(ttlValue, string(ttlReadValueRetained))
+
+	var ttlGetValueRetained []byte
+	ok, err = appStorage.TTLGet([]byte(pKey), []byte(ttlCCols), &ttlGetValueRetained)
+	require.NoError(err)
+	require.True(ok)
+	require.Equal(ttlValue, string(ttlGetValueRetained))
+
+	churnBboltStorage(t, appStorage)
+
+	require.Equal(readCCols, string(readCColsRetained))
+	require.Equal(readValue, string(readValueRetained))
+	require.Equal(ttlCCols, string(ttlReadCColsRetained))
+	require.Equal(ttlValue, string(ttlReadValueRetained))
+	require.Equal(ttlValue, string(ttlGetValueRetained))
+}
+
+func churnBboltStorage(t *testing.T, storage istorage.IAppStorage) {
+	t.Helper()
+
+	large := make([]byte, 64*1024)
+	for i := range large {
+		large[i] = byte(i)
+	}
+	base := time.Now()
+	batch := make([]istorage.BatchItem, 0, 256)
+	for i := range 256 {
+		batch = append(batch, istorage.BatchItem{
+			PKey:  []byte("stable-read-churn"),
+			CCols: []byte(base.Add(time.Duration(i)).String()),
+			Value: large,
+		})
+	}
+	require.NoError(t, storage.PutBatch(batch))
 }
 
 func TestBackgroundCleaner(t *testing.T) {
