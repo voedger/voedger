@@ -18,7 +18,7 @@ import (
 )
 
 func (ms *metricsService) Prepare(interface{}) (err error) {
-	ms.listener, err = net.Listen("tcp", httpu.ListenAddr(ms.port))
+	ms.listener, err = net.Listen("tcp", httpu.ListenAddr(ms.port)) //nolint:noctx // lefitime is controlled by IService engine
 	return err
 }
 
@@ -62,7 +62,7 @@ func provideHandler(metrics imetrics.IMetrics) http.HandlerFunc {
 			if _, err = rw.Write(imetrics.ToPrometheus(metric, metricValue)); err != nil {
 				return fmt.Errorf("metrics service: failed to write metric %s for app %s on VVM %s: %w", metric.Name(), metric.App(), metric.Vvm(), err)
 			}
-			return
+			return nil
 		})
 		if err != nil {
 			logger.Error(err)

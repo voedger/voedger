@@ -36,54 +36,54 @@ func (b *baseKeyBuilder) String() string {
 func (b *baseKeyBuilder) PartitionKey() istructs.IRowWriter                { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter
 func (b *baseKeyBuilder) ClusteringColumns() istructs.IRowWriter           { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter
 func (b *baseKeyBuilder) ToBytes(istructs.WSID) (pk, cc []byte, err error) { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter
-func (b *baseKeyBuilder) PutInt8(name appdef.FieldName, value int8) {
+func (b *baseKeyBuilder) PutInt8(name appdef.FieldName, _ int8) {
 	panic(errInt8FieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutInt16(name appdef.FieldName, value int16) {
+func (b *baseKeyBuilder) PutInt16(name appdef.FieldName, _ int16) {
 	panic(errInt16FieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutInt32(name appdef.FieldName, value int32) {
+func (b *baseKeyBuilder) PutInt32(name appdef.FieldName, _ int32) {
 	panic(errInt32FieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutInt64(name appdef.FieldName, value int64) {
+func (b *baseKeyBuilder) PutInt64(name appdef.FieldName, _ int64) {
 	panic(errInt64FieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutFloat32(name appdef.FieldName, value float32) {
+func (b *baseKeyBuilder) PutFloat32(name appdef.FieldName, _ float32) {
 	panic(errFloat32FieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutFloat64(name appdef.FieldName, value float64) {
+func (b *baseKeyBuilder) PutFloat64(name appdef.FieldName, _ float64) {
 	panic(errFloat64FieldUndefined(name))
 }
 
 // Puts value into bytes or raw data field.
-func (b *baseKeyBuilder) PutBytes(name appdef.FieldName, value []byte) {
+func (b *baseKeyBuilder) PutBytes(name appdef.FieldName, _ []byte) {
 	panic(errBytesFieldUndefined(name))
 }
 
 // Puts value into string or raw data field.
-func (b *baseKeyBuilder) PutString(name appdef.FieldName, value string) {
+func (b *baseKeyBuilder) PutString(name appdef.FieldName, _ string) {
 	panic(errStringFieldUndefined(name))
 }
 
-func (b *baseKeyBuilder) PutQName(name appdef.FieldName, value appdef.QName) {
+func (b *baseKeyBuilder) PutQName(name appdef.FieldName, _ appdef.QName) {
 	panic(errQNameFieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutBool(name appdef.FieldName, value bool) {
+func (b *baseKeyBuilder) PutBool(name appdef.FieldName, _ bool) {
 	panic(errBoolFieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
+func (b *baseKeyBuilder) PutRecordID(name appdef.FieldName, _ istructs.RecordID) {
 	panic(errRecordIDFieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, value json.Number) {
+func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, _ json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutChars(name appdef.FieldName, value string) {
+func (b *baseKeyBuilder) PutChars(name appdef.FieldName, _ string) {
 	panic(errCharsFieldUndefined(name))
 }
 func (b *baseKeyBuilder) PutFromJSON(map[appdef.FieldName]any) {
 	panic(ErrNotSupported)
 }
-func (b *baseKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+func (b *baseKeyBuilder) Equals(istructs.IKeyBuilder) bool {
 	panic(errNotImplemented)
 }
 
@@ -91,40 +91,40 @@ type baseValueBuilder struct {
 	istructs.IStateValueBuilder
 }
 
-func (b *baseValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+func (b *baseValueBuilder) Equal(istructs.IStateValueBuilder) bool {
 	return false
 }
-func (b *baseValueBuilder) PutInt8(name string, value int8) {
+func (b *baseValueBuilder) PutInt8(name string, _ int8) {
 	panic(errInt8FieldUndefined(name))
 }
-func (b *baseValueBuilder) PutInt16(name string, value int16) {
+func (b *baseValueBuilder) PutInt16(name string, _ int16) {
 	panic(errInt16FieldUndefined(name))
 }
-func (b *baseValueBuilder) PutInt32(name string, value int32) {
+func (b *baseValueBuilder) PutInt32(name string, _ int32) {
 	panic(errInt32FieldUndefined(name))
 }
-func (b *baseValueBuilder) PutInt64(name string, value int64) {
+func (b *baseValueBuilder) PutInt64(name string, _ int64) {
 	panic(errInt64FieldUndefined(name))
 }
-func (b *baseValueBuilder) PutBytes(name string, value []byte) {
+func (b *baseValueBuilder) PutBytes(name string, _ []byte) {
 	panic(errBytesFieldUndefined(name))
 }
-func (b *baseValueBuilder) PutString(name, value string)       { panic(errStringFieldUndefined(name)) }
-func (b *baseValueBuilder) PutBool(name string, value bool)    { panic(errBoolFieldUndefined(name)) }
-func (b *baseValueBuilder) PutChars(name string, value string) { panic(errCharsFieldUndefined(name)) }
-func (b *baseValueBuilder) PutFloat32(name string, value float32) {
+func (b *baseValueBuilder) PutString(name, _ string)       { panic(errStringFieldUndefined(name)) }
+func (b *baseValueBuilder) PutBool(name string, _ bool)    { panic(errBoolFieldUndefined(name)) }
+func (b *baseValueBuilder) PutChars(name string, _ string) { panic(errCharsFieldUndefined(name)) }
+func (b *baseValueBuilder) PutFloat32(name string, _ float32) {
 	panic(errFloat32FieldUndefined(name))
 }
-func (b *baseValueBuilder) PutFloat64(name string, value float64) {
+func (b *baseValueBuilder) PutFloat64(name string, _ float64) {
 	panic(errFloat64FieldUndefined(name))
 }
-func (b *baseValueBuilder) PutQName(name string, value appdef.QName) {
+func (b *baseValueBuilder) PutQName(name string, _ appdef.QName) {
 	panic(errQNameFieldUndefined(name))
 }
-func (b *baseValueBuilder) PutNumber(name string, value json.Number) {
+func (b *baseValueBuilder) PutNumber(name string, _ json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
-func (b *baseValueBuilder) PutRecordID(name string, value istructs.RecordID) {
+func (b *baseValueBuilder) PutRecordID(name string, _ istructs.RecordID) {
 	panic(errRecordIDFieldUndefined(name))
 }
 func (b *baseValueBuilder) BuildValue() istructs.IStateValue {
@@ -236,7 +236,7 @@ func (v *ObjectStateValue) AsValue(name string) (result istructs.IStateValue) {
 	if result == nil {
 		panic(errValueFieldUndefined(name))
 	}
-	return
+	return result
 }
 
 type objectArrayContainerValue struct {
@@ -265,7 +265,7 @@ func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateVal
 	if result == nil {
 		panic(errIndexOutOfBounds(i))
 	}
-	return
+	return result
 }
 func (v *objectArrayContainerValue) Length() int {
 	var result int
@@ -378,7 +378,7 @@ func (v *jsonValue) AsRecordID(name string) istructs.RecordID {
 	panic(errRecordIDFieldUndefined(name))
 }
 func (v *jsonValue) RecordIDs(bool) func(func(string, istructs.RecordID) bool) {
-	return func(cb func(string, istructs.RecordID) bool) {}
+	return func(func(string, istructs.RecordID) bool) {}
 }
 func (v *jsonValue) FieldNames(cb func(string) bool) {
 	for name := range v.json {

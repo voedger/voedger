@@ -29,8 +29,7 @@ func cmdCommandUpdateGlobalRolesExec(args istructs.ExecCommandArgs) error {
 	appName := args.ArgumentObject.AsString(field_AppName)
 	globalRoles := args.ArgumentObject.AsString(field_GlobalRoles)
 	if len(globalRoles) > 0 {
-		globalRolesStr := strings.Split(globalRoles, ",")
-		for _, role := range globalRolesStr {
+		for role := range strings.SplitSeq(globalRoles, ",") {
 			_, err := appdef.ParseQName(role)
 			if err != nil {
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, err)

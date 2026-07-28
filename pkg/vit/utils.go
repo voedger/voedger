@@ -133,7 +133,7 @@ func (vit *VIT) GetCDocWSKind(ws *AppWorkspace) (cdoc map[string]interface{}, id
 
 func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istructs.WSID) (cdoc map[string]interface{}, id int64) {
 	vit.T.Helper()
-	body := bytes.NewBufferString(fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields":["sys.ID"`, qName))
+	body := bytes.NewBufferString(fmt.Sprintf(`{"args":{"Schema":%q},"elements":[{"fields":["sys.ID"`, qName))
 	fields := []string{}
 	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)
@@ -142,7 +142,7 @@ func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istru
 			if field.IsSys() {
 				continue
 			}
-			fmt.Fprintf(body, `,"%s"`, field.Name())
+			fmt.Fprintf(body, `,%q`, field.Name())
 			fields = append(fields, field.Name())
 		}
 	}
@@ -157,7 +157,7 @@ func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istru
 	for i, fieldName := range fields {
 		cdoc[fieldName] = resp.SectionRow()[i+1]
 	}
-	return
+	return cdoc, id
 }
 
 func (vit *VIT) GetCDocChildWorkspace(ws *AppWorkspace) (cdoc map[string]interface{}, id int64) {
@@ -205,7 +205,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 					tempWSError = tempWSError[:strings.Index(tempWSError, errChunk)+len(errChunk)]
 					continue
 				}
-				vit.T.Fatalf(`expected ws init error template is [%s] but is "%s"`, strings.Join(expectWSInitErrorChunks, ", "), wsError)
+				vit.T.Fatalf("expected ws init error template is [%s] but is %q", strings.Join(expectWSInitErrorChunks, ", "), wsError)
 			}
 		} else {
 			require.Empty(vit.T, wsError)
@@ -232,7 +232,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 	return ws
 }
 
-func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQName appdef.AppQName, expectWSInitErrorChunks ...string) (profileWSID istructs.WSID) {
+func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, _ appdef.AppQName, expectWSInitErrorChunks ...string) (profileWSID istructs.WSID) {
 	vit.T.Helper()
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
@@ -275,7 +275,7 @@ func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal, expectWSInitEr
 }
 
 func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, opts ...httpu.ReqOptFunc) (ws *AppWorkspace) {
-	return vit.waitForWorkspace(wsName, parentWS.Owner, func(owner *Principal, body string) *federation.FuncResponse {
+	return vit.waitForWorkspace(wsName, parentWS.Owner, func(_ *Principal, body string) *federation.FuncResponse {
 		return vit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body, opts...)
 	})
 }
@@ -333,9 +333,9 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}, opts ...
 	body := fmt.Sprintf(`{
 		"args": {
 			"WSName": %q,
-			"WSKind": "%s",
+			"WSKind": %q,
 			"WSKindInitializationData": %q,
-			"TemplateName": "%s",
+			"TemplateName": %q,
 			"TemplateParams": %q,
 			"WSClusterID": %d
 		}
@@ -394,7 +394,7 @@ func (vit *VIT) SubscribeForN10nProjectionKey(pk in10n.ProjectionKey) federation
 	vit.T.Helper()
 	offsetsChan, unsubscribe := vit.SubscribeForN10nUnsubscribe(pk)
 	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
-	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+	vit.cleanups = append(vit.cleanups, func(*VIT) {
 		unsubscribe()
 	})
 	vit.lock.Unlock()

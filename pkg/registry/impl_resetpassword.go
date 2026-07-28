@@ -36,7 +36,6 @@ type resetPasswordResult struct {
 }
 
 func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, itokens itokens.ITokens, federation federation.IFederation) {
-
 	// sys/registry/pseudoProfileWSID/q.sys.InitiateResetPasswordByEmail
 	// null auth
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
@@ -60,7 +59,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, itokens itoken
 // sys/registry/pseudoWSID
 // null auth
 func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federation federation.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		loginAppStr := args.ArgumentObject.AsString(authnz.Field_AppName)
 		email := args.ArgumentObject.AsString(field_Email)
 		language := args.ArgumentObject.AsString(field_Language)
@@ -95,7 +94,7 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 // sys/registry/pseudoWSID
 // null auth
 func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens, federation federation.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		token := args.ArgumentObject.AsString(field_VerificationToken)
 		code := args.ArgumentObject.AsString(field_VerificationCode)
 		profileWSID := args.ArgumentObject.AsInt64(field_ProfileWSID)

@@ -4,7 +4,7 @@
 
 package dbcertcache
 
-import istorage "github.com/voedger/voedger/pkg/istorage"
+import "github.com/voedger/voedger/pkg/istorage"
 
 type RouterAppStoragePtr *istorage.IAppStorage
 

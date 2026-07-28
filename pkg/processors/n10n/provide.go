@@ -14,8 +14,8 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
 
-func NewIN10NProc(vvmCtx context.Context, n10nBroker in10n.IN10nBroker, authenticator iauthnz.IAuthenticator,
-	appTokensFactory payloads.IAppTokensFactory, asp istructs.IAppStructsProvider) (IN10NProc, func()) {
+func NewIN10NProc(_ context.Context, n10nBroker in10n.IN10nBroker, authenticator iauthnz.IAuthenticator,
+	appTokensFactory payloads.IAppTokensFactory, asp istructs.IAppStructsProvider) (n10nProc IN10NProc, cleanup func()) {
 	res := &implIN10NProc{
 		n10nBroker:         n10nBroker,
 		authenticator:      authenticator,

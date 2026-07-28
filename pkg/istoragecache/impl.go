@@ -354,7 +354,7 @@ func (s *cachedAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) 
 	if !s.getBatchFromCache(pKey, items) {
 		return s.getBatchFromStorage(pKey, items)
 	}
-	return
+	return nil
 }
 
 func (s *cachedAppStorage) getBatchFromCache(pKey []byte, items []istorage.GetBatchItem) (ok bool) {

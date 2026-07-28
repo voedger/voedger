@@ -169,7 +169,6 @@ func (s *sendMailStorage) Validate(items []state.ApplyBatchItem) (err error) {
 	return nil
 }
 func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
-
 	opts := []mail.Option{
 		mail.WithPort(int(k.port)),
 		mail.WithUsername(k.username),
@@ -184,7 +183,7 @@ func (s *sendMailStorage) sendMail(k *mailKeyBuilder) error {
 	}
 	logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent",
 		k.message.Subject, k.message.From, k.message.To, k.message.CC, k.message.BCC))
-		
+
 	return nil
 }
 func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
@@ -230,6 +229,7 @@ func (s *sendMailStorage) Get(key istructs.IStateKeyBuilder) (istructs.IStateVal
 		err = s.sendMail(key.(*mailKeyBuilder))
 	}
 	if err != nil {
+		//nolint:nilerr
 		return &sendMailValue{
 			success: false,
 			error:   err.Error(),
@@ -246,16 +246,16 @@ func (s *implIEmailSender_SMTP) Send(host string, m state.EmailMessage, opts ...
 	}
 	msg := mail.NewMsg()
 	msg.Subject(m.Subject)
-	if err = msg.From(m.From); err != nil {
+	if err := msg.From(m.From); err != nil {
 		return err
 	}
-	if err = msg.To(m.To...); err != nil {
+	if err := msg.To(m.To...); err != nil {
 		return err
 	}
-	if err = msg.Cc(m.CC...); err != nil {
+	if err := msg.Cc(m.CC...); err != nil {
 		return err
 	}
-	if err = msg.Bcc(m.BCC...); err != nil {
+	if err := msg.Bcc(m.BCC...); err != nil {
 		return err
 	}
 	msg.SetBodyString(mail.TypeTextHTML, m.Body)

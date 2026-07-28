@@ -6,6 +6,7 @@
 package sqlquery
 
 import (
+	"maps"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -139,7 +140,7 @@ func executeBlobRead(
 		blobErr = fmt.Errorf("blob read error: %w", sysErr)
 	}
 
-	ok := (*blobHandlerPtr).HandleRead_V2(appQName, wsid, header, ctx,
+	ok := (*blobHandlerPtr).HandleRead_V2(ctx, appQName, wsid, header,
 		okResponseIniter, errorResponder,
 		ownerRecord, fieldName, ownerID, *requestSenderPtr, rLimiter)
 
@@ -246,12 +247,12 @@ func parseBlobFuncExpr(funcExpr *sqlparser.FuncExpr, sourceTableType appdef.ITyp
 		return blobFuncDesc{}, fmt.Errorf("%s: first argument must be a field name", funcName)
 	}
 	fieldName := colName.Name.String()
-	if sourceTableWithFields, ok := sourceTableType.(appdef.IWithFields); ok {
-		fieldName = recoverFieldName(sourceTableWithFields, fieldName)
-	} else {
+	sourceTableWithFields, ok := sourceTableType.(appdef.IWithFields)
+	if !ok {
 		// notest
 		panic("impossible")
 	}
+	fieldName = recoverFieldName(sourceTableWithFields, fieldName)
 
 	bf := blobFuncDesc{
 		funcName:  funcName,
@@ -291,9 +292,7 @@ func mergeJSONWithBlobResults(recJSON string, blobResults map[string]interface{}
 	if err := json.Unmarshal([]byte(recJSON), &recData); err != nil {
 		return "", err
 	}
-	for k, v := range blobResults {
-		recData[k] = v
-	}
+	maps.Copy(recData, blobResults)
 	bb, err := json.Marshal(recData)
 	if err != nil {
 		return "", err

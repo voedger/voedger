@@ -52,19 +52,19 @@ func writeCommonError_V2(w http.ResponseWriter, err error, code int) bool {
 	return writeResponse(w, jsonu.Jprintf(`{"status":%d,"message":%q}`, code, err.Error()))
 }
 
-func writeCommonError_V1(w http.ResponseWriter, err error, code int) bool {
+func writeCommonError_V1(w http.ResponseWriter, err error, code int) {
 	sysErr := coreutils.WrapSysErrorToExact(err, code)
 	w.Header().Set(httpu.ContentType, httpu.ContentType_ApplicationJSON)
 	applySysErrorHeaders(w, sysErr)
 	w.WriteHeader(code)
-	return writeResponse(w, sysErr.ToJSON_APIV1())
+	_ = writeResponse(w, sysErr.ToJSON_APIV1()) // ignore the error assuming that sending the error is always the last communication
 }
 
 func writeResponse(w http.ResponseWriter, data string) bool {
 	if onBeforeWriteResponse != nil {
 		onBeforeWriteResponse(w)
 	}
-	if _, err := w.Write([]byte(data)); err != nil { //nolint G705 data is always JSON; Content-Type is set to application/json by all callers
+	if _, err := w.Write([]byte(data)); err != nil { //nolint G705 // data is always JSON; Content-Type is set to application/json by all callers
 		stack := debug.Stack()
 		log.Println("failed to write response:", err, "\n", string(stack))
 		return false

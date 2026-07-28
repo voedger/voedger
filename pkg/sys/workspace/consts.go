@@ -38,7 +38,7 @@ const (
 	Field_OwnerQName2                               = "OwnerQName2"
 	EPWSTemplates             extensionpoints.EPKey = "WSTemplates"
 
-	//Deprecated: use Field_OwnerQName2
+	// Deprecated: use Field_OwnerQName2
 	Field_OwnerQName = "OwnerQName"
 )
 

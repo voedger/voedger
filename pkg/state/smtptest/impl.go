@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func (b *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
+func (b *backend) NewSession(_ *smtp.Conn) (smtp.Session, error) {
 	return &session{ch: make(chan state.EmailMessage), server: b.server}, nil
 }
 
@@ -26,6 +26,7 @@ func NewServer(opts ...Option) Server {
 		opt(ts)
 	}
 
+	//nolint:noctx // lifetime is managed manually in tests
 	l, err := net.Listen("tcp", httpu.LocalhostDynamic())
 	if err != nil {
 		panic(err)
@@ -36,8 +37,8 @@ func NewServer(opts ...Option) Server {
 
 	go func() {
 		log.Println("Starting test SMTP server at port", ts.port)
-		if err = s.Serve(l); err != nil {
-			log.Fatal(err)
+		if err := s.Serve(l); err != nil {
+			panic(err)
 		}
 	}()
 

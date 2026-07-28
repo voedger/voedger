@@ -33,7 +33,7 @@ type federationCommandStorage struct {
 	emulation  state.FederationCommandHandler
 }
 
-func NewFederationCommandStorage(appStructs state.AppStructsFunc, wsid state.WSIDFunc, federation federation.IFederation, tokens itokens.ITokens, emulation state.FederationCommandHandler) *federationCommandStorage {
+func NewFederationCommandStorage(appStructs state.AppStructsFunc, wsid state.WSIDFunc, federation federation.IFederation, tokens itokens.ITokens, emulation state.FederationCommandHandler) state.IStateStorage {
 	return &federationCommandStorage{
 		appStructs: appStructs,
 		wsid:       wsid,
@@ -137,7 +137,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 
 	kb := key.(*federationCommandKeyBuilder)
 
-	for _, ec := range strings.Split(kb.expectedCodes, ",") {
+	for ec := range strings.SplitSeq(kb.expectedCodes, ",") {
 		if ec == "" {
 			continue
 		}
@@ -166,11 +166,10 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		wsid = s.wsid()
 	}
 
-	if kb.command != appdef.NullQName {
-		command = kb.command
-	} else {
+	if kb.command == appdef.NullQName {
 		return nil, errCommandNotSpecified
 	}
+	command = kb.command
 
 	if kb.body != "" {
 		body = kb.body
@@ -218,12 +217,11 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		newIDs = resp.NewIDs
 		resStatus = resp.HTTPResp.StatusCode
 		result = resp.CmdResult
-
 	}
 
 	return &fcCmdValue{
 		statusCode: resStatus,
-		newIds:     &fcCmdNewIds{newIds: newIDs},
+		newIDs:     &fcCmdNewIDs{newIDs: newIDs},
 		result:     &jsonValue{json: result},
 		body:       resBody,
 	}, nil
@@ -239,7 +237,7 @@ func (s *federationCommandStorage) Read(key istructs.IStateKeyBuilder, callback 
 type fcCmdValue struct {
 	baseStateValue
 	statusCode int
-	newIds     istructs.IStateValue
+	newIDs     istructs.IStateValue
 	result     istructs.IStateValue
 	body       string
 }
@@ -253,7 +251,7 @@ func (v *fcCmdValue) AsInt32(name string) int32 {
 
 func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_FederationCommand_Field_NewIDs {
-		return v.newIds
+		return v.newIDs
 	}
 	if name == sys.Storage_FederationCommand_Field_Result {
 		return v.result
@@ -261,13 +259,13 @@ func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
 	return v.baseStateValue.AsValue(name)
 }
 
-type fcCmdNewIds struct {
+type fcCmdNewIDs struct {
 	baseStateValue
-	newIds map[string]istructs.RecordID
+	newIDs map[string]istructs.RecordID
 }
 
-func (v *fcCmdNewIds) AsInt64(name string) int64 {
-	if id, ok := v.newIds[name]; ok {
+func (v *fcCmdNewIDs) AsInt64(name string) int64 {
+	if id, ok := v.newIDs[name]; ok {
 		return int64(id) // nolint G115
 	}
 	panic(errInt64FieldUndefined(name))

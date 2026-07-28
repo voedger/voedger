@@ -253,33 +253,33 @@ func TestRetryAfter_replyErr(t *testing.T) {
 
 type busyBlobRequestHandler struct{}
 
-func (busyBlobRequestHandler) HandleRead(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleRead(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, string, bus.IRequestSender, iblobstorage.RLimiterType) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleWrite(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleWrite(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	url.Values, func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleWrite_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleWrite_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender, appdef.QName, string) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleRead_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleRead_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, appdef.QName, string, istructs.RecordID,
 	bus.IRequestSender, iblobstorage.RLimiterType) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleReadTemp_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleReadTemp_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, bus.IRequestSender, iblobstorage.SUUID, iblobstorage.RLimiterType) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleWriteTemp_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleWriteTemp_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender) bool {
 	return false
 }
@@ -426,8 +426,10 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 		Transport: &http.Transport{DisableKeepAlives: true},
 	}
 	defer client.CloseIdleConnections()
+	// nolint bodyclose resp.Body is captured by onBeforeWriteResponse hook and closed there via sync.Once; defer below covers early-exit paths
 	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/queries/test.query", router.port(), testWSID))
 	require.NoError(err)
+	defer resp.Body.Close()
 
 	// ensure the first element is sent successfully
 	require.NoError(<-firstElemSendErrCh)
@@ -512,6 +514,7 @@ type testRouter struct {
 }
 
 func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandler bus.RequestHandler, blobRequestHandler blobprocessor.IRequestHandler) {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	requestSender := bus.NewIRequestSender(testingu.MockTime, requestHandler)
 	httpSrv, acmeSrv, adminService := Provide(rp, nil, blobRequestHandler, nil, requestSender,
@@ -539,10 +542,12 @@ func startRouter(t *testing.T, router *testRouter, rp RouterParams, requestHandl
 }
 
 func setUp(t *testing.T, requestHandler bus.RequestHandler) *testRouter {
+	t.Helper()
 	return setUpWithBlobHandler(t, requestHandler, nil)
 }
 
 func setUpWithBlobHandler(t *testing.T, requestHandler bus.RequestHandler, blobRequestHandler blobprocessor.IRequestHandler) *testRouter {
+	t.Helper()
 	rp := RouterParams{
 		HTTPServerParams: HTTPServerParams{
 			Port:             0,
@@ -630,7 +635,9 @@ func (t testRouter) adminPort() int {
 	return t.adminService.(interface{ GetPort() int }).GetPort()
 }
 
+//nolint thelper
 func (t testRouter) expectClientDisconnection(tst *testing.T) {
+	tst.Helper()
 	select {
 	case <-t.clientDisconnections:
 	case <-time.After(time.Second):
@@ -639,6 +646,7 @@ func (t testRouter) expectClientDisconnection(tst *testing.T) {
 }
 
 func expectJSONResp(t *testing.T, expectedJSON string, expectedString string, resp *http.Response) {
+	t.Helper()
 	b, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	if len(expectedJSON) > 0 {

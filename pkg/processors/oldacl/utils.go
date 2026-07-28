@@ -20,7 +20,7 @@ func prnsToString(prns []iauthnz.Principal) string {
 	}
 	res := &strings.Builder{}
 	res.WriteString("[")
-	for i := 0; i < len(prns); i++ {
+	for i := range prns {
 		prn := prns[i]
 		switch prn.Kind {
 		case iauthnz.PrincipalKind_Host:

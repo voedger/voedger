@@ -62,10 +62,7 @@ func TestBasic(t *testing.T) {
 
 		// Launch VVM2, expecting leadership acquisition to fail
 		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			vvmCfg2 := GetTestVVMCfg(net.IPv4(192, 168, 0, 2))
 
 			// set vvmCfg2 storage factory to the one from vvm1
@@ -89,7 +86,7 @@ func TestBasic(t *testing.T) {
 
 			r.Error(problemCtx2.Err(), "VVM2 should not acquire leadership")
 			r.ErrorIs(vvm2.Shutdown(), ErrVVMLeadershipAcquisition)
-		}()
+		})
 
 		wg.Wait()
 		r.NoError(vvm1.Shutdown())

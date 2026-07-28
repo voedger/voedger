@@ -130,22 +130,22 @@ var (
 		}),
 		WithSecret(testSMTPPwdSecretName, []byte("smtpPassword")),
 		WithCleanup(func(_ *VIT) {
-			MockCmdExec = func(input string, args istructs.ExecCommandArgs) error { panic("") }
-			MockQryExec = func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error { panic("") }
+			MockCmdExec = func(string, istructs.ExecCommandArgs) error { panic("") }
+			MockQryExec = func(string, istructs.ExecQueryArgs, istructs.ExecQueryCallback) error { panic("") }
 		}),
 	)
 	MockQryExec func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	MockCmdExec func(input string, args istructs.ExecCommandArgs) error
 )
 
-func ProvideApp2(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
+func ProvideApp2(_ builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	sysPackageFS := sysprovide.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
-	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(istructs.IAppStructs, istructs.WSID, istructs.WSID) (ok bool, err error) {
 		// simulate we could not work in any non-profile WS
 		return false, err
 	})
@@ -162,7 +162,7 @@ func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, e
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2WithJobFS,
 	}
-	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+	ep.AddNamed(builtinapps.EPIsDeviceAllowedFunc, func(istructs.IAppStructs, istructs.WSID, istructs.WSID) (ok bool, err error) {
 		// simulate we could not work in any non-profile WS
 		return false, err
 	})
@@ -191,7 +191,7 @@ func ProvideApp2WithJob(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, e
 	}
 }
 
-func ProvideApp2WithJobSendMail(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
+func ProvideApp2WithJobSendMail(_ builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
 	sysPackageFS := sysprovide.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
@@ -227,7 +227,7 @@ func ProvideApp2WithJobSendMail(apis builtinapps.APIs, cfg *istructsmem.AppConfi
 	}
 }
 
-func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
+func ProvideApp1(_ builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
 	// sys package
 	sysPackageFS := sysprovide.Provide(cfg)
 
@@ -343,7 +343,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					}
 					svbViewClients.PutInt64(state.ColOffset, int64(event.WLogOffset())) // nolint G115
 				}
-				return
+				return nil
 			},
 		},
 	)
@@ -412,7 +412,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 					svbViewDailyIdxSmall.PutString(Field_StringValue, stringValue)
 					svbViewDailyIdxSmall.PutInt64(state.ColOffset, offs)
 				}
-				return
+				return nil
 			},
 		},
 	)
@@ -429,7 +429,7 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestDeniedCmd"), istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "TestDeniedQuery"), istructsmem.NullQueryExec))
 
-	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryIntents"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryIntents"), func(_ context.Context, args istructs.ExecQueryArgs, _ istructs.ExecQueryCallback) (err error) {
 		kb, err := args.State.KeyBuilder(sys.Storage_Result, appdef.NewQName(app1PkgName, "QryIntentsResult"))
 		if err != nil {
 			return err
@@ -460,11 +460,11 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
 
-	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryWithResponseIntent"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryWithResponseIntent"), func(_ context.Context, args istructs.ExecQueryArgs, _ istructs.ExecQueryCallback) (err error) {
 		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
 
-	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryReturnsCategory"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryReturnsCategory"), func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		q := appdef.NewQName(app1PkgName, "category")
 		kb, err := args.State.KeyBuilder(sys.Storage_Record, q)
 		if err != nil {
@@ -478,10 +478,10 @@ func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep exten
 		return callback(&qryCategory{id: args.ArgumentObject.AsInt64("CategoryID")})
 	}))
 
-	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryDailyIdx"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryDailyIdx"), func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		skbViewDailyIdx, err := args.State.KeyBuilder(sys.Storage_View, QNameApp1_ViewDailyIdx)
 		if err != nil {
-			return
+			return err
 		}
 		if year := args.ArgumentObject.AsInt32(Field_Year); year > 0 {
 			skbViewDailyIdx.PutInt32(Field_Year, year)
@@ -590,11 +590,11 @@ type qryCategory struct {
 	id int64
 }
 
-func (q *qryCategory) AsInt64(name appdef.FieldName) int64 {
+func (q *qryCategory) AsInt64(appdef.FieldName) int64 {
 	return q.id
 }
 
-func (q *qryCategory) AsRecordID(name appdef.FieldName) istructs.RecordID {
+func (q *qryCategory) AsRecordID(appdef.FieldName) istructs.RecordID {
 	return istructs.RecordID(q.id) // nolint G115
 }
 

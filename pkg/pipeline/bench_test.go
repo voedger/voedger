@@ -28,7 +28,7 @@ func Benchmark_10_NOPS(b *testing.B) {
 	start := time.Now()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = pipeline.SendSync(noRelease{})
 	}
 
@@ -42,7 +42,7 @@ func Benchmark_100_NOPS(b *testing.B) {
 	start := time.Now()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = pipeline.SendSync(noRelease{})
 	}
 

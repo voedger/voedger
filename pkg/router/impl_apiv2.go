@@ -377,7 +377,7 @@ func requestHandlerV2_blobs_read(blobRequestHandler blobprocessor.IRequestHandle
 			// notest: checked by router url rule
 			panic(err)
 		}
-		if !blobRequestHandler.HandleRead_V2(data.appQName, data.wsid, data.header, req.Context(),
+		if !blobRequestHandler.HandleRead_V2(req.Context(), data.appQName, data.wsid, data.header,
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
 				replyErr(rw, sysErr)
 			}, ownerRecord, ownerRecordField, istructs.RecordID(ownerID), requestSender, iblobstoragestg.RLimiter_Null) {
@@ -391,7 +391,7 @@ func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHa
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
 		vars := mux.Vars(req)
 		suuid := iblobstorage.SUUID(vars[URLPlaceholder_blobIDOrSUUID])
-		if !blobRequestHandler.HandleReadTemp_V2(data.appQName, data.wsid, data.header, req.Context(),
+		if !blobRequestHandler.HandleReadTemp_V2(req.Context(), data.appQName, data.wsid, data.header,
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
 				replyErr(rw, sysErr)
 			}, requestSender, suuid, iblobstoragestg.RLimiter_Null) {
@@ -403,7 +403,7 @@ func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHa
 func requestHandlerV2_tempblobs_create(blobRequestHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return withValidateForBLOBs(numsAppsWorkspaces, func(req *http.Request, rw http.ResponseWriter, data validatedData) {
-		if !blobRequestHandler.HandleWriteTemp_V2(data.appQName, data.wsid, data.header, req.Context(),
+		if !blobRequestHandler.HandleWriteTemp_V2(req.Context(), data.appQName, data.wsid, data.header,
 			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(sysErr coreutils.SysError) {
 				replyErr(rw, sysErr)
 			}, requestSender) {
@@ -418,7 +418,7 @@ func requestHandlerV2_blobs_create(blobRequestHandler blobprocessor.IRequestHand
 		vars := mux.Vars(req)
 		ownerRecord := appdef.NewQName(vars[URLPlaceholder_pkg], vars[URLPlaceholder_table])
 		ownerRecordField := vars[URLPlaceholder_field]
-		if !blobRequestHandler.HandleWrite_V2(data.appQName, data.wsid, data.header, req.Context(),
+		if !blobRequestHandler.HandleWrite_V2(req.Context(), data.appQName, data.wsid, data.header,
 			newBLOBOKResponseIniter(rw, http.StatusCreated), req.Body, func(sysErr coreutils.SysError) {
 				replyErr(rw, sysErr)
 			}, requestSender, ownerRecord, ownerRecordField) {
@@ -479,7 +479,6 @@ func requestHandlerV2_table(reqSender bus.IRequestSender, apiPath processors.API
 				panic(err)
 			}
 			busRequest.DocID = istructs.IDType(docID)
-
 		}
 		busRequest.IsAPIV2 = true
 		busRequest.APIPath = int(apiPath)
@@ -538,9 +537,10 @@ func sendRequestAndReadResponse(req *http.Request, busRequest bus.Request, reqSe
 	reply_v2(requestCtx, rw, respCh, respErr, cancel, respMeta)
 }
 
+//nolint:dupl
 func parseChangePasswordArgs(body string) (login, oldPassword, newPassword string, err error) {
 	args := coreutils.MapObject{}
-	if err = json.Unmarshal([]byte(body), &args); err != nil {
+	if err := json.Unmarshal([]byte(body), &args); err != nil {
 		return "", "", "", fmt.Errorf("failed to unmarshal body: %w", err)
 	}
 	ok := false
@@ -568,9 +568,10 @@ func parseChangePasswordArgs(body string) (login, oldPassword, newPassword strin
 	return login, oldPassword, newPassword, nil
 }
 
+//nolint:dupl
 func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd string, err error) {
 	args := coreutils.MapObject{}
-	if err = json.Unmarshal([]byte(body), &args); err != nil {
+	if err := json.Unmarshal([]byte(body), &args); err != nil {
 		return "", "", "", fmt.Errorf("failed to unmarshal body: %w", err)
 	}
 	ok := false
@@ -595,5 +596,5 @@ func parseCreateLoginArgs(body string) (verifiedEmailToken, displayName, pwd str
 	if !ok {
 		return "", "", "", errors.New("password field missing")
 	}
-	return
+	return verifiedEmailToken, displayName, pwd, nil
 }

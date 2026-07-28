@@ -57,7 +57,7 @@ type appSecretValue struct {
 	content string
 }
 
-func (v *appSecretValue) AsString(name string) string {
+func (v *appSecretValue) AsString(string) string {
 	return v.content
 }
 

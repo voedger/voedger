@@ -5,6 +5,7 @@
 
 package engines
 
+//nolint redundant-import-alias
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"

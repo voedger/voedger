@@ -111,7 +111,7 @@ func (vvm *VoedgerVM) killerRoutine(leadershipDurationSeconds ielections.Leaders
 	processKillThreshold := time.Duration(leadershipDurationSeconds) * time.Second / 4
 	time.Sleep(processKillThreshold)
 	logger.Error("the process is still alive after the time allotted for graceful shutdown -> terminating...")
-	os.Exit(1)
+	os.Exit(1) // nolint deep-exit: by design
 }
 
 // tryToAcquireLeadership tries to acquire leadership in loop

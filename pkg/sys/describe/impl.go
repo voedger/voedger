@@ -12,14 +12,14 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func qryDescribePackageNames(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func qryDescribePackageNames(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	as := args.State.AppStructs()
 	names := as.DescribePackageNames()
 	namesStr := strings.Join(names, ",")
 	return callback(&result{res: namesStr})
 }
 
-func qryDescribePackage(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func qryDescribePackage(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	as := args.State.AppStructs()
 
 	packageName := args.ArgumentObject.AsString(field_PackageName)

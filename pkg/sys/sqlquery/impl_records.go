@@ -19,7 +19,6 @@ import (
 
 func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter,
 	callback istructs.ExecQueryCallback, recordID istructs.RecordID) error {
-
 	qNameType := appStructs.AppDef().Type(qName)
 	isSingleton := false
 	if iSingleton, ok := qNameType.(appdef.ISingleton); ok {
@@ -85,7 +84,6 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 	}
 
 	return readSingleRecord(recordID, wsid, appStructs, qNameType, f, callback, isSingleton)
-
 }
 
 func readManyODocs(ids []istructs.RecordID, wsid istructs.WSID, qName appdef.QName, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {

@@ -99,8 +99,7 @@ func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, 
 			return v, nil
 		}
 	case appdef.DataKind_string:
-		switch v := value.(type) {
-		case string:
+		if v, ok := value.(string); ok {
 			return v, nil
 		}
 	case appdef.DataKind_QName:
@@ -127,18 +126,15 @@ func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, 
 			return b, nil
 		}
 	case appdef.DataKind_bool:
-		switch v := value.(type) {
-		case bool:
+		if v, ok := value.(bool); ok {
 			return v, nil
 		}
 	case appdef.DataKind_Record:
-		switch v := value.(type) {
-		case *recordType:
+		if v, ok := value.(*recordType); ok {
 			return v.storeToBytes(), nil
 		}
 	case appdef.DataKind_Event:
-		switch v := value.(type) {
-		case *eventType:
+		if v, ok := value.(*eventType); ok {
 			return v.storeToBytes(), nil
 		}
 	}
@@ -217,18 +213,18 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	row.clear()
 
-	var QNameID uint16
-	if QNameID, err = utils.ReadUInt16(buf); err != nil {
+	var qNameID uint16
+	if qNameID, err = utils.ReadUInt16(buf); err != nil {
 		return enrichError(err, "error read row QNameID")
 	}
-	if err = row.setQNameID(QNameID); err != nil {
+	if err := row.setQNameID(qNameID); err != nil {
 		return err
 	}
 	if row.QName() == appdef.NullQName {
 		return nil
 	}
 
-	if err = loadRowSysFields(row, codecVer, buf); err != nil {
+	if err := loadRowSysFields(row, codecVer, buf); err != nil {
 		return err
 	}
 
@@ -292,7 +288,7 @@ func loadRowSysFields(row *rowType, codecVer byte, buf *bytes.Buffer) (err error
 		if id, err = utils.ReadUInt16(buf); err != nil {
 			return enrichError(err, "error read record container ID")
 		}
-		if err = row.setContainerID(containers.ContainerID(id)); err != nil {
+		if err := row.setContainerID(containers.ContainerID(id)); err != nil {
 			return enrichError(err, "error read record container")
 		}
 	}

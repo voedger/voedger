@@ -46,7 +46,7 @@ func createLogin(args istructs.ExecCommandArgs, login string) (err error) {
 	}
 
 	appParts := args.Workpiece.(processors.IProcessorWorkpiece).AppPartitions()
-	if _, err = appParts.AppDef(appQName); err != nil {
+	if _, err := appParts.AppDef(appQName); err != nil {
 		if errors.Is(err, appparts.ErrNotFound) {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("target app %s is not found", appQName))
 		}
@@ -54,17 +54,17 @@ func createLogin(args istructs.ExecCommandArgs, login string) (err error) {
 	}
 
 	// still need this check after https://github.com/voedger/voedger/issues/1311: the command is tkaen from AppWS, number of AppWS related to the login is checked here
-	if err = CheckAppWSID(login, args.WSID, args.State.AppStructs().NumAppWorkspaces()); err != nil {
-		return
+	if err := CheckAppWSID(login, args.WSID, args.State.AppStructs().NumAppWorkspaces()); err != nil {
+		return err
 	}
 
-	if err = validateSignInIdentifier(login); err != nil {
+	if err := validateSignInIdentifier(login); err != nil {
 		return err
 	}
 
 	// deactivated cdoc.registry.Login is treated as missing by GetCDocLogin so the same login name can be registered again;
 	// projectorLoginIdx then rewrites view.registry.LoginIdx by primary key (AppWSID, AppIDLoginHash)
-	if err = assertIdentifierAvailable(args.State, appName, login, args.WSID, nil); err != nil {
+	if err := assertIdentifierAvailable(args.State, appName, login, args.WSID, nil); err != nil {
 		return err
 	}
 
@@ -95,7 +95,7 @@ func createLogin(args istructs.ExecCommandArgs, login string) (err error) {
 	cdocLogin.PutRecordID(appdef.SystemField_ID, 1)
 	cdocLogin.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationData)
 
-	return
+	return nil
 }
 
 // sys/registry, appWorkspace, triggered by CDoc<Login>

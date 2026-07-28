@@ -42,7 +42,7 @@ func provideQryInitiateEmailVerification(sr istructsmem.IStatelessResources, ito
 // q.sys.InitiateEmailVerification
 // called at targetApp/profileWSID
 func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
 		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID)) // nolint G115
 		field := args.ArgumentObject.AsString(field_Field)
@@ -96,7 +96,7 @@ func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg s
 
 		kb, err := st.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 		if err != nil {
-			return
+			return err
 		}
 		reason := event.ArgumentObject().AsString(field_Reason)
 		translatedEmailSubject := message.NewPrinter(language.Make(lng), message.Catalog(translationsCatalog)).Sprintf(EmailSubject)
@@ -115,7 +115,7 @@ func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg s
 
 		_, err = intents.NewValue(kb)
 
-		return
+		return err
 	}
 }
 
@@ -139,7 +139,7 @@ func provideQryIssueVerifiedValueToken(sr istructsmem.IStatelessResources, itoke
 // called at targetApp/profileWSID
 // a helper is used for ResetPassword that calls `q.sys.IssueVerifiedValueToken` at the profile
 func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		verificationToken := args.ArgumentObject.AsString(field_VerificationToken)
 		verificationCode := args.ArgumentObject.AsString(field_VerificationCode)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)

@@ -31,7 +31,7 @@ type BasicSchedulerConfig struct {
 	stateOpts  state.StateOpts
 	HTTPClient httpu.IHTTPClient
 
-	//IntentsLimit top limit per event, optional, default value is 100
+	// IntentsLimit top limit per event, optional, default value is 100
 	IntentsLimit int
 	EmailSender  state.IEmailSender
 }

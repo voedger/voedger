@@ -58,10 +58,10 @@ const (
 )
 
 var (
-	onRequestCtxClosed    func() = nil // used in tests
-	reqID                        = atomic.Uint64{}
-	globalServerStartTime        = time.Now().Format("01021504")
-	skipAnnoyingErrors           = []string{"TLS handshake error"}
+	onRequestCtxClosed    func() // used in tests
+	reqID                 = atomic.Uint64{}
+	globalServerStartTime = time.Now().Format("01021504")
+	skipAnnoyingErrors    = []string{"TLS handshake error"}
 )
 
 const (

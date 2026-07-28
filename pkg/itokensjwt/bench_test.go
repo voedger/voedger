@@ -32,7 +32,7 @@ func Benchmark_IssueTtoken(b *testing.B) {
 	testAppQName := istructs.AppQName_test1_app1
 	testDuration := 1 * time.Minute
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := signer.IssueToken(testAppQName, testDuration, &principalPayload)
 		if err != nil {
 			b.Fatal(err)
@@ -64,7 +64,7 @@ func Benchmark_VerifyToken(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		payload := TestPayload_Principal{}
 		_, err := signer.ValidateToken(principalToken, &payload)
 		if err != nil {

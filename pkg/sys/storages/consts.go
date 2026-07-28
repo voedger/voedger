@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	defaultHTTPClientTimeout              = 20_000 * time.Millisecond
-	httpStorageKeyBuilderStringerSliceCap = 3
-	field_WSKind                          = "WSKind"
-	wsidTypeValidatorCacheSize            = 100
+	defaultHTTPClientTimeout   = 20_000 * time.Millisecond
+	field_WSKind               = "WSKind"
+	wsidTypeValidatorCacheSize = 100
 )

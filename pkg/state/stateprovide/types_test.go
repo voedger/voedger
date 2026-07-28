@@ -82,7 +82,7 @@ func (b *mapKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	}
 	return true
 }
-func (b *mapKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { panic(ErrNotSupported) }
+func (b *mapKeyBuilder) ToBytes(istructs.WSID) (pk []byte, cc []byte, err error) { panic(ErrNotSupported) }
 
 func TestKeyBuilder(t *testing.T) {
 	require := require.New(t)

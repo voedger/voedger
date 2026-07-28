@@ -122,4 +122,6 @@ func (b *uniqKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	}
 	return true
 }
-func (b *uniqKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { panic(ErrNotSupported) }
+func (b *uniqKeyBuilder) ToBytes(istructs.WSID) (pk []byte, cc []byte, err error) {
+	panic(ErrNotSupported)
+}

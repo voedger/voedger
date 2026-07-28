@@ -27,7 +27,7 @@ func TestBasicUsage_ChangePassword(t *testing.T) {
 	// change the password
 	// null auth
 	newPwd := "2"
-	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"1","NewPassword":"%s"}}`, loginName, istructs.AppQName_test1_app1, newPwd)
+	body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q},"unloggedArgs":{"OldPassword":"1","NewPassword":%q}}`, loginName, istructs.AppQName_test1_app1, newPwd)
 	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.ChangePassword", body)
 
 	// note: previous tokens are still valid after password change
@@ -48,7 +48,7 @@ func TestBasicUsage_ChangePassword_APIv2(t *testing.T) {
 
 	// change password to "2"
 	body := fmt.Sprintf(`{
-		"login":"%s",
+		"login":%q,
 		"oldPassword": "1",
 		"newPassword": "2"
 	}`, login.Name)
@@ -101,7 +101,7 @@ func TestChangePasswordErrors_APIv2(t *testing.T) {
 
 	t.Run("forward error from c.registry.ChangePassword, e.g. on an unknown login", func(t *testing.T) {
 		unknownLogin := vit.NextName()
-		body := fmt.Sprintf(`{"login":"%s","oldPassword": "1","newPassword": "2"}`, unknownLogin)
+		body := fmt.Sprintf(`{"login":%q,"oldPassword": "1","newPassword": "2"}`, unknownLogin)
 		vit.POST("api/v2/apps/test1/app1/users/change-password", body, httpu.Expect401()).Println()
 	})
 }
@@ -114,14 +114,14 @@ func TestChangePasswordErrors(t *testing.T) {
 
 	t.Run("login not found", func(t *testing.T) {
 		unexistingLogin := vit.NextName()
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"1","NewPassword":"2"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q},"unloggedArgs":{"OldPassword":"1","NewPassword":"2"}}`,
 			unexistingLogin, istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401())
 	})
 
 	t.Run("wrong password", func(t *testing.T) {
 		vit.TimeAdd(time.Minute) // proceed to the next minute to avoid 429 too many requests
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401())
 	})
@@ -129,7 +129,7 @@ func TestChangePasswordErrors(t *testing.T) {
 	t.Run("rate limit exceed", func(t *testing.T) {
 		vit.TimeAdd(time.Minute) // proceed to the next minute to avoid 429 too many requests
 
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401()) // not 429, wrong password
 
@@ -138,7 +138,7 @@ func TestChangePasswordErrors(t *testing.T) {
 
 		// proceed to the next minute -> able to change the password again
 		vit.TimeAdd(time.Minute)
-		body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
+		body = fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q},"unloggedArgs":{"OldPassword":"2","NewPassword":"3"}}`,
 			prn.Login.Name, istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.ChangePassword", body, httpu.Expect401()) // again not 429, wrong password
 	})

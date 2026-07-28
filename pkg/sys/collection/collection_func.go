@@ -27,7 +27,7 @@ func collectionResultQName(args istructs.PrepareArgs) appdef.QName {
 	return qname
 }
 
-func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func collectionFuncExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	if args.ArgumentObject == nil {
 		return errors.New("ArgumentObject is not defined in PrepareArgs")
 	}
@@ -64,7 +64,7 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 			obj := newCollectionObject(rec)
 			lastDoc = obj
 		}
-		return
+		return err
 	})
 	if lastDoc != nil && err == nil {
 		lastDoc.handleRawRecords()

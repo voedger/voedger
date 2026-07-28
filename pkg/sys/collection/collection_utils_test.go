@@ -121,8 +121,8 @@ type testCmdWorkpiece struct {
 	event   istructs.IPLogEvent
 }
 
-func (w testCmdWorkpiece) AppPartition() appparts.IAppPartition { return w.appPart }
-func (w testCmdWorkpiece) Event() istructs.IPLogEvent           { return w.event }
+func (w *testCmdWorkpiece) AppPartition() appparts.IAppPartition { return w.appPart }
+func (w *testCmdWorkpiece) Event() istructs.IPLogEvent           { return w.event }
 
 func (w *testCmdWorkpiece) Borrow(ctx context.Context, appParts appparts.IAppPartitions) (err error) {
 	w.appPart, err = appParts.WaitForBorrow(ctx, test.appQName, test.partition, appparts.ProcessorKind_Command)

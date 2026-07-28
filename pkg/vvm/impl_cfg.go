@@ -6,6 +6,7 @@ package vvm
 
 import (
 	"os"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
@@ -86,10 +87,5 @@ func (cfg *VVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) Se
 }
 
 func (ha *VVMApps) Exists(name appdef.AppQName) bool {
-	for _, appQName := range *ha {
-		if appQName == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(*ha, name)
 }

@@ -20,13 +20,13 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameViewChildWorkspaceIdx)
 	if err != nil {
-		return
+		return err
 	}
 	kb.PutInt32(field_dummy, 1)
 	kb.PutString(authnz.Field_WSName, wsName)
 	_, ok, err := args.State.CanExist(kb)
 	if err != nil {
-		return
+		return err
 	}
 
 	if ok {
@@ -50,11 +50,11 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	// Create cdoc.sys.ChildWorkspace
 	kb, err = args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocChildWorkspace)
 	if err != nil {
-		return
+		return err
 	}
 	cdocChildWS, err := args.Intents.NewValue(kb)
 	if err != nil {
-		return
+		return err
 	}
 	cdocChildWS.PutRecordID(appdef.SystemField_ID, 1)
 	cdocChildWS.PutString(authnz.Field_WSName, wsName)
@@ -64,7 +64,7 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	cdocChildWS.PutInt32(authnz.Field_WSClusterID, wsClusterID)
 	cdocChildWS.PutString(Field_TemplateParams, templateParams)
 
-	return err
+	return nil
 }
 
 var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {

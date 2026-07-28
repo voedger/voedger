@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -26,20 +26,20 @@ func provideQryCDoc(sr istructsmem.IStatelessResources) {
 	)
 }
 
-func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func execQryCDoc(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	rkb, err := args.State.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 	if err != nil {
-		return
+		return err
 	}
 	rkb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64(field_ID))) // nolint G115
 	rsv, err := args.State.MustExist(rkb)
 	if err != nil {
-		return
+		return err
 	}
 
 	vrkb, err := args.State.KeyBuilder(sys.Storage_View, QNameCollectionView)
 	if err != nil {
-		return
+		return err
 	}
 	vrkb.PutQName(Field_DocQName, rsv.AsQName(appdef.SystemField_QName))
 	vrkb.PutInt32(Field_PartKey, PartitionKeyCollection)
@@ -48,7 +48,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	var doc *collectionObject
 
 	// build tree
-	err = args.State.Read(vrkb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
+	err = args.State.Read(vrkb, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 		rec := value.(istructs.IStateViewValue).AsRecord(Field_Record)
 		if doc == nil {
 			cobj := newCollectionObject(rec)
@@ -56,10 +56,10 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 		} else {
 			doc.addRawRecord(rec)
 		}
-		return
+		return nil
 	})
 	if err != nil {
-		return
+		return err
 	}
 
 	if doc == nil {
@@ -74,15 +74,15 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	appDef := args.State.AppStructs().AppDef()
 	obj, err = convert(doc, appDef, refs, istructs.NullRecordID)
 	if err != nil {
-		return
+		return err
 	}
 	err = addRefs(obj, refs, args.State, appDef)
 	if err != nil {
-		return
+		return err
 	}
 	bytes, err = marshal(obj)
 	if err != nil {
-		return
+		return err
 	}
 	return callback(&cdocObject{data: string(bytes)})
 }
@@ -174,7 +174,6 @@ func skipField(fieldName string) bool {
 	return fieldName == appdef.SystemField_QName ||
 		fieldName == appdef.SystemField_Container ||
 		fieldName == appdef.SystemField_ParentID
-
 }
 
 type cdocObject struct {

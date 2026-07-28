@@ -84,19 +84,16 @@ func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents,
 	refIDToSet := istructs.NullRecordID
 	uniqueViewRecordID := uniqueViewRecord.AsRecordID(field_ID)
 	if rec.AsBool(appdef.SystemField_IsActive) {
-		if uniqueViewRecordID == istructs.NullRecordID {
-			// activating the record whereas previous combination was deactivated -> allow, update the view
-			refIDToSet = rec.ID()
-		} else {
+		if uniqueViewRecordID != istructs.NullRecordID {
 			// activating the already activated record, unique combination exists for that record -> allow, nothing to do
 			// note: case when uniqueViewRecordID != rec.ID() is handled already by the validator, so nothing to do here
 			return nil
 		}
-	} else {
-		if rec.ID() != uniqueViewRecordID {
-			// deactivating a record whereas unique combination exists for another record -> allow, nothing to do
-			return nil
-		}
+		// activating the record whereas previous combination was deactivated -> allow, update the view
+		refIDToSet = rec.ID()
+	} else if rec.ID() != uniqueViewRecordID {
+		// deactivating a record whereas unique combination exists for another record -> allow, nothing to do
+		return nil
 	}
 	uniqueViewUpdater, err := intents.UpdateValue(uniqueViewKB, uniqueViewRecord)
 	if err != nil {
@@ -193,7 +190,7 @@ func writeUniqueKeyValue(uniqueField appdef.IField, value interface{}, buf *byte
 
 func checkUniqueKeyLen(buf *bytes.Buffer, uniqueQName appdef.QName) error {
 	if buf.Len() > int(appdef.MaxFieldLength) {
-		return fmt.Errorf(`%w: resulting len of the unique combination "%s" is %d, max %d is allowed. Decrease len of values of unique fields`,
+		return fmt.Errorf("%w: resulting len of the unique combination %q is %d, max %d is allowed. Decrease len of values of unique fields",
 			ErrUniqueValueTooLong, uniqueQName, buf.Len(), appdef.MaxFieldLength)
 	}
 	return nil
@@ -280,13 +277,12 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 	}
 	if cudRec.IsNew() {
 		// !IsActive is impossible for new records anymore
-		if uniqueViewRecord.refRecordID == istructs.NullRecordID {
-			// inserting a new active record, the doc record according to this combination is inactive or does not exist -> allow, update its ID in map
-			uniqueViewRecord.refRecordID = cudRec.ID()
-		} else {
+		if uniqueViewRecord.refRecordID != istructs.NullRecordID {
 			// inserting a new active record, the doc record according to this combination is active -> deny
 			return conflict(cudQName, uniqueViewRecord.refRecordID, uniqueQName)
 		}
+		// inserting a new active record, the doc record according to this combination is inactive or does not exist -> allow, update its ID in map
+		uniqueViewRecord.refRecordID = cudRec.ID()
 	} else {
 		// update
 		// unique view record exists because all unique fields are required.
@@ -319,7 +315,7 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 	return nil
 }
 
-func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
+func eventUniqueValidator(_ context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
 	//                    cudQName       uniqueQName  unique-key-bytes
 	uniquesState := map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord{}
 
@@ -344,5 +340,5 @@ func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appS
 }
 
 func conflict(docQName appdef.QName, conflictingWithID istructs.RecordID, uniqueQName appdef.QName) error {
-	return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf(`%s: "%s" %w with ID %d`, docQName, uniqueQName, ErrUniqueConstraintViolation, conflictingWithID))
+	return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf("%s: %q %w with ID %d", docQName, uniqueQName, ErrUniqueConstraintViolation, conflictingWithID))
 }

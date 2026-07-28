@@ -12,6 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
+
+	// Required by vpm/pkg/compile: appws.vsql references `sys` package,
+	// so pkg/sys golang package must appear in the Go import graph for packages.Load
+	// to discover its directory and embedded *.vsql.
+	// The import exists purely as a build-time signal for the vsql loader.
 	_ "github.com/voedger/voedger/pkg/sys"
 )
 

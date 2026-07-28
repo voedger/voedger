@@ -83,7 +83,7 @@ func execCmdInitiateSetLoginAlias(args istructs.ExecCommandArgs) error {
 }
 
 func applySetLoginAlias(fed federationCaller, tokens itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, _ istructs.IIntents) error {
 		login := event.ArgumentObject().AsString(field_Login)
 		appName := event.ArgumentObject().AsString(field_AppName)
 		newAlias := event.ArgumentObject().AsString(field_Alias)

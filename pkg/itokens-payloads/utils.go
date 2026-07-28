@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	itokens "github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/itokens"
 )
 
 func GetSystemPrincipalToken(itokens itokens.ITokens, appQName appdef.AppQName) (string, error) {
@@ -35,12 +35,12 @@ func GetPayloadRegistry(itokens itokens.ITokens, token string, payload interface
 	if gp, err = itokens.ValidateToken(token, payload); err != nil {
 		err = coreutils.NewHTTPError(http.StatusUnauthorized, err)
 	}
-	return
+	return gp, err
 }
 
 func GetPrincipalPayload(appTokens istructs.IAppTokens, principalToken string) (principalPayload PrincipalPayload, err error) {
 	_, err = GetPayload(appTokens, principalToken, &principalPayload)
-	return
+	return principalPayload, err
 }
 
 // nolint (gp is never used)
@@ -48,5 +48,5 @@ func GetPayload(appTokens istructs.IAppTokens, token string, payload interface{}
 	if gp, err = appTokens.ValidateToken(token, payload); err != nil {
 		err = coreutils.NewHTTPError(http.StatusUnauthorized, err)
 	}
-	return
+	return gp, err
 }

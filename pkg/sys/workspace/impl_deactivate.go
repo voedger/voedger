@@ -26,7 +26,6 @@ import (
 )
 
 func provideDeactivateWorkspace(sr istructsmem.IStatelessResources, tokensAPI itokens.ITokens, federation federation.IFederation) {
-
 	sr.AddCommands(appdef.SysPackagePath,
 		// c.sys.DeactivateWorkspace
 		// target app, target WSID
@@ -126,7 +125,7 @@ func cmdOnWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err error) {
 	}
 	if !ok {
 		logger.Verbose("workspace", wsName, ":", ownerWSID, "is not mentioned in view.sys.WorkspaceIDId")
-		return
+		return nil
 	}
 	idOfCDocWorkspaceID := viewRec.AsRecordID(field_IDOfCDocWorkspaceID)
 	kb, err = args.State.KeyBuilder(sys.Storage_Record, QNameCDocWorkspaceID)
@@ -183,7 +182,7 @@ func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err erro
 
 // target app, target WSID
 func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+	return func(event istructs.IPLogEvent, s istructs.IState, _ istructs.IIntents) (err error) {
 		kb, err := s.KeyBuilder(sys.Storage_Record, appdef.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			// notest

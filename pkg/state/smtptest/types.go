@@ -26,11 +26,18 @@ type server struct {
 	server   *smtp.Server
 }
 
+type session struct {
+	ch         chan state.EmailMessage
+	recipients []string
+	data       string
+	server     *server
+}
+
 func (s *session) AuthMechanisms() []string {
 	return []string{sasl.Plain}
 }
 
-func (s *session) Auth(mech string) (sasl.Server, error) {
+func (s *session) Auth(_ string) (sasl.Server, error) {
 	return sasl.NewPlainServer(func(identity, username, password string) error {
 		if identity != "" && identity != username {
 			return errors.New("invalid identity")
@@ -64,13 +71,6 @@ func (s *server) Close() error {
 type credentials struct {
 	username string
 	password string
-}
-
-type session struct {
-	ch         chan state.EmailMessage
-	recipients []string
-	data       string
-	server     *server
 }
 
 func (s *session) Reset() {}
@@ -110,13 +110,13 @@ func (s *session) message() state.EmailMessage {
 		case "From":
 			msg.From = strings.Trim(pair[1], " <>")
 		case "To":
-			for _, to := range strings.Split(pair[1], ",") {
+			for to := range strings.SplitSeq(pair[1], ",") {
 				to = strings.Trim(to, " <>")
 				msg.To = append(msg.To, to)
 				toMap[to] = true
 			}
 		case "Cc":
-			for _, cc := range strings.Split(pair[1], ",") {
+			for cc := range strings.SplitSeq(pair[1], ",") {
 				cc = strings.Trim(cc, " <>")
 				msg.CC = append(msg.CC, cc)
 				ccMap[cc] = true

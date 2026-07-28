@@ -35,7 +35,7 @@ import (
 // triggered by CDoc<ChildWorkspace> (not a singleton)
 // targetApp/userProfileWSID
 func invokeCreateWorkspaceIDProjector(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, _ istructs.IIntents) error {
 		for rec := range event.CUDs {
 			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
 				continue
@@ -164,7 +164,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
 	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID)) // nolint G115: safe to cast WSID
 
-	return
+	return nil
 }
 
 // sp.sys.WorkspaceIDIdx
@@ -200,7 +200,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 // triggered by CDoc<WorkspaceID>
 // targetApp/appWS
 func invokeCreateWorkspaceProjector(federation federation.IFederationWithRetry, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, _ istructs.IIntents) error {
 		for rec := range event.CUDs {
 			if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
 				continue
@@ -298,20 +298,18 @@ func execCmdCreateWorkspace(time timeu.ITime) istructsmem.ExecCommandClosure {
 		if e != nil {
 			cdocWSDesc.PutString(Field_CreateError, e.Error())
 			logger.Info("c.sys.CreateWorkspace: ", e.Error())
-		} else {
-			// if no error create CDoc{$wsKind}
-			kb, err := args.State.KeyBuilder(sys.Storage_Record, wsKind)
-			if err != nil {
-				return err
-			}
-			cdocWSKind, err := args.Intents.NewValue(kb)
-			if err != nil {
-				return err
-			}
-			cdocWSKind.PutRecordID(appdef.SystemField_ID, 2)
-			return coreutils.MapToObject(wsKindInitializationData, cdocWSKind) // validated already in func()
+			return nil
 		}
-		return nil
+		// if no error create CDoc{$wsKind}
+		if kb, err = args.State.KeyBuilder(sys.Storage_Record, wsKind); err != nil {
+			return err
+		}
+		cdocWSKind, err := args.Intents.NewValue(kb)
+		if err != nil {
+			return err
+		}
+		cdocWSKind.PutRecordID(appdef.SystemField_ID, 2)
+		return coreutils.MapToObject(wsKindInitializationData, cdocWSKind) // validated already in func()
 	}
 }
 
@@ -319,7 +317,7 @@ func execCmdCreateWorkspace(time timeu.ITime) istructsmem.ExecCommandClosure {
 // triggered by CDoc<WorkspaceDescriptor>
 func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFederationWithRetry, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) error {
+	return func(event istructs.IPLogEvent, s istructs.IState, _ istructs.IIntents) error {
 		for rec := range event.CUDs {
 			if rec.QName() != appdef.QNameCDocWorkspaceDescriptor {
 				continue
@@ -346,6 +344,7 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 			er := func(args ...interface{}) {
 				logger.Error(logPrefix, args)
 			}
+			// nolint defer
 			defer func() {
 				if updateOwnerErr == nil {
 					if wsError != nil {

@@ -133,7 +133,7 @@ func GetPasswordSaltedHash(pwd string) (pwdSaltedHash []byte, err error) {
 	if pwdSaltedHash, err = bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.MinCost); err != nil {
 		err = fmt.Errorf("password salting & hashing failed: %w", err)
 	}
-	return
+	return pwdSaltedHash, err
 }
 
 func CheckPassword(cdocLogin istructs.IStateValue, pwd string) (isPasswordOK bool, err error) {

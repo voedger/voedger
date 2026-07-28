@@ -12,7 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	"github.com/voedger/voedger/pkg/vvm"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
@@ -23,7 +22,7 @@ import (
 func NewOwnVITConfig(opts ...VITConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
-		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, testRegistryPartsNum)),
+		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(testRegistryPartsNum)),
 		WithApp(istructs.AppQName_sys_cluster, clusterapp.Provide()),
 	)
 	return VITConfig{opts: opts}
@@ -53,7 +52,7 @@ func WithUserLogin(name, pwd string, opts ...PostConstructFunc) AppOptFunc {
 }
 
 func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS coreutils.EmbedFS) AppOptFunc {
-	return func(app *app, cfg *vvm.VVMConfig) {
+	return func(app *app, _ *vvm.VVMConfig) {
 		app.wsTemplateFuncs = append(app.wsTemplateFuncs, func(ep extensionpoints.IExtensionPoint) {
 			epWSKindTemplates := ep.ExtensionPoint(workspace.EPWSTemplates).ExtensionPoint(wsKind)
 			epWSKindTemplates.AddNamed(templateName, templateFS)
@@ -86,7 +85,7 @@ func WithChild(wsKind appdef.QName, name, templateName string, templateParams st
 }
 
 func WithChildWorkspace(wsKind appdef.QName, name, templateName string, templateParams string, ownerLoginName string, wsInitData map[string]interface{}, opts ...PostConstructFunc) AppOptFunc {
-	return func(app *app, cfg *vvm.VVMConfig) {
+	return func(app *app, _ *vvm.VVMConfig) {
 		initData, err := json.Marshal(&wsInitData)
 		if err != nil {
 			panic(err)
@@ -122,7 +121,7 @@ func WithDocWithVerifiedFields(name appdef.QName, dataFactory func(verifiedValue
 }
 
 func WithDoc(name appdef.QName, data map[string]interface{}) PostConstructFunc {
-	return WithDocWithVerifiedFields(name, func(verifiedValues map[string]string) map[string]interface{} {
+	return WithDocWithVerifiedFields(name, func(_ map[string]string) map[string]interface{} {
 		return data
 	})
 }
@@ -190,7 +189,7 @@ func WithApp(appQName appdef.AppQName, updater builtinapps.Builder, appOpts ...A
 }
 
 func WithVerifiedValue(docQName appdef.QName, fieldName string, desiredValue string) AppOptFunc {
-	return func(app *app, cfg *vvm.VVMConfig) {
+	return func(app *app, _ *vvm.VVMConfig) {
 		app.verifiedValuesIntents[desiredValue] = verifiedValueIntent{
 			docQName:     docQName,
 			fieldName:    fieldName,

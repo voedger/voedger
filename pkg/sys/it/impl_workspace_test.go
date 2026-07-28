@@ -317,7 +317,7 @@ func TestWorkspaceInitError(t *testing.T) {
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
 
 	wsName := vit.NextName()
-	body := fmt.Sprintf(`{"args":{"WSName":"%s","WSKind":"app1pkg.test_ws","WSKindInitializationData":"{ wrong json }","WSClusterID":1}}`, wsName)
+	body := fmt.Sprintf(`{"args":{"WSName":%q,"WSKind":"app1pkg.test_ws","WSKindInitializationData":"{ wrong json }","WSClusterID":1}}`, wsName)
 	vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
 
 	vit.WaitForWorkspace(wsName, prn, "failed to unmarshal workspace initialization data")

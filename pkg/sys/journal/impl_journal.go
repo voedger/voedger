@@ -25,15 +25,13 @@ func provideQryJournal(sr istructsmem.IStatelessResources, eps map[appdef.AppQNa
 	))
 }
 func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
 		ep := eps[args.State.App()]
 		ji := ep.ExtensionPoint(EPJournalIndices)
 		jp := ep.ExtensionPoint(EPJournalPredicates)
 		switch args.ArgumentObject.AsString(field_RangeUnit) {
-		case rangeUnit_UnixTimestamp:
-			fallthrough
-		case "":
+		case rangeUnit_UnixTimestamp, "":
 			fo, lo, err = handleTimestamps(args.ArgumentObject, ji, args.State)
 		case rangeUnit_Offset:
 			fo, lo, err = handleOffsets(args.ArgumentObject)
@@ -52,7 +50,7 @@ func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) ist
 		appDef := args.State.AppStructs().AppDef()
 		cb := func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 			if fo == int64(0) {
-				return
+				return nil
 			}
 			eo, err := NewEventObject(value.(istructs.IStateWLogValue).AsEvent(), appDef, f)
 			if err != nil {
@@ -60,9 +58,7 @@ func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) ist
 			}
 			if !eo.Empty {
 				eo.Data[Field_Offset] = value.AsInt64(sys.Storage_WLog_Field_Offset)
-				if err := callback(eo); err != nil {
-					return err
-				}
+				err = callback(eo)
 			}
 			return err
 		}
@@ -108,5 +104,5 @@ func handleOffsets(args istructs.IObject) (fo, lo int64, err error) {
 		errs = append(errs, errFromOffsetMustBeLowerOrEqualToTillOffset)
 	}
 	err = errors.Join(errs...)
-	return
+	return fo, lo, err
 }

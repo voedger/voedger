@@ -46,10 +46,10 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 			for _, st := range ss {
 				err = st.ApplyIntents()
 				if err != nil {
-					return
+					return err
 				}
 			}
-			return
+			return nil
 		}),
 		pipeline.WireSyncOperator("ErrorHandler", h))
 }
@@ -69,7 +69,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 	)
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector",
-			func(ctx context.Context, work processors.IProjectorWorkpiece) error {
+			func(_ context.Context, work processors.IProjectorWorkpiece) error {
 				appPart := work.AppPartition()
 				appDef := appPart.AppStructs().AppDef()
 				prj := appdef.Projector(appDef.Type, projector.Name)
@@ -91,7 +91,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 		pipeline.WireFunc("IntentsValidator", func(_ context.Context, _ pipeline.IWorkpiece) (err error) {
 			return s.ValidateIntents()
 		})))
-	return
+	return fn, s
 }
 
 type syncErrorHandler struct {
@@ -100,7 +100,7 @@ type syncErrorHandler struct {
 	err error
 }
 
-func (h *syncErrorHandler) DoSync(ctx context.Context, work pipeline.IWorkpiece) (err error) {
+func (h *syncErrorHandler) DoSync(context.Context, pipeline.IWorkpiece) (err error) {
 	if h.err != nil {
 		for _, s := range h.ss {
 			s.ClearIntents()
@@ -108,7 +108,7 @@ func (h *syncErrorHandler) DoSync(ctx context.Context, work pipeline.IWorkpiece)
 		err = h.err
 		h.err = nil
 	}
-	return
+	return err
 }
 
 func (h *syncErrorHandler) OnErr(err error, _ interface{}, _ pipeline.IWorkpieceContext) error {

@@ -24,11 +24,11 @@ type queryProcessorState struct {
 	resultValueBuilder istructs.IStateValueBuilder
 }
 
-func (s queryProcessorState) QueryPrepareArgs() istructs.PrepareArgs {
+func (s *queryProcessorState) QueryPrepareArgs() istructs.PrepareArgs {
 	return s.queryArgs()
 }
 
-func (s queryProcessorState) QueryCallback() istructs.ExecQueryCallback {
+func (s *queryProcessorState) QueryCallback() istructs.ExecQueryCallback {
 	return s.queryCallback()
 }
 
@@ -75,7 +75,6 @@ func (s *queryProcessorState) ApplyIntents() (err error) {
 func implProvideQueryProcessorState(
 	ctx context.Context,
 	appStructsFunc state.AppStructsFunc,
-	partitionIDFunc state.PartitionIDFunc,
 	wsidFunc state.WSIDFunc,
 	secretReader isecrets.ISecretReader,
 	principalsFunc state.PrincipalsFunc,
@@ -87,7 +86,6 @@ func implProvideQueryProcessorState(
 	federation federation.IFederation,
 	queryCallbackFunc state.ExecQueryCallbackFunc,
 	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) state.IHostState {
-
 	state := &queryProcessorState{
 		hostState:     newHostState(ctx, "QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
 		queryArgs:     execQueryArgsFunc,

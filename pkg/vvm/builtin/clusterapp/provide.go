@@ -17,7 +17,7 @@ import (
 )
 
 func Provide() builtinapps.Builder {
-	return func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
+	return func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
 		clusterAppPackageFS := parser.PackageFS{
 			Path: ClusterAppFQN,
 			FS:   schemaFS,

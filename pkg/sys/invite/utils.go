@@ -68,8 +68,7 @@ func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istruct
 	if err != nil {
 		return nil, err
 	}
-	svbCDocJoinedWorkspace, err = intents.UpdateValue(skb, svCDocJoinedWorkspace)
-	return
+	return intents.UpdateValue(skb, svCDocJoinedWorkspace)
 }
 
 func GetCDocJoinedWorkspace(st istructs.IState, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValue, skb istructs.IStateKeyBuilder, ok bool, err error) {

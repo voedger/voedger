@@ -28,12 +28,12 @@ func TestQueryProcessorState(t *testing.T) {
 		}
 	}
 
-	qps := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, nil, nil, nil, nil, nil, nil, nil, istructs.NewNullObjectBuilder, nil, execQueryCallbackFunc, state.StateOpts{}, nil)
+	qps := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, nil, nil, nil, nil, nil, nil, istructs.NewNullObjectBuilder, nil, execQueryCallbackFunc, state.StateOpts{}, nil)
 	kb, err := qps.KeyBuilder(sys.Storage_Result, appdef.NullQName)
 	require.NoError(err)
 	require.NotNil(kb)
 	rows := queryProcessorStateMaxIntents + 1
-	for i := 0; i < rows; i++ {
+	for range rows {
 		vb, err := qps.NewValue(kb)
 		require.NoError(err)
 		require.NotNil(vb)

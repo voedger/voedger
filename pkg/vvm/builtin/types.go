@@ -35,8 +35,8 @@ type APIs struct {
 	payloads.IAppTokensFactory
 	federation.IFederation
 	timeu.ITime
-	SidecarApps []appparts.SidecarApp
 	iblobstorage.IBLOBStorage
+	SidecarApps []appparts.SidecarApp
 	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
 	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -184,7 +185,7 @@ func (gts *generalTestState) addRequiredItems(
 
 // recoverPanicInTestState must be called in defer to recover panic in the test state
 func (gts *generalTestState) recoverPanicInTestState() {
-	r := recover()
+	r := recover() //nolint defer
 	recoveredError, ok := r.(error)
 	if ok {
 		require.Fail(gts.t, recoveredError.Error())
@@ -437,6 +438,7 @@ type CommandTestState struct {
 
 // NewCommandTestState creates a new test state for command testing
 func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *CommandTestState {
+	t.Helper()
 	const wsid = istructs.WSID(1)
 
 	cts := &CommandTestState{}
@@ -539,16 +541,17 @@ func (gts *generalTestState) buildAppDef() {
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, compileResult.AppDefBuilder)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	for ext := range appdef.Extensions(gts.appDef.Types()) {
-		if proj, ok := ext.(appdef.IProjector); ok {
-			if proj.Sync() {
+		switch typed := ext.(type) {
+		case appdef.IProjector:
+			if typed.Sync() {
 				cfg.AddSyncProjectors(istructs.Projector{Name: ext.QName()})
 			} else {
 				cfg.AddAsyncProjectors(istructs.Projector{Name: ext.QName()})
 			}
-		} else if cmd, ok := ext.(appdef.ICommand); ok {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(cmd.QName(), istructsmem.NullCommandExec))
-		} else if q, ok := ext.(appdef.IQuery); ok {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
+		case appdef.ICommand:
+			cfg.Resources.Add(istructsmem.NewCommandFunction(typed.QName(), istructsmem.NullCommandExec))
+		case appdef.IQuery:
+			cfg.Resources.Add(istructsmem.NewCommandFunction(typed.QName(), istructsmem.NullCommandExec))
 		}
 	}
 
@@ -584,7 +587,7 @@ func (cts *CommandTestState) ArgumentObject(id istructs.RecordID, keyValueList .
 
 		cts.argumentObject[key] = value
 		if intValue, ok := value.(int); ok {
-			cts.argumentObject[key] = json.Number(fmt.Sprintf("%d", intValue))
+			cts.argumentObject[key] = json.Number(strconv.Itoa(intValue))
 		}
 	}
 	cts.argumentObject[appdef.SystemField_ID] = id
@@ -614,25 +617,25 @@ func (cts *CommandTestState) ArgumentObjectRow(path string, id istructs.RecordID
 }
 
 func (cts *CommandTestState) IntentSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner {
-	cts.intentSingletonInsert(fQName, getSourceFileReference(2), keyValueList...)
+	cts.intentSingletonInsert(fQName, getSourceFileReference(), keyValueList...)
 
 	return cts
 }
 
 func (cts *CommandTestState) IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner {
-	cts.intentSingletonUpdate(fQName, getSourceFileReference(2), keyValueList...)
+	cts.intentSingletonUpdate(fQName, getSourceFileReference(), keyValueList...)
 
 	return cts
 }
 
 func (cts *CommandTestState) IntentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
-	cts.intentRecordInsert(fQName, id, getSourceFileReference(2), keyValueList...)
+	cts.intentRecordInsert(fQName, id, getSourceFileReference(), keyValueList...)
 
 	return cts
 }
 
 func (cts *CommandTestState) IntentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner {
-	cts.intentRecordUpdate(fQName, id, getSourceFileReference(2), keyValueList...)
+	cts.intentRecordUpdate(fQName, id, getSourceFileReference(), keyValueList...)
 
 	return cts
 }
@@ -659,6 +662,7 @@ type ProjectorTestState struct {
 
 // NewProjectorTestState creates a new test state for projector testing
 func NewProjectorTestState(t *testing.T, extensionFunc func()) *ProjectorTestState {
+	t.Helper()
 	pts := &ProjectorTestState{}
 	pts.t = t
 	pts.ctx = context.Background()
@@ -726,7 +730,7 @@ func (pts *ProjectorTestState) EventUnloggedArgumentObjectRow(path string, id is
 
 func (pts *ProjectorTestState) EventCUD(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
 	if isODoc(fQName) {
-		panic(fmt.Errorf("ODoc is not supported in the EventCUD method"))
+		panic(errors.New("ODoc is not supported in the EventCUD method"))
 	}
 
 	keyValueMap, err := parseKeyValues(keyValueList)
@@ -744,25 +748,25 @@ func (pts *ProjectorTestState) EventCUD(fQName IFullQName, id istructs.RecordID,
 }
 
 func (pts *ProjectorTestState) IntentSingletonInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner {
-	pts.intentSingletonInsert(fQName, getSourceFileReference(2), keyValueList...)
+	pts.intentSingletonInsert(fQName, getSourceFileReference(), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentSingletonUpdate(fQName IFullQName, keyValueList ...any) IProjectorRunner {
-	pts.intentSingletonUpdate(fQName, getSourceFileReference(2), keyValueList...)
+	pts.intentSingletonUpdate(fQName, getSourceFileReference(), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	pts.intentRecordInsert(fQName, id, getSourceFileReference(2), keyValueList...)
+	pts.intentRecordInsert(fQName, id, getSourceFileReference(), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	pts.intentRecordUpdate(fQName, id, getSourceFileReference(2), keyValueList...)
+	pts.intentRecordUpdate(fQName, id, getSourceFileReference(), keyValueList...)
 
 	return pts
 }
@@ -779,13 +783,13 @@ func (pts *ProjectorTestState) StateCUDRow(fQName IFullQName, id istructs.Record
 }
 
 func (pts *ProjectorTestState) IntentViewInsert(fQName IFullQName, keyValueList ...any) IProjectorRunner {
-	pts.addRequiredItems(fQName, 0, false, true, true, getSourceFileReference(2), keyValueList...)
+	pts.addRequiredItems(fQName, 0, false, true, true, getSourceFileReference(), keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) IntentViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) IProjectorRunner {
-	pts.addRequiredItems(fQName, id, false, false, true, getSourceFileReference(2), keyValueList...)
+	pts.addRequiredItems(fQName, id, false, false, true, getSourceFileReference(), keyValueList...)
 
 	return pts
 }
@@ -819,7 +823,7 @@ func (pts *ProjectorTestState) Run() {
 	pts.require()
 }
 
-//nolint:unused
+// nolint unused
 func (pts *ProjectorTestState) putArgument() {
 	if pts.rawEvent.argumentObject == nil {
 		return
@@ -939,7 +943,7 @@ func parseKeyValues(keyValues []any) (map[string]any, error) {
 		value := keyValues[i+1]
 
 		if intValue, ok := value.(int); ok {
-			result[key] = json.Number(fmt.Sprintf("%d", intValue))
+			result[key] = json.Number(strconv.Itoa(intValue))
 		} else {
 			result[key] = value
 		}
@@ -1014,7 +1018,7 @@ func setArgumentObject(argumentObject *coreutils.TestObject, fQName IFullQName, 
 
 		argumentObject.Data[key] = value
 		if intValue, ok := value.(int); ok {
-			argumentObject.Data[key] = json.Number(fmt.Sprintf("%d", intValue))
+			argumentObject.Data[key] = json.Number(strconv.Itoa(intValue))
 		}
 	}
 
@@ -1040,11 +1044,9 @@ func setArgumentObjectRow(argumentObject *coreutils.TestObject, path string, id 
 	}
 }
 
-// getSourceFileReference returns the file reference of the source file.
-// The argument skip is the number of stack frames to ascend.
-func getSourceFileReference(skip int) string {
+func getSourceFileReference() string {
 	var fileRef string
-	if _, file, line, ok := runtime.Caller(skip); ok {
+	if _, file, line, ok := runtime.Caller(2); ok {
 		fileRef = fmt.Sprintf("%s:%d", file, line)
 	}
 

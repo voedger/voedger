@@ -38,7 +38,7 @@ func (q *iptRR) AsString(name string) string {
 }
 
 func provideIssuePrincipalTokenExec(itokens itokens.ITokens, federation federation.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		login := args.ArgumentObject.AsString(authnz.Field_Login)
 		appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 

@@ -8,6 +8,7 @@ package sys_it
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -106,7 +107,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	waitForDeactivate(vit, newWS.Owner.AppQName, newWS.WSID, newWS.Name)
 
 	// check cdoc.sys.JoinedWorkspace.IsActive == false
-	joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, testEmail2Prn)
+	joinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, testEmail2Prn)
 	require.False(joinedWorkspace.isActive)
 
 	// check appWS/cdoc.sys.WorkspaceID.IsActive == false
@@ -143,12 +144,12 @@ func TestDeactivateUserProfile(t *testing.T) {
 	// to hand the command a token issued for the still-active login
 	profileWSID := istructs.WSID(0)
 	verifyToken, verifyCode := InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, loginName)
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, loginName)
 		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 		profileWSID = istructs.WSID(resp.SectionRow()[1].(float64))
 		return resp
 	})
-	body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`,
+	body := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`,
 		verifyToken, verifyCode, profileWSID, istructs.AppQName_test1_app1)
 	verifiedValueToken := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID,
 		"q.registry.IssueVerifiedValueTokenForResetPassword", body).SectionRow()[0].(string)
@@ -162,14 +163,14 @@ func TestDeactivateUserProfile(t *testing.T) {
 		vit.PostProfile(prn, "q.sys.Collection", body, httpu.Expect410()).Println()
 	})
 
-	expectedCDocLoginIDStr := fmt.Sprintf("%d", cdocLoginID)
+	expectedCDocLoginIDStr := strconv.Itoa(int(cdocLoginID))
 	expectVerboseLine := func() {
 		logCap.EventuallyHasLine("cdoc.registry.Login", "is deactivated, treating as missing login", expectedCDocLoginIDStr)
 	}
 
 	t.Run("q.registry.IssuePrincipalToken -> 401", func(t *testing.T) {
 		logCap.Reset()
-		body := fmt.Sprintf(`{"args":{"Login":"%s","Password":"%s","AppName":"%s"},"elements":[{"fields":["PrincipalToken"]}]}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"Password":%q,"AppName":%q},"elements":[{"fields":["PrincipalToken"]}]}`,
 			loginName, pwd, istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body,
 			it.Expect401("login or password is incorrect")).Println()
@@ -178,7 +179,7 @@ func TestDeactivateUserProfile(t *testing.T) {
 
 	t.Run("c.registry.ChangePassword -> 401", func(t *testing.T) {
 		logCap.Reset()
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s"},"unloggedArgs":{"OldPassword":"%s","NewPassword":"new"}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q},"unloggedArgs":{"OldPassword":%q,"NewPassword":"new"}}`,
 			loginName, istructs.AppQName_test1_app1, pwd)
 		vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.ChangePassword", body,
 			it.Expect401(fmt.Sprintf("login %s does not exist", loginName))).Println()
@@ -187,7 +188,7 @@ func TestDeactivateUserProfile(t *testing.T) {
 
 	t.Run("q.registry.InitiateResetPasswordByEmail -> 400", func(t *testing.T) {
 		logCap.Reset()
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`,
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`,
 			istructs.AppQName_test1_app1, loginName)
 		vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body,
 			it.Expect400("login does not exist")).Println()
@@ -196,7 +197,7 @@ func TestDeactivateUserProfile(t *testing.T) {
 
 	t.Run("c.registry.ResetPasswordByEmail -> 401", func(t *testing.T) {
 		logCap.Reset()
-		body := fmt.Sprintf(`{"args":{"AppName":"%s"},"unloggedArgs":{"Email":"%s","NewPwd":"new"}}`,
+		body := fmt.Sprintf(`{"args":{"AppName":%q},"unloggedArgs":{"Email":%q,"NewPwd":"new"}}`,
 			istructs.AppQName_test1_app1, verifiedValueToken)
 		vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.ResetPasswordByEmail", body,
 			it.Expect401(fmt.Sprintf("login %s does not exist", loginName))).Println()
@@ -206,7 +207,7 @@ func TestDeactivateUserProfile(t *testing.T) {
 	t.Run("c.registry.UpdateGlobalRoles -> 401", func(t *testing.T) {
 		logCap.Reset()
 		sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":""}}`,
+		body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"GlobalRoles":""}}`,
 			loginName, istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body,
 			httpu.WithAuthorizeBy(sysRegistryToken),

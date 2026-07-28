@@ -50,39 +50,39 @@ func supports(ops int, op int) bool {
 	return ops&op == op
 }
 
-func (s hostState) App() appdef.AppQName {
+func (s *hostState) App() appdef.AppQName {
 	return s.appStructsFunc().AppQName()
 }
 
-func (s hostState) AppStructs() istructs.IAppStructs {
+func (s *hostState) AppStructs() istructs.IAppStructs {
 	return s.appStructsFunc()
 }
 
-func (s hostState) CommandPrepareArgs() istructs.CommandPrepareArgs {
+func (s *hostState) CommandPrepareArgs() istructs.CommandPrepareArgs {
 	panic(errCommandPrepareArgsNotSupportedByState)
 }
 
-func (s hostState) PackageFullPath(localName string) string {
+func (s *hostState) PackageFullPath(localName string) string {
 	return s.appStructsFunc().AppDef().PackageFullPath(localName)
 }
 
-func (s hostState) PackageLocalName(fullPath string) string {
+func (s *hostState) PackageLocalName(fullPath string) string {
 	return s.appStructsFunc().AppDef().PackageLocalName(fullPath)
 }
 
-func (s hostState) PLogEvent() istructs.IPLogEvent {
+func (s *hostState) PLogEvent() istructs.IPLogEvent {
 	panic("PLogEvent only available in actualizers")
 }
 
-func (s hostState) QueryPrepareArgs() istructs.PrepareArgs {
+func (s *hostState) QueryPrepareArgs() istructs.PrepareArgs {
 	panic(errQueryPrepareArgsNotSupportedByState)
 }
 
-func (s hostState) QueryCallback() istructs.ExecQueryCallback {
+func (s *hostState) QueryCallback() istructs.ExecQueryCallback {
 	panic(errQueryCallbackNotSupportedByState)
 }
 
-func (s hostState) Context() context.Context {
+func (s *hostState) Context() context.Context {
 	return s.ctx
 }
 
@@ -117,7 +117,6 @@ func (s *hostState) KeyBuilder(storage, entity appdef.QName) (builder istructs.I
 	return strg.NewKeyBuilder(entity, nil), nil
 }
 func (s *hostState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
-
 	get, ok := s.withGet[key.Storage()]
 	if ok {
 		value, err = get.Get(key)
@@ -171,12 +170,12 @@ func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istru
 func (s *hostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	value, ok, err := s.CanExist(key)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if !ok {
 		return nil, s.err(key, ErrNotExists)
 	}
-	return
+	return value, nil
 }
 func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	batches := make(map[appdef.QName][]state.GetBatchItem)
@@ -188,7 +187,7 @@ func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istr
 		if ok { // GetBatch supported
 			err = getBatch.GetBatch(batch)
 			if err != nil {
-				return
+				return err
 			}
 			for _, item := range batch {
 				if item.Value == nil {
@@ -223,12 +222,12 @@ func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istr
 func (s *hostState) MustNotExist(key istructs.IStateKeyBuilder) (err error) {
 	_, ok, err := s.CanExist(key)
 	if err != nil {
-		return
+		return err
 	}
 	if ok {
 		return s.err(key, ErrExists)
 	}
-	return
+	return err
 }
 func (s *hostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error) {
 	batches := make(map[appdef.QName][]state.GetBatchItem)
@@ -240,7 +239,7 @@ func (s *hostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error
 		if ok { // GetBatch supported
 			err = getBatch.GetBatch(batch)
 			if err != nil {
-				return
+				return err
 			}
 			for _, item := range batch {
 				if item.Value != nil {
@@ -349,10 +348,10 @@ func (s *hostState) ValidateIntents() (err error) {
 	for sid, items := range s.intents {
 		err = s.withApplyBatch[sid].Validate(items)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }
 func (s *hostState) ApplyIntents() (err error) {
 	if s.isIntentsEmpty() {
@@ -366,7 +365,7 @@ func (s *hostState) ApplyIntents() (err error) {
 	for sid, items := range s.intents {
 		err = s.withApplyBatch[sid].ApplyBatch(items)
 		if err != nil {
-			return
+			return err
 		}
 	}
 	return nil

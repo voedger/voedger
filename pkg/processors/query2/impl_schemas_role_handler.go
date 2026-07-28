@@ -7,6 +7,7 @@ package query2
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -29,11 +30,10 @@ func schemasRoleHandler() apiPathHandler {
 	}
 }
 
-func schemasRoleExec(ctx context.Context, qw *queryWork) (err error) {
-
+func schemasRoleExec(_ context.Context, qw *queryWork) (err error) {
 	wsQname := qw.msg.WorkspaceQName()
 	if wsQname == appdef.NullQName {
-		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("workspace is not specified"))
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, errors.New("workspace is not specified"))
 	}
 	workspace := qw.appStructs.AppDef().Workspace(wsQname)
 	if workspace == nil {

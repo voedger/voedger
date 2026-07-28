@@ -34,12 +34,12 @@ func execCmdInitiateUpdateInviteRoles(_ timeu.ITime) func(args istructs.ExecComm
 
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
-			return
+			return err
 		}
 		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, args.ArgumentObject.AsRecordID(field_InviteID))
 		svCDocInvite, ok, err := args.State.CanExist(skbCDocInvite)
 		if err != nil {
-			return
+			return err
 		}
 		if !ok {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteNotExists)

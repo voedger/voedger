@@ -30,42 +30,42 @@ type implIServiceSimple struct {
 
 func (n *NOOP) Close() {}
 
-func (n *NOOP) DoSync(_ context.Context, _ IWorkpiece) (err error) {
-	return
+func (n *NOOP) DoSync(_ context.Context, _ IWorkpiece) error {
+	return nil
 }
 
 func (n *AsyncNOOP) Close() {}
 
-func (n *AsyncNOOP) DoAsync(ctx context.Context, work IWorkpiece) (outWork IWorkpiece, err error) {
-	return
+func (n *AsyncNOOP) DoAsync(context.Context, IWorkpiece) (IWorkpiece, error) {
+	return nil, nil
 }
 
-func (n *AsyncNOOP) Flush(callback OpFuncFlush) (err error) {
-	return
+func (n *AsyncNOOP) Flush(OpFuncFlush) error {
+	return nil
 }
 
-func (n *AsyncNOOP) OnError(ctx context.Context, err error) {}
+func (n *AsyncNOOP) OnError(context.Context, error) {}
 
-func (n *NOPService) Prepare(work interface{}) (err error) {
-	return
+func (n *NOPService) Prepare(interface{}) error {
+	return nil
 }
 
-func (n *NOPService) Run(ctx context.Context) {}
+func (n *NOPService) Run(context.Context) {}
 
 func (n *NOPService) Stop() {}
 
-func (so *implISyncOperatorSimple) DoSync(ctx context.Context, work IWorkpiece) (err error) {
+func (so *implISyncOperatorSimple) DoSync(ctx context.Context, work IWorkpiece) error {
 	if so.doSync != nil {
 		return so.doSync(ctx, work)
 	}
-	return
+	return nil
 }
 
 func (ao *implAsyncOperatorSimple) DoAsync(ctx context.Context, work IWorkpiece) (outWork IWorkpiece, err error) {
 	if ao.doAsync != nil {
 		return ao.doAsync(ctx, work)
 	}
-	return
+	return nil, nil
 }
 
 func (s *implIServiceSimple) Run(ctx context.Context) {

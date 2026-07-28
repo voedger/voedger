@@ -17,7 +17,7 @@ import (
 
 // Get return certificate for the specified key(domain).
 // If there's no such key, Get returns ErrCacheMiss.
-func (ac *autoCertDBCache) Get(ctx context.Context, key string) (data []byte, err error) {
+func (ac *autoCertDBCache) Get(_ context.Context, key string) (data []byte, err error) {
 	domainKey, err := createKey(CertPrefixInRouterStorage, key)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func (ac *autoCertDBCache) Get(ctx context.Context, key string) (data []byte, er
 }
 
 // Put stores the data in the cache under the specified key.
-func (ac *autoCertDBCache) Put(ctx context.Context, key string, data []byte) (err error) {
+func (ac *autoCertDBCache) Put(_ context.Context, key string, data []byte) (err error) {
 	domainKey, err := createKey(CertPrefixInRouterStorage, key)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (ac *autoCertDBCache) Put(ctx context.Context, key string, data []byte) (er
 }
 
 // Delete IAppStorage does not have Delete method, therefore set value to nil and in Get method check value for length
-func (ac *autoCertDBCache) Delete(ctx context.Context, key string) (err error) {
+func (ac *autoCertDBCache) Delete(_ context.Context, key string) (err error) {
 	domainKey, err := createKey(CertPrefixInRouterStorage, key)
 	if err != nil {
 		return err
@@ -55,16 +55,16 @@ func createKey(columns ...interface{}) (buf *bytes.Buffer, err error) {
 	for _, col := range columns {
 		switch v := col.(type) {
 		case uint16:
-			if err = binary.Write(buf, binary.BigEndian, v); err != nil {
+			if err := binary.Write(buf, binary.BigEndian, v); err != nil {
 				// error impossible
 				// notest
-				return buf, nil
+				panic(err)
 			}
 		case string:
-			if err = binary.Write(buf, binary.LittleEndian, []byte(v)); err != nil {
+			if err := binary.Write(buf, binary.LittleEndian, []byte(v)); err != nil {
 				// error impossible
 				// notest
-				return buf, err
+				panic(err)
 			}
 		default:
 			return nil, fmt.Errorf("unsupported data type %s: %w", reflect.ValueOf(col).Type(), ErrPKeyCreateError)

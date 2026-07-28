@@ -33,7 +33,7 @@ func execCmdCreateJoinedWorkspace(args istructs.ExecCommandArgs) (err error) {
 	}
 	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocJoinedWorkspace)
 	if err != nil {
-		return
+		return err
 	}
 	svbCDocJoinedWorkspace, err = args.Intents.NewValue(skbCDocJoinedWorkspace)
 	if err != nil {
