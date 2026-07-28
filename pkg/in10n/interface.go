@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // This interface is provided only once per process

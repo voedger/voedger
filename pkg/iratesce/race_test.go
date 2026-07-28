@@ -85,7 +85,7 @@ func TestRace_Buckets(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		start.Add(3)
 		finish.Add(3)
 		go getTokensForRegistration()

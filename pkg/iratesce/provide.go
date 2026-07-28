@@ -8,7 +8,7 @@ package iratesce
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
-	irates "github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/irates"
 )
 
 // Provide: constructs bucketFactory

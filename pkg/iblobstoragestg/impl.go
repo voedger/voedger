@@ -170,7 +170,7 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 	}
 
 	if stateExists && stateCallback != nil {
-		if err = stateCallback(state); err != nil {
+		if err := stateCallback(state); err != nil {
 			return err
 		}
 	}
@@ -187,7 +187,7 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 	for ctx.Err() == nil {
 		bucketExists := false
 		err = (*(b.blobStorage)).Read(ctx, pKeyWithBucket, nil, nil,
-			func(ccols []byte, viewRecord []byte) (err error) {
+			func(_ []byte, viewRecord []byte) (err error) {
 				bucketExists = true
 				if !stateExists {
 					return fmt.Errorf("%w: blob data exists whereas state is missing", iblobstorage.ErrBLOBCorrupted)
@@ -236,7 +236,7 @@ func (b *bStorageType) ReadBLOB(ctx context.Context, blobKey iblobstorage.IBLOBK
 	return nil
 }
 
-func (b *bStorageType) QueryBLOBState(ctx context.Context, key iblobstorage.IBLOBKey) (state iblobstorage.BLOBState, err error) {
+func (b *bStorageType) QueryBLOBState(_ context.Context, key iblobstorage.IBLOBKey) (state iblobstorage.BLOBState, err error) {
 	blobKeyBytes := key.Bytes()
 	pKeyState, cColState := getStateKeys(blobKeyBytes)
 	state, stateExists, err := b.readState(pKeyState, cColState, key.IsPersistent())

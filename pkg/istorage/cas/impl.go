@@ -272,7 +272,7 @@ func scanViewQuery(ctx context.Context, q *gocql.Query, cb istorage.ReadCallback
 			return scannerCloser(scanner, err)
 		}
 		if ctx.Err() != nil {
-			return nil // TCK contract
+			return nil //nolint:nilerr // TCK contract
 		}
 	}
 	return scannerCloser(scanner, err)

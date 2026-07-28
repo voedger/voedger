@@ -16,5 +16,5 @@ func (m *SecretReaderMock) ReadSecret(name string) (bb []byte, err error) {
 		bb = intf.([]byte)
 	}
 	err = aa.Error(1)
-	return
+	return bb, err
 }

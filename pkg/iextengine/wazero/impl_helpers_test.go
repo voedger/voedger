@@ -6,6 +6,7 @@
 package iextenginewazero
 
 import (
+	"maps"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -274,7 +275,9 @@ func (kb *mockKeyBuilder) PutString(name, value string)                     {}
 func (kb *mockKeyBuilder) PutQName(name string, value appdef.QName)         { kb.data[name] = value }
 func (kb *mockKeyBuilder) PutBool(name string, value bool)                  {}
 func (kb *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) {}
-func (kb *mockKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error)    { return nil, nil, nil }
+func (kb *mockKeyBuilder) ToBytes(istructs.WSID) (pk []byte, cc []byte, err error) {
+	return nil, nil, nil
+}
 
 // Tries to make conversion from value to a name type
 func (kb *mockKeyBuilder) PutNumber(name string, value json.Number) {}
@@ -373,9 +376,7 @@ func (s *mockIo) UpdateValue(key istructs.IStateKeyBuilder, existingValue istruc
 		items: make(map[string]interface{}),
 	}
 	mv := existingValue.(*mockValue)
-	for k, v := range mv.Data {
-		vb.items[k] = v
-	}
+	maps.Copy(vb.items, mv.Data)
 	s.intents = append(s.intents, intent{
 		key:   key,
 		value: &vb,

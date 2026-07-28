@@ -351,7 +351,7 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 		}
 	}
 
-	if err = f.resetModule(ctx, ePkg); err != nil {
+	if err := f.resetModule(ctx, ePkg); err != nil {
 		return err
 	}
 

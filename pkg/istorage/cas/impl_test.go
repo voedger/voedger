@@ -57,7 +57,7 @@ func TestMultipleApps(t *testing.T) {
 		istorage.TechnologyCompatibilityKit(t, asf)
 	}
 
-	for appNo := 0; appNo < appCount; appNo++ {
+	for range appCount {
 		wg.Add(1)
 		go testApp()
 	}

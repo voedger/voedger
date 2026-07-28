@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -24,7 +24,7 @@ func NewN10nBroker(quotas in10n.Quotas, time timeu.ITime) (nb in10n.IN10nBroker,
 		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
 		logger.LogAttr_Extension: "sys._N10NBroker",
 	})
-	broker := N10nBroker{
+	broker := n10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channel),
 		channelsWG:      sync.WaitGroup{},

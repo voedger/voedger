@@ -16,10 +16,10 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type N10nBroker struct {
+type n10nBroker struct {
 	sync.RWMutex
 	projections      map[in10n.ProjectionKey]*projection
 	channels         map[in10n.ChannelID]*channel

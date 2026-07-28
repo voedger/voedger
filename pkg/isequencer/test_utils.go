@@ -17,6 +17,7 @@ const actualizationTimeoutLimit = maxRetryDelay
 
 // waitForActualization waits for actualization to complete by repeatedly calling Start
 func WaitForStart(t *testing.T, seq ISequencer, wsKind WSKind, wsID WSID, shouldBeOk bool) PLogOffset {
+	t.Helper()
 	timeoutCtx, timeoutCtxCancel := context.WithTimeout(context.Background(), actualizationTimeoutLimit)
 	defer timeoutCtxCancel()
 

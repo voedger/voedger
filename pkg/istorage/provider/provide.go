@@ -23,7 +23,7 @@ func Provide(asf istorage.IAppStorageFactory, keyspaceIsolationSuffix ...string)
 		res.keyspaceIsolationSuffix = keyspaceIsolationSuffix[0]
 	}
 	var err error
-	res.sysMetaAppSafeName, err = istorage.NewSafeAppName(appdef.NewAppQName(appdef.SysPackage, "meta"), func(name string) (bool, error) { return true, nil })
+	res.sysMetaAppSafeName, err = istorage.NewSafeAppName(appdef.NewAppQName(appdef.SysPackage, "meta"), func(string) (bool, error) { return true, nil })
 	if err != nil {
 		// notest
 		panic(err)
