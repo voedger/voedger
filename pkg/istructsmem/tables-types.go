@@ -152,16 +152,15 @@ func (row *rowType) SpecifiedValues(cb func(appdef.IField, any) bool) {
 		case appdef.DataKind_RecordID:
 			value = istructs.RecordID(value.(int64)) //nolint:gosec
 		case appdef.DataKind_QName:
-			QNameID := binary.BigEndian.Uint16(value.([]byte))
-			qName, err := row.appCfg.qNames.QName(QNameID)
+			qNameID := binary.BigEndian.Uint16(value.([]byte))
+			qName, err := row.appCfg.qNames.QName(qNameID)
 			if err != nil {
 				// notest
 				panic(err)
 			}
 			value = qName
 		}
-		switch field.DataKind() {
-		case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
+		if field.DataKind() == appdef.DataKind_int8 { // #3435 [~server.vsql.smallints/cmp.istructs~impl]
 			value = int8(value.(byte)) // nolint G115 : dynobuffers uses byte to store int8
 		}
 		goOn = cb(row.fieldDef(name), value)

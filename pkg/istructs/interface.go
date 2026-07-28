@@ -230,7 +230,7 @@ type IViewRecords interface {
 	// - The fullness of the required view value fields is not checked
 	PutJSON(WSID, map[appdef.FieldName]any) error
 
-	// All fields must be filled in in the key (panic otherwise).
+	// All fields must be filled in the key (panic otherwise).
 	// If key is not found then null value (with NullQName) and ErrRecordNotFound returned
 	Get(WSID, IKeyBuilder) (IValue, error)
 

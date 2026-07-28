@@ -38,12 +38,12 @@ func (st *Singletons) ID(qName appdef.QName) (istructs.RecordID, error) {
 // Loads all singletons IDs from storage, add all known application singletons and store if some changes.
 // Must be called at application starts
 func (st *Singletons) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) (err error) {
-	if err = st.load(storage, versions); err != nil {
+	if err := st.load(storage, versions); err != nil {
 		return err
 	}
 
 	if appDef != nil {
-		if err = st.collectAllSingletons(appDef); err != nil {
+		if err := st.collectAllSingletons(appDef); err != nil {
 			return err
 		}
 	}
@@ -72,7 +72,6 @@ func (st *Singletons) load(storage istorage.IAppStorage, versions *vers.Versions
 
 // Loads singletons IDs from storage using ver01 codec
 func (st *Singletons) load01(storage istorage.IAppStorage) error {
-
 	readSingleton := func(cCols, value []byte) error {
 		qName, err := appdef.ParseQName(string(cCols))
 		if err != nil {
@@ -108,19 +107,19 @@ func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
 
 // collectSingleton checks is singleton in cache. If not then adds it with new ID
 func (st *Singletons) collectSingleton(qname appdef.QName) error {
-
 	if _, ok := st.qNames[qname]; ok {
 		return nil // already known singleton
 	}
 
 	for id := st.lastID + 1; id < istructs.MaxSingletonID; id++ {
-		if _, ok := st.ids[id]; !ok {
-			st.qNames[qname] = id
-			st.ids[id] = qname
-			st.lastID = id
-			st.changes++
-			return nil
+		if _, ok := st.ids[id]; ok {
+			continue
 		}
+		st.qNames[qname] = id
+		st.ids[id] = qname
+		st.lastID = id
+		st.changes++
+		return nil
 	}
 
 	return ErrSingletonIDsExceeds
@@ -142,12 +141,12 @@ func (st *Singletons) store(storage istorage.IAppStorage, versions *vers.Version
 		}
 	}
 
-	if err = storage.PutBatch(batch); err != nil {
+	if err := storage.PutBatch(batch); err != nil {
 		return fmt.Errorf("error store application singleton IDs to storage: %w", err)
 	}
 
 	if ver := versions.Get(vers.SysSingletonsVersion); ver != latestVersion {
-		if err = versions.Put(vers.SysSingletonsVersion, latestVersion); err != nil {
+		if err := versions.Put(vers.SysSingletonsVersion, latestVersion); err != nil {
 			return fmt.Errorf("error store singletons system view version: %w", err)
 		}
 	}

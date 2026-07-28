@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -16,9 +17,8 @@ import (
 
 func extractStatement(s any) interface{} {
 	v := reflect.ValueOf(s)
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		if field.Kind() == reflect.Ptr && !field.IsNil() {
+	for _, field := range v.Fields() {
+		if field.Kind() == reflect.Pointer && !field.IsNil() {
 			return field.Interface()
 		}
 	}
@@ -44,7 +44,7 @@ func CompareParams(params []FunctionParam, f *FunctionStmt) error {
 	if len(params) != len(f.Params) {
 		return ErrFunctionParamsIncorrect
 	}
-	for i := 0; i < len(params); i++ {
+	for i := range params {
 		if !CompareParam(params[i], f.Params[i]) {
 			return ErrFunctionParamsIncorrect
 		}
@@ -138,8 +138,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	lookInOtherPackages := true
 	lookInInheritedWorkspaces := true
 
-	switch value.(type) {
-	case *TagStmt:
+	if _, ok := value.(*TagStmt); ok {
 		lookInOtherPackages = false
 		lookInInheritedWorkspaces = false
 	}
@@ -154,7 +153,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 		return nil, nil, err
 	}
 
-	var schema *PackageSchemaAST = nil
+	var schema *PackageSchemaAST
 	var lookupCallback func(stmt interface{})
 	lookupCallback = func(stmt interface{}) {
 		if f, ok := stmt.(stmtType); ok && item == nil {
@@ -188,10 +187,8 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 				var lookInInherted func(iws *WorkspaceStmt) error
 				var chain []*WorkspaceStmt
 				lookInInherted = func(iws *WorkspaceStmt) error {
-					for _, c := range chain {
-						if c == iws {
-							return nil // avoid circular references. Note this isn't an error because circular references are analyzed elsewhere
-						}
+					if slices.Contains(chain, iws) {
+						return nil // avoid circular references. Note this isn't an error because circular references are analyzed elsewhere
 					}
 					chain = append(chain, iws)
 					for _, dq := range iws.Inherits {
@@ -298,14 +295,14 @@ func ExtractLocalPackageName(pkgPath string) string {
 }
 
 func GetQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
-	for i := 0; i < len(schema.Imports); i++ {
+	for i := range schema.Imports {
 		imp := schema.Imports[i]
 		if imp.Alias != nil && *imp.Alias == pkgName {
 			return imp.Name
 		}
 	}
 	suffix := fmt.Sprintf("/%s", pkgName)
-	for i := 0; i < len(schema.Imports); i++ {
+	for i := range schema.Imports {
 		imp := schema.Imports[i]
 		if strings.HasSuffix(imp.Name, suffix) || imp.Name == string(pkgName) {
 			return imp.Name
@@ -337,7 +334,6 @@ func findPackage(pnkName Ident, c *iterateCtx) (*PackageSchemaAST, error) {
 		return nil, ErrCouldNotImport(pkgQN)
 	}
 	return targetPkgSch, nil
-
 }
 
 func getTargetSchema(n DefQName, c *iterateCtx) (*PackageSchemaAST, error) {

@@ -88,7 +88,7 @@ func (m *mapMetrics) List(cb func(metric IMetric, metricValue float64) (err erro
 		ptr := (*uint64)(unsafe.Pointer(value))
 		err = cb(&metric, math.Float64frombits(atomic.LoadUint64(ptr)))
 		if err != nil {
-			return
+			return err
 		}
 	}
 	return err

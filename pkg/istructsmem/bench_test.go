@@ -52,7 +52,7 @@ func Benchmark_BuildRawEvent(b *testing.B) {
 }
 
 func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
-
+	b.Helper()
 	require := require.New(b)
 
 	// Names
@@ -174,7 +174,7 @@ func Benchmark_UnmarshalJSONForBuildRawEvent(b *testing.B) {
 }
 
 func bench_UnmarshalJSONForBuildRawEvent(b *testing.B, numOfIntFields int) {
-
+	b.Helper()
 	require := require.New(b)
 
 	srcMap := make(map[string]any)
