@@ -7,12 +7,16 @@ on:
       - 'pkg/vvm/storage/**'
       - 'pkg/vvm/storage/**'
       - 'pkg/elections/**'
-  pull_request_target:
+  pull_request:
     paths:
       - 'pkg/istorage/**'
       - 'pkg/vvm/storage/**'
       - 'pkg/vvm/storage/**'
       - 'pkg/elections/**'
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
 
@@ -31,18 +35,26 @@ jobs:
       elections_changed_push: ${{ steps.push_files.outputs.elections_changed }}
     steps:
 
-      - name: Install GitHub CLI
-        run: sudo apt-get install -y gh
-
       - name: Get changed files in PR
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request'
         id: pr_files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          CHANGED_FILES=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER/files --jq '.[].filename')
+          set -Eeuo pipefail
+
+          CHANGED_FILES_FILE="$(mktemp)"
+          trap 'rm -f "$CHANGED_FILES_FILE"' EXIT
+
+          gh api \
+            --paginate \
+            "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
+            --jq '.[].filename' > "$CHANGED_FILES_FILE"
 
           echo "Changed files:"
-          echo "$CHANGED_FILES"
+          sed 's/^/  /' "$CHANGED_FILES_FILE"
 
           CAS_CHANGED=false
           AMAZON_CHANGED=false
@@ -50,7 +62,7 @@ jobs:
           TTLSTORAGE_CHANGED=false
           ELECTIONS_CHANGED=false
 
-          for FILE in $CHANGED_FILES; do
+          while IFS= read -r FILE || [[ -n "$FILE" ]]; do
             case "$FILE" in
               pkg/istorage/cas/*)
                 CAS_CHANGED=true
@@ -68,16 +80,13 @@ jobs:
                 ELECTIONS_CHANGED=true
                 ;;
             esac
-          done
+          done < "$CHANGED_FILES_FILE"
 
           echo "cas_changed=$CAS_CHANGED" >> "$GITHUB_OUTPUT"
           echo "amazon_changed=$AMAZON_CHANGED" >> "$GITHUB_OUTPUT"
           echo "others_changed=$OTHERS_CHANGED" >> "$GITHUB_OUTPUT"
           echo "ttlstorage_changed=$TTLSTORAGE_CHANGED" >> "$GITHUB_OUTPUT"
           echo "elections_changed=$ELECTIONS_CHANGED" >> "$GITHUB_OUTPUT"
-
-        env:
-          GH_TOKEN: ${{ secrets.REPOREADING_TOKEN }}
 
       - name: Checkout repository
         if: github.event_name == 'push'
@@ -159,7 +168,7 @@ jobs:
       )
     uses: ./.github/workflows/ci_cas.yml
     secrets:
-      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+      personaltoken: ${{ github.event_name == 'push' && secrets.REPOREADING_TOKEN || secrets.GITHUB_TOKEN }}
 
   trigger_amazon:
     needs: determine_changes
@@ -178,5 +187,4 @@ jobs:
       )
     uses: ./.github/workflows/ci_amazon.yml
     secrets:
-      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
-
+      personaltoken: ${{ github.event_name == 'push' && secrets.REPOREADING_TOKEN || secrets.GITHUB_TOKEN }}

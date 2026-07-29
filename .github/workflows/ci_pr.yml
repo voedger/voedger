@@ -1,9 +1,13 @@
 name: CI on Pull Request
 
 on:
-  pull_request_target:
+  pull_request:
     paths-ignore:
       - 'pkg/istorage/**'
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   call-workflow-ci:
@@ -15,4 +19,4 @@ jobs:
       go_race: "false"
       install_tinygo: "true"
     secrets:
-      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      reporeading_token: ${{ secrets.GITHUB_TOKEN }}

@@ -49,7 +49,7 @@ jobs:
 
   call-workflow-create-issue:
     needs: build
-    if: ${{ failure() }}
+    if: ${{ failure() && github.event_name == 'push' }}
     uses: untillpro/ci-action/.github/workflows/create_issue.yml@main
     with:
       repo: 'voedger/voedger'
