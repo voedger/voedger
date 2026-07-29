@@ -168,7 +168,7 @@ jobs:
       )
     uses: ./.github/workflows/ci_cas.yml
     secrets:
-      personaltoken: ${{ github.event_name == 'push' && secrets.REPOREADING_TOKEN || github.token }}
+      personaltoken: ${{ github.event_name == 'push' && secrets.REPOREADING_TOKEN || secrets.GITHUB_TOKEN }}
 
   trigger_amazon:
     needs: determine_changes
@@ -187,4 +187,4 @@ jobs:
       )
     uses: ./.github/workflows/ci_amazon.yml
     secrets:
-      personaltoken: ${{ github.event_name == 'push' && secrets.REPOREADING_TOKEN || github.token }}
+      personaltoken: ${{ github.event_name == 'push' && secrets.REPOREADING_TOKEN || secrets.GITHUB_TOKEN }}

@@ -19,4 +19,4 @@ jobs:
       go_race: "false"
       install_tinygo: "true"
     secrets:
-      reporeading_token: ${{ github.token }}
+      reporeading_token: ${{ secrets.GITHUB_TOKEN }}
