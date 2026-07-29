@@ -16,7 +16,7 @@ import (
 func Provide(sr istructsmem.IStatelessResources, time timeu.ITime,
 	federation federation.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
 	provideCmdInitiateInvitationByEMail(sr, time)
-	provideCmdInitiateJoinWorkspace(sr, time)
+	provideCmdInitiateJoinWorkspace(sr, time, itokens)
 	provideCmdInitiateUpdateInviteRoles(sr, time)
 	provideCmdInitiateCancelAcceptedInvite(sr, time)
 	provideCmdInitiateLeaveWorkspace(sr, time)
