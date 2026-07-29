@@ -20,6 +20,6 @@ Error: Refusing to check out fork pull request code from a 'pull_request_target'
 
 ## What
 
-* use `pull_request` instead of `pull_request_tagret`
+* use `pull_request` instead of `pull_request_target`
 * investigate what else should be changed after `pull_request` change
 
