@@ -10,9 +10,9 @@
 
 ## Why
 
-`pull_request_target` was needed to auto-merge the PR. Now auto-merge is disable to it is better to use more safe `pull_request`
+`pull_request_target` was needed for PR auto-merge. Now auto-merge is disabled, so it is safer to use `pull_request`.
 
-Now we have error on pull request from fork:
+Now we get an error on pull requests from forks:
 
 ```
 Error: Refusing to check out fork pull request code from a 'pull_request_target' workflow. This workflow runs with the base repository's GITHUB_TOKEN, secrets, default-branch cache scope, and runner access. Fetching and executing a fork's code in that trusted context commonly leads to "pwn request" vulnerabilities. To opt in, review the risks at https://gh.io/securely-using-pull_request_target and set 'allow-unsafe-pr-checkout: true' on the actions/checkout step.
