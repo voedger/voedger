@@ -24,6 +24,11 @@ jobs:
     - name: Checkout and Setup go
       uses: untillpro/ci-action/checkout-and-setup-go@main
 
+    - name: Wait for Scylla CQL
+      uses: untillpro/ci-action/wait-for-scylla@main
+      with:
+        container-id: ${{ job.services.scylladb.id }}
+
     - name: Run Cassandra Implementation Tests
       working-directory: pkg/istorage/cas
       run: go test ./... -v -race
@@ -44,7 +49,7 @@ jobs:
 
   call-workflow-create-issue:
     needs: build
-    if: ${{ failure() }}
+    if: ${{ failure() && github.event_name == 'push' }}
     uses: untillpro/ci-action/.github/workflows/create_issue.yml@main
     with:
       repo: 'voedger/voedger'

@@ -120,12 +120,12 @@ func closeContextOnCompareAndSwapFailure_KeyDeleted[K any, V any](require *requi
 	require.False(ok)
 }
 
-func releaseLeadershipWithoutAcquire[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
+func releaseLeadershipWithoutAcquire[K any, V any](_ *require.Assertions, elections IElections[K, V], _ ITTLStorage[K, V], _ func(), dataGen TestDataGen[K, V]) {
 	// Releasing unknown key => nothing happens, no errors
 	elections.ReleaseLeadership(dataGen.NextKey())
 }
 
-func acquireFailingAfterCleanup[K any, V any](require *require.Assertions, elections IElections[K, V], iTTLStorage ITTLStorage[K, V], cleanup func(), dataGen TestDataGen[K, V]) {
+func acquireFailingAfterCleanup[K any, V any](require *require.Assertions, elections IElections[K, V], _ ITTLStorage[K, V], cleanup func(), dataGen TestDataGen[K, V]) {
 	key1 := dataGen.NextKey()
 	val1 := dataGen.NextVal()
 	key2 := dataGen.NextKey()

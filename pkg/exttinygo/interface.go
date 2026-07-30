@@ -15,24 +15,24 @@ type TValue safe.TValue
 type TKey safe.TKey
 type QName safe.QName
 
-var KeyBuilder func(storage, entity string) (b TKeyBuilder) = keyBuilderImpl
+var KeyBuilder = keyBuilderImpl
 
 // QueryValue queries value. When not exists it returns exists=false and value=nil.
-var QueryValue func(key TKeyBuilder) (value TValue, exists bool) = queryValueImpl
+var QueryValue = queryValueImpl
 
 // MustGetValue gets value. Panics when value is not exist
-var MustGetValue func(key TKeyBuilder) TValue = mustGetValueImpl
+var MustGetValue = mustGetValueImpl
 
 // ReadValues reads using partial key and returns values in callback.
 //
 // Important: key and value are not kept after callback!
-var ReadValues func(key TKeyBuilder, callback func(key TKey, value TValue)) = readValuesImpl
+var ReadValues = readValuesImpl
 
 // UpdateValue creates intent to update a value
-var UpdateValue func(key TKeyBuilder, existingValue TValue) TIntent = updateValueImpl
+var UpdateValue = updateValueImpl
 
 // NewValue creates intent for new value
-var NewValue func(key TKeyBuilder) TIntent = newValueImpl
+var NewValue = newValueImpl
 
 /*
 type IKey interface {

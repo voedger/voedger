@@ -6,6 +6,7 @@
 package cluster
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -33,7 +34,7 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
-		_, newID, err := dispatchDML(update, federation, itokens, time)
+		_, newID, err := dispatchDML(args.State.Context(), update, federation, itokens, time)
 		if err != nil {
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}
@@ -54,14 +55,14 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 	}
 }
 
-func dispatchDML(update update, federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime) (cudWLogOffset istructs.Offset, newID istructs.RecordID, err error) {
+func dispatchDML(ctx context.Context, update update, federation federation.IFederation, itokens itokens.ITokens, time timeu.ITime) (cudWLogOffset istructs.Offset, newID istructs.RecordID, err error) {
 	switch update.Kind {
 	case dml.OpKind_UpdateTable:
 		cudWLogOffset, err = updateTable(update, federation, itokens)
 	case dml.OpKind_InsertTable:
 		cudWLogOffset, newID, err = insertTable(update, federation, itokens)
 	case dml.OpKind_UpdateCorrupted:
-		err = updateCorrupted(update, istructs.UnixMilli(time.Now().UnixMilli()))
+		err = updateCorrupted(ctx, update, istructs.UnixMilli(time.Now().UnixMilli()))
 	case dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert:
 		err = updateUnlogged(update)
 	}

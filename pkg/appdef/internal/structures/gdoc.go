@@ -3,6 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
+//nolint:dupl
 package structures
 
 import (

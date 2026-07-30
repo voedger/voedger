@@ -19,7 +19,7 @@ func Test_Packages(t *testing.T) {
 	pkg := packages.MakeWithPackages()
 
 	// should be appdef.IPackages compatible
-	var _ appdef.IWithPackages = pkg
+	var _ appdef.IWithPackages = &pkg
 
 	pb := packages.MakePackagesBuilder(&pkg)
 

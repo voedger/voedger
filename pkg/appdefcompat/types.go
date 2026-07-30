@@ -68,7 +68,7 @@ func (e *CompatibilityErrors) Error() (err string) {
 	if len(errs) > 0 {
 		return errors.Join(errs...).Error()
 	}
-	return
+	return ""
 }
 
 // matchNodesResult represents the result of matching nodes.

@@ -12,9 +12,9 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func NewTestAppParts(asp istructs.IAppStructsProvider) (IAppPartitions, func()) {
+func NewTestAppParts(asp istructs.IAppStructsProvider) (res IAppPartitions, cleanup func()) {
 	vvmCtx, cancel := context.WithCancel(context.Background())
-	appParts, cleanup, err := New2(
+	res, clean, err := New2(
 		vvmCtx,
 		asp,
 		NullSyncActualizerFactory,
@@ -26,9 +26,8 @@ func NewTestAppParts(asp istructs.IAppStructsProvider) (IAppPartitions, func()) 
 	if err != nil {
 		panic(err)
 	}
-	combinedCleanup := func() {
+	return res, func() {
 		cancel()
-		cleanup()
+		clean()
 	}
-	return appParts, combinedCleanup
 }

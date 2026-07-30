@@ -134,7 +134,7 @@ func TestSchedulersDeploy(t *testing.T) {
 			return s
 		}
 
-		for pid := istructs.PartitionID(0); pid < partCnt; pid++ {
+		for pid := range istructs.PartitionID(partCnt) {
 			schedulers[pid] = deploy(pid)
 		}
 
@@ -154,7 +154,7 @@ func TestSchedulersDeploy(t *testing.T) {
 		stop()
 
 		wg := sync.WaitGroup{}
-		for pid := istructs.PartitionID(0); pid < partCnt; pid++ {
+		for pid := range istructs.PartitionID(partCnt) {
 			wg.Add(1)
 			go func(pid istructs.PartitionID) {
 				defer wg.Done()
@@ -164,7 +164,7 @@ func TestSchedulersDeploy(t *testing.T) {
 
 		wg.Wait()
 
-		for pid := istructs.PartitionID(0); pid < partCnt; pid++ {
+		for pid := range istructs.PartitionID(partCnt) {
 			require.Empty(schedulers[pid].Enum())
 		}
 	})

@@ -16,7 +16,6 @@ import (
 )
 
 func LoadExportedApps(folderPath string) ([]ExportedApp, error) {
-
 	exportedApps := make([]ExportedApp, 0)
 
 	expInfo, err := loadExportedAppsInfo(folderPath)
@@ -59,7 +58,6 @@ func LoadExportedApps(folderPath string) ([]ExportedApp, error) {
 			Ast:    appSchema,
 			Ignore: append(expInfo.Ignore, eapp.Ignore...),
 		})
-
 	}
 
 	return exportedApps, nil
@@ -79,7 +77,6 @@ func loadExportedAppsInfo(folderPath string) (*ExportedAppsInfo, error) {
 }
 
 func loadExportedPackage(folderPath string, qn string) (*parser.PackageSchemaAST, error) {
-
 	var pathToFolder string
 
 	pathToFolder = filepath.Join(folderPath, parser.ExportedPkgFolder)

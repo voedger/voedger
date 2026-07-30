@@ -32,10 +32,12 @@ type CommandResponse struct {
 }
 
 type QueryResponse struct {
-	QPv2Response // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
-	Sections     []struct {
-		Elements [][][][]interface{} `json:"elements"`
-	} `json:"sections"`
+	QPv2Response           // TODO: eliminate this after https://github.com/voedger/voedger/issues/1313
+	Sections     []Section `json:"sections"`
+}
+
+type Section struct {
+	Elements [][][][]interface{} `json:"elements"`
 }
 
 type QPv2Response []map[string]interface{}

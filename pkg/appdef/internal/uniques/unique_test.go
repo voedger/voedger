@@ -176,7 +176,7 @@ func Test_UniquesPanics(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 			ws := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
 			rec := ws.AddCRecord(appdef.NewQName("test", "rec"))
-			for i := 0; i < appdef.MaxTypeUniqueCount; i++ {
+			for i := range appdef.MaxTypeUniqueCount {
 				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, appdef.DataKind_int32, false)
 				rec.AddUnique(appdef.NewQName("test", "rec$uniques$"+n), []appdef.FieldName{n})

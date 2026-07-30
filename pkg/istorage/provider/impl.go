@@ -49,7 +49,7 @@ func (asp *implIAppStorageProvider) AppStorage(appQName appdef.AppQName) (storag
 			appStorageDesc.Status = istorage.AppStorageStatus_Done
 		}
 		// possible: new SafeAppName written , but appDesc write is failed. No problem in this case because we'll just have an orphaned record
-		if err = storeAppDesc(appQName, appStorageDesc, asp.metaStorage); err != nil {
+		if err := storeAppDesc(appQName, appStorageDesc, asp.metaStorage); err != nil {
 			return nil, err
 		}
 	}

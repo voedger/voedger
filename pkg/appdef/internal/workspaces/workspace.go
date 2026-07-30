@@ -51,18 +51,18 @@ func NewWorkspace(app appdef.IAppDef, name appdef.QName) *Workspace {
 	return ws
 }
 
-func (ws Workspace) Ancestors() []appdef.IWorkspace {
+func (ws *Workspace) Ancestors() []appdef.IWorkspace {
 	return ws.ancestors.AsArray()
 }
 
-func (ws Workspace) Descriptor() appdef.QName {
+func (ws *Workspace) Descriptor() appdef.QName {
 	if ws.desc != nil {
 		return ws.desc.QName()
 	}
 	return appdef.NullQName
 }
 
-func (ws Workspace) Inherits(anc appdef.QName) bool {
+func (ws *Workspace) Inherits(anc appdef.QName) bool {
 	switch anc {
 	case appdef.SysWorkspaceQName, ws.QName():
 		return true
@@ -76,15 +76,15 @@ func (ws Workspace) Inherits(anc appdef.QName) bool {
 	return false
 }
 
-func (ws Workspace) LocalType(name appdef.QName) appdef.IType {
+func (ws *Workspace) LocalType(name appdef.QName) appdef.IType {
 	return ws.WithTypes.Type(name)
 }
 
-func (ws Workspace) LocalTypes() []appdef.IType {
+func (ws *Workspace) LocalTypes() []appdef.IType {
 	return ws.WithTypes.Types()
 }
 
-func (ws Workspace) Type(name appdef.QName) appdef.IType {
+func (ws *Workspace) Type(name appdef.QName) appdef.IType {
 	var (
 		find  func(appdef.IWorkspace) appdef.IType
 		chain = make(map[appdef.QName]bool) // to prevent stack overflow recursion
@@ -109,17 +109,17 @@ func (ws Workspace) Type(name appdef.QName) appdef.IType {
 		}
 		return appdef.NullType
 	}
-	return find(&ws)
+	return find(ws)
 }
 
-func (ws Workspace) Types() []appdef.IType {
+func (ws *Workspace) Types() []appdef.IType {
 	if ws.allTypes != nil {
 		return ws.allTypes
 	}
 	return ws.enumerateTypes()
 }
 
-func (ws Workspace) UsedWorkspaces() []appdef.IWorkspace {
+func (ws *Workspace) UsedWorkspaces() []appdef.IWorkspace {
 	return ws.usedWS.AsArray()
 }
 
@@ -250,7 +250,7 @@ func (ws *Workspace) builded() {
 
 func (ws *Workspace) changed() { ws.allTypes = nil }
 
-func (ws Workspace) enumerateTypes() []appdef.IType {
+func (ws *Workspace) enumerateTypes() []appdef.IType {
 	tt := []appdef.IType{}
 
 	var (
@@ -270,7 +270,7 @@ func (ws Workspace) enumerateTypes() []appdef.IType {
 			}
 		}
 	}
-	visit(&ws)
+	visit(ws)
 
 	slices.SortFunc(tt, func(i, j appdef.IType) int { return appdef.CompareQName(i.QName(), j.QName()) })
 

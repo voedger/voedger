@@ -96,7 +96,12 @@ func (s *httpServer) prepareBasicServer(handler http.Handler) (err error) {
 	s.listeningPort.Store(uint32(s.listener.Addr().(*net.TCPAddr).Port)) // nolint G115
 
 	if s.UseProxyProtocol {
-		s.listener = &proxyproto.Listener{Listener: s.listener}
+		s.listener = &proxyproto.Listener{
+			Listener: s.listener,
+			ConnPolicy: func(proxyproto.ConnPolicyOptions) (proxyproto.Policy, error) {
+				return proxyproto.USE, nil
+			},
+		}
 	}
 
 	if s.ConnectionsLimit > 0 {

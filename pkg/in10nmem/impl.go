@@ -19,17 +19,18 @@ import (
 	"sync"
 	"time"
 
+	"maps"
+
 	"github.com/google/uuid"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
-	istructs "github.com/voedger/voedger/pkg/istructs"
-	"golang.org/x/exp/maps"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // NewChannel @ConcurrentAccess
 // Create new channel.
 // On timeout channel will be closed. channelDuration determines time during with it will be open.
-func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration time.Duration) (channelID in10n.ChannelID, channelCleanup func(), err error) {
+func (nb *n10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration time.Duration) (channelID in10n.ChannelID, channelCleanup func(), err error) {
 	nb.Lock()
 	defer nb.Unlock()
 	var metric *metricType
@@ -70,8 +71,7 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 //
 // [~server.n10n.heartbeats/freq.Interval30Seconds~doc]
 // - Implementation generates a heartbeat every 30 seconds for all channels that are subscribed on QNameHeartbeat30
-func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
-
+func (nb *n10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
 	var prj *projection
 	var channel *channel
 	var channelOK bool
@@ -144,15 +144,13 @@ func (nb *N10nBroker) Subscribe(channelID in10n.ChannelID, projectionKey in10n.P
 	return err
 }
 
-func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
-
+func (nb *n10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n.ProjectionKey) (err error) {
 	var prj *projection
 	var channel *channel
 	var cOK bool
 
 	// Modify broker structures
 	err = func() error {
-
 		nb.Lock()
 		defer nb.Unlock()
 
@@ -196,7 +194,7 @@ func (nb *N10nBroker) Unsubscribe(channelID in10n.ChannelID, projectionKey in10n
 
 // Implementation of the in10n.IN10nBroker
 // watchCtx normally is normally request+VVM ctx
-func (nb *N10nBroker) WatchChannel(watchCtx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
+func (nb *n10nBroker) WatchChannel(watchCtx context.Context, channelID in10n.ChannelID, notifySubscriber func(projection in10n.ProjectionKey, offset istructs.Offset)) {
 	// check that the channelID with the given ChannelID exists
 	channel := func() *channel {
 		nb.RLock()
@@ -253,12 +251,10 @@ func (nb *N10nBroker) WatchChannel(watchCtx context.Context, channelID in10n.Cha
 			}
 			updateUnits = updateUnits[:0]
 		}
-
 	}
 }
 
-func (nb *N10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID, metric *metricType) {
-
+func (nb *n10nBroker) cleanupChannel(channel *channel, channelID in10n.ChannelID, metric *metricType) {
 	// Mark channel as terminated and unsubscribe from all projections
 	{
 		if channel.terminated {
@@ -320,7 +316,7 @@ func notifier(brokerCtx context.Context, logCtx context.Context, wg *sync.WaitGr
 						delete(prj.subscribedChannels, channelID)
 					}
 				}
-				maps.Clear(prj.toSubscribe)
+				clear(prj.toSubscribe)
 				prj.Unlock()
 			}
 
@@ -349,14 +345,13 @@ func guaranteeProjection(projections map[in10n.ProjectionKey]*projection, projec
 			toSubscribe:        make(map[in10n.ChannelID]*channel),
 		}
 		projections[projectionKey] = prj
-
 	}
 	return prj.offsetPointer
 }
 
 // Update @ConcurrentAccess
 // Update projections map with new offset
-func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Offset) {
+func (nb *n10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Offset) {
 	nb.Lock()
 	*guaranteeProjection(nb.projections, projection) = offset
 	prj := nb.projections[projection]
@@ -368,19 +363,19 @@ func (nb *N10nBroker) Update(projection in10n.ProjectionKey, offset istructs.Off
 
 // MetricNumChannels @ConcurrentAccess
 // return channels count
-func (nb *N10nBroker) MetricNumChannels() int {
+func (nb *n10nBroker) MetricNumChannels() int {
 	nb.RLock()
 	defer nb.RUnlock()
 	return len(nb.channels)
 }
 
-func (nb *N10nBroker) MetricNumSubscriptions() int {
+func (nb *n10nBroker) MetricNumSubscriptions() int {
 	nb.RLock()
 	defer nb.RUnlock()
 	return nb.numSubscriptions
 }
 
-func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istructs.SubjectLogin, numChannels int, numSubscriptions int)) {
+func (nb *n10nBroker) MetricSubject(ctx context.Context, cb func(subject istructs.SubjectLogin, numChannels int, numSubscriptions int)) {
 	postMetric := func(subject istructs.SubjectLogin, metric *metricType) (err error) {
 		nb.RLock()
 		defer nb.RUnlock()
@@ -398,7 +393,7 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func (nb *N10nBroker) MetricNumProjectionSubscriptions(projection in10n.ProjectionKey) int {
+func (nb *n10nBroker) MetricNumProjectionSubscriptions(projection in10n.ProjectionKey) int {
 	nb.RLock()
 	defer nb.RUnlock()
 	prj := nb.projections[projection]
@@ -411,7 +406,7 @@ func (nb *N10nBroker) MetricNumProjectionSubscriptions(projection in10n.Projecti
 }
 
 // Call Update() every 30 seconds for i10n.Heartbeat30ProjectionKey
-func (nb *N10nBroker) heartbeat30(brokerCtx context.Context, wg *sync.WaitGroup) {
+func (nb *n10nBroker) heartbeat30(brokerCtx context.Context, wg *sync.WaitGroup) {
 	defer func() {
 		logger.InfoCtx(nb.logCtx, "n10n.heartbeat.stop")
 		wg.Done()
@@ -435,7 +430,7 @@ func (nb *N10nBroker) heartbeat30(brokerCtx context.Context, wg *sync.WaitGroup)
 	}
 }
 
-func (nb *N10nBroker) validateChannel(channel *channel) error {
+func (nb *n10nBroker) validateChannel(channel *channel) error {
 	// if channel lifetime > channelDuration defined in NewChannel when create channel - must exit
 	if nb.time.Now().Sub(channel.createTime) > channel.channelDuration {
 		return ErrChannelExpired

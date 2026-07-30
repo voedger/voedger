@@ -141,7 +141,7 @@ func TestNextDelay_GrowsOnAverage(t *testing.T) {
 	var prevMean time.Duration
 	var prevCap time.Duration
 
-	for attempt := 0; attempt < 50; attempt++ {
+	for attempt := range 50 {
 		// Compute the expected cap: min(base * 2^attempt, max)
 		delayCap := cfg.BaseDelay << attempt
 		if delayCap < 0 || delayCap > cfg.MaxDelay { // overflow or max reached
@@ -150,7 +150,7 @@ func TestNextDelay_GrowsOnAverage(t *testing.T) {
 
 		// Sample many delays at this attempt level.
 		var sum time.Duration
-		for i := 0; i < samplesPerAttempt; i++ {
+		for i := range samplesPerAttempt {
 			// Force the attempt we want to test (NextDelay mutates it).
 			r.attempt = attempt
 			d := r.NextDelay()
@@ -341,7 +341,7 @@ func TestNextDelayOverflowAverageIsConstant2(t *testing.T) {
 	bucketSums := make([]float64, buckets)
 	bucketCounts := make([]int, buckets)
 
-	for i := 0; i < samples; i++ {
+	for i := range samples {
 		// Force the overflow path on every draw.
 		r.attempt = overflowAttempt
 

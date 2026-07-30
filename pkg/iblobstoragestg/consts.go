@@ -12,6 +12,6 @@ const (
 )
 
 var (
-	RLimiter_Null iblobstorage.RLimiterType = func(wantReadBytes uint64) error { return nil }
+	RLimiter_Null iblobstorage.RLimiterType = func(uint64) error { return nil }
 	cColState                               = []byte{0, 0, 0, 0, 0, 0, 0, 0}
 )

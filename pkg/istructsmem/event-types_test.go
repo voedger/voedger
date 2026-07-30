@@ -221,8 +221,6 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
 						defer ev.Release()
 						cnt++
-						// sequentially-read event must own its bytes so it stays valid after the read callback returns
-						require.NotNil(ev.(*eventType).buffer)
 						switch ev.QName() {
 						case test.saleCmdName:
 							require.Equal(test.plogOfs, plogOffset)

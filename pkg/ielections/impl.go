@@ -68,7 +68,7 @@ func (e *elections[K, V]) maintainLeadership(key K, val V, leadershipDurationSec
 			return
 		case <-ticker:
 			ticker = e.clock.NewTimerChan(tickerInterval)
-			tickerCounter = bumpTickerCounter(tickerCounter, li.ctx, tickerInterval)
+			tickerCounter = bumpTickerCounter(li.ctx, tickerCounter, tickerInterval)
 			if !e.renewWithRetry(li.ctx, key, val, leadershipDurationSeconds, li, tickerInterval) {
 				return
 			}
@@ -102,7 +102,7 @@ func (e *elections[K, V]) renewWithRetry(ctx context.Context, key K, val V, lead
 	return false
 }
 
-func bumpTickerCounter(tickerCounter int64, ctx context.Context, tickerInterval time.Duration) (tickerCounterPlus1 int64) {
+func bumpTickerCounter(ctx context.Context, tickerCounter int64, tickerInterval time.Duration) (tickerCounterPlus1 int64) {
 	tickerCounterPlus1 = tickerCounter + 1
 	if tickerCounter < maintainLogFirstTicks {
 		logger.VerboseCtx(ctx, "leadership.maintain.10", "renewing leadership")

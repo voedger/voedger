@@ -26,7 +26,7 @@ func NewCommand(ws appdef.IWorkspace, name appdef.QName) *Command {
 	return c
 }
 
-func (c Command) UnloggedParam() appdef.IType {
+func (c *Command) UnloggedParam() appdef.IType {
 	return c.unl.Target(c.App().Type)
 }
 

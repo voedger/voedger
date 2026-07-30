@@ -10,7 +10,7 @@ package pool
 // Value is borrowed from poll by calling Borrow() method.
 // After using value, it must be returned to pool by calling Release() method.
 //
-//TODO: adds tests to check that pool is thread-safe
+// TODO: adds tests to check that pool is thread-safe
 type Pool[T any] struct {
 	c chan T
 }

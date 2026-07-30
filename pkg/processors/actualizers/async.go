@@ -188,7 +188,6 @@ func (a *asyncActualizer) init(vvmCtx context.Context) (err error) {
 	p.state = stateprovide.ProvideAsyncActualizerStateFactory()(
 		vvmCtx,
 		p.borrowedAppStructs,
-		state.SimplePartitionIDFunc(a.conf.PartitionID),
 		p.WSIDProvider,
 		func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
 			a.conf.Broker.Update(in10n.ProjectionKey{

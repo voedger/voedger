@@ -68,7 +68,7 @@ func Benchmark_FuncForPC(b *testing.B) {
 	start := time.Now()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		funcName, _ = getFuncName(2)
 	}
 	assert.Equal(b, "testing.(*B).runN", funcName)

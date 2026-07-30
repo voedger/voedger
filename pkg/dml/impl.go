@@ -91,13 +91,12 @@ func ParseQuery(query string) (op Op, err error) {
 	case "insert":
 		op.Kind = OpKind_InsertTable
 	default:
-		if strings.HasPrefix(operationStrLowered, "select") {
-			opSQL = operationStr
-			op.Kind = OpKind_Select
-		} else {
+		if !strings.HasPrefix(operationStrLowered, "select") {
 			// notest: avoided already by regexp
-			return op, fmt.Errorf(`wrong dml operation kind "%s"`, operationStr)
+			return op, fmt.Errorf("wrong dml operation kind %q", operationStr)
 		}
+		opSQL = operationStr
+		op.Kind = OpKind_Select
 	}
 
 	if len(pars) > 0 || op.Kind == OpKind_Select {

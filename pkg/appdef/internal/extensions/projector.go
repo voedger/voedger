@@ -32,13 +32,13 @@ func NewProjector(ws appdef.IWorkspace, name appdef.QName) *Projector {
 	return p
 }
 
-func (p Projector) Events() []appdef.IProjectorEvent {
+func (p *Projector) Events() []appdef.IProjectorEvent {
 	return p.events.events
 }
 
-func (p Projector) Sync() bool { return p.sync }
+func (p *Projector) Sync() bool { return p.sync }
 
-func (p Projector) Triggers(op appdef.OperationKind, t appdef.IType) bool {
+func (p *Projector) Triggers(op appdef.OperationKind, t appdef.IType) bool {
 	for _, e := range p.Events() {
 		if e.Op(op) {
 			if e.Filter().Match(t) {
@@ -59,7 +59,7 @@ func (p *Projector) Validate() error {
 		p.events.Validate())
 }
 
-func (p Projector) WantErrors() bool { return p.sysErrors }
+func (p *Projector) WantErrors() bool { return p.sysErrors }
 
 func (p *Projector) setSync(sync bool) { p.sync = sync }
 
@@ -125,7 +125,7 @@ func (ee *ProjectorEvents) Add(ops []appdef.OperationKind, flt appdef.IFilter, c
 }
 
 // Validates projector events.
-func (ee ProjectorEvents) Validate() (err error) {
+func (ee *ProjectorEvents) Validate() (err error) {
 	for _, e := range ee.events {
 		if e, ok := e.(*ProjectorEvent); ok {
 			err = errors.Join(err, e.Validate(ee.p))

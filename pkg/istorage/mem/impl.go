@@ -7,7 +7,7 @@ package mem
 import (
 	"bytes"
 	"context"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
@@ -119,8 +119,6 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 
 	ttlExpired := viewRecord.IsExpired(now)
 	if !ttlExpired && bytes.Equal(viewRecord.Data, oldValue) {
-		ok = true
-
 		var expireAt int64
 		if ttlSeconds > 0 {
 			expireAt = now.Add(time.Duration(ttlSeconds) * time.Second).UnixMilli()
@@ -130,7 +128,7 @@ func (s *appStorage) CompareAndSwap(pKey []byte, cCols []byte, oldValue, newValu
 			ExpireAt: expireAt,
 		}
 
-		return
+		return true, nil
 	}
 
 	return false, nil
@@ -146,21 +144,19 @@ func (s *appStorage) CompareAndDelete(pKey []byte, cCols []byte, expectedValue [
 
 	p, ok := s.storage[string(pKey)]
 	if !ok {
-		return
+		return false, nil
 	}
 
 	viewRecord, ok := p[string(cCols)]
 	if !ok {
-		return
+		return false, nil
 	}
 
 	now := s.iTime.Now()
 	ttlExpired := viewRecord.IsExpired(now)
 	if !ttlExpired && bytes.Equal(viewRecord.Data, expectedValue) {
-		ok = true
-
 		delete(s.storage[string(pKey)], string(cCols))
-		return
+		return true, nil
 	}
 
 	return false, nil
@@ -231,7 +227,7 @@ func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	}
 	p[string(cCols)] = istorage.DataWithExpiration{Data: copySlice(value)}
 
-	return
+	return nil
 }
 
 func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
@@ -250,7 +246,7 @@ func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	s.lock.Unlock()
 
 	for _, item := range items {
-		if err = s.Put(item.PKey, item.CCols, item.Value); err != nil {
+		if err := s.Put(item.PKey, item.CCols, item.Value); err != nil {
 			return err
 		}
 	}
@@ -284,7 +280,7 @@ func (s *appStorage) readPartSort(ctx context.Context, part map[string]istorage.
 		}
 		sortKeys = append(sortKeys, col)
 	}
-	sort.Strings(sortKeys)
+	slices.Sort(sortKeys)
 
 	return sortKeys
 }
@@ -319,7 +315,6 @@ func (s *appStorage) readPart(ctx context.Context, pKey []byte, startCCols, fini
 }
 
 func (s *appStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
-
 	if (len(startCCols) > 0) && (len(finishCCols) > 0) && (bytes.Compare(startCCols, finishCCols) >= 0) {
 		return nil // absurd range
 	}
@@ -327,9 +322,9 @@ func (s *appStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCC
 	if cCols, values := s.readPart(ctx, pKey, startCCols, finishCCols); cCols != nil {
 		for i, cCol := range cCols {
 			if ctx.Err() != nil {
-				return nil
+				return nil //nolint:nilerr // TCK contract
 			}
-			if err = cb(cCol, values[i]); err != nil {
+			if err := cb(cCol, values[i]); err != nil {
 				return err
 			}
 		}
@@ -348,12 +343,12 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 
 	p, ok := s.storage[string(pKey)]
 	if !ok {
-		return
+		return false, nil
 	}
 
 	viewRecord, ok := p[string(cCols)]
 	if !ok {
-		return
+		return false, nil
 	}
 
 	now := s.iTime.Now()
@@ -365,7 +360,7 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 
 	*data = append((*data)[0:0], copySlice(viewRecord.Data)...)
 
-	return
+	return true, nil
 }
 
 func (s *appStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
@@ -385,11 +380,11 @@ func (s *appStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err e
 	for i := range items {
 		items[i].Ok, err = s.Get(pKey, items[i].CCols, items[i].Data)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
 func copySlice(src []byte) []byte {

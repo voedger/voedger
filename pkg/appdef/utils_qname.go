@@ -15,9 +15,9 @@ import (
 	"strings"
 )
 
-//—————————————————————————————
-//— QName —————————————————————
-//—————————————————————————————
+// —————————————————————————————
+// — QName —————————————————————
+// —————————————————————————————
 
 // Returns is string is valid identifier and error if not
 func ValidIdent(ident string) (bool, error) {
@@ -155,13 +155,13 @@ func (qn *QName) UnmarshalJSON(text []byte) (err error) {
 // golang json looks on UnmarshalText presence only on unmarshal map[QName]any. UnmarshalJSON() will be used anyway
 // but no UnmarshalText -> fail to unmarshal map[QName]any
 // see https://github.com/golang/go/issues/29732
-func (qn *QName) UnmarshalText(text []byte) (err error) {
+func (qn *QName) UnmarshalText([]byte) error {
 	return nil
 }
 
-//—————————————————————————————
-//—  QNames ———————————————————
-//—————————————————————————————
+// —————————————————————————————
+// —  QNames ———————————————————
+// —————————————————————————————
 
 // Returns slice of QNames from variadic arguments.
 //
@@ -237,7 +237,7 @@ func (qns *QNames) Collect(seq iter.Seq[QName]) {
 }
 
 // Returns true if slice contains specified QName
-func (qns QNames) Contains(n QName) bool {
+func (qns *QNames) Contains(n QName) bool {
 	_, ok := qns.Find(n)
 	return ok
 }
@@ -245,7 +245,7 @@ func (qns QNames) Contains(n QName) bool {
 // Returns true if slice contains all specified QNames.
 //
 // If no names specified then returns true.
-func (qns QNames) ContainsAll(names ...QName) bool {
+func (qns *QNames) ContainsAll(names ...QName) bool {
 	for _, n := range names {
 		if !qns.Contains(n) {
 			return false
@@ -257,23 +257,21 @@ func (qns QNames) ContainsAll(names ...QName) bool {
 // Returns true if slice contains any from specified QName.
 //
 // If no names specified then returns true.
-func (qns QNames) ContainsAny(names ...QName) bool {
-	for _, n := range names {
-		if qns.Contains(n) {
-			return true
-		}
+func (qns *QNames) ContainsAny(names ...QName) bool {
+	if len(names) == 0 {
+		return true
 	}
-	return len(names) == 0
+	return slices.ContainsFunc(names, qns.Contains)
 }
 
 // Returns index of QName in slice and true if found.
-func (qns QNames) Find(n QName) (int, bool) {
-	return slices.BinarySearchFunc(qns, n, CompareQName)
+func (qns *QNames) Find(n QName) (int, bool) {
+	return slices.BinarySearchFunc(*qns, n, CompareQName)
 }
 
-//—————————————————————————————
-//— FullQName —————————————————
-//—————————————————————————————
+// —————————————————————————————
+// — FullQName —————————————————
+// —————————————————————————————
 
 // TODO: implement
 // Parsing a URI Reference with a Regular Expression [RFC3986, app B](https://datatracker.ietf.org/doc/html/rfc3986#appendix-B)
@@ -304,7 +302,7 @@ func MustParseFullQName(val string) FullQName {
 	return fqn
 }
 
-// Builds a full qualified name from from package path and entity name
+// Builds a full qualified name from package path and entity name
 func NewFullQName(pkgPath, entityName string) FullQName {
 	return FullQName{pkgPath: pkgPath, entity: entityName}
 }
@@ -385,9 +383,9 @@ func (fqn *FullQName) UnmarshalText([]byte) error {
 	return nil
 }
 
-//—————————————————————————————
-//— AppQName ——————————————————
-//—————————————————————————————
+// —————————————————————————————
+// — AppQName ——————————————————
+// —————————————————————————————
 
 // Builds a qualified application name from two parts (from owner name and from local application name)
 func NewAppQName(owner, name string) AppQName {
@@ -454,7 +452,7 @@ func (aqn *AppQName) UnmarshalJSON(text []byte) (err error) {
 // golang json looks on UnmarshalText presence only on unmarshal map[QName]any. UnmarshalJSON() will be used anyway
 // but no UnmarshalText -> fail to unmarshal map[AppQName]any
 // see https://github.com/golang/go/issues/29732
-func (aqn *AppQName) UnmarshalText(text []byte) (err error) {
+func (aqn *AppQName) UnmarshalText([]byte) error {
 	// notest
 	return nil
 }

@@ -101,12 +101,10 @@ func (pa *PartitionActualizers) stopOlds(appDef appdef.IAppDef) {
 		rt := rt.(*runtime)
 		// TODO: compare if projector properties changed (events, sync/async, etc.)
 		if appdef.Projector(appDef.Type, name) == nil {
-			wg.Add(1)
-			go func() {
+			wg.Go(func() {
 				rt.cancel()
 				<-rt.done
-				wg.Done()
-			}()
+			})
 		}
 	}
 	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971

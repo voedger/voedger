@@ -26,7 +26,7 @@ func NewJob(ws appdef.IWorkspace, name appdef.QName) *Job {
 	return j
 }
 
-func (j Job) CronSchedule() string { return j.cronSchedule }
+func (j *Job) CronSchedule() string { return j.cronSchedule }
 
 func (j *Job) setCronSchedule(cs string) { j.cronSchedule = cs }
 

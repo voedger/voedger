@@ -19,7 +19,7 @@ var NullExtensionEngineFactory IExtensionEngineFactory = nullExtensionEngineFact
 
 type nullExtensionEngine struct{}
 
-func (nullExtensionEngine) SetLimits(limits ExtensionLimits) {}
+func (nullExtensionEngine) SetLimits(ExtensionLimits) {}
 
 func (nullExtensionEngine) Invoke(_ context.Context, n appdef.FullQName, _ IExtensionIO) error {
 	return fmt.Errorf("unable nullExtensionEngine.Invoke(%v): %w", n, errors.NotSupported)
@@ -31,7 +31,7 @@ type nullExtensionEngineFactory struct{}
 
 func (nullExtensionEngineFactory) New(_ context.Context, _ appdef.AppQName, _ []ExtensionModule, _ *ExtEngineConfig, numEngines uint) ([]IExtensionEngine, error) {
 	ee := make([]IExtensionEngine, numEngines)
-	for i := uint(0); i < numEngines; i++ {
+	for i := range numEngines {
 		ee[i] = NullExtensionEngine
 	}
 	return ee, nil

@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type BLOBState struct {

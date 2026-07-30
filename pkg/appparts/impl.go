@@ -59,7 +59,7 @@ func newAppPartitions(
 	}
 	a.asyncActualizersRunner.SetAppPartitions(a)
 	a.schedulerRunner.SetAppPartitions(a)
-	a.partBorrowRetryCfg.OnError = func(attempt int, delay time.Duration, opErr error) (retry bool, err error) {
+	a.partBorrowRetryCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, err error) {
 		if !errors.Is(err, ErrNotAvailableEngines) {
 			return true, nil
 		}
@@ -76,12 +76,10 @@ func newAppPartitions(
 		var wg sync.WaitGroup
 		for _, app := range a.apps {
 			for _, part := range app.parts {
-				wg.Add(1)
-				go func(p *appPartitionRT) {
-					defer wg.Done()
-					p.actualizers.Wait()
-					p.schedulers.Wait()
-				}(part)
+				wg.Go(func() {
+					part.actualizers.Wait()
+					part.schedulers.Wait()
+				})
 			}
 		}
 		wg.Wait()
@@ -198,25 +196,21 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, partitionIDs []istruc
 		}
 		a.mx.Unlock()
 
-		wg.Add(1)
-		go func(p *appPartitionRT) {
+		wg.Go(func() {
 			p.actualizers.Deploy(
 				aps.vvmCtx,
 				a.lastestVersion.appDef(),
 				aps.asyncActualizersRunner.NewAndRun,
 			)
-			wg.Done()
-		}(p)
+		})
 
-		wg.Add(1)
-		go func(p *appPartitionRT) {
+		wg.Go(func() {
 			p.schedulers.Deploy(
 				aps.vvmCtx,
 				a.lastestVersion.appDef(),
 				aps.schedulerRunner.NewAndRun,
 			)
-			wg.Done()
-		}(p)
+		})
 	}
 	wg.Wait()
 }

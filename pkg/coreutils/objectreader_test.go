@@ -6,6 +6,7 @@ package coreutils
 
 import (
 	"fmt"
+	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -159,9 +160,7 @@ func TestReadValue(t *testing.T) {
 	appDef := testAppDef(t)
 
 	iValueValues := map[string]interface{}{}
-	for k, v := range testData {
-		iValueValues[k] = v
-	}
+	maps.Copy(iValueValues, testData)
 	iValueValues[appdef.SystemField_QName] = testQNameView
 	iValueValues["record"] = &TestObject{
 		Data: testDataSimple,
@@ -269,6 +268,7 @@ func testBasic(expectedQName appdef.QName, m map[string]interface{}, require *re
 }
 
 func testAppDef(t *testing.T) appdef.IAppDef {
+	t.Helper()
 	adb := builder.New()
 
 	wsb := adb.AddWorkspace(testWS)
@@ -283,9 +283,7 @@ func testAppDef(t *testing.T) appdef.IAppDef {
 	view.Key().PartKey().AddField("pk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cc", appdef.DataKind_string)
 	iValueFields := map[string]appdef.DataKind{}
-	for n, k := range testFieldDefs {
-		iValueFields[n] = k
-	}
+	maps.Copy(iValueFields, testFieldDefs)
 	iValueFields["record"] = appdef.DataKind_Record
 	for n, k := range iValueFields {
 		view.Value().AddField(n, k, false)

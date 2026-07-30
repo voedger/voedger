@@ -33,11 +33,10 @@ func addFlagsToCommands(cmd *cobra.Command) {
 }
 
 func PrepareRootCmd(use string, short string, args []string, version string, cmds ...*cobra.Command) *cobra.Command {
-
 	var rootCmd = &cobra.Command{
 		Use:   use,
 		Short: short,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			if ok, _ := cmd.Flags().GetBool("trace"); ok {
 				logger.SetLogLevel(logger.LogLevelTrace)
 				logger.Verbose("Using logger.LogLevelTrace...")
@@ -52,7 +51,7 @@ func PrepareRootCmd(use string, short string, args []string, version string, cmd
 		Use:     "version",
 		Short:   "Print the current version",
 		Aliases: []string{"ver"},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			fmt.Printf("%s version %s\n", cmd.Root().Name(), version)
 		},
 	}

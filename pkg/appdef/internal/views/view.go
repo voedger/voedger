@@ -34,9 +34,9 @@ func NewView(ws appdef.IWorkspace, name appdef.QName) *View {
 	return v
 }
 
-func (v View) Key() appdef.IViewKey { return v.key }
+func (v *View) Key() appdef.IViewKey { return v.key }
 
-func (v View) Value() appdef.IViewValue { return v.value }
+func (v *View) Value() appdef.IViewValue { return v.value }
 
 // Validates view
 func (v *View) Validate() error {
@@ -72,8 +72,8 @@ func (vb *ViewBuilder) Value() appdef.IViewValueBuilder { return vb.val }
 // # Supports:
 //   - IViewKey
 type ViewKey struct {
-	view *View
 	fields.WithFields
+	view  *View
 	pkey  *ViewPartKey
 	ccols *ViewClustCols
 }
@@ -87,9 +87,9 @@ func NewViewKey(view *View) *ViewKey {
 	}
 }
 
-func (key ViewKey) PartKey() appdef.IViewPartKey { return key.pkey }
+func (key *ViewKey) PartKey() appdef.IViewPartKey { return key.pkey }
 
-func (key ViewKey) ClustCols() appdef.IViewClustCols { return key.ccols }
+func (key *ViewKey) ClustCols() appdef.IViewClustCols { return key.ccols }
 
 // Validates value key
 func (key *ViewKey) Validate() error {
@@ -122,8 +122,8 @@ func (kb *ViewKeyBuilder) PartKey() appdef.IViewPartKeyBuilder { return kb.pkey 
 // # Supports:
 //   - appdef.IViewPartKey
 type ViewPartKey struct {
-	view *View
 	fields.WithFields
+	view *View
 }
 
 func NewViewPartKey(v *View) *ViewPartKey {
@@ -134,7 +134,7 @@ func NewViewPartKey(v *View) *ViewPartKey {
 	return pKey
 }
 
-func (ViewPartKey) IsViewPK() {}
+func (*ViewPartKey) IsViewPK() {}
 
 func (pk *ViewPartKey) addDataField(name appdef.FieldName, dataType appdef.QName, constraints ...appdef.IConstraint) {
 	d := appdef.Data(pk.view.App().Type, dataType)
@@ -211,8 +211,8 @@ func (pkb *ViewPartKeyBuilder) SetFieldComment(name appdef.FieldName, comment ..
 // # Supports:
 //   - appdef.IViewClustCols
 type ViewClustCols struct {
-	view *View
 	fields.WithFields
+	view     *View
 	varField appdef.FieldName
 }
 
@@ -223,7 +223,7 @@ func NewViewClustCols(v *View) *ViewClustCols {
 	}
 }
 
-func (ViewClustCols) IsViewCC() {}
+func (*ViewClustCols) IsViewCC() {}
 
 func (cc *ViewClustCols) addDataField(name appdef.FieldName, dataType appdef.QName, constraints ...appdef.IConstraint) {
 	d := appdef.Data(cc.view.App().Type, dataType)
@@ -307,8 +307,8 @@ func (ccb *ViewClustColsBuilder) SetFieldComment(name appdef.FieldName, comment 
 // # Supports:
 //   - appdef.IViewValue
 type ViewValue struct {
-	view *View
 	fields.WithFields
+	view *View
 }
 
 func NewViewValue(v *View) *ViewValue {
@@ -320,7 +320,7 @@ func NewViewValue(v *View) *ViewValue {
 	return val
 }
 
-func (ViewValue) IsViewValue() {}
+func (*ViewValue) IsViewValue() {}
 
 func (v *ViewValue) addDataField(name appdef.FieldName, dataType appdef.QName, required bool, constraints ...appdef.IConstraint) {
 	fields.AddDataField(&v.view.WithFields, name, dataType, required, constraints...)

@@ -32,14 +32,14 @@ func TestTime_BasicUsage(t *testing.T) {
 func BenchmarkRealTimers(b *testing.B) {
 	b.Run("create only", func(b *testing.B) {
 		t := NewITime()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = t.NewTimerChan(time.Hour)
 		}
 	})
 
 	b.Run("create and fire", func(b *testing.B) {
 		t := NewITime()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = t.NewTimerChan(time.Millisecond)
 			time.Sleep(2 * time.Millisecond)
 		}
@@ -47,7 +47,7 @@ func BenchmarkRealTimers(b *testing.B) {
 
 	b.Run("create, fire and read", func(b *testing.B) {
 		t := NewITime()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			timerChan := t.NewTimerChan(time.Millisecond)
 			time.Sleep(2 * time.Millisecond)
 			<-timerChan

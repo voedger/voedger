@@ -60,7 +60,7 @@ func (fld *Field) Name() appdef.FieldName { return fld.name }
 
 func (fld *Field) Required() bool { return fld.required }
 
-func (fld Field) String() string {
+func (fld *Field) String() string {
 	return fmt.Sprintf("%s-field «%s»", fld.DataKind().TrimString(), fld.Name())
 }
 
@@ -101,18 +101,18 @@ func MakeWithFields(ws appdef.IWorkspace, typeKind appdef.TypeKind) WithFields {
 	return ff
 }
 
-func (ff WithFields) Field(name appdef.FieldName) appdef.IField {
-	if ff, ok := ff.fields[name]; ok {
-		return ff.(appdef.IField)
+func (ff *WithFields) Field(name appdef.FieldName) appdef.IField {
+	if fieldIntf, ok := ff.fields[name]; ok {
+		return fieldIntf.(appdef.IField)
 	}
 	return nil
 }
 
-func (ff WithFields) FieldCount() int { return len(ff.fieldsOrdered) }
+func (ff *WithFields) FieldCount() int { return len(ff.fieldsOrdered) }
 
-func (ff WithFields) Fields() []appdef.IField { return ff.fieldsOrdered }
+func (ff *WithFields) Fields() []appdef.IField { return ff.fieldsOrdered }
 
-func (ff WithFields) RefField(name appdef.FieldName) (rf appdef.IRefField) {
+func (ff *WithFields) RefField(name appdef.FieldName) (rf appdef.IRefField) {
 	if fld := ff.Field(name); fld != nil {
 		if fld.DataKind() == appdef.DataKind_RecordID {
 			if fld, ok := fld.(appdef.IRefField); ok {
@@ -146,11 +146,11 @@ func (ff *WithFields) MakeSysFields() {
 	}
 }
 
-func (ff WithFields) RefFields() []appdef.IRefField { return ff.refFields }
+func (ff *WithFields) RefFields() []appdef.IRefField { return ff.refFields }
 
-func (ff WithFields) UserFields() []appdef.IField { return ff.userFields }
+func (ff *WithFields) UserFields() []appdef.IField { return ff.userFields }
 
-func (ff WithFields) UserFieldCount() int { return len(ff.userFields) }
+func (ff *WithFields) UserFieldCount() int { return len(ff.userFields) }
 
 func (ff *WithFields) addDataField(name appdef.FieldName, data appdef.QName, required bool, constraints ...appdef.IConstraint) {
 	d := appdef.Data(ff.ws.Type, data)

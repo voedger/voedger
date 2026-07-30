@@ -10,8 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"slices"
+
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
@@ -122,6 +123,7 @@ func Test_Basic(t *testing.T) {
 }
 
 func validateCompatibilityErrors2(t *testing.T, expectedErrors []CompatibilityError, actualErrors *CompatibilityErrors) {
+	t.Helper()
 	for _, actualErr := range actualErrors.Errors {
 		require.True(t, slices.ContainsFunc(expectedErrors, func(expectedErr CompatibilityError) bool {
 			if expectedErr.Path() == actualErr.Path() && expectedErr.ErrorType == actualErr.ErrorType {
@@ -141,6 +143,7 @@ func validateCompatibilityErrors2(t *testing.T, expectedErrors []CompatibilityEr
 }
 
 func checkPathsToIgnore(t *testing.T, pathsToIgnore [][]string, compatErrors, filteredCompatErrors *CompatibilityErrors) {
+	t.Helper()
 	for _, pathToIgnore := range pathsToIgnore {
 		found := false
 		for _, cerr := range compatErrors.Errors {

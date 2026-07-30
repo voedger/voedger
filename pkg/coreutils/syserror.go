@@ -54,7 +54,7 @@ func WrapSysErrorToExact(err error, defaultStatusCode int) SysError {
 
 func WrapSysError(err error, defaultStatusCode int) error {
 	if err == nil {
-		return err
+		return nil
 	}
 	return WrapSysErrorToExact(err, defaultStatusCode)
 }

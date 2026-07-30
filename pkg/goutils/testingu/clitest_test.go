@@ -221,7 +221,7 @@ func TestCmdTestCase(t *testing.T) {
 				ExpectedStdoutPatterns: []string{"stdout1", "stdout2"},
 				ExpectedStderrPatterns: []string{"stderr1", "stderr2"},
 			},
-			validate: func(t *testing.T, tc CmdTestCase) {
+			validate: func(t *testing.T, tc CmdTestCase) { //nolint:thelper
 				require := require.New(t)
 				require.Equal("complete test", tc.Name)
 				require.Equal([]string{"arg1", "arg2"}, tc.Args)

@@ -60,7 +60,7 @@ func (c *captor) EventuallyHasLine(str string, strs ...string) {
 
 func anyLineContainsAll(content []byte, str string, strs []string) bool {
 	all := append([]string{str}, strs...)
-	for _, line := range bytes.Split(content, []byte("\n")) {
+	for line := range bytes.SplitSeq(content, []byte("\n")) {
 		found := true
 		for _, s := range all {
 			if !bytes.Contains(line, []byte(s)) {

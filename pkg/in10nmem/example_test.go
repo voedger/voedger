@@ -61,11 +61,9 @@ func Example() {
 
 	// Run a watcher
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		broker.WatchChannel(ctx, channel, c.updatesMock)
-	}()
+	})
 
 	// check subscriptions, numSubscriptions must be equal 0
 	fmt.Println("Before Subscribe(), numSubscriptions: ", broker.MetricNumSubscriptions())

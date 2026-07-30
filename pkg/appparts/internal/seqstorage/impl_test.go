@@ -329,6 +329,7 @@ func testPLogEventToIPlogEvent(pLogEvent testPLogEvent, appDef appdef.IAppDef) i
 
 // setupTestAppDef creates a standard app definition for testing
 func setupTestAppDef(t *testing.T) appdef.IAppDef {
+	t.Helper()
 	require := require.New(t)
 	appDefBuilder := builder.New()
 	ws := appDefBuilder.AddWorkspace(testWSQName)
@@ -346,6 +347,7 @@ func setupTestAppDef(t *testing.T) appdef.IAppDef {
 
 // setupSeqStorage creates and returns a sequence storage instance for testing
 func setupSeqStorage(t *testing.T, mockEvents *coreutils.MockEvents, appDef appdef.IAppDef) isequencer.ISeqStorage {
+	t.Helper()
 	require := require.New(t)
 	appStorageProvider := provider.Provide(mem.Provide(testingu.MockTime))
 	appStorage, err := appStorageProvider.AppStorage(istructs.AppQName_sys_vvm)

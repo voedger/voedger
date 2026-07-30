@@ -128,7 +128,7 @@ func reporter[Key comparable, PV any](in chan reportInfo[Key, PV], finishCh chan
 		finishCh <- struct{}{}
 	}()
 
-	ToBeReported := list.New()
+	toBeReported := list.New()
 	timer := time.NewTimer(0)
 	<-timer.C
 
@@ -143,7 +143,7 @@ func reporter[Key comparable, PV any](in chan reportInfo[Key, PV], finishCh chan
 			logger.Verbose(m.String())
 
 			if err := reporterFunc(m.Key, m.PV); err != nil {
-				ToBeReported.PushBack(reportInfoAttempt[Key, PV]{
+				toBeReported.PushBack(reportInfoAttempt[Key, PV]{
 					Key:     m.Key,
 					PV:      m.PV,
 					Attempt: 1,
@@ -151,17 +151,17 @@ func reporter[Key comparable, PV any](in chan reportInfo[Key, PV], finishCh chan
 				resetTimer(timer, ReportInterval)
 			}
 		case <-timer.C:
-			element := ToBeReported.Front()
+			element := toBeReported.Front()
 			if element == nil {
 				break
 			}
 
 			r := element.Value.(reportInfoAttempt[Key, PV])
-			ToBeReported.Remove(element)
+			toBeReported.Remove(element)
 
 			if r.Attempt < MaxReportAttemptNumber {
 				if err := reporterFunc(r.Key, r.PV); err != nil {
-					ToBeReported.PushBack(reportInfoAttempt[Key, PV]{
+					toBeReported.PushBack(reportInfoAttempt[Key, PV]{
 						Key:     r.Key,
 						PV:      r.PV,
 						Attempt: r.Attempt + 1,

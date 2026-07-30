@@ -98,7 +98,7 @@ func Test_Projectors(t *testing.T) {
 
 	t.Run("should be ok to find builded projectors", func(t *testing.T) {
 
-		t.Run(fmt.Sprint(prjRecName), func(t *testing.T) {
+		t.Run(prjRecName.String(), func(t *testing.T) {
 			typ := app.Type(prjRecName)
 			require.Equal(appdef.TypeKind_Projector, typ.Kind())
 
@@ -151,7 +151,7 @@ func Test_Projectors(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprint(prjCmdName), func(t *testing.T) {
+		t.Run(prjCmdName.String(), func(t *testing.T) {
 			prj := appdef.Projector(app.Type, prjCmdName)
 			require.NotNil(prj)
 			require.Equal(appdef.ExtensionEngineKind_WASM, prj.Engine())

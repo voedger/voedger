@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error) {
+func updateCorrupted(ctx context.Context, update update, currentMillis istructs.UnixMilli) (err error) {
 	var currentEventBytes []byte
 	var wlogOffset istructs.Offset
 	var wsid istructs.WSID
@@ -24,7 +24,7 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 	if update.QName == plog {
 		plogOffset = update.offset
 		partitionID = update.partitionID
-		err = update.appStructs.Events().ReadPLog(context.Background(), update.partitionID, update.offset, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+		err = update.appStructs.Events().ReadPLog(ctx, update.partitionID, update.offset, 1, func(_ istructs.Offset, event istructs.IPLogEvent) (err error) {
 			currentEventBytes = event.Bytes()
 			wlogOffset = event.WLogOffset()
 			wsid = event.Workspace()
@@ -44,7 +44,7 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		wlogOffset = update.offset
 		plogOffset = istructs.NullOffset // ok to set NullOffset on update WLog because we do not have way to know how it was stored, no IWLogEvent.PLogOffset() method
 		if partitionID, err = update.appParts.AppWorkspacePartitionID(update.AppQName, wsid); err == nil {
-			err = update.appStructs.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+			err = update.appStructs.Events().ReadWLog(ctx, wsid, wlogOffset, 1, func(_ istructs.Offset, event istructs.IWLogEvent) (err error) {
 				currentEventBytes = event.Bytes()
 				eventExists = true
 				return nil

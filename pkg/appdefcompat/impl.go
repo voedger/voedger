@@ -10,8 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"slices"
+
 	"github.com/google/go-cmp/cmp"
-	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -47,7 +48,7 @@ func ignoreCompatibilityErrors(cerrs *CompatibilityErrors, pathsToIgnore [][]str
 			cerrsOut.Errors = append(cerrsOut.Errors, cerr)
 		}
 	}
-	return
+	return cerrsOut
 }
 
 func buildTree(app appdef.IAppDef) (parentNode *CompatibilityTreeNode) {
@@ -72,7 +73,7 @@ func buildTreeNode(parentNode *CompatibilityTreeNode, item interface{}) (node *C
 	default:
 		node = buildQNameNode(parentNode, item.(appdef.IType), item.(appdef.IType).QName().String(), false)
 	}
-	return
+	return node
 }
 
 func newNode(parentNode *CompatibilityTreeNode, name string, value interface{}) (node *CompatibilityTreeNode) {
@@ -81,7 +82,7 @@ func newNode(parentNode *CompatibilityTreeNode, name string, value interface{}) 
 	node.Name = name
 	node.Value = value
 	node.Props = make([]*CompatibilityTreeNode, 0)
-	return
+	return node
 }
 
 func buildQueryNode(parentNode *CompatibilityTreeNode, item appdef.IQuery) (node *CompatibilityTreeNode) {
@@ -90,7 +91,7 @@ func buildQueryNode(parentNode *CompatibilityTreeNode, item appdef.IQuery) (node
 		buildFieldsNode(node, item.Param(), NodeNameQueryArgs),
 		buildFieldsNode(node, item.Result(), NodeNameQueryResult),
 	)
-	return
+	return node
 }
 
 func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *CompatibilityTreeNode) {
@@ -102,7 +103,7 @@ func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *
 		buildAbstractNode(node, item),
 		// TODO: implement buildInheritsNode(node, item)
 	)
-	return
+	return node
 }
 
 func buildCommandNode(parentNode *CompatibilityTreeNode, item appdef.ICommand) (node *CompatibilityTreeNode) {
@@ -112,7 +113,7 @@ func buildCommandNode(parentNode *CompatibilityTreeNode, item appdef.ICommand) (
 		buildQNameNode(node, item.UnloggedParam(), NodeNameUnloggedArgs, true),
 		buildQNameNode(node, item.Result(), NodeNameCommandResult, true),
 	)
-	return
+	return node
 }
 
 func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name string, qNameOnly bool) (node *CompatibilityTreeNode) {
@@ -132,42 +133,41 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 			node.Props = append(node.Props, buildContainersNode(node, t))
 		}
 	}
-	return
+	return node
 }
 
 func buildAppDefNode(parentNode *CompatibilityTreeNode, app appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameAppDef, nil)
-	node.Props = append(node.Props, buildTypesNode(node, app.Types(), false))
-	node.Props = append(node.Props, buildPackagesNode(node, app))
-	return
+	node.Props = append(node.Props,
+		buildTypesNode(node, app.Types(), false),
+		buildPackagesNode(node, app),
+	)
+	return node
 }
 
 func buildAbstractNode(parentNode *CompatibilityTreeNode, item appdef.IWithAbstract) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, NodeNameAbstract, item.Abstract())
-	return
+	return newNode(parentNode, NodeNameAbstract, item.Abstract())
 }
 
 func buildContainerNode(parentNode *CompatibilityTreeNode, item appdef.IContainer) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, item.Name(), item.QName().String())
-	return
+	return newNode(parentNode, item.Name(), item.QName().String())
 }
 
 func buildFieldNode(parentNode *CompatibilityTreeNode, item appdef.IField) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, item.Name(), item.DataKind())
-	return
+	return newNode(parentNode, item.Name(), item.DataKind())
 }
 
 func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeName string) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, nodeName, nil)
 	if item == nil {
-		return
+		return node
 	}
 	if fieldsObj, ok := item.(appdef.IWithFields); ok {
 		for _, field := range fieldsObj.Fields() {
 			node.Props = append(node.Props, buildFieldNode(node, field))
 		}
 	}
-	return
+	return node
 }
 
 func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (node *CompatibilityTreeNode) {
@@ -175,7 +175,7 @@ func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUniqu
 	for _, f := range item.Fields() {
 		node.Props = append(node.Props, buildFieldNode(node, f))
 	}
-	return
+	return node
 }
 
 func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (node *CompatibilityTreeNode) {
@@ -183,7 +183,7 @@ func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (no
 	node.Props = append(node.Props,
 		buildUniqueFieldsNode(node, item),
 	)
-	return
+	return node
 }
 
 func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IWithUniques) (node *CompatibilityTreeNode) {
@@ -191,7 +191,7 @@ func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IWithUnique
 	for _, unique := range item.Uniques() {
 		node.Props = append(node.Props, buildUniqueNode(node, unique))
 	}
-	return
+	return node
 }
 
 func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IWithContainers) (node *CompatibilityTreeNode) {
@@ -199,7 +199,7 @@ func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IWithCon
 	for _, container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))
 	}
-	return
+	return node
 }
 
 func buildWorkspaceNode(parentNode *CompatibilityTreeNode, ws appdef.IWorkspace) (node *CompatibilityTreeNode) {
@@ -210,7 +210,7 @@ func buildWorkspaceNode(parentNode *CompatibilityTreeNode, ws appdef.IWorkspace)
 		buildAbstractNode(node, ws.(appdef.IWithAbstract)),
 		// TODO: add buildInheritsNode with ancestors in Props
 	)
-	return
+	return node
 }
 
 func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.TypesSlice, qNamesOnly bool) (node *CompatibilityTreeNode) {
@@ -222,7 +222,7 @@ func buildTypesNode(parentNode *CompatibilityTreeNode, types appdef.TypesSlice, 
 			node.Props = append(node.Props, buildTreeNode(node, t))
 		}
 	}
-	return
+	return node
 }
 
 func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
@@ -230,12 +230,11 @@ func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (
 	for localName, fullPath := range item.Packages() {
 		node.Props = append(node.Props, newNode(node, fullPath, localName))
 	}
-	return
+	return node
 }
 
 func buildDescriptorNode(parentNode *CompatibilityTreeNode, item appdef.QName) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, NodeNameDescriptor, item.String())
-	return
+	return newNode(parentNode, NodeNameDescriptor, item.String())
 }
 
 func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *CompatibilityTreeNode) {
@@ -245,7 +244,7 @@ func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *
 		buildFieldsNode(node, item.Key().ClustCols(), NodeNameClustColsFields),
 		buildFieldsNode(node, item.Value(), NodeNameFields),
 	)
-	return
+	return node
 }
 
 func compareNodes(oldNode, newNode *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
@@ -257,7 +256,7 @@ func compareNodes(oldNode, newNode *CompatibilityTreeNode, constrains []NodeCons
 	for _, pair := range m.MatchedNodePairs {
 		cerrs = append(cerrs, compareNodes(pair[0], pair[1], constrains)...)
 	}
-	return
+	return cerrs
 }
 
 func findConstraint(nodeName string, constrains []NodeConstraint) (constraint Constraint) {
@@ -267,12 +266,12 @@ func findConstraint(nodeName string, constrains []NodeConstraint) (constraint Co
 			return c.Constraint
 		}
 	}
-	return
+	return constraint
 }
 
 func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Constraint) (cerrs []CompatibilityError) {
 	if constraint == ConstraintAllAllowed {
-		return
+		return nil
 	}
 	if len(m.DeletedNodeNames) == 0 && m.InsertedNodeCount > 0 {
 		if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 {
@@ -325,7 +324,7 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 		}
 	}
 
-	return
+	return cerrs
 }
 
 func findNodeByName(nodes []*CompatibilityTreeNode, name string) (foundNode *CompatibilityTreeNode, index int) {
@@ -336,7 +335,7 @@ func findNodeByName(nodes []*CompatibilityTreeNode, name string) (foundNode *Com
 			foundNode = node
 		}
 	}
-	return
+	return foundNode, index
 }
 
 // matchNodes matches nodes in two CompatibilityTreeNode slices and categorizes them.

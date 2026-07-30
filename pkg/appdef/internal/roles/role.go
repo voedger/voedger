@@ -25,7 +25,7 @@ func NewRole(ws appdef.IWorkspace, name appdef.QName) *Role {
 	return r
 }
 
-func (r Role) Published() bool { return r.published }
+func (r *Role) Published() bool { return r.published }
 
 func (r *Role) setPublished(value bool) { r.published = value }
 

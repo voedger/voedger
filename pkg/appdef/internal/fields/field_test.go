@@ -192,7 +192,7 @@ func Test_FieldsPanics(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 			wsb := adb.AddWorkspace(wsName)
 			o := wsb.AddObject(objName)
-			for i := 0; i < appdef.MaxTypeFieldCount-2; i++ { // -2 because sys.QName, sys.Container
+			for i := range appdef.MaxTypeFieldCount - 2 { // -2 because sys.QName, sys.Container
 				o.AddField(fmt.Sprintf("f_%#x", i), appdef.DataKind_bool, false)
 			}
 			require.Panics(func() { o.AddField("errorField", appdef.DataKind_bool, true) },

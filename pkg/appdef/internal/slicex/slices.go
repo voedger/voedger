@@ -8,7 +8,7 @@ package slicex
 import "sort"
 
 // If the slices have duplicates, then the indices of the first pair are returned, otherwise (-1, -1)
-func FindDuplicates[T comparable](s []T) (int, int) {
+func FindDuplicates[T comparable](s []T) (i int, j int) {
 	for i := range s {
 		for j := i + 1; j < len(s); j++ {
 			if s[i] == s[j] {

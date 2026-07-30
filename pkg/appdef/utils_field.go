@@ -50,7 +50,7 @@ func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {
 	text := string(data)
 	if t, err := strconv.Unquote(text); err == nil {
 		text = t
-		for v := VerificationKind(0); v < VerificationKind_FakeLast; v++ {
+		for v := range VerificationKind_FakeLast {
 			if v.String() == text {
 				*k = v
 				return nil

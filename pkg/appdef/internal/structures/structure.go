@@ -39,7 +39,7 @@ func MakeStructure(ws appdef.IWorkspace, name appdef.QName, kind appdef.TypeKind
 	return s
 }
 
-func (s Structure) SystemField_QName() appdef.IField {
+func (s *Structure) SystemField_QName() appdef.IField {
 	return s.Field(appdef.SystemField_QName)
 }
 

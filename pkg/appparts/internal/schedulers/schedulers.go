@@ -123,12 +123,10 @@ func (ps *PartitionSchedulers) stopOlds(appDef appdef.IAppDef) {
 
 	wg := sync.WaitGroup{}
 	for _, rt := range olds {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			rt.cancel()
 			<-rt.done // wait until scheduler is finished
-			wg.Done()
-		}()
+		})
 	}
 	// wrong to watch over vvmCtx. See https://github.com/voedger/voedger/issues/3971
 	wg.Wait() // wait for all old actualizers to stop
