@@ -28,6 +28,12 @@ Feature: Workspace invitations
       Then the response status is "400 Bad Request" when User Login "alice@example.com" tries to accept it
       And User Login "alice@example.com" is not a member of Workspace "Acme"
 
+    Scenario: Workspace owner cannot cancel a non-existing invitation
+      Given Workspace "Acme" has no invitation with ID "66048"
+      When Workspace Owner cancels invitation with ID "66048"
+      Then the response status is "400 Bad Request"
+      And the response reports that the invitation does not exist
+
     Scenario: Workspace owner reinvites after cancelling a pending invitation
       Given Workspace Owner cancelled a pending invitation for "alice@example.com" to Workspace "Acme"
       When Workspace Owner reinvites "alice@example.com"

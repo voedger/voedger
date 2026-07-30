@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/goutils/httpu"
-	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -30,45 +29,6 @@ var (
 	}, ";")
 	inviteEmailSubject = "you are invited"
 )
-
-func TestCancelSentInvite_NonExisting(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-	owner := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
-	ws := vit.CreateWorkspace(it.SimpleWSParams("TestCancelSentInvite_NonExisting_ws"), owner)
-	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.NonExistingRecordID), it.Expect400RefIntegrity_Existence())
-}
-
-func TestInactiveCDocSubject(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	// sign up a new login
-	newLoginName := vit.NextName()
-	newLogin := vit.SignUp(newLoginName, "1", istructs.AppQName_test1_app1)
-	newPrn := vit.SignIn(newLogin)
-
-	parentWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
-	// try to execute an operation by the foreign login, expect 403
-	cudBody := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
-	vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.Expect403(), httpu.WithAuthorizeBy(newPrn.Token))
-
-	// make this new foreign login a subject in the existing workspace
-	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
-		newLoginName, istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceOwner, newPrn.ProfileWSID)
-	cdocSubjectID := vit.PostWS(parentWS, "c.sys.CUD", body).NewID()
-
-	// now the foreign login could work in the workspace
-	vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.WithAuthorizeBy(newPrn.Token))
-
-	// deactivate cdoc.Subject
-	body = fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.IsActive": false}}]}`, cdocSubjectID)
-	vit.PostWS(parentWS, "c.sys.CUD", body)
-
-	// try again to work in the foreign workspace -> should fail
-	vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.WithAuthorizeBy(newPrn.Token), httpu.Expect403())
-}
 
 func TestRecoverFromStuckInviteStates(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

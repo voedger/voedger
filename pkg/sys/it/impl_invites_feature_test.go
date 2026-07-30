@@ -119,6 +119,16 @@ func TestInvites(t *testing.T) {
 		require.Empty(t, getInvitesFeatureSubjects(t, f, f.email))
 	})
 
+	t.Run("invites: scn: Workspace owner cannot cancel a non-existing invitation", func(t *testing.T) {
+		// Given Workspace "Acme" has no invitation with ID "66048"
+		f := newInvitesFeatureFixture(t, "cancel_non_existing")
+
+		// When Workspace Owner cancels invitation with ID "66048"
+		// Then the response status is "400 Bad Request"
+		// And the response reports that the invitation does not exist
+		f.vit.PostWS(f.ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.NonExistingRecordID), it.Expect400RefIntegrity_Existence())
+	})
+
 	t.Run("invites: scn: Workspace owner reinvites after cancelling a pending invitation", func(t *testing.T) {
 		f := newInvitesFeatureFixture(t, "reinvite_cancelled")
 
