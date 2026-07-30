@@ -113,10 +113,17 @@ func TestForeignAuthorization(t *testing.T) {
 		// make this new foreign login a subject in the existing workspace
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "sys.Subject","Login": "%s","SubjectKind":%d,"Roles": "%s","ProfileWSID":%d}}]}`,
 			newLoginName, istructs.SubjectKind_User, iauthnz.QNameRoleWorkspaceOwner, newPrn.ProfileWSID)
-		vit.PostWS(parentWS, "c.sys.CUD", body)
+		cdocSubjectID := vit.PostWS(parentWS, "c.sys.CUD", body).NewID()
 
 		// now the foreign login could work in the workspace
 		vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.WithAuthorizeBy(newPrn.Token))
+
+		// deactivate cdoc.Subject
+		body = fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.IsActive": false}}]}`, cdocSubjectID)
+		vit.PostWS(parentWS, "c.sys.CUD", body)
+
+		// the foreign login can no longer work in the workspace
+		vit.PostWS(parentWS, "c.sys.CUD", cudBody, httpu.WithAuthorizeBy(newPrn.Token), httpu.Expect403())
 	})
 
 	t.Run("enrich principal token", func(t *testing.T) {
