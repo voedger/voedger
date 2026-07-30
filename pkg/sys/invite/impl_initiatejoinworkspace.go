@@ -13,19 +13,21 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time timeu.ITime) {
+func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time timeu.ITime, tokens itokens.ITokens) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateJoinWorkspace,
-		execCmdInitiateJoinWorkspace(time),
+		execCmdInitiateJoinWorkspace(time, tokens),
 	))
 }
 
 // [~server.invites/Join.InitiateJoinWorkspace~impl]
-func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
@@ -59,9 +61,14 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommand
 			return
 		}
 
-		loginFromToken := svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
+		principalPayload := payloads.PrincipalPayload{}
+		if _, err = payloads.GetPayloadRegistry(tokens, svPrincipal.AsString(sys.Storage_RequestSubject_Field_Token), &principalPayload); err != nil {
+			return
+		}
+
+		loginFromToken := principalPayload.Login
 		emailWeSentTo := svCDocInvite.AsString(Field_Email)
-		if loginFromToken != emailWeSentTo {
+		if emailWeSentTo != loginFromToken && emailWeSentTo != principalPayload.Alias {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("invitation was sent to %s but current login is %s", emailWeSentTo, loginFromToken))
 		}
 
@@ -72,7 +79,7 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime) func(args istructs.ExecCommand
 		svbCDocInvite.PutInt64(Field_InviteeProfileWSID, svPrincipal.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
 		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(sys.Storage_RequestSubject_Field_Kind))
 		svbCDocInvite.PutInt64(Field_Updated, tm.Now().UnixMilli())
-		svbCDocInvite.PutChars(field_ActualLogin, svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name))
+		svbCDocInvite.PutChars(field_ActualLogin, loginFromToken)
 		svbCDocInvite.PutInt32(Field_Version, 1)
 
 		return
