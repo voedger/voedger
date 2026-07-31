@@ -5,6 +5,7 @@
 package invite
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -29,11 +30,12 @@ func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time ti
 // [~server.invites/Join.InitiateJoinWorkspace~impl]
 func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
+		inviteID := args.ArgumentObject.AsRecordID(field_InviteID)
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return
 		}
-		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, args.ArgumentObject.AsRecordID(field_InviteID))
+		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, inviteID)
 		svCDocInvite, ok, err := args.State.CanExist(skbCDocInvite)
 		if err != nil {
 			return
@@ -72,6 +74,17 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(a
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("invitation was sent to %s but current login is %s", emailWeSentTo, loginFromToken))
 		}
 
+		subjectID, subject, subjectExists, err := subjectByLogin(loginFromToken, args.State)
+		if err != nil {
+			return err
+		}
+		if subjectExists && subject.AsBool(appdef.SystemField_IsActive) {
+			_, _, err = resolveControllingInvite(subjectID, subject, loginFromToken, principalPayload.Alias, inviteID, args.State)
+			if err = controllingInviteResolutionError(err, loginFromToken); err != nil {
+				return err
+			}
+		}
+
 		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
 		if err != nil {
 			return
@@ -84,4 +97,11 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(a
 
 		return
 	}
+}
+
+func controllingInviteResolutionError(err error, canonicalLogin string) error {
+	if errors.Is(err, ErrControllingInviteNotIdentified) {
+		return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf(errControllingInviteNotIdentifiedMessageFormat, canonicalLogin))
+	}
+	return err
 }

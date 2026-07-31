@@ -6,6 +6,7 @@
 package invite
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/jsonu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/strconvu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -144,6 +146,30 @@ func updateInviteViaCUD(fed federation.IFederation, appQName appdef.AppQName, ws
 	return err
 }
 
+func joinedInviteCUD(inviteID, subjectID istructs.RecordID, updated int64) string {
+	return jsonu.Jprintf(`{"sys.ID":%d,"fields":{"State":%d,"SubjectID":%d,"Updated":%d}}`,
+		inviteID, State_Joined, subjectID, updated)
+}
+
+func applyJoinedInviteViaCUD(fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, token string, previousInviteID, currentInviteID, subjectID istructs.RecordID, roles, inviteEmail string, updated int64) error {
+	cuds := make([]string, 0, 3)
+	if previousInviteID != istructs.NullRecordID {
+		cuds = append(cuds, jsonu.Jprintf(`{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}`,
+			previousInviteID, State_Cancelled, updated))
+	}
+	cuds = append(cuds,
+		joinedInviteCUD(currentInviteID, subjectID, updated),
+		jsonu.Jprintf(`{"sys.ID":%d,"fields":{"Roles":%q,%q:%q}}`,
+			subjectID, roles, Field_InviteEmail, inviteEmail),
+	)
+	_, err := fed.Func(
+		cudURL(appQName, wsid),
+		`{"cuds":[`+strings.Join(cuds, ",")+`]}`,
+		httpu.WithAuthorizeBy(token),
+		httpu.WithDiscardResponse())
+	return err
+}
+
 func deactivateSubjectAndJoinedWorkspace(fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, token string, svCDocInvite istructs.IStateValue) error {
 	subjectID := svCDocInvite.AsRecordID(field_SubjectID)
 	_, err := fed.Func(
@@ -225,15 +251,38 @@ func sendEmail(s istructs.IState, intents istructs.IIntents, smtpCfg smtp.Cfg, s
 // handleApplyJoinWorkspace finalizes c.sys.InitiateJoinWorkspace:
 //   - creates sys.JoinedWorkspace in the invitee's profile workspace (so the user can list workspaces they joined);
 //   - creates or re-activates sys.Subject in the inviting workspace (so the user can authorize there);
-//   - moves the invite to State_Joined.
+//   - moves the current invite to State_Joined and records it as the Subject's controlling invitation;
+//   - when the Subject is already active, retires its previous controlling invitation.
 //
 // The Subject lookup has three cases: missing (first join), inactive (was Cancelled/Left previously - re-join),
-// active (idempotent retry). All paths must be safe to re-run because the projector is asynchronous.
+// and active (replacement). A replay whose current invitation is already Joined is filtered by applyInviteEvents.
 func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens) error {
 	login := svCDocInvite.AsString(field_ActualLogin)
-	existingSubjectID, isActive, err := SubjectExistsByLogin(login, s)
+	existingSubjectID, subject, subjectExists, err := subjectByLogin(login, s)
 	if err != nil {
 		return err
+	}
+	isActive := subjectExists && subject.AsBool(appdef.SystemField_IsActive)
+
+	// The command pre-validates replacement, but the asynchronous projector repeats the
+	// authoritative check against its own PLog-order state before producing side effects.
+	previousInviteID := istructs.NullRecordID
+	if isActive {
+		previousInviteID, _, err = resolveControllingInvite(
+			existingSubjectID,
+			subject,
+			login,
+			svCDocInvite.AsString(Field_Email),
+			inviteID,
+			s,
+		)
+		if err != nil {
+			if errors.Is(err, ErrControllingInviteNotIdentified) {
+				logger.Error(fmt.Sprintf("ap.sys.ApplyInviteEvents: skipping join event because the controlling invitation was not resolved: workspace=%d invite=%d canonicalLogin=%q", event.Workspace(), inviteID, login))
+				return nil
+			}
+			return err
+		}
 	}
 
 	// WSName is needed for the JoinedWorkspace record below.
@@ -265,57 +314,54 @@ func handleApplyJoinWorkspace(event istructs.IPLogEvent, s istructs.IState, svCD
 		return err
 	}
 
-	// Step 2: ensure sys.Subject exists in the inviting workspace and carries the invited Roles.
-	// `body` is the CUD that finalizes the Subject; in the inactive case we additionally pre-run an activation CUD
-	// because the platform forbids combining sys.IsActive with other fields in a single CUD (HTTP 403).
-	var body string
-	switch {
-	case existingSubjectID == istructs.NullRecordID:
-		// First join: insert a new Subject with all fields.
-		body = jsonu.Jprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":%q,"Roles":%q,"SubjectKind":%d,"ProfileWSID":%d}}]}`,
-			svCDocInvite.AsString(field_ActualLogin), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
-			svCDocInvite.AsInt64(Field_InviteeProfileWSID))
-	case !isActive:
-		// Re-join after Cancel/Leave: re-activate first, then update Roles in the second CUD below.
-		// Two separate CUDs are required: sys.IsActive cannot be updated together with other fields.
-		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, existingSubjectID)
-		_, err = fed.Func(
+	// Step 2: ensure sys.Subject exists and is active. sys.IsActive cannot be combined
+	// with other fields in one CUD, so re-join activates the Subject first.
+	if !subjectExists {
+		const rawSubjectID = istructs.RecordID(1)
+		updated := time.Now().UnixMilli()
+		subjectCUD := jsonu.Jprintf(`{"fields":{"sys.ID":%d,"sys.QName":"sys.Subject","Login":%q,"Roles":%q,"SubjectKind":%d,"ProfileWSID":%d,%q:%q}}`,
+			rawSubjectID,
+			login,
+			svCDocInvite.AsString(Field_Roles),
+			svCDocInvite.AsInt32(authnz.Field_SubjectKind),
+			svCDocInvite.AsInt64(Field_InviteeProfileWSID),
+			Field_InviteEmail,
+			svCDocInvite.AsString(Field_Email))
+		_, err := fed.Func(
 			cudURL(appQName, event.Workspace()),
-			body,
+			`{"cuds":[`+subjectCUD+`,`+joinedInviteCUD(inviteID, rawSubjectID, updated)+`]}`,
 			httpu.WithAuthorizeBy(token),
 			httpu.WithDiscardResponse())
 		if err != nil {
 			return err
 		}
-		fallthrough
-	default:
-		// Active Subject (idempotent retry) or fallthrough from !isActive: refresh Roles.
-		body = jsonu.Jprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":%q}}]}`, existingSubjectID, svCDocInvite.AsString(Field_Roles))
+		return nil
 	}
-	// Insert path needs the new ID for the invite's SubjectID; update path can discard the response.
-	subjectID := existingSubjectID
-	if existingSubjectID == istructs.NullRecordID {
-		resp, err := fed.Func(
-			cudURL(appQName, event.Workspace()),
-			body,
-			httpu.WithAuthorizeBy(token))
-		if err != nil {
-			return err
-		}
-		subjectID = resp.NewID()
-	} else {
+	if !isActive {
 		_, err = fed.Func(
 			cudURL(appQName, event.Workspace()),
-			body,
+			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":true}}]}`, existingSubjectID),
 			httpu.WithAuthorizeBy(token),
 			httpu.WithDiscardResponse())
 		if err != nil {
 			return err
 		}
 	}
-	// Step 3: mark the invite as Joined and remember the SubjectID for later Cancel/Leave/UpdateRoles handlers.
-	return updateInviteViaCUD(fed, appQName, event.Workspace(), token, inviteID,
-		jsonu.Jprintf(`"State":%d,"SubjectID":%d,"Updated":%d`, State_Joined, subjectID, time.Now().UnixMilli()))
+
+	// Step 3: finalize all workspace-local replacement/re-join state together. Omitting
+	// SubjectID from the previous invitation preserves its historical membership linkage.
+	return applyJoinedInviteViaCUD(
+		fed,
+		appQName,
+		event.Workspace(),
+		token,
+		previousInviteID,
+		inviteID,
+		existingSubjectID,
+		svCDocInvite.AsString(Field_Roles),
+		svCDocInvite.AsString(Field_Email),
+		time.Now().UnixMilli(),
+	)
 }
 
 func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents, svCDocInvite istructs.IStateValue, inviteID istructs.RecordID, time timeu.ITime, fed federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) error {

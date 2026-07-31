@@ -78,12 +78,46 @@ Feature: Workspace invitations
         | has a different verification code |
         | was cancelled                     |
 
-    Scenario: Alias-addressed invitation reuses an existing canonical membership
+    Scenario Outline: Existing member replaces the controlling invitation through another authenticated identifier
       Given User Login "jsmith@example.com" has active Login Alias "j.smith@example.com"
-      And User Login "jsmith@example.com" is already a member of Workspace "Acme"
-      And Workspace "Acme" has an invitation for "j.smith@example.com"
-      When User Login "jsmith@example.com" submits the invitation verification code
-      Then Workspace "Acme" has exactly one membership for User Login "jsmith@example.com"
+      And User Login "jsmith@example.com" joined Workspace "Acme" through an invitation for "<previous recipient>" with Role "app1pkg.LimitedAccessRole"
+      And Workspace "Acme" has an invitation for "<new recipient>" with Role "app1pkg.SpecialAPITokenRole"
+      When User Login "jsmith@example.com" submits the new invitation verification code
+      Then User Login "jsmith@example.com" remains an active member of Workspace "Acme"
+      And Workspace "Acme" has exactly one membership for User Login "jsmith@example.com"
+      And the invitation for "<previous recipient>" is cancelled
+      And Workspace "Acme" has exactly one joined invitation for the membership, addressed to "<new recipient>"
+      And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
+
+      Examples:
+        | previous recipient  | new recipient       |
+        | jsmith@example.com  | j.smith@example.com |
+        | j.smith@example.com | jsmith@example.com  |
+
+    Scenario Outline: Workspace owner cannot manage a retired invitation
+      Given User Login "jsmith@example.com" is an active member of Workspace "Acme" through a joined invitation for "j.smith@example.com" with Role "app1pkg.SpecialAPITokenRole"
+      And the previous invitation for "jsmith@example.com" was retired after replacement
+      When Workspace Owner <operation>
+      Then the response status is "400 Bad Request"
+      And User Login "jsmith@example.com" remains an active member of Workspace "Acme"
+      And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
+      And the invitation for "j.smith@example.com" remains joined
+
+      Examples:
+        | operation                                                                            |
+        | cancels the retired invitation                                                       |
+        | updates the retired invitation to Role "app1pkg.LimitedAccessRole"                   |
+
+    Scenario: User cannot replace a membership whose controlling invitation cannot be identified
+      Given User Login "jsmith@example.com" has active Login Alias "j.smith@example.com"
+      And User Login "jsmith@example.com" is an active member of Workspace "Acme" with Role "app1pkg.LimitedAccessRole"
+      And the membership has no identifiable previous controlling invitation
+      And Workspace "Acme" has a pending invitation for "j.smith@example.com" with Role "app1pkg.SpecialAPITokenRole"
+      When User Login "jsmith@example.com" submits the pending invitation verification code
+      Then the response status is "409 Conflict"
+      And error message is "A workspace membership is already active for canonical login \"jsmith@example.com\". The existing accepted invitation must be cancelled manually before another invitation can be accepted."
+      And User Login "jsmith@example.com" remains an active member of Workspace "Acme" with Role "app1pkg.LimitedAccessRole"
+      And the invitation for "j.smith@example.com" remains pending
 
   Rule: Managing member roles
 

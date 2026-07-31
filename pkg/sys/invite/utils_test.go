@@ -13,6 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 var (
@@ -150,4 +152,74 @@ func TestValidateInviteRoles(t *testing.T) {
 			requireRolesError(t, validateInviteRoles("test.Reader,test.Reader", ws), ErrRoleDuplicate)
 		})
 	})
+}
+
+func TestResolveControllingInviteRejectsMultipleFallbackCandidates(t *testing.T) {
+	const (
+		subjectID      = istructs.RecordID(101)
+		canonicalID    = istructs.RecordID(201)
+		aliasID        = istructs.RecordID(202)
+		excludedID     = istructs.RecordID(203)
+		canonicalLogin = "jsmith@example.com"
+		activeAlias    = "j.smith@example.com"
+	)
+
+	newIndexKey := func(email string) *coreutils.MockStateKeyBuilder {
+		key := &coreutils.MockStateKeyBuilder{}
+		key.On("PutInt32", field_Dummy, value_Dummy_One).Return().Once()
+		key.On("PutString", Field_Login, email).Return().Once()
+		return key
+	}
+	newInviteKey := func(id istructs.RecordID) *coreutils.MockStateKeyBuilder {
+		key := &coreutils.MockStateKeyBuilder{}
+		key.On("PutRecordID", sys.Storage_Record_Field_ID, id).Return().Once()
+		return key
+	}
+	newJoinedInvite := func() *coreutils.MockStateValue {
+		invite := &coreutils.MockStateValue{}
+		invite.On("AsInt32", Field_State).Return(int32(State_Joined)).Once()
+		invite.On("AsRecordID", field_SubjectID).Return(subjectID).Once()
+		return invite
+	}
+
+	canonicalIndexKey := newIndexKey(canonicalLogin)
+	aliasIndexKey := newIndexKey(activeAlias)
+	canonicalInviteKey := newInviteKey(canonicalID)
+	aliasInviteKey := newInviteKey(aliasID)
+
+	canonicalIndex := &coreutils.MockStateValue{}
+	canonicalIndex.On("AsRecordID", field_InviteID).Return(canonicalID).Once()
+	aliasIndex := &coreutils.MockStateValue{}
+	aliasIndex.On("AsRecordID", field_InviteID).Return(aliasID).Once()
+	canonicalInvite := newJoinedInvite()
+	aliasInvite := newJoinedInvite()
+
+	subject := &coreutils.MockStateValue{}
+	subject.On("AsString", Field_InviteEmail).Return("").Once()
+
+	st := &coreutils.MockState{}
+	st.On("KeyBuilder", sys.Storage_View, qNameViewInviteIndex).Return(canonicalIndexKey, nil).Once()
+	st.On("CanExist", canonicalIndexKey).Return(canonicalIndex, true, nil).Once()
+	st.On("KeyBuilder", sys.Storage_Record, QNameCDocInvite).Return(canonicalInviteKey, nil).Once()
+	st.On("CanExist", canonicalInviteKey).Return(canonicalInvite, true, nil).Once()
+	st.On("KeyBuilder", sys.Storage_View, qNameViewInviteIndex).Return(aliasIndexKey, nil).Once()
+	st.On("CanExist", aliasIndexKey).Return(aliasIndex, true, nil).Once()
+	st.On("KeyBuilder", sys.Storage_Record, QNameCDocInvite).Return(aliasInviteKey, nil).Once()
+	st.On("CanExist", aliasInviteKey).Return(aliasInvite, true, nil).Once()
+
+	inviteID, invite, err := resolveControllingInvite(subjectID, subject, canonicalLogin, activeAlias, excludedID, st)
+	require.ErrorIs(t, err, ErrControllingInviteNotIdentified)
+	require.Equal(t, istructs.NullRecordID, inviteID)
+	require.Nil(t, invite)
+
+	st.AssertExpectations(t)
+	canonicalIndexKey.AssertExpectations(t)
+	aliasIndexKey.AssertExpectations(t)
+	canonicalInviteKey.AssertExpectations(t)
+	aliasInviteKey.AssertExpectations(t)
+	canonicalIndex.AssertExpectations(t)
+	aliasIndex.AssertExpectations(t)
+	canonicalInvite.AssertExpectations(t)
+	aliasInvite.AssertExpectations(t)
+	subject.AssertExpectations(t)
 }
