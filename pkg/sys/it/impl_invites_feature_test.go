@@ -38,10 +38,11 @@ type invitesFeatureInvite struct {
 }
 
 type invitesFeatureSubject struct {
-	id       istructs.RecordID
-	login    string
-	roles    string
-	isActive bool
+	id          istructs.RecordID
+	login       string
+	roles       string
+	inviteEmail string
+	isActive    bool
 }
 
 // [~server.invites.invite/it~impl]
@@ -179,6 +180,7 @@ func TestInvites(t *testing.T) {
 		// Then User Login "jsmith@example.com" becomes a member of Workspace "Acme"
 		subject := requireInvitesFeatureMembership(t, f, f.email, true)
 		require.Equal(t, initialRoles, subject.roles)
+		require.Equal(t, f.email, subject.inviteEmail)
 
 		// And the membership identifies canonical User Login "jsmith@example.com"
 		require.Equal(t, f.email, subject.login)
@@ -210,6 +212,7 @@ func TestInvites(t *testing.T) {
 		// Then User Login "jsmith@example.com" becomes a member of Workspace "Acme"
 		subject := requireInvitesFeatureMembership(t, f, f.email, true)
 		require.Equal(t, initialRoles, subject.roles)
+		require.Equal(t, alias, subject.inviteEmail)
 
 		// And the membership identifies canonical User Login "jsmith@example.com"
 		require.Equal(t, f.email, subject.login)
@@ -287,28 +290,288 @@ func TestInvites(t *testing.T) {
 		require.Empty(t, getInvitesFeatureSubjects(t, f, f.email))
 	})
 
-	t.Run("invites: scn: Alias-addressed invitation reuses an existing canonical membership", func(t *testing.T) {
-		f := newInvitesFeatureFixture(t, "alias_reuse")
+	t.Run("invites: scn: Existing member replaces the controlling invitation through another authenticated identifier: canonical to alias", func(t *testing.T) {
+		// | previous recipient  | new recipient       |
+		// | jsmith@example.com  | j.smith@example.com |
+		f := newInvitesFeatureFixture(t, "replace_canonical_alias")
 
 		// Given User Login "jsmith@example.com" has active Login Alias "j.smith@example.com"
 		principal, alias := setInvitesFeatureAlias(t, f)
 
-		// And User Login "jsmith@example.com" is already a member of Workspace "Acme"
-		canonicalInviteID, _, canonicalCode := sendInvitesFeatureInvitation(t, f, f.email, initialRoles, f.vit.Now().Add(time.Hour).UnixMilli())
-		acceptInvitesFeatureInvitation(t, f, canonicalInviteID, principal, canonicalCode)
+		// And User Login "jsmith@example.com" joined Workspace "Acme" through an invitation for "<previous recipient>" with Role "app1pkg.LimitedAccessRole"
+		// previous recipient = jsmith@example.com
+		// And Workspace "Acme" has an invitation for "<new recipient>" with Role "app1pkg.SpecialAPITokenRole"
+		// new recipient = j.smith@example.com
+		previousInviteID, newInviteID, newCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
 
-		// And Workspace "Acme" has an invitation for "j.smith@example.com"
-		aliasInviteID, _, aliasCode := sendInvitesFeatureInvitation(t, f, alias, newRoles, f.vit.Now().Add(time.Hour).UnixMilli())
+		// When User Login "jsmith@example.com" submits the new invitation verification code
+		acceptInvitesFeatureInvitation(t, f, newInviteID, principal, newCode)
 
-		// When User Login "jsmith@example.com" submits the invitation verification code
-		acceptInvitesFeatureInvitation(t, f, aliasInviteID, principal, aliasCode)
+		// Then User Login "jsmith@example.com" remains an active member of Workspace "Acme"
+		subject := requireInvitesFeatureMembership(t, f, f.email, true)
 
-		// Then Workspace "Acme" has exactly one membership for User Login "jsmith@example.com"
-		subjects := getInvitesFeatureSubjects(t, f, f.email)
-		require.Len(t, subjects, 1)
-		require.True(t, subjects[0].isActive)
-		require.Equal(t, newRoles, subjects[0].roles)
-		require.Equal(t, f.email, getInvitesFeatureInvitation(t, f, aliasInviteID).actualLogin)
+		// And Workspace "Acme" has exactly one membership for User Login "jsmith@example.com"
+		require.Len(t, getInvitesFeatureSubjects(t, f, f.email), 1)
+
+		// And the invitation for "<previous recipient>" is cancelled
+		// previous recipient = jsmith@example.com
+		previousInvite := getInvitesFeatureInvitation(t, f, previousInviteID)
+		require.Equal(t, invite.State_Cancelled, previousInvite.state)
+		require.Equal(t, subject.id, previousInvite.subjectID)
+
+		// And Workspace "Acme" has exactly one joined invitation for the membership, addressed to "<new recipient>"
+		// new recipient = j.smith@example.com
+		newInvite := getInvitesFeatureInvitation(t, f, newInviteID)
+		require.Equal(t, invite.State_Joined, newInvite.state)
+		require.Equal(t, subject.id, newInvite.subjectID)
+		require.Equal(t, alias, newInvite.email)
+		require.Equal(t, alias, subject.inviteEmail)
+
+		// And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
+		require.Equal(t, newRoles, subject.roles)
+		joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal)
+		require.True(t, joinedWorkspace.isActive)
+		require.Equal(t, newRoles, joinedWorkspace.roles)
+	})
+
+	t.Run("invites: scn: Existing member replaces the controlling invitation through another authenticated identifier: alias to canonical", func(t *testing.T) {
+		// | previous recipient  | new recipient       |
+		// | j.smith@example.com | jsmith@example.com  |
+		f := newInvitesFeatureFixture(t, "replace_alias_canonical")
+
+		// Given User Login "jsmith@example.com" has active Login Alias "j.smith@example.com"
+		principal, alias := setInvitesFeatureAlias(t, f)
+
+		// And User Login "jsmith@example.com" joined Workspace "Acme" through an invitation for "<previous recipient>" with Role "app1pkg.LimitedAccessRole"
+		// previous recipient = j.smith@example.com
+		// And Workspace "Acme" has an invitation for "<new recipient>" with Role "app1pkg.SpecialAPITokenRole"
+		// new recipient = jsmith@example.com
+		previousInviteID, newInviteID, newCode := prepareInvitesFeatureReplacement(t, f, principal, alias, f.email)
+
+		// When User Login "jsmith@example.com" submits the new invitation verification code
+		acceptInvitesFeatureInvitation(t, f, newInviteID, principal, newCode)
+
+		// Then User Login "jsmith@example.com" remains an active member of Workspace "Acme"
+		subject := requireInvitesFeatureMembership(t, f, f.email, true)
+
+		// And Workspace "Acme" has exactly one membership for User Login "jsmith@example.com"
+		require.Len(t, getInvitesFeatureSubjects(t, f, f.email), 1)
+
+		// And the invitation for "<previous recipient>" is cancelled
+		// previous recipient = j.smith@example.com
+		previousInvite := getInvitesFeatureInvitation(t, f, previousInviteID)
+		require.Equal(t, invite.State_Cancelled, previousInvite.state)
+		require.Equal(t, subject.id, previousInvite.subjectID)
+
+		// And Workspace "Acme" has exactly one joined invitation for the membership, addressed to "<new recipient>"
+		// new recipient = jsmith@example.com
+		newInvite := getInvitesFeatureInvitation(t, f, newInviteID)
+		require.Equal(t, invite.State_Joined, newInvite.state)
+		require.Equal(t, subject.id, newInvite.subjectID)
+		require.Equal(t, f.email, newInvite.email)
+		require.Equal(t, f.email, subject.inviteEmail)
+
+		// And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
+		require.Equal(t, newRoles, subject.roles)
+		joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal)
+		require.True(t, joinedWorkspace.isActive)
+		require.Equal(t, newRoles, joinedWorkspace.roles)
+	})
+
+	t.Run("invites: scn: Workspace owner cannot manage a retired invitation: cancel", func(t *testing.T) {
+		// | operation                                                                            |
+		// | cancels the retired invitation                                                       |
+		f := newInvitesFeatureFixture(t, "reject_retired_cancel")
+		principal, alias := setInvitesFeatureAlias(t, f)
+
+		// Given User Login "jsmith@example.com" is an active member of Workspace "Acme" through a joined invitation for "j.smith@example.com" with Role "app1pkg.SpecialAPITokenRole"
+		// And the previous invitation for "jsmith@example.com" was retired after replacement
+		retiredInviteID, currentInviteID, currentCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
+		acceptInvitesFeatureInvitation(t, f, currentInviteID, principal, currentCode)
+
+		// When Workspace Owner <operation>
+		// operation = cancels the retired invitation
+		f.vit.PostWS(f.ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, retiredInviteID), httpu.Expect400())
+
+		// Then the response status is "400 Bad Request"
+		// And User Login "jsmith@example.com" remains an active member of Workspace "Acme"
+		subject := requireInvitesFeatureMembership(t, f, f.email, true)
+
+		// And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
+		require.Equal(t, newRoles, subject.roles)
+
+		// And the invitation for "j.smith@example.com" remains joined
+		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, currentInviteID).state)
+		require.Equal(t, invite.State_Cancelled, getInvitesFeatureInvitation(t, f, retiredInviteID).state)
+		require.True(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+	})
+
+	t.Run("invites: scn: Workspace owner cannot manage a retired invitation: update roles", func(t *testing.T) {
+		// | operation                                                                            |
+		// | updates the retired invitation to Role "app1pkg.LimitedAccessRole"                   |
+		f := newInvitesFeatureFixture(t, "reject_retired_update")
+		principal, alias := setInvitesFeatureAlias(t, f)
+
+		// Given User Login "jsmith@example.com" is an active member of Workspace "Acme" through a joined invitation for "j.smith@example.com" with Role "app1pkg.SpecialAPITokenRole"
+		// And the previous invitation for "jsmith@example.com" was retired after replacement
+		retiredInviteID, currentInviteID, currentCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
+		acceptInvitesFeatureInvitation(t, f, currentInviteID, principal, currentCode)
+
+		// When Workspace Owner <operation>
+		// operation = updates the retired invitation to Role "app1pkg.LimitedAccessRole"
+		body := fmt.Sprintf(`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			retiredInviteID, initialRoles, "text:"+invite.EmailTemplatePlaceholder_Roles, "roles updated")
+		f.vit.PostWS(f.ws, "c.sys.InitiateUpdateInviteRoles", body, httpu.Expect400())
+
+		// Then the response status is "400 Bad Request"
+		// And User Login "jsmith@example.com" remains an active member of Workspace "Acme"
+		subject := requireInvitesFeatureMembership(t, f, f.email, true)
+
+		// And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
+		require.Equal(t, newRoles, subject.roles)
+
+		// And the invitation for "j.smith@example.com" remains joined
+		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, currentInviteID).state)
+		require.Equal(t, invite.State_Cancelled, getInvitesFeatureInvitation(t, f, retiredInviteID).state)
+		require.True(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+	})
+
+	for _, tc := range []struct {
+		name        string
+		inviteEmail func(f *invitesFeatureFixture, alias string) string
+	}{
+		{
+			name: "empty InviteEmail",
+			inviteEmail: func(_ *invitesFeatureFixture, _ string) string {
+				return ""
+			},
+		},
+		{
+			name: "unresolvable InviteEmail",
+			inviteEmail: func(f *invitesFeatureFixture, _ string) string {
+				return fmt.Sprintf("missing_%d@example.com", f.vit.NextNumber())
+			},
+		},
+		{
+			name: "InviteEmail references the pending invitation",
+			inviteEmail: func(_ *invitesFeatureFixture, alias string) string {
+				return alias
+			},
+		},
+	} {
+		t.Run("legacy controller fallback: "+tc.name, func(t *testing.T) {
+			f := newInvitesFeatureFixture(t, "fallback")
+			principal, alias := setInvitesFeatureAlias(t, f)
+			previousInviteID, newInviteID, newCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
+			subject := requireInvitesFeatureMembership(t, f, f.email, true)
+			setInvitesFeatureSubjectInviteEmail(t, f, subject.id, tc.inviteEmail(f, alias))
+
+			acceptInvitesFeatureInvitation(t, f, newInviteID, principal, newCode)
+
+			subject = requireInvitesFeatureMembership(t, f, f.email, true)
+			require.Equal(t, alias, subject.inviteEmail)
+			require.Equal(t, newRoles, subject.roles)
+			require.Equal(t, invite.State_Cancelled, getInvitesFeatureInvitation(t, f, previousInviteID).state)
+			require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, newInviteID).state)
+		})
+	}
+
+	t.Run("legacy controller fallback: InviteEmail references another Subject", func(t *testing.T) {
+		f := newInvitesFeatureFixture(t, "fallback_wrong_subject")
+		principal, alias := setInvitesFeatureAlias(t, f)
+		previousInviteID, newInviteID, newCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
+		subject := requireInvitesFeatureMembership(t, f, f.email, true)
+
+		otherEmail := fmt.Sprintf("other_%d@example.com", f.vit.NextNumber())
+		otherLogin := f.vit.SignUp(otherEmail, "password", istructs.AppQName_test1_app1)
+		otherPrincipal := f.vit.SignIn(otherLogin)
+		otherInviteID, _, otherCode := sendInvitesFeatureInvitation(t, f, otherEmail, initialRoles, f.vit.Now().Add(time.Hour).UnixMilli())
+		acceptInvitesFeatureInvitation(t, f, otherInviteID, otherPrincipal, otherCode)
+		setInvitesFeatureSubjectInviteEmail(t, f, subject.id, otherEmail)
+
+		acceptInvitesFeatureInvitation(t, f, newInviteID, principal, newCode)
+
+		subject = requireInvitesFeatureMembership(t, f, f.email, true)
+		require.Equal(t, alias, subject.inviteEmail)
+		require.Equal(t, newRoles, subject.roles)
+		require.Equal(t, invite.State_Cancelled, getInvitesFeatureInvitation(t, f, previousInviteID).state)
+		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, newInviteID).state)
+		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, otherInviteID).state)
+	})
+
+	t.Run("invites: scn: User cannot replace a membership whose controlling invitation cannot be identified", func(t *testing.T) {
+		// Given User Login "jsmith@example.com" has active Login Alias "j.smith@example.com"
+		f := newInvitesFeatureFixture(t, "reject_missing_controller")
+		principal, alias := setInvitesFeatureAlias(t, f)
+
+		// And User Login "jsmith@example.com" is an active member of Workspace "Acme" with Role "app1pkg.LimitedAccessRole"
+		previousInviteID, newInviteID, newCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
+		subject := requireInvitesFeatureMembership(t, f, f.email, true)
+
+		// And the membership has no identifiable previous controlling invitation
+		missingInviteEmail := fmt.Sprintf("missing_%d@example.com", f.vit.NextNumber())
+		setInvitesFeatureSubjectInviteEmail(t, f, subject.id, missingInviteEmail)
+		setInvitesFeatureInvitationState(t, f, previousInviteID, invite.State_Cancelled)
+
+		// And Workspace "Acme" has a pending invitation for "j.smith@example.com" with Role "app1pkg.SpecialAPITokenRole"
+		require.Equal(t, invite.State_Invited, getInvitesFeatureInvitation(t, f, newInviteID).state)
+
+		// When User Login "jsmith@example.com" submits the pending invitation verification code
+		// Then the response status is "409 Conflict"
+		// And error message is "A workspace membership is already active for canonical login \"jsmith@example.com\". The existing accepted invitation must be cancelled manually before another invitation can be accepted."
+		InitiateJoinWorkspace(f.vit, f.ws, newInviteID, principal, newCode,
+			it.Expect409(fmt.Sprintf("A workspace membership is already active for canonical login %q. The existing accepted invitation must be cancelled manually before another invitation can be accepted.", f.email)))
+
+		// And User Login "jsmith@example.com" remains an active member of Workspace "Acme" with Role "app1pkg.LimitedAccessRole"
+		subject = requireInvitesFeatureMembership(t, f, f.email, true)
+		require.Equal(t, initialRoles, subject.roles)
+		require.Equal(t, missingInviteEmail, subject.inviteEmail)
+
+		// And the invitation for "j.smith@example.com" remains pending
+		require.Equal(t, invite.State_Invited, getInvitesFeatureInvitation(t, f, newInviteID).state)
+		require.True(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+	})
+
+	t.Run("current controlling invitation: owner cancellation retains InviteEmail and rejoin overwrites it", func(t *testing.T) {
+		f := newInvitesFeatureFixture(t, "current_cancel")
+		principal, alias := setInvitesFeatureAlias(t, f)
+		previousInviteID, currentInviteID, currentCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
+		acceptInvitesFeatureInvitation(t, f, currentInviteID, principal, currentCode)
+
+		f.vit.PostWS(f.ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, currentInviteID))
+		WaitForInviteState(f.vit, f.ws, currentInviteID, invite.State_Joined, invite.State_Cancelled)
+
+		subject := requireInvitesFeatureMembership(t, f, f.email, false)
+		require.Equal(t, alias, subject.inviteEmail)
+		require.False(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+
+		_, canonicalCode := resendInvitesFeatureInvitation(t, f, previousInviteID, f.email, initialRoles)
+		acceptInvitesFeatureInvitation(t, f, previousInviteID, principal, canonicalCode)
+
+		subject = requireInvitesFeatureMembership(t, f, f.email, true)
+		require.Equal(t, f.email, subject.inviteEmail)
+		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, previousInviteID).state)
+	})
+
+	t.Run("current controlling invitation: member leave retains InviteEmail and rejoin overwrites it", func(t *testing.T) {
+		f := newInvitesFeatureFixture(t, "current_leave")
+		principal, alias := setInvitesFeatureAlias(t, f)
+		previousInviteID, currentInviteID, currentCode := prepareInvitesFeatureReplacement(t, f, principal, f.email, alias)
+		acceptInvitesFeatureInvitation(t, f, currentInviteID, principal, currentCode)
+
+		f.vit.PostWS(f.ws, "c.sys.InitiateLeaveWorkspace", "{}", httpu.WithAuthorizeBy(principal.Token))
+		WaitForInviteState(f.vit, f.ws, currentInviteID, invite.State_Joined, invite.State_Left)
+
+		subject := requireInvitesFeatureMembership(t, f, f.email, false)
+		require.Equal(t, alias, subject.inviteEmail)
+		require.False(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+
+		_, canonicalCode := resendInvitesFeatureInvitation(t, f, previousInviteID, f.email, initialRoles)
+		acceptInvitesFeatureInvitation(t, f, previousInviteID, principal, canonicalCode)
+
+		subject = requireInvitesFeatureMembership(t, f, f.email, true)
+		require.Equal(t, f.email, subject.inviteEmail)
+		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, previousInviteID).state)
 	})
 
 	t.Run("invites: scn: Workspace owner updates an invited member's roles", func(t *testing.T) {
@@ -605,6 +868,26 @@ func acceptInvitesFeatureInvitation(t *testing.T, f *invitesFeatureFixture, invi
 	WaitForInviteState(f.vit, f.ws, inviteID, invite.State_Invited, invite.State_Joined)
 }
 
+func prepareInvitesFeatureReplacement(t *testing.T, f *invitesFeatureFixture, principal *it.Principal, previousEmail, newEmail string) (previousInviteID, newInviteID istructs.RecordID, newVerificationCode string) {
+	t.Helper()
+	previousInviteID, _, previousCode := sendInvitesFeatureInvitation(t, f, previousEmail, initialRoles, f.vit.Now().Add(time.Hour).UnixMilli())
+	newInviteID, _, newVerificationCode = sendInvitesFeatureInvitation(t, f, newEmail, newRoles, f.vit.Now().Add(time.Hour).UnixMilli())
+	acceptInvitesFeatureInvitation(t, f, previousInviteID, principal, previousCode)
+	return previousInviteID, newInviteID, newVerificationCode
+}
+
+func setInvitesFeatureSubjectInviteEmail(t *testing.T, f *invitesFeatureFixture, subjectID istructs.RecordID, inviteEmail string) {
+	t.Helper()
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"InviteEmail":%q}}]}`, subjectID, inviteEmail)
+	f.vit.PostWS(f.ws, "c.sys.CUD", body)
+}
+
+func setInvitesFeatureInvitationState(t *testing.T, f *invitesFeatureFixture, inviteID istructs.RecordID, state invite.State) {
+	t.Helper()
+	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d}}]}`, inviteID, state)
+	f.vit.PostWS(f.ws, "c.sys.CUD", body)
+}
+
 func setInvitesFeatureAlias(t *testing.T, f *invitesFeatureFixture) (*it.Principal, string) {
 	t.Helper()
 	alias := fmt.Sprintf("alias_%d@example.com", f.vit.NextNumber())
@@ -640,7 +923,7 @@ func getInvitesFeatureSubjects(t *testing.T, f *invitesFeatureFixture, login str
 	t.Helper()
 	resp := f.vit.PostWS(f.ws, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.Subject"},
-		"elements":[{"fields":["sys.ID","Login","Roles","sys.IsActive"]}],
+		"elements":[{"fields":["sys.ID","Login","Roles","InviteEmail","sys.IsActive"]}],
 		"filters":[{"expr":"eq","args":{"field":"Login","value":"%s"}}]}`, login))
 	if len(resp.Sections) == 0 {
 		return nil
@@ -649,10 +932,11 @@ func getInvitesFeatureSubjects(t *testing.T, f *invitesFeatureFixture, login str
 	for i := range resp.Sections[0].Elements {
 		row := resp.SectionRow(i)
 		subjects = append(subjects, invitesFeatureSubject{
-			id:       istructs.RecordID(row[0].(float64)),
-			login:    row[1].(string),
-			roles:    row[2].(string),
-			isActive: row[3].(bool),
+			id:          istructs.RecordID(row[0].(float64)),
+			login:       row[1].(string),
+			roles:       row[2].(string),
+			inviteEmail: row[3].(string),
+			isActive:    row[4].(bool),
 		})
 	}
 	return subjects

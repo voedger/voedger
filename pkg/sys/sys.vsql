@@ -75,26 +75,81 @@ ABSTRACT WORKSPACE Workspace (
 		SubjectKind int32 NOT NULL,
 		Roles varchar(1024) NOT NULL,
 		ProfileWSID int64 NOT NULL,
+
+		-- InviteEmail: exact Invite.Email of the current controlling accepted invitation while the Subject is active,
+		-- or of the last controlling accepted invitation while the Subject is inactive.
+		-- Optional because Subjects created before this field was introduced have an empty value.
+		InviteEmail varchar,
+
 		UNIQUEFIELD Login
 	) WITH Tags=(WorkspaceOwnerTableTag);
 
 	TABLE Invite INHERITS sys.CDoc (
 		SubjectKind int32,
-		-- Login: email address the invitation was sent to (set by InitiateInvitationByEMail)
+
+		-- Login: legacy field intended to hold the platform login resolved from the invitation Email.
+		-- Email-to-login resolution was never implemented. The current flow writes Login and Email from the same
+		-- InitiateInvitationByEMail.Email argument and does not subsequently change either field.
+		-- Consequently, Login equals Email and can contain an alias; it is not the canonical membership identity.
+		-- InviteIndexView.Login is populated separately from the command Email without reading this field.
+		-- Sources:
+		-- - pkg/sys/invite/impl_initiateinvitationbyemail.go: writes Invite.Login on creation
+		-- - pkg/sys/invite/impl_inviteindexprojector.go: writes InviteIndexView.Login without reading Invite.Login
 		Login varchar NOT NULL,
+
+		-- Email: original invitation recipient and the Invite's unique field.
+		-- Set together with Login from InitiateInvitationByEMail.Email when the Invite is created and not changed on re-invite.
+		-- Unlike the redundant Login field, Email is read by the current invitation flow.
+		-- InitiateJoinWorkspace requires it to match the authenticated canonical login or active alias.
+		-- ApplyInviteEvents uses it as the recipient of role-update emails.
+		-- Sources:
+		-- - pkg/sys/invite/impl_initiateinvitationbyemail.go: writes Invite.Email on creation
+		-- - pkg/sys/invite/impl_initiatejoinworkspace.go: reads Invite.Email to validate the authenticated recipient
+		-- - pkg/sys/invite/impl_applyinviteevents.go: reads Invite.Email to address role-update emails
 		Email varchar NOT NULL,
+
 		Roles varchar(1024),
+
+		-- ExpireDatetime: Unix epoch time in milliseconds after which the Invite cannot be accepted.
+		-- Set from InitiateInvitationByEMail.ExpireDatetime on creation and every re-invite.
+		-- Checked by InitiateJoinWorkspace before accepting the Invite.
+		-- Sources:
+		-- - pkg/sys/invite/impl_initiateinvitationbyemail.go: writes Invite.ExpireDatetime on creation and re-invite
+		-- - pkg/sys/invite/impl_initiatejoinworkspace.go: reads Invite.ExpireDatetime to reject expired Invites
 		ExpireDatetime int64,
+
 		VerificationCode varchar,
+
+		-- State: current Invite lifecycle state.
+		-- InitiateInvitationByEMail writes the transient ToBeInvited(1) state.
+		-- ApplyInviteEvents writes the final Invited(2), Joined(4), Cancelled(7), and Left(9) states.
+		-- Sources:
+		-- - pkg/sys/invite/impl_initiateinvitationbyemail.go: writes Invite.State as ToBeInvited
+		-- - pkg/sys/invite/impl_applyinviteevents.go: reads Invite.State for guards and writes final states
 		State int32 NOT NULL,
+
 		Created int64,
 		Updated int64 NOT NULL,
+
+		-- SubjectID: ID of the sys.Subject representing the accepted member in the inviting workspace.
+		-- Set by ApplyInviteEvents on join, using either the newly created Subject or an existing Subject for ActualLogin.
+		-- Used later to update roles or deactivate the Subject during cancellation or leave.
+		-- Sources: 
+		-- - pkg/sys/invite/impl_applyinviteevents.go: writes Invite.SubjectID on join and reads it for role update, cancellation, and leave
 		SubjectID ref,
+
 		InviteeProfileWSID int64,
-		-- ActualLogin: invitee's login from auth token (set by InitiateJoinWorkspace when user accepts)
-		-- Currently always equals Login because InitiateJoinWorkspace validates they match
-		-- Used for cdoc.sys.Subject.Login field
+
+		-- ActualLogin: authenticated invitee's canonical login and the canonical membership identity after acceptance.
+		-- It can differ from Login and Email when the Invite was addressed to an alias.
+		-- Set from the principal token by InitiateJoinWorkspace after Email matches the token's canonical login or active alias.
+		-- Cleared on re-invite and used by ApplyInviteEvents to find, create, or reactivate sys.Subject.
+		-- Sources:
+		-- - pkg/sys/invite/impl_initiatejoinworkspace.go: writes Invite.ActualLogin from the authenticated principal
+		-- - pkg/sys/invite/impl_initiateinvitationbyemail.go: clears Invite.ActualLogin on re-invite
+		-- - pkg/sys/invite/impl_applyinviteevents.go: reads Invite.ActualLogin to find, create, or reactivate sys.Subject
 		ActualLogin varchar,
+
 		-- Version: command-side discriminator; current commands write 1, pre-refactor events have 0 and are skipped by ap.sys.ApplyInviteEvents
 		Version int32,
 		UNIQUEFIELD Email
