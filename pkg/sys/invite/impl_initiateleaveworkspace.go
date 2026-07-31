@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -33,26 +34,29 @@ func execCmdInitiateLeaveWorkspace(_ timeu.ITime) func(args istructs.ExecCommand
 			return
 		}
 
-		skbViewInviteIndex, err := args.State.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
+		canonicalLogin := svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
+		subjectID, subject, subjectExists, err := subjectByLogin(canonicalLogin, args.State)
 		if err != nil {
-			return
+			return err
 		}
-		skbViewInviteIndex.PutInt32(field_Dummy, value_Dummy_One)
-		skbViewInviteIndex.PutString(Field_Login, svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name))
-		svViewInviteIndex, err := args.State.MustExist(skbViewInviteIndex)
+		if !subjectExists || !subject.AsBool(appdef.SystemField_IsActive) {
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
+		}
+
+		principalPayload, err := payloads.GetPrincipalPayload(args.State.AppStructs().AppTokens(), svPrincipal.AsString(sys.Storage_RequestSubject_Field_Token))
 		if err != nil {
-			return
+			return err
+		}
+		inviteID, svCDocInvite, err := resolveControllingInvite(subjectID, subject, canonicalLogin, principalPayload.Alias, istructs.NullRecordID, args.State)
+		if err = controllingInviteResolutionError(err, canonicalLogin); err != nil {
+			return err
 		}
 
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
 			return err
 		}
-		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, svViewInviteIndex.AsRecordID(field_InviteID))
-		svCDocInvite, err := args.State.MustExist(skbCDocInvite)
-		if err != nil {
-			return err
-		}
+		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, inviteID)
 
 		if !isValidInviteState(svCDocInvite.AsInt32(Field_State), qNameCmdInitiateLeaveWorkspace) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)

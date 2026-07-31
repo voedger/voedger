@@ -59,6 +59,7 @@ const (
 	Field_SubjectKind           = "SubjectKind"
 	Field_ProfileWSID           = "ProfileWSID"
 	Field_SubjectID             = "SubjectID"
+	Field_InviteEmail           = "InviteEmail"
 	Field_LoginHash             = "LoginHash"
 	field_ActualLogin           = "ActualLogin"
 	Field_Version               = "Version"
