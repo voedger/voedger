@@ -152,7 +152,7 @@ func joinedInviteCUD(inviteID, subjectID istructs.RecordID, updated int64) strin
 }
 
 func applyJoinedInviteViaCUD(fed federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, token string, previousInviteID, currentInviteID, subjectID istructs.RecordID, roles, inviteEmail string, updated int64) error {
-	cuds := make([]string, 0, 3)
+	cuds := make([]string, 0, 3) // nolint add-constant
 	if previousInviteID != istructs.NullRecordID {
 		cuds = append(cuds, jsonu.Jprintf(`{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}`,
 			previousInviteID, State_Cancelled, updated))
