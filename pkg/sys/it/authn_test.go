@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-present unTill Pro, Ltd.
+ * Copyright (c) 2026-present unTill Software Development Group B.V.
  */
 
 package sys_it
