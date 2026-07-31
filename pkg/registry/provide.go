@@ -43,6 +43,7 @@ func Provide(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, federation
 	provideChangePassword(cfg)
 	provideResetPassword(cfg, itokens, federation)
 	provideUpdateGlobalRoles(cfg)
+	provideCanonicalLoginEnablement(cfg)
 	cfg.AddAsyncProjectors(
 		provideAsyncProjectorInvokeCreateWorkspaceID(federation.WithRetry(), itokens),
 		provideAsyncProjectorApplySetLoginAlias(federation.WithRetry(), itokens),

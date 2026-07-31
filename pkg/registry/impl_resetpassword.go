@@ -137,13 +137,17 @@ func resolveResetPasswordLogin(email, appName string, st istructs.IState, wsid i
 		return resetPasswordLogin{}, err
 	}
 	if loginExists {
+		if !isCanonicalLoginEnabled(cdocLogin) {
+			return resetPasswordLogin{}, errResetPasswordLoginDoesNotExist()
+		}
 		profileWSID := cdocLogin.AsInt64(authnz.Field_WSID)
 		if err := ensureResetPasswordProfileReady(profileWSID); err != nil {
 			return resetPasswordLogin{}, err
 		}
+		canonicalPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, email, wsid.ClusterID())
 		return resetPasswordLogin{
 			profileWSID:         profileWSID,
-			canonicalPseudoWSID: int64(wsid),
+			canonicalPseudoWSID: int64(canonicalPseudoWSID),
 		}, nil
 	}
 

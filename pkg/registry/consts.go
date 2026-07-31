@@ -15,30 +15,32 @@ import (
 )
 
 const (
-	RegistryPackage         = "registry"
-	RegistryPackageFQN      = "github.com/voedger/voedger/pkg/" + RegistryPackage
-	field_AppWSID           = "AppWSID"
-	field_AppIDLoginHash    = "AppIDLoginHash"
-	field_CDocLoginID       = "CDocLoginID"
-	field_PwdHash           = "PwdHash"
-	field_Passwrd           = "Password"
-	field_NewPassword       = "NewPassword"
-	field_OldPassword       = "OldPassword"
-	field_Email             = "Email"
-	field_Language          = "Language"
-	field_VerificationToken = "VerificationToken"
-	field_VerificationCode  = "VerificationCode"
-	field_ProfileWSID       = "ProfileWSID"
-	field_NewPwd            = "NewPwd"
-	field_AppName           = "AppName"
-	field_Login             = "Login"
-	field_Alias             = "Alias"
-	field_AliasInProc       = "AliasInProc"
-	field_AliasError        = "AliasError"
-	field_SourceAppWSID     = "SourceAppWSID"
-	field_TTLHours          = "TTLHours"
-	field_GlobalRoles       = "GlobalRoles"
-	maxTokenTTLHours        = 168 // 1 week
+	RegistryPackage              = "registry"
+	RegistryPackageFQN           = "github.com/voedger/voedger/pkg/" + RegistryPackage
+	field_AppWSID                = "AppWSID"
+	field_AppIDLoginHash         = "AppIDLoginHash"
+	field_CDocLoginID            = "CDocLoginID"
+	field_PwdHash                = "PwdHash"
+	field_Passwrd                = "Password"
+	field_NewPassword            = "NewPassword"
+	field_OldPassword            = "OldPassword"
+	field_Email                  = "Email"
+	field_Language               = "Language"
+	field_VerificationToken      = "VerificationToken"
+	field_VerificationCode       = "VerificationCode"
+	field_ProfileWSID            = "ProfileWSID"
+	field_NewPwd                 = "NewPwd"
+	field_AppName                = "AppName"
+	field_Login                  = "Login"
+	field_Enabled                = "Enabled"
+	field_Alias                  = "Alias"
+	field_AliasInProc            = "AliasInProc"
+	field_AliasError             = "AliasError"
+	field_CanonicalLoginDisabled = "CanonicalLoginDisabled"
+	field_SourceAppWSID          = "SourceAppWSID"
+	field_TTLHours               = "TTLHours"
+	field_GlobalRoles            = "GlobalRoles"
+	maxTokenTTLHours             = 168 // 1 week
 )
 
 var (
@@ -51,6 +53,7 @@ var (
 	QNameCommandInitiateSetLoginAlias                 = appdef.NewQName(RegistryPackage, "InitiateSetLoginAlias")
 	QNameCommandPutLoginAliasIndex                    = appdef.NewQName(RegistryPackage, "PutLoginAliasIndex")
 	QNameCommandDeactivateLoginAliasIndex             = appdef.NewQName(RegistryPackage, "DeactivateLoginAliasIndex")
+	QNameCommandSetCanonicalLoginEnablement           = appdef.NewQName(RegistryPackage, "SetCanonicalLoginEnablement")
 	QNameCommandResetPasswordByEmail                  = appdef.NewQName(RegistryPackage, "ResetPasswordByEmail")
 	QNameCommandUpdateGlobalRoles                     = appdef.NewQName(RegistryPackage, "UpdateGlobalRoles")
 	QNameCommandResetPasswordByEmailUnloggedParams    = appdef.NewQName(RegistryPackage, "ResetPasswordByEmailUnloggedParams")

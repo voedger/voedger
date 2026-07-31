@@ -1,6 +1,6 @@
 # Feature technical design: authn
 
-Technical design for the authentication feature: login creation, sign-in, principal token issue and refresh, profile workspace readiness, and password lifecycle flows. The subsystem architecture for the same scope is in [arch-authn.md](./arch-authn.md); the principal payload contract and refresh semantics (including the alias snapshot captured at issue time) are owned by [arch-tokens.md](./arch-tokens.md); shared concepts (`[(registry.Login)]`, `[Principal Token]`, `[Auth boundary]`) are defined in [arch.md](./arch.md#shared-concepts). This document only adds the HTTP-side surface (routes, handlers, status-code mapping) that is unique to the public authn feature.
+Technical design for the authentication feature: login creation, canonical Login enablement, sign-in, principal token issue and refresh, profile workspace readiness, and password lifecycle flows. The subsystem architecture for the same scope is in [arch-authn.md](./arch-authn.md); the principal payload contract and refresh semantics (including the alias snapshot captured at issue time) are owned by [arch-tokens.md](./arch-tokens.md); shared concepts (`[(registry.Login)]`, `[Principal Token]`, `[Auth boundary]`) are defined in [arch.md](./arch.md#shared-concepts). This document specifies the concrete endpoints, handlers, registry operations, status-code mapping, and scenario interactions unique to the authn feature.
 
 ## External actors
 
@@ -12,6 +12,9 @@ Roles:
 - `@System`
   - Trusted backend caller using a System Principal Token for internal registry-backed authn operations.
 
+- `@WorkspaceOwner`
+  - Caller with the WorkspaceOwner role in a workspace; can read Login CDocs only when that workspace is the request's target registry workspace and cannot mutate Login or LoginAlias state.
+
 ## Components
 
 ### Layers
@@ -20,6 +23,8 @@ Roles:
 External callers
     |
     +-- @Client
+    +-- @System
+    +-- @WorkspaceOwner
     |
     v
 Public API endpoints
@@ -59,6 +64,7 @@ Registry operations
     +-- [/q.registry.InitiateResetPasswordByEmail/]
     +-- [/q.registry.IssueVerifiedValueTokenForResetPassword/]
     +-- [/c.registry.ResetPasswordByEmail/]
+    +-- [/c.registry.SetCanonicalLoginEnablement/]
     |
     v
 Token and verification operations
@@ -150,6 +156,10 @@ State and workspace lifecycle
   - decl: [pkg/registry/appws.vsql#CreateLogin](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_createlogin.go#execCmdCreateLogin](../../../../pkg/registry/impl_createlogin.go)
 
+- `[/c.registry.SetCanonicalLoginEnablement/]`
+  - System-only command that accepts `Login`, `AppName`, and `Enabled bool`, resolves the canonical Login directly, and idempotently writes `Login.CanonicalLoginDisabled = !Enabled`. The command does not change `sys.IsActive`, LoginAlias state, credentials, profile fields, or memberships.
+  - decl: [pkg/registry/appws.vsql](../../../../pkg/registry/appws.vsql)
+
 - `[/c.registry.InitiateSetLoginAlias/]`
   - System-authorized command that resolves the source `[(registry.Login)]`, validates the requested alias format, sets the alias in-progress lock, and records the alias intent for asynchronous application.
   - decl: [pkg/registry/appws.vsql#InitiateSetLoginAlias](../../../../pkg/registry/appws.vsql)
@@ -171,17 +181,17 @@ State and workspace lifecycle
   - impl: [pkg/registry/impl_setloginalias.go#applySetLoginAlias](../../../../pkg/registry/impl_setloginalias.go)
 
 - `[/q.registry.IssuePrincipalToken/]`
-  - Resolves sign-in by primary login or active alias, validates password and profile readiness, applies TTL policy, and issues principal tokens. On the alias path, it reads `[(registry.LoginAlias)]`, fetches the source `[(registry.Login)]` with `q.sys.GetCDoc`, validates `Login.Alias` against the submitted identifier, and snapshots the canonical login into `Login` and the active alias (empty when none is set) into `Alias`; payload-field semantics are owned by [arch-tokens.md](./arch-tokens.md).
+  - Resolves sign-in by canonical Login or active LoginAlias, validates password and profile readiness, applies TTL policy, and issues principal tokens. A direct canonical hit requires `CanonicalLoginEnablement=Enabled` and maps `Disabled` to the existing incorrect-login-or-password response. On the alias path, it reads `[(registry.LoginAlias)]`, fetches the source `[(registry.Login)]` with `q.sys.GetCDoc`, validates `Login.Alias` against the submitted identifier without reading canonical enablement, and snapshots the canonical login into `Login` and the active alias (empty when none is set) into `Alias`; payload-field semantics are owned by [arch-tokens.md](./arch-tokens.md).
   - decl: [pkg/registry/appws.vsql#IssuePrincipalToken](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_issueprincipaltoken.go#provideIssuePrincipalTokenExec](../../../../pkg/registry/impl_issueprincipaltoken.go)
 
 - `[/c.registry.ChangePassword/]`
-  - Validates current password and writes the new password hash.
+  - Validates current password and writes the new password hash without reading `CanonicalLoginEnablement`.
   - decl: [pkg/registry/appws.vsql#ChangePassword](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_changepassword.go#cmdChangePasswordExec](../../../../pkg/registry/impl_changepassword.go)
 
 - `[/q.registry.InitiateResetPasswordByEmail/]`
-  - Resolves password-reset identity by primary login first, then by active `[(registry.LoginAlias)]` in the submitted email's pseudo workspace. Starts email verification for the submitted email and returns the ready profile workspace plus the canonical login pseudo workspace selected for the final reset command.
+  - Resolves password-reset identity by canonical Login first, then by active `[(registry.LoginAlias)]` in the submitted email's pseudo workspace. A direct canonical hit requires `CanonicalLoginEnablement=Enabled` and maps `Disabled` to the existing unknown-login response; the active-alias path does not read canonical enablement. The query starts email verification for the submitted email and returns the ready profile workspace plus the canonical login pseudo workspace selected for the final reset command.
   - decl: [pkg/registry/appws.vsql#InitiateResetPasswordByEmail](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_resetpassword.go#provideQryInitiateResetPasswordByEmailExec](../../../../pkg/registry/impl_resetpassword.go)
 
@@ -191,7 +201,7 @@ State and workspace lifecycle
   - impl: [pkg/registry/impl_resetpassword.go#provideIssueVerifiedValueTokenForResetPasswordExec](../../../../pkg/registry/impl_resetpassword.go)
 
 - `[/c.registry.ResetPasswordByEmail/]`
-  - Applies a password reset locally after verified value token validation. It writes the password for the login carried by the token value and relies on the client routing the command to the returned canonical pseudo workspace.
+  - Applies a password reset locally after verified value token validation without reading `CanonicalLoginEnablement`. It writes the password for the login carried by the token value and relies on the client routing the command to the returned canonical pseudo workspace.
   - decl: [pkg/registry/appws.vsql#ResetPasswordByEmail](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_resetpassword.go#cmdResetPasswordByEmailExec](../../../../pkg/registry/impl_resetpassword.go)
 
@@ -216,14 +226,14 @@ State and workspace lifecycle
   - impl: [pkg/sys/verifier/impl.go#provideQryIssueVerifiedValueToken](../../../../pkg/sys/verifier/impl.go)
 
 - `[/q.sys.GetCDoc/]`
-  - Reads a CDoc by ID from the target workspace; alias flows use it to fetch the canonical `[(registry.Login)]` after a local alias-index hit.
+  - Reads the full CDoc by ID from the target workspace. `WorkspaceOwnerFuncTag` authorizes `@WorkspaceOwner` only in that workspace, while `@System` is allowed by the System authorization bypass. Management reads expose all Login CDoc fields, including `CanonicalLoginDisabled`, `Alias`, `AliasInProc`, and `AliasError`; alias flows also use the query internally after a local alias-index hit.
   - decl: [pkg/sys/sys.vsql#GetCDoc](../../../../pkg/sys/sys.vsql)
   - impl: [pkg/sys/collection/cdoc_func.go#execQryCDoc](../../../../pkg/sys/collection/cdoc_func.go)
 
 ### State and workspace lifecycle
 
 - `[(registry.Login)]`
-  - Shared concept; see [arch.md#shared-concepts](./arch.md#shared-concepts). The `AliasInProc` / `Alias` / `AliasError` fields used by the alias commands of this feature are described in [arch-authn.md](./arch-authn.md#sign-in-and-lifecycle-queriescommands).
+  - Shared concept; see [arch.md#shared-concepts](./arch.md#shared-concepts). This feature stores `CanonicalLoginEnablement` independently of `sys.IsActive` as `CanonicalLoginDisabled bool`; absent or `false` maps to `Enabled`, so existing records remain enabled without migration. One shared `isCanonicalLoginEnabled` predicate performs this mapping for direct canonical eligibility checks. Management readers interpret the same raw field in the full Login CDoc. The `AliasInProc` / `Alias` / `AliasError` fields used by the alias commands are described in [arch-authn.md](./arch-authn.md#sign-in-and-lifecycle-queriescommands).
 
 - `[(registry.LoginIdx)]`
   - Sync-projector-maintained registry view that resolves active login records by application workspace and login hash; produced and consumed by the registry operations of this feature. See [arch-authn.md](./arch-authn.md#registry-records-and-indexes) for the architectural role.
@@ -390,6 +400,158 @@ State and workspace lifecycle
   -> [/c.registry.InitiateSetLoginAlias/]: Alias = invalid identifier
   -> [(registry.Login)]: alias format validation fails before AliasInProc is set
   -> @System: 400 Bad Request
+```
+
+### Login state visibility
+
+#### Reading a Login CDoc is limited to System and the target registry WorkspaceOwner
+
+```text
+@System
+  -> [/q.sys.GetCDoc/]: CDocLoginID in the target registry workspace
+  -> [(registry.Login)]: full Login CDoc
+  -> @System: success
+
+@WorkspaceOwner
+  -> [/q.sys.GetCDoc/]: CDocLoginID in the owned target registry workspace
+  -> [(registry.Login)]: full Login CDoc
+  -> @WorkspaceOwner: success
+
+@WorkspaceOwner
+  -> [/q.sys.GetCDoc/]: CDocLoginID in an unowned target registry workspace
+  -> @WorkspaceOwner: rejected
+
+@Client
+  -> [/q.sys.GetCDoc/]: CDocLoginID in the target registry workspace
+  -> @Client: rejected
+```
+
+#### A target registry WorkspaceOwner read returns Login state
+
+```text
+@WorkspaceOwner
+  -> [/q.sys.GetCDoc/]: CDocLoginID for jsmith in the owned target registry workspace
+  -> [(registry.Login)]: CanonicalLoginDisabled = true, Alias = j.smith, AliasInProc = 0, AliasError = ""
+  -> @WorkspaceOwner: full Login CDoc
+```
+
+### Canonical Login enablement management
+
+#### System sets CanonicalLoginEnablement idempotently
+
+```text
+@System
+  -> [/c.registry.SetCanonicalLoginEnablement/]: Login = jsmith, AppName = untill, Enabled = true | false
+  -> [(registry.LoginIdx)]: direct canonical lookup
+  -> [(registry.Login)]: write CanonicalLoginDisabled = !Enabled only when its value differs
+  -> [/c.registry.SetCanonicalLoginEnablement/]: repeat the same request
+  -> [(registry.Login)]: requested value already stored; no additional state change
+  -> [/q.sys.GetCDoc/]: CDocLoginID in the target registry workspace
+  -> [(registry.Login)]: full Login CDoc; CanonicalLoginDisabled = !Enabled
+  -> @System: success for both requests and requested state is stored
+```
+
+#### Canonical Login enablement management requires a System PrincipalToken
+
+```text
+@Client
+  -> [/c.registry.SetCanonicalLoginEnablement/]
+  -> @Client: rejected before [(registry.Login)] changes
+```
+
+### Disabled canonical Login behavior
+
+#### Disabling canonical Login preserves its active LoginAlias
+
+```text
+@System
+  -> [/c.registry.SetCanonicalLoginEnablement/]: Login = jsmith@example.com, AppName = untill, Enabled = false
+  -> [(registry.Login)]: CanonicalLoginDisabled = true
+  -> [(registry.LoginAlias)]: active j.smith@example.com row unchanged
+  -> @System: success
+```
+
+#### Disabled canonical Login rejects only canonical entry operations
+
+```text
+@Client
+  -> [/q.registry.IssuePrincipalToken/]: jsmith@example.com, correct password
+  -> [(registry.LoginIdx)] -> [(registry.Login)]: direct hit, CanonicalLoginEnablement = Disabled
+  -> @Client: 401 Unauthorized; no PrincipalToken
+
+@Client
+  -> [/q.registry.InitiateResetPasswordByEmail/]: jsmith@example.com
+  -> [(registry.LoginIdx)] -> [(registry.Login)]: direct hit, CanonicalLoginEnablement = Disabled
+  -> @Client: 400 Bad Request; no verification flow started
+```
+
+Both branches reuse their existing unknown-login or invalid-Credential response and never expose `CanonicalLoginEnablement`.
+
+#### Active LoginAlias sign-in is unaffected by canonical Login disablement
+
+```text
+@Client
+  -> [Auth login handler]: j.smith@example.com, correct password
+  -> [/q.registry.IssuePrincipalToken/]
+  -> [(registry.LoginIdx)]: direct miss
+  -> [(registry.LoginAlias)]: active alias hit
+  -> [/q.sys.GetCDoc/] -> [(registry.Login)]: validate alias binding; do not read CanonicalLoginEnablement
+  -> [Token service]: issue PrincipalToken
+  -> @Client: principalToken, expiresInSeconds, profileWSID
+```
+
+#### Active LoginAlias password reset is unaffected by canonical Login disablement
+
+```text
+@Client
+  -> [/q.registry.InitiateResetPasswordByEmail/]: j.smith@example.com
+  -> [(registry.LoginIdx)]: direct miss
+  -> [(registry.LoginAlias)]: active alias hit
+  -> [/q.sys.GetCDoc/] -> [(registry.Login)]: resolve profile; do not read CanonicalLoginEnablement
+  -> [/q.sys.InitiateEmailVerification/]: send code to j.smith@example.com
+  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]
+  -> [/q.sys.IssueVerifiedValueToken/]
+  -> [/c.registry.ResetPasswordByEmail/]: do not read CanonicalLoginEnablement; write new password hash
+  -> [/q.registry.IssuePrincipalToken/]: sign in through active alias with new password
+  -> @Client: PrincipalToken; canonical Login remains Disabled
+```
+
+#### Password reset initiated before canonical Login disablement can complete
+
+```text
+@Client
+  -> [/q.registry.InitiateResetPasswordByEmail/]: canonical jsmith@example.com while Enabled
+  -> [/q.sys.InitiateEmailVerification/]
+  -> [/q.registry.IssueVerifiedValueTokenForResetPassword/]
+  -> [/q.sys.IssueVerifiedValueToken/]: VerifiedValueToken
+@System
+  -> [/c.registry.SetCanonicalLoginEnablement/]: Login = jsmith@example.com, AppName = untill, Enabled = false
+@Client
+  -> [/c.registry.ResetPasswordByEmail/]: VerifiedValueToken; no CanonicalLoginEnablement read
+  -> [/q.registry.IssuePrincipalToken/]: sign in through active alias with new password
+  -> @Client: PrincipalToken; canonical Login remains Disabled
+```
+
+#### Disabled canonical identifier remains reserved
+
+```text
+@Client
+  -> [/c.registry.CreateEmailLogin/]: Login = jsmith@example.com
+  -> [(registry.LoginIdx)]: existing active canonical identifier; CanonicalLoginEnablement is irrelevant to uniqueness
+  -> @Client: 409 Conflict
+```
+
+#### Re-enabling canonical Login restores canonical entry operations
+
+```text
+@System
+  -> [/c.registry.SetCanonicalLoginEnablement/]: Login = jsmith@example.com, AppName = untill, Enabled = true
+  -> [(registry.Login)]: CanonicalLoginDisabled = false
+@Client
+  -> [/q.registry.IssuePrincipalToken/]: canonical identifier, existing password
+  -> [Token service]: issue PrincipalToken
+  -> [/q.registry.InitiateResetPasswordByEmail/]: canonical identifier
+  -> [/q.sys.InitiateEmailVerification/]: issue password-reset verification code
 ```
 
 ### Sign-in and profile readiness
@@ -709,14 +871,16 @@ error-handling rules from [auth architecture](./arch.md).
 - Every Component in `Public API endpoints` and `Authn request handlers` treats passwords, bearer tokens, verification tokens, and verified value tokens as request secrets.
 - Every Component in `Registry operations` stores password evidence only through `[(registry.Login)]` password hashes and never returns plaintext passwords except generated device credentials at creation time.
 - Every `[Token service]` principal token issue includes the authn identity fields required by this feature: login, canonical login, subject kind, and profile workspace ID.
+- Every `[/c.registry.SetCanonicalLoginEnablement/]` execution requires `@System` authorization.
+- Every management read through `[/q.sys.GetCDoc/]` requires `@System` or `@WorkspaceOwner` authorization in the target registry workspace and returns the full Login CDoc rather than a field-scoped result.
 
 ### Error handling and resilience
 
 - Every Component in `Public API endpoints` maps malformed public request bodies to `400 Bad Request`.
 - Every `[Auth login handler]` maps ready profile workspace responses to authn JSON output and maps zero profile workspace ID to `409 Conflict`.
 - Every `[Auth refresh handler]` maps a missing bearer token to `401 Unauthorized`.
-- Every `[/q.registry.IssuePrincipalToken/]` maps missing login or password mismatch to `401 Unauthorized` and maps TTL above `maxTokenTTLHours` to
-  `400 Bad Request`.
+- Every `[/q.registry.IssuePrincipalToken/]` maps a missing login, disabled direct canonical Login, or password mismatch to `401 Unauthorized` and maps TTL above `maxTokenTTLHours` to `400 Bad Request`.
+- Every `[/q.registry.InitiateResetPasswordByEmail/]` maps a missing identifier or disabled direct canonical Login to the same `400 Bad Request`; active LoginAlias resolution does not expose canonical enablement.
 
 ### Consistency
 
@@ -724,11 +888,16 @@ error-handling rules from [auth architecture](./arch.md).
 - Every `[(registry.LoginIdx)]` lookup used by sign-in, password change, and primary-login password reset resolves to the active `[(registry.Login)]` for the requested app and login hash.
 - Every alias password reset proves the submitted alias email through the verifier, then carries the canonical login in the verified value token so the final password write remains local to `CanonicalPseudoWSID`.
 - Every password change or reset updates future credential checks but does not revoke already issued principal tokens.
+- Every `[/c.registry.SetCanonicalLoginEnablement/]` update changes only `CanonicalLoginDisabled`; `sys.IsActive`, LoginIdx, LoginAlias, credentials, profile fields, and memberships remain unchanged.
+- Every authentication eligibility check based on canonical enablement occurs only after a direct canonical match in `[/q.registry.IssuePrincipalToken/]` or `[/q.registry.InitiateResetPasswordByEmail/]`; alias resolution, password mutation, and PrincipalToken validation or renewal do not read the state.
 
 ### Testing
 
 - Every Scenario in [authn.feature](./authn.feature) has integration coverage or must gain integration coverage before authn behavior changes.
 - Every login-alias Scenario has registry integration coverage, including alias management, cross-namespace uniqueness, alias sign-in, stale-alias rejection, and token alias snapshots.
 - Every password reset by alias Scenario has registry integration coverage for alias-to-canonical reset, alias inbox code delivery, and inactive-alias rejection.
+- Every Scenario in `Canonical Login enablement management` and `Disabled canonical Login behavior` has integration coverage for idempotent System management, non-disclosing canonical rejection, unaffected alias sign-in and reset, reset completion after disablement, identifier reservation, and re-enablement.
+- Login CDoc read authorization tests cover System, the target registry WorkspaceOwner, a WorkspaceOwner of another workspace, and a caller with neither authorization.
+- Canonical Login enablement tests cover both an existing Login with no `CanonicalLoginDisabled` field and an explicitly stored `false` value as `Enabled`.
 - Every Component in `Public API endpoints` that maps a public status code has API-level integration coverage for success and rejection paths.
 - Every token contract Scenario validates the emitted token payload or returned authn response fields at API or registry integration level.

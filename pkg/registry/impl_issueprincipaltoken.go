@@ -55,6 +55,9 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens, federation federati
 		}
 		var loginForSignIn signInLogin
 		if doesLoginExist {
+			if !isCanonicalLoginEnabled(cdocLogin) {
+				return errLoginOrPasswordIsIncorrect
+			}
 			loginForSignIn = loginFromPrimaryCDoc(login, cdocLogin)
 		} else {
 			loginForSignIn, doesLoginExist, err = resolveAliasSignInLogin(login, appName, args.State, args.WSID, itokens, federation)

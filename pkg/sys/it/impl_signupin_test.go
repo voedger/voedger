@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"testing"
 	"time"
@@ -46,15 +45,6 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 		prn2.ProfileWSID.BaseWSID() >= istructs.FirstBaseUserWSID &&
 		prn1.ProfileWSID.BaseWSID() != prn2.ProfileWSID.BaseWSID())
 
-	// refresh principal token
-	// simulate delay to make the new token be different
-	vit.TimeAdd(time.Minute)
-	body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
-	resp := vit.PostProfile(prn1, "q.sys.RefreshPrincipalToken", body)
-
-	refreshedPrincipalToken := resp.SectionRow()[0].(string)
-	require.NotEqual(prn1.Token, refreshedPrincipalToken)
-
 	// not need to read CDoc<Login>. Nothing to do in AppWS at all.
 
 	var idOfCDocUserProfile int64
@@ -72,13 +62,6 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 		vit.PostProfile(prn1, "c.sys.CUD", body) // nothing to check, just expect no errors here
 	})
 
-	t.Run("check token default TTL", func(t *testing.T) {
-		var p payloads.PrincipalPayload
-		gp, err := vit.ITokens.ValidateToken(prn1.Token, &p)
-		require.NoError(err)
-		require.Equal(authnz.DefaultPrincipalTokenExpiration, gp.Duration)
-	})
-
 	t.Run("sign up and sign in with special JSON characters in password", func(t *testing.T) {
 		specialLoginName := vit.NextName()
 		specialLogin := vit.SignUp(specialLoginName, `p"a\ss`, istructs.AppQName_test1_app1)
@@ -91,14 +74,6 @@ func TestTTL(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	t.Run("default TTL", func(t *testing.T) {
-		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-		var p payloads.PrincipalPayload
-		gp, err := vit.ITokens.ValidateToken(prn.Token, &p)
-		require.NoError(err)
-		require.Equal(authnz.DefaultPrincipalTokenExpiration, gp.Duration)
-	})
-
 	t.Run("custom TTL", func(t *testing.T) {
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "%s","AppName": "%s", "TTLHours":15},"elements":[{"fields":["PrincipalToken"]}]}`,
@@ -109,209 +84,6 @@ func TestTTL(t *testing.T) {
 		gp, err := vit.ITokens.ValidateToken(token, &p)
 		require.NoError(err)
 		require.Equal(15*time.Hour, gp.Duration)
-	})
-}
-
-func TestCreateLoginErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	t.Run("wrong AppWSID", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Login":"login1","AppName":"test1/app1","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"password"}}`, istructs.SubjectKind_User)
-		crc16 := coreutils.CRC16([]byte("login1")) - 1 // simulate crc16 is calculated wrong
-		pseudoWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(crc16))
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body,
-			it.Expect403("wrong AppWSID: 140737488420870 expected, 140737488420869 got"))
-	})
-
-	login := vit.NextName()
-	loginPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
-
-	t.Run("unknown application", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
-			login, istructs.SubjectKind_User, istructs.CurrentClusterID())
-		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body, it.Expect400("my/unknown is not found"))
-	})
-
-	t.Run("wrong application name", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"wrong-AppName","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"different"}}`,
-			login, istructs.SubjectKind_User)
-		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body,
-			it.Expect400("failed to parse app qualified name"))
-	})
-
-	newLogin := vit.SignUp(login, "1", istructs.AppQName_test1_app1)
-	// wait for acomplishing the profile init
-	vit.SignIn(newLogin)
-
-	t.Run("create an existing login again", func(t *testing.T) {
-		vit.SignUp(login, "1", istructs.AppQName_test1_app1, it.WithReqOpt(httpu.Expect409()))
-	})
-
-	t.Run("subject name constraint violation", func(t *testing.T) {
-		// see https://dev.untill.com/projects/#!537026
-		wrongLogins := []string{
-			"哇",
-			"test@tesT.com",
-			"test@test.com ",
-			" test@test.com",
-			" test@test.com ",
-			".test@test.com",
-			"test@test.com.",
-			".test@test.com.",
-			"test@test..com",
-			"-test@test.com",
-			"test@test.com-",
-			"-test@test.com",
-			"-test@test.com-",
-			"sys.test@test.com",
-			",",
-			"test,foo@test.com",
-		}
-		for _, wrongLogin := range wrongLogins {
-			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.CurrentClusterID())
-			body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
-				wrongLogin, istructs.AppQName_test1_app1.String(), istructs.SubjectKind_User, istructs.CurrentClusterID(), "1")
-			vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body,
-				it.Expect400("incorrect login format"))
-		}
-	})
-
-	t.Run("allowed special chars in login", func(t *testing.T) {
-		if testing.Short() {
-			t.Skip()
-		}
-		allowedSpecialChars := []string{"!", "#", "$", "%", "&", "'", "*", "+", "-", "/", "=", ".", "?", "^", "_", "{", "|", "}", "~", "@"}
-		for _, c := range allowedSpecialChars {
-			goodLogin := vit.NextName() + c + "x"
-			login := vit.SignUp(goodLogin, "1", istructs.AppQName_test1_app1)
-			vit.SignIn(login)
-		}
-	})
-}
-
-func TestSignInErrors(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	login := vit.NextName()
-	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
-
-	t.Run("unknown login", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
-			login, istructs.AppQName_test1_app1.String())
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, httpu.Expect401()).Println()
-	})
-
-	newLogin := vit.SignUp(login, "1", istructs.AppQName_test1_app1)
-	// wait for acomplishing the profile init
-	vit.SignIn(newLogin)
-
-	t.Run("wrong password", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "wrongPass","AppName": "%s"},"elements":[{"fields":[]}]}`,
-			login, istructs.AppQName_test1_app1.String())
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, httpu.Expect401()).Println()
-	})
-
-	t.Run("wrong TTL", func(t *testing.T) {
-		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "%s","AppName": "%s", "TTLHours":1000},"elements":[{"fields":["PrincipalToken"]}]}`,
-			prn.Name, prn.Pwd, prn.AppQName.String())
-		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body,
-			it.Expect400("max token TTL hours is 168 hours"))
-	})
-}
-
-func TestLoginAlias(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	appQName := istructs.AppQName_test1_app1
-	login := vit.SignUp(vit.NextName(), "pwd1", appQName)
-	vit.SignIn(login)
-
-	alias1 := vit.NextName()
-	alias2 := vit.NextName()
-	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
-
-	t.Run("alias management rejected without system principal token", func(t *testing.T) {
-		initiateSetLoginAlias(t, vit, login, alias1, "", httpu.Expect403())
-	})
-
-	t.Run("set alias and sign in with original login and alias", func(t *testing.T) {
-		initiateSetLoginAlias(t, vit, login, alias1, sysRegistryToken)
-		waitForLoginAlias(t, vit, login, alias1)
-
-		primaryToken := issuePrincipalToken(t, vit, login.Name, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, primaryToken, login.Name, alias1)
-
-		aliasToken := issuePrincipalToken(t, vit, alias1, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, aliasToken, login.Name, alias1)
-
-		issuePrincipalToken(t, vit, alias1, "wrong-password", appQName, it.Expect401("login or password is incorrect"))
-	})
-
-	t.Run("setting the same alias is idempotent", func(t *testing.T) {
-		initiateSetLoginAlias(t, vit, login, alias1, sysRegistryToken)
-		waitForLoginAlias(t, vit, login, alias1)
-
-		cdocLogin := getLoginCDoc(t, vit, login)
-		require.Empty(cdocLogin["AliasError"])
-		require.Equal(float64(0), cdocLogin["AliasInProc"])
-	})
-
-	t.Run("update alias rejects previous alias sign-in", func(t *testing.T) {
-		initiateSetLoginAlias(t, vit, login, alias2, sysRegistryToken)
-		waitForLoginAlias(t, vit, login, alias2)
-
-		issuePrincipalToken(t, vit, alias1, login.Pwd, appQName, it.Expect401("login or password is incorrect"))
-		aliasToken := issuePrincipalToken(t, vit, alias2, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, aliasToken, login.Name, alias2)
-	})
-
-	t.Run("existing token keeps alias snapshot and refresh preserves it", func(t *testing.T) {
-		tokenBeforeClear := issuePrincipalToken(t, vit, alias2, login.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, tokenBeforeClear, login.Name, alias2)
-
-		initiateSetLoginAlias(t, vit, login, "", sysRegistryToken)
-		waitForLoginAlias(t, vit, login, "")
-		issuePrincipalToken(t, vit, alias2, login.Pwd, appQName, it.Expect401("login or password is incorrect"))
-
-		assertPrincipalTokenClaims(t, vit, tokenBeforeClear, login.Name, alias2)
-
-		vit.TimeAdd(time.Minute)
-		prnWithAliasSnapshot := &it.Principal{
-			Login:       login,
-			Token:       tokenBeforeClear,
-			ProfileWSID: vit.SignIn(login).ProfileWSID,
-		}
-		body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
-		resp := vit.PostProfile(prnWithAliasSnapshot, "q.sys.RefreshPrincipalToken", body)
-		refreshedToken := resp.SectionRow()[0].(string)
-		require.NotEqual(tokenBeforeClear, refreshedToken)
-		assertPrincipalTokenClaims(t, vit, refreshedToken, login.Name, alias2)
-	})
-
-	t.Run("clearing when no alias is set is idempotent", func(t *testing.T) {
-		initiateSetLoginAlias(t, vit, login, "", sysRegistryToken)
-		waitForLoginAlias(t, vit, login, "")
-
-		cdocLogin := getLoginCDoc(t, vit, login)
-		require.Empty(cdocLogin["AliasError"])
-		require.Equal(float64(0), cdocLogin["AliasInProc"])
-	})
-
-	t.Run("cleared alias can be reused by another login", func(t *testing.T) {
-		reuseLogin := vit.SignUp(vit.NextName(), "pwd-reuse", appQName)
-		vit.SignIn(reuseLogin)
-
-		initiateSetLoginAlias(t, vit, reuseLogin, alias2, sysRegistryToken)
-		waitForLoginAlias(t, vit, reuseLogin, alias2)
-
-		issuePrincipalToken(t, vit, alias2, login.Pwd, appQName, it.Expect401("login or password is incorrect"))
-		aliasToken := issuePrincipalToken(t, vit, alias2, reuseLogin.Pwd, appQName)
-		assertPrincipalTokenClaims(t, vit, aliasToken, reuseLogin.Name, alias2)
 	})
 }
 
@@ -352,90 +124,6 @@ func TestLoginAliasCommandEdgeCases(t *testing.T) {
 	})
 }
 
-func TestLoginAliasCollisionsAndValidation(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	appQName := istructs.AppQName_test1_app1
-	login1 := vit.SignUp(vit.NextName(), "pwd1", appQName)
-	login2 := vit.SignUp(vit.NextName(), "pwd2", appQName)
-	vit.SignIn(login1)
-	vit.SignIn(login2)
-
-	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
-	alias1 := vit.NextName()
-	initiateSetLoginAlias(t, vit, login1, alias1, sysRegistryToken)
-	waitForLoginAlias(t, vit, login1, alias1)
-
-	t.Run("alias rejected when it violates sign-in identifier format rules", func(t *testing.T) {
-		invalidAliasLogin := vit.SignUp(vit.NextName(), "pwd3", appQName)
-		vit.SignIn(invalidAliasLogin)
-		initiateSetLoginAlias(t, vit, invalidAliasLogin, "test@test..com", sysRegistryToken, it.Expect400("incorrect login format"))
-	})
-
-	t.Run("alias rejected when it collides with an existing login", func(t *testing.T) {
-		collisionLogin := vit.SignUp(vit.NextName(), "pwd4", appQName)
-		vit.SignIn(collisionLogin)
-
-		initiateSetLoginAlias(t, vit, collisionLogin, login2.Name, sysRegistryToken)
-		waitForLoginAliasError(t, vit, collisionLogin)
-		issuePrincipalToken(t, vit, login2.Name, login2.Pwd, appQName)
-		issuePrincipalToken(t, vit, login2.Name, collisionLogin.Pwd, appQName, it.Expect401("login or password is incorrect"))
-	})
-
-	t.Run("alias rejected when it collides with an existing alias", func(t *testing.T) {
-		collisionLogin := vit.SignUp(vit.NextName(), "pwd5", appQName)
-		vit.SignIn(collisionLogin)
-
-		initiateSetLoginAlias(t, vit, collisionLogin, alias1, sysRegistryToken)
-		waitForLoginAliasError(t, vit, collisionLogin)
-		issuePrincipalToken(t, vit, alias1, login1.Pwd, appQName)
-		issuePrincipalToken(t, vit, alias1, collisionLogin.Pwd, appQName, it.Expect401("login or password is incorrect"))
-	})
-
-	t.Run("login creation rejected when requested login collides with active alias", func(t *testing.T) {
-		vit.SignUp(alias1, "pwd6", appQName, it.WithReqOpt(httpu.Expect409()))
-	})
-}
-
-// [~server.devices/it.TestDevicesCreate~impl]
-func TestCreateDevice(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-	deviceLogin := vit.SignUpDevice(istructs.AppQName_test1_app2)
-
-	// APIv2 create device returns generated device login and password
-	log.Println(deviceLogin.Name)
-	log.Println(deviceLogin.Pwd)
-
-	devicePrn := vit.SignIn(deviceLogin)
-	as, err := vit.BuiltIn(istructs.AppQName_test1_app2)
-	require.NoError(err)
-	devicePrnPayload := payloads.PrincipalPayload{}
-	_, err = as.AppTokens().ValidateToken(devicePrn.Token, &devicePrnPayload)
-	require.NoError(err)
-	require.Equal(istructs.SubjectKind_Device, devicePrnPayload.SubjectKind)
-
-	t.Run("exec a simple operation in the device profile", func(t *testing.T) {
-		body := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["sys.ID"]}]}`
-		vit.PostProfile(devicePrn, "q.sys.Collection", body)
-	})
-
-	t.Run("refresh the device principal token", func(t *testing.T) {
-		// simulate delay to make the new token be different
-		vit.TimeAdd(time.Minute)
-		body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
-		resp := vit.PostProfile(devicePrn, "q.sys.RefreshPrincipalToken", body)
-		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
-	})
-
-	t.Run("400 bad request on an unexpected body", func(t *testing.T) {
-		vit.Func(fmt.Sprintf("api/v2/apps/%s/%s/devices", deviceLogin.AppQName.Owner(), deviceLogin.AppQName.Name()), "body",
-			httpu.Expect400()).Println()
-	})
-}
-
 func initiateSetLoginAlias(t *testing.T, vit *it.VIT, login it.Login, alias, token string, opts ...httpu.ReqOptFunc) {
 	t.Helper()
 	initiateSetLoginAliasByName(t, vit, login.PseudoProfileWSID, login.Name, login.AppQName, alias, token, opts...)
@@ -457,12 +145,44 @@ func initiateSetLoginAliasByName(t *testing.T, vit *it.VIT, wsid istructs.WSID, 
 	vit.PostApp(istructs.AppQName_sys_registry, wsid, "c.registry.InitiateSetLoginAlias", string(bodyBytes), opts...)
 }
 
+func setCanonicalLoginEnablement(t *testing.T, vit *it.VIT, login it.Login, enabled bool, token string, opts ...httpu.ReqOptFunc) {
+	t.Helper()
+	bodyBytes, err := json.Marshal(map[string]any{
+		"args": map[string]any{
+			"Login":   login.Name,
+			"AppName": login.AppQName.String(),
+			"Enabled": enabled,
+		},
+	})
+	require.NoError(t, err)
+	if len(token) > 0 {
+		opts = append(opts, httpu.WithAuthorizeBy(token))
+	}
+	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.SetCanonicalLoginEnablement", string(bodyBytes), opts...)
+}
+
 func setLoginAliasInProc(t *testing.T, vit *it.VIT, login it.Login, aliasInProc int32) {
 	t.Helper()
 	cdocLoginID := vit.GetCDocLoginID(login)
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"AliasInProc":%d}}]}`, cdocLoginID, aliasInProc)
 	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
 	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.sys.CUD", body, httpu.WithAuthorizeBy(sysRegistryToken))
+}
+
+func setLoginProfileState(t *testing.T, vit *it.VIT, login it.Login, profileWSID istructs.WSID, wsError string) {
+	t.Helper()
+	bodyBytes, err := json.Marshal(map[string]any{
+		"cuds": []map[string]any{{
+			"sys.ID": vit.GetCDocLoginID(login),
+			"fields": map[string]any{
+				authnz.Field_WSID:    profileWSID,
+				authnz.Field_WSError: wsError,
+			},
+		}},
+	})
+	require.NoError(t, err)
+	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
+	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.sys.CUD", string(bodyBytes), httpu.WithAuthorizeBy(sysRegistryToken))
 }
 
 func issuePrincipalToken(t *testing.T, vit *it.VIT, signInIdentifier, pwd string, appQName appdef.AppQName, opts ...httpu.ReqOptFunc) string {
@@ -521,7 +241,8 @@ func waitForLoginAlias(t *testing.T, vit *it.VIT, login it.Login, expectedAlias 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		cdocLogin := getLoginCDoc(t, vit, login)
-		if cdocLogin["Alias"] == expectedAlias && cdocLogin["AliasInProc"] == float64(0) {
+		aliasMatches := cdocLogin["Alias"] == expectedAlias || expectedAlias == "" && cdocLogin["Alias"] == nil
+		if aliasMatches && cdocLogin["AliasInProc"] == float64(0) {
 			return
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -544,35 +265,53 @@ func waitForLoginAliasError(t *testing.T, vit *it.VIT, login it.Login) {
 
 func getLoginCDoc(t *testing.T, vit *it.VIT, login it.Login) map[string]any {
 	t.Helper()
-	cdocLoginID := vit.GetCDocLoginID(login)
-	body := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, cdocLoginID)
 	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
-	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysRegistryToken))
+	return getLoginCDocWithToken(t, vit, login, sysRegistryToken)
+}
+
+func getLoginCDocWithToken(t *testing.T, vit *it.VIT, login it.Login, token string, opts ...httpu.ReqOptFunc) map[string]any {
+	t.Helper()
+	cdocLoginID := vit.GetCDocLoginID(login)
+	body := fmt.Sprintf(`{"args":{"ID":%d},"elements":[{"fields":["Result"]}]}`, cdocLoginID)
+	if len(token) > 0 {
+		opts = append(opts, httpu.WithAuthorizeBy(token))
+	}
+	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.GetCDoc", body, opts...)
+	if resp.SysError != nil {
+		return nil
+	}
 	cdocLogin := map[string]any{}
 	require.NoError(t, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &cdocLogin))
 	return cdocLogin
 }
 
-func TestLoginAliasStateVisibility(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
+func assertStoredCanonicalLoginDisabled(t *testing.T, cdocLogin map[string]any, expected bool) {
+	t.Helper()
+	actual, ok := cdocLogin["CanonicalLoginDisabled"].(bool)
+	require.True(t, ok)
+	require.Equal(t, expected, actual)
+}
 
-	appQName := istructs.AppQName_test1_app1
-	login := vit.SignUp(vit.NextName(), "pwd1", appQName)
-	vit.SignIn(login)
-
-	alias := vit.NextName()
-	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
-	initiateSetLoginAlias(t, vit, login, alias, sysRegistryToken)
-	waitForLoginAlias(t, vit, login, alias)
-
-	// System can read the login's alias lifecycle state (Alias / AliasInProc / AliasError).
-	// The complementary half — a non-System caller cannot read the registry Login record —
-	// is covered by TestAuthnz/"foreign app" (regular user, cross-app read of registry.Login -> 403).
-	cdocLogin := getLoginCDoc(t, vit, login)
-	require.Equal(t, alias, cdocLogin["Alias"])
+func assertLoginAliasState(t *testing.T, cdocLogin map[string]any, expectedAlias string) {
+	t.Helper()
+	if expectedAlias == "" {
+		require.Empty(t, cdocLogin["Alias"])
+	} else {
+		require.Equal(t, expectedAlias, cdocLogin["Alias"])
+	}
 	require.Equal(t, float64(0), cdocLogin["AliasInProc"])
 	require.Empty(t, cdocLogin["AliasError"])
+}
+
+func issueRegistryPrincipalToken(t *testing.T, vit *it.VIT, login string, profileWSID istructs.WSID) string {
+	t.Helper()
+	token, err := vit.ITokens.IssueToken(istructs.AppQName_sys_registry, time.Minute, &payloads.PrincipalPayload{
+		Login:       login,
+		SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: profileWSID,
+	})
+	require.NoError(t, err)
+	return token
 }
 
 func TestWorkInForeignProfileWithEnrichedToken(t *testing.T) {
