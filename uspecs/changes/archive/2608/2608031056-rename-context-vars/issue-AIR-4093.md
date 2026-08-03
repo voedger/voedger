@@ -9,7 +9,7 @@
 
 ## Why
 
-`ctx` is provided to `ProvideQueryProcessorStateFactory`, `ProvideAsyncActualizerStateFactory`, `ProvideSchedulerStateFactory`, `ProvideSyncActualizerStateFactory`, `ProvideMockedActualizerStateFactory`, `ProvideMockedCommandProcessorStateFactory`, `ProvideCommandProcessorStateFactory`. It is not cleare what is the context, It actually is `VVMCtx`
+`ctx` is provided to state factories (e.g. `ProvideQueryProcessorStateFactory`, `ProvideAsyncActualizerStateFactory`, `ProvideSchedulerStateFactory`, `ProvideSyncActualizerStateFactory`, `ProvideMockedActualizerStateFactory`, `ProvideMockedCommandProcessorStateFactory`, `ProvideCommandProcessorStateFactory`). The name does not clarify whether it is a VVM-lifetime context (`vvmCtx`) or a per-request context (`requestCtx`).
 
 ## What
 
