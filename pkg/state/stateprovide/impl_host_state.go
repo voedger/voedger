@@ -26,10 +26,10 @@ type hostState struct {
 	withUpdate     map[appdef.QName]state.IWithUpdate
 	intents        map[appdef.QName][]state.ApplyBatchItem
 	intentsLimit   int
-	ctx            context.Context
+	stateCtx       context.Context
 }
 
-func newHostState(ctx context.Context, name string, intentsLimit int, appStructsFunc state.AppStructsFunc) *hostState {
+func newHostState(stateCtx context.Context, name string, intentsLimit int, appStructsFunc state.AppStructsFunc) *hostState {
 	return &hostState{
 		name:           name,
 		storages:       make(map[appdef.QName]state.IStateStorage),
@@ -42,7 +42,7 @@ func newHostState(ctx context.Context, name string, intentsLimit int, appStructs
 		intents:        make(map[appdef.QName][]state.ApplyBatchItem),
 		intentsLimit:   intentsLimit,
 		appStructsFunc: appStructsFunc,
-		ctx:            ctx,
+		stateCtx:       stateCtx,
 	}
 }
 
@@ -82,8 +82,8 @@ func (s hostState) QueryCallback() istructs.ExecQueryCallback {
 	panic(errQueryCallbackNotSupportedByState)
 }
 
-func (s hostState) Context() context.Context {
-	return s.ctx
+func (s hostState) RequestContext() context.Context {
+	return s.stateCtx
 }
 
 func (s *hostState) addStorage(storageName appdef.QName, storage state.IStateStorage, ops int) {

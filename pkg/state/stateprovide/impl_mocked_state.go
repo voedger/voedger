@@ -16,14 +16,12 @@ import (
 
 type MockedState struct {
 	*hostState
-	ctx context.Context
 }
 
-func implProvideMockedCommandProcessorState(ctx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
+func implProvideMockedCommandProcessorState(vvmCtx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
 
 	ms := &MockedState{
-		ctx:       ctx,
-		hostState: newHostState(ctx, "MockedCommandProcessorState", intentsLimit, appStructsFunc),
+		hostState: newHostState(vvmCtx, "MockedCommandProcessorState", intentsLimit, appStructsFunc),
 	}
 
 	ms.addStorage(sys.Storage_View, storages.NewMockedStorage(sys.Storage_View), S_GET|S_GET_BATCH)
@@ -40,10 +38,10 @@ func implProvideMockedCommandProcessorState(ctx context.Context, intentsLimit in
 	return ms
 }
 
-func implProvideMockedActualizerState(ctx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
+func implProvideMockedActualizerState(vvmCtx context.Context, intentsLimit int, appStructsFunc state.AppStructsFunc) state.IHostState {
 
 	ms := &MockedState{
-		hostState: newHostState(ctx, "MockedActualizerState", intentsLimit, appStructsFunc),
+		hostState: newHostState(vvmCtx, "MockedActualizerState", intentsLimit, appStructsFunc),
 	}
 
 	ms.addStorage(sys.Storage_View, storages.NewMockedStorage(sys.Storage_View), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)

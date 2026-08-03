@@ -443,7 +443,7 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 
 	cts.testData = make(map[string]any)
 	cts.t = t
-	cts.ctx = context.Background()
+	cts.stateCtx = context.Background()
 	cts.processorKind = ProcKind_CommandProcessor
 	cts.commandWSID = wsid
 	cts.secretReader = &secretReader{secrets: make(map[string][]byte)}
@@ -452,7 +452,7 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	cts.buildAppDef()
 	// build state
 	cts.IState = stateprovide.ProvideMockedCommandProcessorStateFactory()(
-		cts.ctx,
+		cts.stateCtx,
 		IntentsLimit,
 		func() istructs.IAppStructs { return cts.appStructs },
 	)
@@ -661,13 +661,13 @@ type ProjectorTestState struct {
 func NewProjectorTestState(t *testing.T, extensionFunc func()) *ProjectorTestState {
 	pts := &ProjectorTestState{}
 	pts.t = t
-	pts.ctx = context.Background()
+	pts.stateCtx = context.Background()
 	pts.processorKind = ProcKind_Actualizer
 	pts.secretReader = &secretReader{secrets: make(map[string][]byte)}
 	pts.buildAppDef()
 	// build state
 	pts.IState = stateprovide.ProvideMockedActualizerStateFactory()(
-		pts.ctx,
+		pts.stateCtx,
 		IntentsLimit,
 		func() istructs.IAppStructs { return pts.appStructs },
 	)
