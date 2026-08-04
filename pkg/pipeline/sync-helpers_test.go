@@ -76,13 +76,13 @@ func (o *mockedSyncCatchOperator) OnErr(err error, work interface{}, context IWo
 	}
 	return nil
 }
-func (o mockedSyncCatchOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
+func (o *mockedSyncCatchOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
 	if o.fDoSync != nil {
 		return o.fDoSync(ctx, work)
 	}
 	return nil
 }
 
-func (o mockedSyncCatchOperator) Close() {
+func (o *mockedSyncCatchOperator) Close() {
 
 }

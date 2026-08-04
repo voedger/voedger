@@ -253,33 +253,33 @@ func TestRetryAfter_replyErr(t *testing.T) {
 
 type busyBlobRequestHandler struct{}
 
-func (busyBlobRequestHandler) HandleRead(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleRead(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, string, bus.IRequestSender, iblobstorage.RLimiterType) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleWrite(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleWrite(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	url.Values, func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleWrite_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleWrite_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender, appdef.QName, string) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleRead_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleRead_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, appdef.QName, string, istructs.RecordID,
 	bus.IRequestSender, iblobstorage.RLimiterType) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleReadTemp_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleReadTemp_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, blobprocessor.ErrorResponder, bus.IRequestSender, iblobstorage.SUUID, iblobstorage.RLimiterType) bool {
 	return false
 }
 
-func (busyBlobRequestHandler) HandleWriteTemp_V2(appdef.AppQName, istructs.WSID, map[string]string, context.Context,
+func (busyBlobRequestHandler) HandleWriteTemp_V2(context.Context, appdef.AppQName, istructs.WSID, map[string]string,
 	func(headersKeyValue ...string) io.Writer, io.ReadCloser, blobprocessor.ErrorResponder, bus.IRequestSender) bool {
 	return false
 }

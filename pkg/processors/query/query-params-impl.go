@@ -64,7 +64,7 @@ func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, fil
 	return qp, qp.validate(rootFieldsKinds, rootType)
 }
 
-func (p *queryParams) fillArray(data coreutils.MapObject, fieldName string, cb func(elem coreutils.MapObject) error) error {
+func (p queryParams) fillArray(data coreutils.MapObject, fieldName string, cb func(elem coreutils.MapObject) error) error {
 	elems, _, err := data.AsObjects(fieldName)
 	for _, elemIntf := range elems {
 		elem, ok := elemIntf.(map[string]interface{})
@@ -146,7 +146,7 @@ func (p queryParams) validate(rootFieldsKinds FieldsKinds, rootType appdef.IType
 func validateFilters(filters []IFilter, validateFilter func(filter, field string) (err error)) (err error) {
 	for _, f := range filters {
 		if err != nil {
-			return
+			return err
 		}
 		switch filter := f.(type) {
 		case *EqualsFilter:

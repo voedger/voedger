@@ -23,7 +23,7 @@ import (
 )
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_getBLOBKeyRead~impl]
-func getBLOBKeyRead(ctx context.Context, bw *blobWorkpiece) (err error) {
+func getBLOBKeyRead(_ context.Context, bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		existingBLOBIDUint, err := strconvu.ParseUint64(bw.blobMessageRead.existingBLOBIDOrSUUID)
 		if err != nil {
@@ -50,7 +50,7 @@ func getBLOBKeyRead(ctx context.Context, bw *blobWorkpiece) (err error) {
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_initResponse~impl]
-func initResponse(ctx context.Context, bw *blobWorkpiece) (err error) {
+func initResponse(_ context.Context, bw *blobWorkpiece) (err error) {
 	bw.writer = bw.blobMessageRead.okResponseIniter(
 		httpu.ContentType, bw.blobState.Descr.ContentType,
 		coreutils.BlobName, bw.blobState.Descr.Name,
@@ -61,7 +61,7 @@ func initResponse(ctx context.Context, bw *blobWorkpiece) (err error) {
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_queryBLOBState~impl]
 func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, bw *blobWorkpiece) (err error) {
-	return func(ctx context.Context, bw *blobWorkpiece) (err error) {
+	return func(_ context.Context, bw *blobWorkpiece) (err error) {
 		bw.blobState, err = blobStorage.QueryBLOBState(bw.blobMessageRead.requestCtx, bw.blobKey)
 		if err != nil {
 			if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
@@ -80,7 +80,7 @@ func provideQueryAndCheckBLOBState(blobStorage iblobstorage.IBLOBStorage) func(c
 }
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_downloadBLOBHelper~impl]
-func downloadBLOBHelper(ctx context.Context, bw *blobWorkpiece) (err error) {
+func downloadBLOBHelper(_ context.Context, bw *blobWorkpiece) (err error) {
 	if !bw.blobMessageRead.isAPIv2 {
 		return nil
 	}
@@ -104,7 +104,7 @@ func downloadBLOBHelper(ctx context.Context, bw *blobWorkpiece) (err error) {
 
 // [~server.apiv2.blobs/cmp.blobber.ServicePipeline_readBLOB~impl]
 func provideReadBLOB(blobStorage iblobstorage.IBLOBStorage) func(ctx context.Context, bw *blobWorkpiece) (err error) {
-	return func(ctx context.Context, bw *blobWorkpiece) (err error) {
+	return func(_ context.Context, bw *blobWorkpiece) (err error) {
 		err = blobStorage.ReadBLOB(bw.blobMessageRead.requestCtx, bw.blobKey, nil, bw.writer, bw.blobMessageRead.rLimiter)
 		if err == nil {
 			logger.VerboseCtx(bw.logCtx, "bp.success")
@@ -143,7 +143,7 @@ func getBLOBIDFromOwner(_ context.Context, bw *blobWorkpiece) (err error) {
 	}
 	if len(resp) > 1 {
 		// notest
-		return coreutils.NewHTTPErrorf(http.StatusInternalServerError, fmt.Errorf("unexpected result reading BLOBID from owner: multiple responses received"))
+		return coreutils.NewHTTPErrorf(http.StatusInternalServerError, errors.New("unexpected result reading BLOBID from owner: multiple responses received"))
 	}
 	ownerFieldValue, ok := resp[0][bw.blobMessageRead.ownerRecordField]
 	if !ok {

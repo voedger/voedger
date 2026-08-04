@@ -25,7 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 )
 
-func getRegisterFunc(ctx context.Context, bw *blobWorkpiece) (err error) {
+func getRegisterFunc(_ context.Context, bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		bw.registerFuncName = registerPersistentBLOBFuncQName
 		bw.registerFuncBody = fmt.Sprintf(`{"args":{"OwnerRecord":%q,"OwnerRecordField":%q}}`,
@@ -42,7 +42,7 @@ func getRegisterFunc(ctx context.Context, bw *blobWorkpiece) (err error) {
 	return nil
 }
 
-func getBLOBKeyWrite(ctx context.Context, bw *blobWorkpiece) (err error) {
+func getBLOBKeyWrite(_ context.Context, bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		bw.blobKey = &iblobstorage.PersistentBLOBKeyType{
 			ClusterAppID: istructs.ClusterAppID_sys_blobber,
@@ -80,7 +80,7 @@ func provideWriteBLOB(blobStorage iblobstorage.IBLOBStorage, wLimiterFactory WLi
 	}
 }
 
-func setBLOBStatusCompleted(ctx context.Context, bw *blobWorkpiece) (err error) {
+func setBLOBStatusCompleted(_ context.Context, bw *blobWorkpiece) (err error) {
 	if !bw.isPersistent() {
 		// do not account statuses for temp blobs
 		return nil
@@ -91,7 +91,7 @@ func setBLOBStatusCompleted(ctx context.Context, bw *blobWorkpiece) (err error) 
 		WSID:     bw.blobMessageWrite.wsid,
 		AppQName: bw.blobMessageWrite.appQName,
 		Resource: "c.sys.CUD",
-		Body:     []byte(fmt.Sprintf(`{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed)),
+		Body:     fmt.Appendf(nil, `{"cuds":[{"sys.ID": %d,"fields":{"status":%d}}]}`, bw.newBLOBID, iblobstorage.BLOBStatus_Completed),
 		Header:   bw.blobMessageWrite.header,
 		Host:     httpu.LocalhostIP.String(),
 	}
@@ -102,7 +102,7 @@ func setBLOBStatusCompleted(ctx context.Context, bw *blobWorkpiece) (err error) 
 	return err
 }
 
-func registerBLOB(ctx context.Context, bw *blobWorkpiece) (err error) {
+func registerBLOB(_ context.Context, bw *blobWorkpiece) (err error) {
 	req := bus.Request{
 		Method:   http.MethodPost,
 		WSID:     bw.blobMessageWrite.wsid,
@@ -183,7 +183,6 @@ func parseMediaType(_ context.Context, bw *blobWorkpiece) error {
 }
 
 func validateQueryParams(_ context.Context, bw *blobWorkpiece) error {
-
 	if (len(bw.blobName) > 0 && len(bw.blobContentType) == 0) || (len(bw.blobName) == 0 && len(bw.blobContentType) > 0) {
 		return errors.New("both name and mimeType query params must be specified")
 	}
@@ -220,7 +219,7 @@ func validateQueryParams(_ context.Context, bw *blobWorkpiece) error {
 
 	if isSingleBLOB {
 		if bw.contentType == httpu.ContentType_MultipartFormData {
-			return fmt.Errorf(`name+mimeType query params and "%s" Content-Type header are mutual exclusive`, httpu.ContentType_MultipartFormData)
+			return fmt.Errorf("name+mimeType query params and %q Content-Type header are mutual exclusive", httpu.ContentType_MultipartFormData)
 		}
 		bw.descr.Name = bw.blobName[0]
 		bw.descr.ContentType = bw.blobContentType[0]
@@ -260,7 +259,7 @@ func replySuccess_V2(bw *blobWorkpiece) (err error) {
 	if bw.isPersistent() {
 		_, err = fmt.Fprintf(writer, `{"blobID":%d}`, bw.newBLOBID)
 	} else {
-		_, err = fmt.Fprintf(writer, `{"blobSUUID":"%s"}`, bw.newSUUID)
+		_, err = fmt.Fprintf(writer, `{"blobSUUID":%q}`, bw.newSUUID)
 	}
 	return err
 }

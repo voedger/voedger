@@ -23,7 +23,7 @@ func (so *serviceOperator) Close() {
 }
 
 func (so *serviceOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
-	if err = so.iService.Prepare(work); err != nil {
+	if err := so.iService.Prepare(work); err != nil {
 		return err
 	}
 	so.isStarted = true
@@ -41,7 +41,7 @@ func (so *serviceOperator) DoSync(ctx context.Context, work IWorkpiece) (err err
 		close(so.serviceDone)
 	}()
 	<-ctxStarted.Done()
-	return
+	return nil
 }
 
 func ServiceOperator(service IService) ISyncOperator {

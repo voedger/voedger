@@ -60,27 +60,27 @@ type blobReadHandlerStub struct {
 	written      []byte
 }
 
-func (s *blobReadHandlerStub) HandleRead(_ appdef.AppQName, _ istructs.WSID, _ map[string]string, _ context.Context,
+func (s *blobReadHandlerStub) HandleRead(_ context.Context, _ appdef.AppQName, _ istructs.WSID, _ map[string]string,
 	_ func(headersKeyValue ...string) io.Writer, _ blobprocessor.ErrorResponder, _ string, _ bus.IRequestSender, _ iblobstorage.RLimiterType) bool {
 	panic("unexpected call")
 }
 
-func (s *blobReadHandlerStub) HandleWrite(_ appdef.AppQName, _ istructs.WSID, _ map[string]string, _ context.Context,
+func (s *blobReadHandlerStub) HandleWrite(_ context.Context, _ appdef.AppQName, _ istructs.WSID, _ map[string]string,
 	_ url.Values, _ func(headersKeyValue ...string) io.Writer, _ io.ReadCloser, _ blobprocessor.ErrorResponder, _ bus.IRequestSender) bool {
 	panic("unexpected call")
 }
 
-func (s *blobReadHandlerStub) HandleWrite_V2(_ appdef.AppQName, _ istructs.WSID, _ map[string]string, _ context.Context,
+func (s *blobReadHandlerStub) HandleWrite_V2(_ context.Context, _ appdef.AppQName, _ istructs.WSID, _ map[string]string,
 	_ func(headersKeyValue ...string) io.Writer, _ io.ReadCloser, _ blobprocessor.ErrorResponder, _ bus.IRequestSender, _ appdef.QName, _ string) bool {
 	panic("unexpected call")
 }
 
-func (s *blobReadHandlerStub) HandleWriteTemp_V2(_ appdef.AppQName, _ istructs.WSID, _ map[string]string, _ context.Context,
+func (s *blobReadHandlerStub) HandleWriteTemp_V2(_ context.Context, _ appdef.AppQName, _ istructs.WSID, _ map[string]string,
 	_ func(headersKeyValue ...string) io.Writer, _ io.ReadCloser, _ blobprocessor.ErrorResponder, _ bus.IRequestSender) bool {
 	panic("unexpected call")
 }
 
-func (s *blobReadHandlerStub) HandleRead_V2(_ appdef.AppQName, _ istructs.WSID, _ map[string]string, _ context.Context,
+func (s *blobReadHandlerStub) HandleRead_V2(_ context.Context, _ appdef.AppQName, _ istructs.WSID, _ map[string]string,
 	okResponseIniter func(headersKeyValue ...string) io.Writer, _ blobprocessor.ErrorResponder,
 	_ appdef.QName, _ string, _ istructs.RecordID, _ bus.IRequestSender, rLimiter iblobstorage.RLimiterType) bool {
 	writer := okResponseIniter(
@@ -103,7 +103,7 @@ func (s *blobReadHandlerStub) HandleRead_V2(_ appdef.AppQName, _ istructs.WSID, 
 	return true
 }
 
-func (s *blobReadHandlerStub) HandleReadTemp_V2(_ appdef.AppQName, _ istructs.WSID, _ map[string]string, _ context.Context,
+func (s *blobReadHandlerStub) HandleReadTemp_V2(_ context.Context, _ appdef.AppQName, _ istructs.WSID, _ map[string]string,
 	_ func(headersKeyValue ...string) io.Writer, _ blobprocessor.ErrorResponder, _ bus.IRequestSender, _ iblobstorage.SUUID, _ iblobstorage.RLimiterType) bool {
 	panic("unexpected call")
 }

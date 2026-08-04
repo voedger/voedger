@@ -399,11 +399,9 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		metrics, "vvm", authn, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader, state.StateOpts{}, nil)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		queryProcessor.Run(processorCtx)
-		wg.Done()
-	}()
+	})
 	systemToken := getSystemToken(appTokens)
 	requestSender := bus.NewIRequestSender(testingu.MockTime, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, responder, body, qNameFunction, "127.0.0.1", systemToken)
@@ -1300,8 +1298,8 @@ func (r *testOutputRow) Set(alias string, value interface{}) {
 	r.values[r.fieldToIdx[alias]] = value
 }
 
-func (r testOutputRow) Value(alias string) interface{} { return r.values[r.fieldToIdx[alias]] }
-func (r testOutputRow) Values() []interface{}          { return r.values }
+func (r *testOutputRow) Value(alias string) interface{} { return r.values[r.fieldToIdx[alias]] }
+func (r *testOutputRow) Values() []interface{}          { return r.values }
 
 type testFilter struct {
 	match bool
