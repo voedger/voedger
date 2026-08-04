@@ -21,7 +21,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		-- async alias projector is applying an alias create, update, or clear.
 		AliasInProc int32,
 		Alias varchar,
-		AliasError varchar(1024)
+		AliasError varchar(1024),
 
 		-- Absent or false means that the canonical Login is enabled.
 		CanonicalLoginDisabled bool
