@@ -35,17 +35,17 @@ func (sch *DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
 // This method can be used to get scheme for:
 //   - any structured type (doc or record),
 //   - view value
-func (sch DynoBufSchemes) Scheme(name appdef.QName) *dynobuffers.Scheme {
+func (sch *DynoBufSchemes) Scheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()]
 }
 
 // Returns view partition key scheme. Nil if not found
-func (sch DynoBufSchemes) ViewPartKeyScheme(name appdef.QName) *dynobuffers.Scheme {
+func (sch *DynoBufSchemes) ViewPartKeyScheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()+viewPartKeySuffix]
 }
 
 // Returns view clustering columns scheme. Nil if not found
-func (sch DynoBufSchemes) ViewClustColsScheme(name appdef.QName) *dynobuffers.Scheme {
+func (sch *DynoBufSchemes) ViewClustColsScheme(name appdef.QName) *dynobuffers.Scheme {
 	return sch.schemes[name.String()+viewClustColsSuffix]
 }
 

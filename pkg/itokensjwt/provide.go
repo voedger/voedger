@@ -8,7 +8,7 @@ package itokensjwt
 
 import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
-	itokens "github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/itokens"
 )
 
 // ProvideITokens implementation by provided interface

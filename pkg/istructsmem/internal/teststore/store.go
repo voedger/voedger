@@ -26,8 +26,8 @@ type (
 
 	damagedStorageFunc    func(*[]byte)
 	scheduleStorageDamage struct {
-		dam damagedStorageFunc
 		scheduleStorageError
+		dam damagedStorageFunc
 	}
 
 	TestMemStorage struct {
@@ -264,7 +264,7 @@ func (s *TestMemStorage) Put(pKey []byte, cCols []byte, value []byte) (err error
 
 func (s *TestMemStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	for _, p := range items {
-		if err = s.Put(p.PKey, p.CCols, p.Value); err != nil {
+		if err := s.Put(p.PKey, p.CCols, p.Value); err != nil {
 			return err
 		}
 	}

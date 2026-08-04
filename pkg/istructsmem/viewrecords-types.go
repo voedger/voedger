@@ -12,7 +12,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
@@ -54,10 +54,10 @@ func (vr *appViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder)
 	value = newNullValue()
 
 	k := key.(*keyType)
-	if err = k.build(); err != nil {
+	if err := k.build(); err != nil {
 		return value, err
 	}
-	if err = validateViewKey(k, false); err != nil {
+	if err := validateViewKey(k, false); err != nil {
 		return value, err
 	}
 
@@ -95,10 +95,10 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 		kv[i].Ok = false
 		kv[i].Value = newNullValue()
 		k := kv[i].Key.(*keyType)
-		if err = k.build(); err != nil {
+		if err := k.build(); err != nil {
 			return enrichError(err, "error building key at batch item %d", i)
 		}
-		if err = validateViewKey(k, false); err != nil {
+		if err := validateViewKey(k, false); err != nil {
 			return enrichError(err, "not valid key at batch item %d", i)
 		}
 		pKey, cKey := k.storeToBytes(workspace)
@@ -111,7 +111,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 		batches[i] = batchPtrType{key: k, batch: &batch[len(batch)-1]}
 	}
 	for pKey, batch := range plan {
-		if err = vr.app.config.storage.GetBatch([]byte(pKey), batch); err != nil {
+		if err := vr.app.config.storage.GetBatch([]byte(pKey), batch); err != nil {
 			return err
 		}
 	}
@@ -120,7 +120,7 @@ func (vr *appViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRe
 		kv[i].Ok = b.batch.Ok
 		if kv[i].Ok {
 			val := newValue(b.key.appCfg, b.key.viewName)
-			if err = val.loadFromBytes(*b.batch.Data); err != nil {
+			if err := val.loadFromBytes(*b.batch.Data); err != nil {
 				return err
 			}
 			kv[i].Value = val
@@ -154,15 +154,15 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 	viewName := appdef.NullQName
 
 	if v, ok := j[appdef.SystemField_QName]; ok {
-		if value, ok := v.(string); ok {
-			if qName, err := appdef.ParseQName(value); err == nil {
-				viewName = qName
-			} else {
-				return enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName)
-			}
-		} else {
+		value, ok := v.(string)
+		if !ok {
 			return ErrWrongFieldType("can not put «%T» to field «%s»", v, appdef.SystemField_QName)
 		}
+		qName, err := appdef.ParseQName(value)
+		if err != nil {
+			return enrichError(err, "can not parse value for field «%s»", appdef.SystemField_QName)
+		}
+		viewName = qName
 	}
 
 	if viewName == appdef.NullQName {
@@ -184,11 +184,10 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 		if view.Key().Field(f) != nil {
 			keyJ[f] = v
 		} else {
-			if view.Value().Field(f) != nil {
-				valueJ[f] = v
-			} else {
+			if view.Value().Field(f) == nil {
 				return ErrFieldNotFound(f, view)
 			}
+			valueJ[f] = v
 		}
 	}
 
@@ -207,12 +206,11 @@ func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) 
 
 // istructs.IViewRecords.Read
 func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key istructs.IKeyBuilder, cb istructs.ValuesCallback) (err error) {
-
 	k := key.(*keyType)
-	if err = k.build(); err != nil {
+	if err := k.build(); err != nil {
 		return err
 	}
-	if err = validateViewKey(k, true); err != nil {
+	if err := validateViewKey(k, true); err != nil {
 		return err
 	}
 
@@ -290,11 +288,7 @@ func (key *keyType) build() (err error) {
 // Reads key from clustering columns bytes. Partition part of key must be filled (or copied) from key builder
 func (key *keyType) loadFromBytes(cKey []byte) (err error) {
 	buf := bytes.NewBuffer(cKey)
-	if err = loadViewClustKey_00(key, buf); err != nil {
-		return err
-	}
-
-	return nil
+	return loadViewClustKey_00(key, buf)
 }
 
 // Stores key to partition key bytes and to clustering columns bytes
@@ -408,7 +402,6 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 		}
 		if err := key.build(); err == nil {
 			if err := k.build(); err == nil {
-
 				equalRow := func(r1, r2 rowType) bool {
 					if r1.dyB.Scheme != r2.dyB.Scheme {
 						// notest: key.viewName == k.viewName

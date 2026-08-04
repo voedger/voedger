@@ -44,7 +44,7 @@ func BenchmarkAppStorage_Get_Seq(b *testing.B) {
 	var res []byte
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		ok, err := storage.Get(pk, cc, &res)
 		if !ok {
 			panic("not ok")

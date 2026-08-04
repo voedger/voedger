@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -30,6 +31,8 @@ import (
 //   - istructs.IValueBuilder
 //   - istructs.IRecord (partially)
 //   - istructs.IEditableRecord
+//
+//nolint:recvcheck // String() must use a value receiver (see its comment); the other rowType methods use pointer receivers
 type rowType struct {
 	appCfg           *AppConfigType
 	typ              appdef.IType
@@ -174,7 +177,7 @@ func (row *rowType) copyFrom(src *rowType) {
 func (row *rowType) empty() bool {
 	userFields := false
 	row.dyB.IterateFields(nil,
-		func(name string, _ any) bool {
+		func(string, any) bool {
 			userFields = true
 			return false
 		})
@@ -197,10 +200,8 @@ func (row *rowType) fieldMustExists(name appdef.FieldName, k appdef.DataKind, ot
 		if f.DataKind() == k {
 			return f
 		}
-		for _, k := range otherKinds {
-			if f.DataKind() == k {
-				return f
-			}
+		if slices.Contains(otherKinds, f.DataKind()) {
+			return f
 		}
 	}
 	panic(ErrTypedFieldNotFound(k.TrimString(), name, row))
@@ -208,7 +209,6 @@ func (row *rowType) fieldMustExists(name appdef.FieldName, k appdef.DataKind, ot
 
 // Loads row from bytes
 func (row *rowType) loadFromBytes(in []byte) (err error) {
-
 	buf := bytes.NewBuffer(in)
 
 	var codec byte
@@ -253,7 +253,6 @@ func (row *rowType) maskValues() {
 //
 // If field must be verified before put then collects error «field must be verified».
 func (row *rowType) putValue(name appdef.FieldName, kind appdef.DataKind, value any) {
-
 	if a, ok := row.typ.(appdef.IWithAbstract); ok {
 		if a.Abstract() {
 			row.collectError(ErrAbstractType("%v is abstract", row.QName()))
@@ -287,17 +286,17 @@ func (row *rowType) putValue(name appdef.FieldName, kind appdef.DataKind, value 
 	fieldValue := value
 
 	if fld.Verifiable() {
-		if token, ok := value.(string); ok {
-			if data, err := row.verifyToken(fld, token); err == nil {
-				fieldValue = data // override value with verified value
-			} else {
-				row.collectError(err)
-				return
-			}
-		} else {
+		token, ok := value.(string)
+		if !ok {
 			row.collectError(ErrWrongFieldType("%v should be verified, expected token, but value «%T» passed", fld, value))
 			return
 		}
+		data, err := row.verifyToken(fld, token)
+		if err != nil {
+			row.collectError(err)
+			return
+		}
+		fieldValue = data // override value with verified value
 	} else {
 		if f, ok := row.dyB.Scheme.FieldsMap[name]; ok {
 			if k := dynobuf.DataKindToFieldType(kind); f.Ft != k {
@@ -909,7 +908,7 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 				row.PutQName(n, fv)
 			}
 		default:
-			row.collectError(ErrWrongType(`%#T for field "%s" with value %v`, v, n, v))
+			row.collectError(ErrWrongType("%#T for field %q with value %v", v, n, v))
 		}
 	}
 }
@@ -1073,6 +1072,9 @@ func (row *rowType) RecordIDs(includeNulls bool) func(cb func(appdef.FieldName, 
 //
 // If row has container name, then the result complete like `CRecord «Price: sales.PriceRecord»`.
 // Otherwise it will be short form, such as "CDoc «sales.BillDocument»".
+// String uses a value receiver on purpose: recordType/updateRecType embed rowType (or hold it as a value field)
+// and are formatted by value via %v/%s; a pointer receiver would keep String() out of the value method set,
+// so fmt would print a raw struct dump instead of the QName.
 func (row rowType) String() string {
 	qName := row.AsQName(appdef.SystemField_QName)
 	if qName == appdef.NullQName {

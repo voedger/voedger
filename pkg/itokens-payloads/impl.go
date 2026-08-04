@@ -16,13 +16,11 @@ func (at *implIAppTokens) IssueToken(duration time.Duration, pointerToPayload in
 }
 
 func (at *implIAppTokens) ValidateToken(token string, pointerToPayload interface{}) (gp istructs.GenericPayload, err error) {
-	if gp, err = at.itokens.ValidateToken(token, pointerToPayload); err != nil {
-		return
-	}
-	if gp.AppQName != at.appQName {
+	gp, err = at.itokens.ValidateToken(token, pointerToPayload)
+	if err == nil && gp.AppQName != at.appQName {
 		err = ErrTokenIssuedForAnotherApp
 	}
-	return
+	return gp, err
 }
 
 func (atf *implIAppTokensFactory) New(app appdef.AppQName) istructs.IAppTokens {

@@ -129,7 +129,7 @@ func (af *abstractFunction) ResultType(args istructs.PrepareArgs) appdef.QName {
 
 // For debug and logging purposes
 func (af *abstractFunction) String() string {
-	return fmt.Sprintf("%v", af.QName())
+	return af.name.String()
 }
 
 type (

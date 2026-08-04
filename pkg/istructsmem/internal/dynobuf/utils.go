@@ -23,6 +23,7 @@ func NewFieldsScheme(name string, fields appdef.IWithFields) *dynobuffers.Scheme
 		if !f.IsSys() { // #18142: extract system fields from dynobuffer
 			ft := DataKindToFieldType(f.DataKind())
 			if ft == dynobuffers.FieldTypeByte {
+				// nolint identical-switch-branches
 				switch f.DataKind() {
 				case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructsmem~impl]
 					db.AddField(f.Name(), ft, false)
