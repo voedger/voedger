@@ -49,7 +49,7 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 			return &pipeline.NOOP{}
 		}
 		conf := SyncActualizerConf{
-			Ctx:          context.Background(), // it is needed for sync pipeline and GMP believes it is enough
+			VvmCtx:       context.Background(), // it is needed for sync pipeline and GMP believes it is enough
 			SecretReader: secretReader,
 			Partition:    partitionID,
 			N10nFunc: func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {

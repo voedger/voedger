@@ -73,7 +73,7 @@ func (s *queryProcessorState) ApplyIntents() (err error) {
 }
 
 func implProvideQueryProcessorState(
-	ctx context.Context,
+	requestCtx context.Context,
 	appStructsFunc state.AppStructsFunc,
 	partitionIDFunc state.PartitionIDFunc,
 	wsidFunc state.WSIDFunc,
@@ -89,7 +89,7 @@ func implProvideQueryProcessorState(
 	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) state.IHostState {
 
 	state := &queryProcessorState{
-		hostState:     newHostState(ctx, "QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
+		hostState:     newHostState(requestCtx, "QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
 		queryArgs:     execQueryArgsFunc,
 		queryCallback: queryCallbackFunc,
 	}
@@ -98,9 +98,9 @@ func implProvideQueryProcessorState(
 		return appStructsFunc().Events()
 	}
 
-	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
+	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(requestCtx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
 	state.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
-	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET|S_READ)
+	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(requestCtx, ieventsFunc, wsidFunc), S_GET|S_READ)
 	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(httpClient), S_READ)
 	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federation, itokens, stateOpts.FederationCommandHandler), S_GET)
 	state.addStorage(sys.Storage_FederationBlob, storages.NewFederationBlobStorage(appStructsFunc, wsidFunc, federation, itokens, stateOpts.FederationBlobHandler), S_READ)

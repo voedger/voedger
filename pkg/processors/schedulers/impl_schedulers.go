@@ -49,8 +49,8 @@ func newSchedulers(cfg BasicSchedulerConfig) *schedulers {
 // Creates and runs new actualizer for specified partition.
 //
 // # apparts.IActualizerRunner.NewAndRun
-func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, appWSIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName) {
-	logCtx := logger.WithContextAttrs(ctx, map[string]any{
+func (a *schedulers) NewAndRun(vvmCtx context.Context, app appdef.AppQName, partition istructs.PartitionID, appWSIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName) {
+	logCtx := logger.WithContextAttrs(vvmCtx, map[string]any{
 		logger.LogAttr_VApp:      app,
 		logger.LogAttr_Extension: fmt.Sprintf("job.%s", job),
 		logger.LogAttr_WSID:      wsid,
@@ -71,7 +71,7 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 	act.Prepare()
 
 	a.wait.Add(1)
-	act.Run(ctx)
+	act.Run(vvmCtx)
 	a.wait.Done()
 }
 

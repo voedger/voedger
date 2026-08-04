@@ -65,7 +65,7 @@ type AsyncActualizerMetrics interface {
 }
 
 type SyncActualizerConf struct {
-	Ctx          context.Context
+	VvmCtx       context.Context
 	SecretReader isecrets.ISecretReader
 	Partition    istructs.PartitionID
 	//IntentsLimit top limit per event, default value is 100

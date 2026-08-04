@@ -31,7 +31,7 @@ type scheduler struct {
 	jobInErrAddr *imetrics.MetricValue
 	schedule     cron.Schedule
 	// run:
-	ctx          context.Context
+	vvmCtx       context.Context
 	projErrState int32 // 0 - no error, 1 - error
 	appParts     appparts.IAppPartitions
 	retrierCfg   retrier.Config
@@ -54,9 +54,9 @@ func (a *scheduler) Prepare() {
 	a.name = fmt.Sprintf("%v [idx: %d, id: %d]", a.job, a.conf.AppWSIdx, a.conf.Workspace)
 }
 
-func (a *scheduler) Run(ctx context.Context) {
-	a.ctx = ctx
-	err := retrier.RetryNoResult(ctx, a.retrierCfg, a.init)
+func (a *scheduler) Run(vvmCtx context.Context) {
+	a.vvmCtx = vvmCtx
+	err := retrier.RetryNoResult(vvmCtx, a.retrierCfg, a.init)
 	if err != nil {
 		// context.Canceled is only possible here
 		// err is logged already by retrier OnError()
@@ -82,12 +82,12 @@ func (a *scheduler) runJob() {
 			}
 		}
 	}()
-	borrowedPartition, err = a.appParts.WaitForBorrow(a.ctx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Scheduler)
+	borrowedPartition, err = a.appParts.WaitForBorrow(a.vvmCtx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Scheduler)
 	if err != nil {
 		return
 	}
 	state := stateprovide.ProvideSchedulerStateFactory()(
-		a.ctx,
+		a.vvmCtx,
 		func() istructs.IAppStructs { return borrowedPartition.AppStructs() },
 		func() istructs.WSID { return a.conf.Workspace },
 		func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
@@ -107,7 +107,7 @@ func (a *scheduler) runJob() {
 		a.conf.HTTPClient,
 	)
 
-	if err = borrowedPartition.Invoke(a.ctx, a.job, state, state); err != nil {
+	if err = borrowedPartition.Invoke(a.vvmCtx, a.job, state, state); err != nil {
 		return
 	}
 	logger.VerboseCtx(a.logCtx, "job.success")
@@ -148,11 +148,11 @@ func (a *scheduler) init() (err error) {
 func (a *scheduler) keepRunning() {
 	now := a.conf.Time.Now()
 	nextTime := a.schedule.Next(now)
-	for a.ctx.Err() == nil {
+	for a.vvmCtx.Err() == nil {
 		logger.VerboseCtx(a.logCtx, "job.schedule", "now=", now, ",next=", nextTime)
 		timerChan := a.conf.Time.NewTimerChan(nextTime.Sub(now))
 		select {
-		case <-a.ctx.Done():
+		case <-a.vvmCtx.Done():
 			return
 		case now = <-timerChan:
 			logger.VerboseCtx(a.logCtx, "job.wake-up", now)

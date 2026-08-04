@@ -24,7 +24,7 @@ func (s commandProcessorState) CommandPrepareArgs() istructs.CommandPrepareArgs 
 }
 
 func implProvideCommandProcessorState(
-	ctx context.Context,
+	vvmCtx context.Context,
 	appStructsFunc state.AppStructsFunc,
 	wsidFunc state.WSIDFunc,
 	secretReader isecrets.ISecretReader,
@@ -40,7 +40,7 @@ func implProvideCommandProcessorState(
 	stateOpts state.StateOpts,
 	originFunc state.OriginFunc) state.IHostState {
 	state := &commandProcessorState{
-		hostState:          newHostState(ctx, "CommandProcessor", intentsLimit, appStructsFunc),
+		hostState:          newHostState(vvmCtx, "CommandProcessor", intentsLimit, appStructsFunc),
 		commandPrepareArgs: execCmdArgsFunc,
 	}
 
@@ -48,9 +48,9 @@ func implProvideCommandProcessorState(
 		return appStructsFunc().Events()
 	}
 
-	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
+	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(vvmCtx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 	state.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, cudFunc), S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
-	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET)
+	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(vvmCtx, ieventsFunc, wsidFunc), S_GET)
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
 	state.addStorage(sys.Storage_RequestSubject, storages.NewSubjectStorage(principalsFunc, tokenFunc), S_GET)
 	state.addStorage(sys.Storage_Result, storages.NewResultStorage(cmdResultBuilderFunc), S_INSERT)

@@ -40,7 +40,7 @@ import (
 type testState struct {
 	state.IState
 
-	ctx                   context.Context
+	stateCtx              context.Context
 	appStructs            istructs.IAppStructs
 	appDef                appdef.IAppDef
 	cud                   istructs.ICUD
@@ -74,7 +74,7 @@ type testState struct {
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
 	ts := &testState{}
-	ts.ctx = context.Background()
+	ts.stateCtx = context.Background()
 	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
 
@@ -343,13 +343,13 @@ func (ts *testState) buildState(processorKind int) {
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
-		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
+		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.stateCtx, appFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
 			IntentsLimit, BundlesLimit, stateOpts, ts.emailSender, ts.httpClient)
 	case ProcKind_CommandProcessor:
 		stateOpts := state.StateOpts{
 			UniquesHandler: ts.emulateUniquesHandler,
 		}
-		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
+		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.stateCtx, appFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, stateOpts, originFunc)
 	case ProcKind_QueryProcessor:
 		stateOpts := state.StateOpts{
@@ -357,7 +357,7 @@ func (ts *testState) buildState(processorKind int) {
 			UniquesHandler:           ts.emulateUniquesHandler,
 			FederationBlobHandler:    ts.emulateFederationBlob,
 		}
-		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
+		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.stateCtx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
 			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback, stateOpts, ts.httpClient)
 	}
 }

@@ -32,7 +32,7 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 		bb = append(bb, b)
 	}
 	h := &syncErrorHandler{ss: ss}
-	return pipeline.NewSyncPipeline(conf.Ctx, "PartitionSyncActualizer",
+	return pipeline.NewSyncPipeline(conf.VvmCtx, "PartitionSyncActualizer",
 		pipeline.WireFunc("Update event", func(_ context.Context, work processors.IProjectorWorkpiece) (err error) {
 			service.event = work.Event()
 			return nil
@@ -57,7 +57,7 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = stateprovide.ProvideSyncActualizerStateFactory()(
-		conf.Ctx,
+		conf.VvmCtx,
 		service.getIAppStructs,
 		state.SimplePartitionIDFunc(conf.Partition),
 		service.getWSID,
@@ -67,7 +67,7 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 		conf.IntentsLimit,
 		state.NullOpts,
 	)
-	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
+	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.VvmCtx, pipelineName,
 		pipeline.WireFunc("Projector",
 			func(ctx context.Context, work processors.IProjectorWorkpiece) error {
 				appPart := work.AppPartition()

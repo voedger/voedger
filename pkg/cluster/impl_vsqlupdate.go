@@ -34,7 +34,7 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
-		_, newID, err := dispatchDML(args.State.Context(), update, federation, itokens, time)
+		_, newID, err := dispatchDML(args.State.RequestContext(), update, federation, itokens, time)
 		if err != nil {
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}

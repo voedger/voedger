@@ -70,9 +70,9 @@ type mockActualizerRunner struct {
 	appparts.IActualizerRunner
 }
 
-func (ar *mockActualizerRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
-	ar.Called(ctx, app, partID, name)
-	ar.newAndRun(ctx, app, partID, appparts.ProcessorKind_Actualizer)
+func (ar *mockActualizerRunner) NewAndRun(vvmCtx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
+	ar.Called(vvmCtx, app, partID, name)
+	ar.newAndRun(vvmCtx, app, partID, appparts.ProcessorKind_Actualizer)
 }
 
 func (ar *mockActualizerRunner) SetAppPartitions(ap appparts.IAppPartitions) {
@@ -86,9 +86,9 @@ type mockSchedulerRunner struct {
 	appparts.ISchedulerRunner
 }
 
-func (sr *mockSchedulerRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName) {
-	sr.Called(ctx, app, partID, wsIdx, wsid, job)
-	sr.newAndRun(ctx, app, partID, appparts.ProcessorKind_Scheduler)
+func (sr *mockSchedulerRunner) NewAndRun(vvmCtx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName) {
+	sr.Called(vvmCtx, app, partID, wsIdx, wsid, job)
+	sr.newAndRun(vvmCtx, app, partID, appparts.ProcessorKind_Scheduler)
 }
 
 func (sr *mockSchedulerRunner) SetAppPartitions(ap appparts.IAppPartitions) {

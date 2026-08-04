@@ -27,12 +27,12 @@ func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 	return s.eventFunc()
 }
 
-func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
+func implProvideAsyncActualizerState(vvmCtx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
 	secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
 	intentsLimit, bundlesLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender, httpClient httpu.IHTTPClient) state.IBundledHostState {
 	state := &asyncActualizerState{
 		bundledHostState: &bundledHostState{
-			hostState:    newHostState(ctx, "AsyncActualizer", intentsLimit, appStructsFunc),
+			hostState:    newHostState(vvmCtx, "AsyncActualizer", intentsLimit, appStructsFunc),
 			bundlesLimit: bundlesLimit,
 			bundles:      make(map[appdef.QName]bundle),
 		},
@@ -43,10 +43,10 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.A
 		return appStructsFunc().Events()
 	}
 
-	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
+	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(vvmCtx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 	state.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 	state.addStorage(sys.Storage_Event, storages.NewEventStorage(eventFunc), S_GET)
-	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET|S_READ)
+	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(vvmCtx, ieventsFunc, wsidFunc), S_GET|S_READ)
 	state.addStorage(sys.Storage_SendMail, storages.NewSendMailStorage(emailSender), S_GET|S_INSERT)
 	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(httpClient), S_READ)
 	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, stateOpts.FederationCommandHandler), S_GET)

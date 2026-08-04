@@ -43,6 +43,14 @@ func TestHostState_BasicUsage(t *testing.T) {
 	require.NoError(hostState.ApplyIntents())
 }
 
+func TestHostState_RequestContext(t *testing.T) {
+	requestCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hostState := newHostState(requestCtx, "ForTest", 10, nil)
+
+	require.Same(t, requestCtx, hostState.RequestContext())
+}
+
 func mockedHostStateStructs() istructs.IAppStructs {
 	mv := &mockValue{}
 	mv.

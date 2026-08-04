@@ -15,16 +15,16 @@ import (
 
 type nullActualizerRunner struct{}
 
-func (nullActualizerRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ appdef.QName) {
-	<-ctx.Done()
+func (nullActualizerRunner) NewAndRun(vvmCtx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ appdef.QName) {
+	<-vvmCtx.Done()
 }
 
 func (nullActualizerRunner) SetAppPartitions(IAppPartitions) {}
 
 type nullSchedulerRunner struct{}
 
-func (nullSchedulerRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ istructs.AppWorkspaceNumber, _ istructs.WSID, _ appdef.QName) {
-	<-ctx.Done()
+func (nullSchedulerRunner) NewAndRun(vvmCtx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ istructs.AppWorkspaceNumber, _ istructs.WSID, _ appdef.QName) {
+	<-vvmCtx.Done()
 }
 
 func (nullSchedulerRunner) SetAppPartitions(IAppPartitions) {}
