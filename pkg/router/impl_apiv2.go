@@ -392,7 +392,6 @@ func requestHandlerV2_tempblobs_read(blobRequestHandler blobprocessor.IRequestHa
 		vars := mux.Vars(req)
 		suuid := iblobstorage.SUUID(vars[URLPlaceholder_blobIDOrSUUID])
 		if !blobRequestHandler.HandleReadTemp_V2(req.Context(), data.appQName, data.wsid, data.header,
-		
 			newBLOBOKResponseIniter(rw, http.StatusOK), func(sysErr coreutils.SysError) {
 				replyErr(rw, sysErr)
 			}, requestSender, suuid, iblobstoragestg.RLimiter_Null) {

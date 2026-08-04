@@ -170,7 +170,7 @@ func TestBasicUsage(t *testing.T) {
 			require.Zero(counter)
 			require.Equal(http.StatusInternalServerError, respMeta.StatusCode)
 			require.Equal(httpu.ContentType_ApplicationJSON, respMeta.ContentType)
-			require.Equal(coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: "fire error"}, elem) // nolint:errorlint
+			require.Equal(coreutils.SysError{HTTPStatus: http.StatusInternalServerError, Message: "fire error"}, elem) // nolint errorlint
 			counter++
 		}
 		require.NoError(*respErr)

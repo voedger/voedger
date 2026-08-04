@@ -5,12 +5,12 @@
 package query2
 
 import (
-	"slices"
-	"maps"
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"

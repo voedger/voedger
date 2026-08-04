@@ -152,7 +152,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					var respWriter bus.IResponseWriter
 					statusCode := http.StatusOK
 					if err != nil {
-						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
+						statusCode = err.(coreutils.SysError).HTTPStatus // nolint errorlint
 						logger.ErrorCtx(qwork.msg.RequestCtx(), "qp.error", err)
 					}
 					if qwork.responseWriterGetter == nil || qwork.responseWriterGetter() == nil {
