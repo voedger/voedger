@@ -17,14 +17,14 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		-- [~server.authnz.groles/cmp.cdoc.registry.Login.GlobalRoles~impl]
 		GlobalRoles varchar(1024),
 
-		-- Absent or false means that the canonical Login is enabled.
-		CanonicalLoginDisabled bool,
-
 		-- Login alias lifecycle state. AliasInProc is non-zero while the
 		-- async alias projector is applying an alias create, update, or clear.
 		AliasInProc int32,
 		Alias varchar,
 		AliasError varchar(1024)
+
+		-- Absent or false means that the canonical Login is enabled.
+		CanonicalLoginDisabled bool
 	);
 
 	-- Active sign-in alias index. SourceAppWSID and CDocLoginID point back to
