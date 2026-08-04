@@ -127,7 +127,7 @@ type IActualizerRunner interface {
 	SetAppPartitions(IAppPartitions)
 
 	// Creates and runs new async actualizer for specified application partition
-	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
+	NewAndRun(vvmCtx context.Context, app appdef.AppQName, partition istructs.PartitionID, projection appdef.QName)
 }
 
 // Scheduler runner.
@@ -140,7 +140,7 @@ type ISchedulerRunner interface {
 	SetAppPartitions(IAppPartitions)
 
 	// Creates and runs new specified job scheduler for specified application partition and workspace
-	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName)
+	NewAndRun(vvmCtx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName)
 
 	// SchedulersTime returns the time instance used by schedulers.
 	// In tests, this returns an isolated MockTime that can be advanced independently

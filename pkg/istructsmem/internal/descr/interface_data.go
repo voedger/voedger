@@ -9,6 +9,6 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 type Data struct {
 	Type
-	Ancestor    appdef.QName   `json:",omitempty"`
+	Ancestor    appdef.QName
 	Constraints map[string]any `json:",omitempty"`
 }

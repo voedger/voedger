@@ -84,6 +84,7 @@ func Test_BasicUsage(t *testing.T) {
 }
 
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) {
+	t.Helper()
 	require := require.New(t)
 	for s := range appdef.Singletons(appDef.Types()) {
 		if s.Singleton() {
@@ -306,7 +307,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		require.ErrorIs(err, testError)
 	})
 
-	t.Run("must error if some some singleton QName from storage is not well formed", func(t *testing.T) {
+	t.Run("must error if some singleton QName from storage is not well formed", func(t *testing.T) {
 		storage := teststore.NewStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()

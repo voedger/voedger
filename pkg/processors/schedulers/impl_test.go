@@ -47,12 +47,12 @@ func TestSchedulerLogging(t *testing.T) {
 		isolatedTime := sr.SchedulersTime().(testingu.IMockTime)
 		isolatedTime.FireNextTimerImmediately()
 
-		ctx, cancel := context.WithCancel(context.Background())
+		vvmCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
-			sr.NewAndRun(ctx, appName, 0, 0, wsid, jobQName)
+			sr.NewAndRun(vvmCtx, appName, 0, 0, wsid, jobQName)
 		}()
 
 		logCap.EventuallyHasLine("job.schedule", vapp, wsidStr, extension)
@@ -74,12 +74,12 @@ func TestSchedulerLogging(t *testing.T) {
 		isolatedTime := sr.SchedulersTime().(testingu.IMockTime)
 		isolatedTime.FireNextTimerImmediately()
 
-		ctx, cancel := context.WithCancel(context.Background())
+		vvmCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
-			sr.NewAndRun(ctx, appName, 0, 0, wsid, jobQName)
+			sr.NewAndRun(vvmCtx, appName, 0, 0, wsid, jobQName)
 		}()
 
 		logCap.EventuallyHasLine("job.error", vapp, wsidStr, extension, "borrow failed")

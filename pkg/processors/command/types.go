@@ -137,9 +137,9 @@ type reusableHostState struct {
 	state state.IHostState
 }
 
-func newReusableHostState(ctx context.Context, secretReader isecrets.ISecretReader) *reusableHostState {
+func newReusableHostState(vvmCtx context.Context, secretReader isecrets.ISecretReader) *reusableHostState {
 	b := &reusableHostState{}
-	b.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx,
+	b.state = stateprovide.ProvideCommandProcessorStateFactory()(vvmCtx,
 		func() istructs.IAppStructs { return b.wp.appStructs },
 		func() istructs.WSID { return b.wp.cmdMes.WSID() },
 		secretReader,

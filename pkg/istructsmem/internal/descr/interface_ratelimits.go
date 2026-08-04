@@ -26,5 +26,5 @@ type Limit struct {
 
 type LimitFilter struct {
 	Option string // ALL or EACH
-	Filter
+	Filter        //nolint:embeddedstructfieldcheck // Option must precede the flattened Filter fields to keep JSON key order
 }

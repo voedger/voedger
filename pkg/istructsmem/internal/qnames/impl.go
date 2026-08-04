@@ -66,7 +66,6 @@ func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versio
 
 // Collect all system and application QName IDs
 func (names *QNames) collectAll(appDef appdef.IAppDef) error {
-
 	// system QNames
 	names.
 		collectSys(appdef.NullQName, istructs.NullQNameID).
@@ -99,13 +98,14 @@ func (names *QNames) collect(qName appdef.QName) error {
 	}
 
 	for id := names.lastID + 1; id < MaxAvailableQNameID; id++ {
-		if _, ok := names.ids[id]; !ok {
-			names.qNames[qName] = id
-			names.ids[id] = qName
-			names.lastID = id
-			names.changes++
-			return nil
+		if _, ok := names.ids[id]; ok {
+			continue
 		}
+		names.qNames[qName] = id
+		names.ids[id] = qName
+		names.lastID = id
+		names.changes++
+		return nil
 	}
 
 	return ErrQNameIDsExceeds
@@ -120,7 +120,6 @@ func (names *QNames) collectSys(qName appdef.QName, id istructs.QNameID) *QNames
 
 // loads all stored QNames from storage
 func (names *QNames) load(storage istorage.IAppStorage, versions *vers.Versions) (err error) {
-
 	ver := versions.Get(vers.SysQNamesVersion)
 	switch ver {
 	case vers.UnknownVersion: // no sys.QName storage exists
@@ -134,7 +133,6 @@ func (names *QNames) load(storage istorage.IAppStorage, versions *vers.Versions)
 
 // loads all stored QNames from storage version ver01
 func (names *QNames) load01(storage istorage.IAppStorage) error {
-
 	readQName := func(cCols, value []byte) error {
 		qName, err := appdef.ParseQName(string(cCols))
 		if err != nil {
@@ -179,12 +177,12 @@ func (names *QNames) store(storage istorage.IAppStorage, versions *vers.Versions
 		}
 	}
 
-	if err = storage.PutBatch(batch); err != nil {
+	if err := storage.PutBatch(batch); err != nil {
 		return fmt.Errorf("error store application QName IDs to storage: %w", err)
 	}
 
 	if ver := versions.Get(vers.SysQNamesVersion); ver != latestVersion {
-		if err = versions.Put(vers.SysQNamesVersion, latestVersion); err != nil {
+		if err := versions.Put(vers.SysQNamesVersion, latestVersion); err != nil {
 			return fmt.Errorf("error store QNames system view version: %w", err)
 		}
 	}

@@ -22,21 +22,21 @@ type schedulerState struct {
 	*hostState
 }
 
-func implProvideSchedulerState(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
+func implProvideSchedulerState(vvmCtx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
 	secretReader isecrets.ISecretReader, tokensFunc itokens.ITokens, federationFunc federation.IFederation, unixTimeFunc state.UnixTimeFunc,
 	intentsLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender, httpClient httpu.IHTTPClient) state.IHostState {
 
 	state := &schedulerState{
-		hostState: newHostState(ctx, "Scheduler", intentsLimit, appStructsFunc),
+		hostState: newHostState(vvmCtx, "Scheduler", intentsLimit, appStructsFunc),
 	}
 
 	ieventsFunc := func() istructs.IEvents {
 		return appStructsFunc().Events()
 	}
 
-	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
+	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(vvmCtx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 	state.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
-	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET|S_READ)
+	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(vvmCtx, ieventsFunc, wsidFunc), S_GET|S_READ)
 	state.addStorage(sys.Storage_SendMail, storages.NewSendMailStorage(emailSender), S_GET|S_INSERT)
 	state.addStorage(sys.Storage_HTTP, storages.NewHTTPStorage(httpClient), S_READ)
 	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, stateOpts.FederationCommandHandler), S_GET)

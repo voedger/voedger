@@ -104,7 +104,7 @@ type IState interface {
 
 	App() appdef.AppQName
 	AppStructs() IAppStructs
-	Context() context.Context
+	RequestContext() context.Context
 }
 
 type IIntents interface {
