@@ -131,23 +131,27 @@ func cmdResetPasswordByEmailExec(args istructs.ExecCommandArgs) (err error) {
 	return ChangePassword(login, args.State, args.Intents, args.WSID, appName, newPwd)
 }
 
-func resolveResetPasswordLogin(email, appName string, st istructs.IState, wsid istructs.WSID, tokens itokens.ITokens, fed federationCaller) (resetPasswordLogin, error) {
-	cdocLogin, loginExists, err := GetCDocLogin(email, st, wsid, appName)
+func resolveResetPasswordLogin(loginOrAlias, appName string, st istructs.IState, wsid istructs.WSID, tokens itokens.ITokens, fed federationCaller) (resetPasswordLogin, error) {
+	cdocLogin, loginExists, err := GetCDocLogin(loginOrAlias, st, wsid, appName)
 	if err != nil {
 		return resetPasswordLogin{}, err
 	}
 	if loginExists {
+		if !isCanonicalLoginEnabled(cdocLogin) {
+			return resetPasswordLogin{}, errResetPasswordLoginDoesNotExist()
+		}
 		profileWSID := cdocLogin.AsInt64(authnz.Field_WSID)
 		if err := ensureResetPasswordProfileReady(profileWSID); err != nil {
 			return resetPasswordLogin{}, err
 		}
+		canonicalPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, loginOrAlias, wsid.ClusterID())
 		return resetPasswordLogin{
 			profileWSID:         profileWSID,
-			canonicalPseudoWSID: int64(wsid),
+			canonicalPseudoWSID: int64(canonicalPseudoWSID),
 		}, nil
 	}
 
-	loginAlias, err := getActiveLoginAlias(st, wsid, appName, email)
+	loginAlias, err := getActiveLoginAlias(st, wsid, appName, loginOrAlias)
 	if err != nil {
 		return resetPasswordLogin{}, err
 	}
@@ -163,7 +167,7 @@ func resolveResetPasswordLogin(email, appName string, st istructs.IState, wsid i
 	if active, ok := sourceLoginMap[appdef.SystemField_IsActive].(bool); ok && !active {
 		return resetPasswordLogin{}, errResetPasswordLoginDoesNotExist()
 	}
-	if str(sourceLoginMap[field_Alias]) != email {
+	if str(sourceLoginMap[field_Alias]) != loginOrAlias {
 		return resetPasswordLogin{}, errResetPasswordLoginDoesNotExist()
 	}
 

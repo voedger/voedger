@@ -74,7 +74,7 @@ Shared concepts
 ### Shared concepts
 
 - `[(registry.Login)]`
-  - Registry CDoc holding the primary sign-in identifier, password hash, subject kind, profile workspace fields, alias snapshot, and active flag. Produced and consumed by `[[Authentication]]` during sign-in.
+  - Registry CDoc holding the primary sign-in identifier, `CanonicalLoginEnablement`, password hash, subject kind, profile workspace fields, alias snapshot, and active flag. `CanonicalLoginEnablement` is stored independently of `sys.IsActive` and controls only direct canonical PrincipalToken issue and password-reset initiation.
   - decl: [pkg/registry/appws.vsql#Login](../../../../pkg/registry/appws.vsql)
   - impl: [pkg/registry/impl_createlogin.go#createLogin](../../../../pkg/registry/impl_createlogin.go)
 

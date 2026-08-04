@@ -93,24 +93,114 @@ Feature: Authentication
       Then the alias change is rejected
       And the response indicates incorrect login format
 
-  Rule: Login alias state visibility
+  Rule: Login state visibility
 
-    Scenario Outline: Reading a login's alias state requires a System Principal Token
-      Given a user login exists with an active login alias
-      When <caller> reads the login's alias state
+    Scenario Outline: Reading a Login CDoc is limited to System and the target registry WorkspaceOwner
+      Given User Login "jsmith" exists
+      When <caller> reads the Login CDoc of User Login "jsmith"
       Then the read <result>
 
       Examples:
-        | caller                                    | result      |
-        | System                                    | succeeds    |
-        | a caller without a System Principal Token | is rejected |
+        | caller                                             | result      |
+        | System                                             | succeeds    |
+        | a WorkspaceOwner of the target registry workspace | succeeds    |
+        | a WorkspaceOwner of another workspace             | is rejected |
+        | a caller with neither authorization                | is rejected |
 
-    Scenario: A System read returns the login's alias lifecycle fields
-      Given a user login "jsmith" with active alias "j.smith", no alias change in progress, and no alias error
-      When System reads the login's alias state
-      Then Alias is "j.smith"
+    Scenario: A target registry WorkspaceOwner read returns Login state
+      Given User Login "jsmith" has active LoginAlias "j.smith", no alias change in progress, and no alias error
+      And CanonicalLoginEnablement of User Login "jsmith" is Disabled
+      When a WorkspaceOwner of the target registry workspace reads the Login CDoc of User Login "jsmith"
+      Then the Login CDoc indicates CanonicalLoginEnablement is Disabled
+      And Alias is "j.smith"
       And AliasInProc is 0
       And AliasError is empty
+
+  Rule: Canonical Login enablement management
+
+    Scenario Outline: System sets CanonicalLoginEnablement idempotently
+      Given CanonicalLoginEnablement of User Login "jsmith" is <initial state>
+      When System <operation> the canonical Login "jsmith" twice
+      Then System reads CanonicalLoginEnablement of User Login "jsmith" as "<resulting state>"
+
+      Examples:
+        | initial state | operation | resulting state |
+        | Enabled       | disables  | Disabled        |
+        | Disabled      | disables  | Disabled        |
+        | Disabled      | enables   | Enabled         |
+        | Enabled       | enables   | Enabled         |
+
+    Scenario Outline: Canonical Login enablement management requires a System PrincipalToken
+      Given CanonicalLoginEnablement of User Login "jsmith" is Enabled
+      When a caller without a System PrincipalToken <operation> the canonical Login "jsmith"
+      Then the enablement operation is rejected
+      And CanonicalLoginEnablement of User Login "jsmith" remains Enabled
+
+      Examples:
+        | operation |
+        | disables  |
+        | enables   |
+
+  Rule: Disabled canonical Login behavior
+
+    Scenario: Disabling canonical Login preserves its active LoginAlias
+      Given User Login "jsmith@example.com" has active LoginAlias "j.smith@example.com"
+      When System disables the canonical Login "jsmith@example.com"
+      Then CanonicalLoginEnablement of User Login "jsmith@example.com" is Disabled
+      And LoginAlias "j.smith@example.com" remains active for User Login "jsmith@example.com"
+
+    Scenario Outline: Disabled canonical Login rejects only canonical entry operations
+      Given CanonicalLoginEnablement of User Login "jsmith@example.com" is Disabled
+      When Client <operation>
+      Then the response status is "<status>"
+      And the response is the same as for <public failure>
+      And <observable result>
+
+      Examples:
+        | operation                                                                      | status           | public failure                     | observable result                              |
+        | signs in using canonical Login "jsmith@example.com" and the correct password   | 401 Unauthorized | an unknown Login or wrong password | no PrincipalToken is returned                  |
+        | initiates password reset using canonical Login "jsmith@example.com"            | 400 Bad Request  | an unknown Login                   | no password-reset verification code is issued  |
+
+    Scenario: Active LoginAlias sign-in is unaffected by canonical Login disablement
+      Given User Login "jsmith@example.com" has active LoginAlias "j.smith@example.com"
+      And CanonicalLoginEnablement of User Login "jsmith@example.com" is Disabled
+      And ProfileWorkspace of User Login "jsmith@example.com" is ready
+      When Client signs in using LoginAlias "j.smith@example.com" and the correct password
+      Then the response contains PrincipalToken, expiresInSeconds, and profileWSID
+
+    Scenario: Active LoginAlias password reset is unaffected by canonical Login disablement
+      Given User Login "jsmith@example.com" has active LoginAlias "j.smith@example.com"
+      And CanonicalLoginEnablement of User Login "jsmith@example.com" is Disabled
+      When Client initiates password reset using LoginAlias "j.smith@example.com"
+      And Client verifies the reset code sent to "j.smith@example.com"
+      And Client resets the password with the VerifiedValueToken
+      Then Client can sign in using LoginAlias "j.smith@example.com" and the new password
+      And CanonicalLoginEnablement of User Login "jsmith@example.com" remains Disabled
+
+    Scenario: Password reset initiated before canonical Login disablement can complete
+      Given User Login "jsmith@example.com" has active LoginAlias "j.smith@example.com"
+      And Client initiated password reset using canonical Login "jsmith@example.com"
+      And Client verified the reset code and received a VerifiedValueToken
+      And System disabled the canonical Login "jsmith@example.com"
+      When Client resets the password with the VerifiedValueToken
+      Then Client can sign in using active LoginAlias "j.smith@example.com" and the new password
+      And CanonicalLoginEnablement of User Login "jsmith@example.com" remains Disabled
+
+    Scenario: Disabled canonical identifier remains reserved
+      Given CanonicalLoginEnablement of User Login "jsmith@example.com" is Disabled
+      When Client creates User Login "jsmith@example.com" again
+      Then the response status is "409 Conflict"
+
+    Scenario Outline: Re-enabling canonical Login restores canonical entry operations
+      Given CanonicalLoginEnablement of User Login "jsmith@example.com" is Disabled
+      When System enables the canonical Login "jsmith@example.com"
+      And Client <operation>
+      Then <observable result>
+
+      Examples:
+        | operation                                                                     | observable result                            |
+        | signs in using canonical Login "jsmith@example.com" and the existing password | a new PrincipalToken is returned             |
+        | initiates password reset using canonical Login "jsmith@example.com"           | a password-reset verification code is issued |
 
   Rule: Sign-in and profile readiness
 

@@ -17,6 +17,9 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		-- [~server.authnz.groles/cmp.cdoc.registry.Login.GlobalRoles~impl]
 		GlobalRoles varchar(1024),
 
+		-- Absent or false means that the canonical Login is enabled.
+		CanonicalLoginDisabled bool,
+
 		-- Login alias lifecycle state. AliasInProc is non-zero while the
 		-- async alias projector is applying an alias create, update, or clear.
 		AliasInProc int32,
@@ -152,12 +155,19 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	 	GlobalRoles text(1024)
 	);
 
+	TYPE SetCanonicalLoginEnablementParams (
+		Login text NOT NULL,
+		AppName text NOT NULL,
+		Enabled bool NOT NULL
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND ChangePassword (ChangePasswordParams, UNLOGGED ChangePasswordUnloggedParams);
 		COMMAND ResetPasswordByEmail (ResetPasswordByEmailParams, UNLOGGED ResetPasswordByEmailUnloggedParams);
 		COMMAND CreateLogin (CreateLoginParams, UNLOGGED CreateLoginUnloggedParams);
 		COMMAND CreateEmailLogin (CreateEmailLoginParams, UNLOGGED CreateEmailLoginUnloggedParams); -- [~server.users/cmp.registry.CreateEmailLogin.vsql~impl]
 		COMMAND UpdateGlobalRoles (UpdateGlobalRolesParams); -- [~server.authnz.groles/cmp.c.registry.UpdateGlobalRoles~impl]
+		COMMAND SetCanonicalLoginEnablement (SetCanonicalLoginEnablementParams);
 		-- Login alias management commands. Public initiation and internal
 		-- index maintenance are separated because aliases route by alias value.
 		COMMAND InitiateSetLoginAlias (InitiateSetLoginAliasParams);
@@ -179,6 +189,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	GRANT EXECUTE ON COMMAND ChangePassword TO sys.Anonymous;
 	GRANT EXECUTE ON COMMAND ResetPasswordByEmail TO sys.Anonymous;
 	GRANT EXECUTE ON COMMAND CreateLogin TO sys.Anonymous;
+	GRANT EXECUTE ON COMMAND SetCanonicalLoginEnablement TO sys.System;
 	-- Alias management is intentionally System-only; end users do not manage
 	-- aliases directly.
 	GRANT EXECUTE ON COMMAND InitiateSetLoginAlias TO sys.System;
