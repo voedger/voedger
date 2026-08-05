@@ -7,6 +7,7 @@ package iextenginebuiltin
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -28,7 +29,7 @@ func (e extensionEngine) SetLimits(iextengine.ExtensionLimits) {}
 func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("extension %s panic: %v", extName, r)
+			err = fmt.Errorf("extension %s panic: %v\n%s", extName, r, debug.Stack())
 		}
 	}()
 	if f, ok := e.statelessFuncs[extName]; ok {
