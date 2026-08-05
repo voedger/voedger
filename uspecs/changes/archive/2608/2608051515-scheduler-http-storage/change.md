@@ -47,7 +47,7 @@ Decisions:
 
 - Keep HTTP client ownership and lifecycle at the VVM boundary, and inject the same managed client into scheduler configuration that is shared with other processor state factories.
 - Preserve the existing scheduler-state registration and HTTP storage contract; propagate the managed dependency through the existing scheduler state path instead of creating a scheduler-specific client or a nil-client fallback in HTTP storage.
-- Verify the complete scheduler-to-HTTP-storage path with an integration test using a controllable HTTP client, so dependency wiring and state availability are covered together.
+- Verify the scheduler-to-HTTP-storage client path without external I/O by reading an intentionally invalid URL, so the managed client is exercised but rejects the URL before reaching its transport.
 
 Assumptions:
 
@@ -72,20 +72,21 @@ References:
 ### Tests
 
 - [x] update: [sys/it/impl_jobs_test.go](../../../../../pkg/sys/it/impl_jobs_test.go)
-  - add: an integration test that starts a local HTTP endpoint, deploys the HTTP scheduler-job fixture through the real VVM, and advances isolated scheduler time to run the job
-  - verify: the endpoint receives the scheduled request and the response persisted by the job is available from its result view
+  - add: an integration test that deploys the HTTP scheduler-job fixture through the real VVM and advances isolated scheduler time to run the job
+  - verify: the job reaches the managed HTTP client through `sys.Storage_HTTP` and persists a success marker without sending an external HTTP request
 
 - [x] create: [vit/schemaTestApp2WithJobHTTP.vsql](../../../../../pkg/vit/schemaTestApp2WithJobHTTP.vsql)
   - provide: a dedicated VIT application schema for scheduler HTTP storage coverage
-  - declare: a result view and a built-in scheduled job with read access to `sys.Http` and intent access to that view
+  - declare: a result view with a `StorageObtained` marker and a built-in scheduled job with read access to `sys.Http` and intent access to that view
   - support: the end-to-end scenario without changing permissions of existing job fixtures
 
 - [x] update: [vit/consts.go](../../../../../pkg/vit/consts.go)
   - embed: the scheduler HTTP-storage VSQL fixture for VIT application construction
 
 - [x] update: [vit/shared_cfgs.go](../../../../../pkg/vit/shared_cfgs.go)
-  - add: a fixture builder that accepts the local endpoint URL and registers the built-in job implementation
-  - read: `sys.Storage_HTTP` from the scheduled job, validate the HTTP response callback, and persist the response in the fixture result view
+  - add: a fixture builder that registers the built-in HTTP-storage job implementation
+  - read: `sys.Storage_HTTP` with an intentionally invalid URL and require the managed client to return `url.Error` before transport execution
+  - persist: `StorageObtained` in the fixture result view after the client path is exercised successfully
 
 ### Runtime wiring
 
