@@ -7,8 +7,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	VIEW HTTPResults (
 		RequestID int32 NOT NULL,
 		Dummy int32 NOT NULL,
-		Body text NOT NULL,
-		StatusCode int32 NOT NULL,
+		StorageObtained bool NOT NULL,
 		PRIMARY KEY((RequestID), Dummy)
 	) AS RESULT OF JobHTTP;
 
