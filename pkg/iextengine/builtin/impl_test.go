@@ -7,7 +7,6 @@ package iextenginebuiltin
 import (
 	"context"
 	"errors"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -93,6 +92,6 @@ func Test_Panics(t *testing.T) {
 	require.ErrorContains(err, "goroutine ")
 	require.ErrorContains(err, "[running]:")
 	require.ErrorContains(err, "panickingExtension")
-	log.Println(err.Error())
+	t.Logf(err.Error())
 
 }
