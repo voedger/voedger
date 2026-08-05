@@ -8,6 +8,8 @@ package sys_it
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -155,6 +157,51 @@ func TestJobs_SendEmail(t *testing.T) {
 	require.Equal(t, "from@test.com", email.From)
 	require.Equal(t, []string{"to@test.com"}, email.To)
 	require.Equal(t, "Test body", email.Body)
+}
+
+func TestJobs_HTTPStorage(t *testing.T) {
+	const expectedBody = "scheduler HTTP response"
+	requestReceived := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case requestReceived <- r.Method + " " + r.URL.Path:
+		default:
+		}
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte(expectedBody)); err != nil {
+			t.Errorf("write HTTP response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJobHTTP(server.URL), it.WithUserLogin("login", "1")),
+	)
+	vit := it.NewVIT(t, &cfg)
+	defer vit.TearDown()
+
+	anyAppWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID)
+	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app2).Token
+	vit.SchedulerTimeAdd(testJobFireInterval)
+
+	var result map[string]interface{}
+	require.Eventually(t, func() bool {
+		body := `{"args":{"Query":"select * from a1.app2pkg.HTTPResults where RequestID = 1 and Dummy = 1"},"elements":[{"fields":["Result"]}]}`
+		resp := vit.PostApp(istructs.AppQName_test1_app2, anyAppWSID, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysToken))
+		if resp.IsEmpty() {
+			return false
+		}
+		return json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &result) == nil
+	}, 5*time.Second, 100*time.Millisecond)
+
+	select {
+	case request := <-requestReceived:
+		require.Equal(t, "GET /", request)
+	default:
+		t.Fatal("scheduler HTTP request was not received")
+	}
+	require.Equal(t, expectedBody, result["Body"])
+	require.Equal(t, float64(http.StatusOK), result["StatusCode"])
 }
 
 func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedMinimalCounterValue int) {

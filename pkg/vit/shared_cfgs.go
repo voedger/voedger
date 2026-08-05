@@ -227,6 +227,61 @@ func ProvideApp2WithJobSendMail(apis builtinapps.APIs, cfg *istructsmem.AppConfi
 	}
 }
 
+func ProvideApp2WithJobHTTP(url string) builtinapps.Builder {
+	return func(_ builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
+		sysPackageFS := sysprovide.Provide(cfg)
+		app2PackageFS := parser.PackageFS{
+			Path: app2PkgPath,
+			FS:   SchemaTestApp2WithJobHTTPFS,
+		}
+		cfg.AddJobs(istructsmem.BuiltinJob{
+			Name: appdef.NewQName(app2PkgName, "JobHTTP"),
+			Func: func(st istructs.IState, intents istructs.IIntents) error {
+				httpKey, err := st.KeyBuilder(sys.Storage_HTTP, appdef.NullQName)
+				if err != nil {
+					return err
+				}
+				httpKey.PutString(sys.Storage_HTTP_Field_URL, url)
+
+				var body string
+				var statusCode int32
+				responseRead := false
+				err = st.Read(httpKey, func(_ istructs.IKey, value istructs.IStateValue) error {
+					responseRead = true
+					body = value.AsString(sys.Storage_HTTP_Field_Body)
+					statusCode = value.AsInt32(sys.Storage_HTTP_Field_StatusCode)
+					return nil
+				})
+				if err != nil {
+					return err
+				}
+				if !responseRead {
+					return errors.New("scheduler HTTP storage returned no response")
+				}
+
+				resultKey, err := st.KeyBuilder(sys.Storage_View, appdef.NewQName(app2PkgName, "HTTPResults"))
+				if err != nil {
+					return err
+				}
+				resultKey.PutInt32("RequestID", 1)
+				resultKey.PutInt32("Dummy", 1)
+				result, err := intents.NewValue(resultKey)
+				if err != nil {
+					return err
+				}
+				result.PutString("Body", body)
+				result.PutInt32("StatusCode", statusCode)
+				return nil
+			},
+		})
+		return builtinapps.Def{
+			AppQName:                istructs.AppQName_test1_app2,
+			Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
+			AppDeploymentDescriptor: TestAppDeploymentDescriptor,
+		}
+	}
+}
+
 func ProvideApp1(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 	// sys package
 	sysPackageFS := sysprovide.Provide(cfg)
