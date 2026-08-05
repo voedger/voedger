@@ -92,6 +92,6 @@ func Test_Panics(t *testing.T) {
 	require.ErrorContains(err, "goroutine ")
 	require.ErrorContains(err, "[running]:")
 	require.ErrorContains(err, "panickingExtension")
-	t.Logf(err.Error())
+	t.Log(err.Error())
 
 }
