@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -224,6 +225,54 @@ func ProvideApp2WithJobSendMail(apis builtinapps.APIs, cfg *istructsmem.AppConfi
 			EnginePoolSize:   appparts.PoolSize(1, 1, 1, 1),
 			NumAppWorkspaces: 1,
 		},
+	}
+}
+
+func ProvideApp2WithJobHTTP() builtinapps.Builder {
+	return func(_ builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
+		sysPackageFS := sysprovide.Provide(cfg)
+		app2PackageFS := parser.PackageFS{
+			Path: app2PkgPath,
+			FS:   SchemaTestApp2WithJobHTTPFS,
+		}
+		cfg.AddJobs(istructsmem.BuiltinJob{
+			Name: appdef.NewQName(app2PkgName, "JobHTTP"),
+			Func: func(st istructs.IState, intents istructs.IIntents) error {
+				// try to use the http storage
+				httpKey, err := st.KeyBuilder(sys.Storage_HTTP, appdef.NullQName)
+				if err != nil {
+					return err
+				}
+				httpKey.PutString(sys.Storage_HTTP_Field_URL, "://invalid")
+				err = st.Read(httpKey, func(istructs.IKey, istructs.IStateValue) error {
+					return errors.New("unexpected HTTP storage response")
+				})
+				var urlErr *url.Error
+				if !errors.As(err, &urlErr) {
+					return errors.New("HTTP storage did not return the expected invalid URL error")
+				}
+
+				// if the storage is used without errors, i.e. underlying IHTTPClient is initialized correctly
+				// then set StorageObtained to check it in the test
+				resultKey, err := st.KeyBuilder(sys.Storage_View, appdef.NewQName(app2PkgName, "HTTPResults"))
+				if err != nil {
+					return err
+				}
+				resultKey.PutInt32("RequestID", 1)
+				resultKey.PutInt32("Dummy", 1)
+				result, err := intents.NewValue(resultKey)
+				if err != nil {
+					return err
+				}
+				result.PutBool("StorageObtained", true)
+				return nil
+			},
+		})
+		return builtinapps.Def{
+			AppQName:                istructs.AppQName_test1_app2,
+			Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
+			AppDeploymentDescriptor: TestAppDeploymentDescriptor,
+		}
 	}
 }
 

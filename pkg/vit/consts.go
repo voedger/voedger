@@ -39,6 +39,8 @@ var (
 	SchemaTestApp2WithJobFS embed.FS
 	//go:embed schemaTestApp2WithJobSendMail.vsql
 	SchemaTestApp2WithJobSendMailFS embed.FS
+	//go:embed schemaTestApp2WithJobHTTP.vsql
+	SchemaTestApp2WithJobHTTPFS embed.FS
 
 	DefaultTestAppEnginesPool   = appparts.PoolSize(10, 10, 20, 10)
 	TestAppDeploymentDescriptor = appparts.AppDeploymentDescriptor{
