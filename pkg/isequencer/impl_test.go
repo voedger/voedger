@@ -385,6 +385,43 @@ func TestNextNumberSourceOrder(t *testing.T) {
 	})
 }
 
+func TestSingletonIDCorruptsSequenceAfterRecovery(t *testing.T) {
+	require := require.New(t)
+	mockTime := testingu.MockTime
+
+	const (
+		seqID        SeqID  = 1
+		singletonID  Number = 65537 // singleton IDs start from 65536
+		initialValue Number = 200001
+	)
+
+	// PLog contains a singleton CUD with ID below initialValue.
+	// This simulates what happens during ActualizeSequencesFromPLog when
+	// singleton CDocs are included in the PLog entries.
+	storage := NewMockStorage()
+	storage.SetPLog(map[PLogOffset][]SeqValue{
+		PLogOffset(1): {
+			{Key: NumberKey{WSID: 1, SeqID: seqID}, Value: singletonID},
+		},
+	})
+
+	params := NewDefaultParams(map[WSKind]map[SeqID]Number{
+		1: {seqID: initialValue},
+	})
+
+	seq, cleanup := New(params, storage, mockTime)
+	defer cleanup()
+
+	// After actualization, toBeFlushed contains singletonID (65537) for seqID.
+	// Next() should return initialValue (200001), not singletonID+1 (65538).
+	offset := WaitForStart(t, seq, 1, 1, true)
+	require.Equal(PLogOffset(2), offset)
+
+	num, err := seq.Next(seqID)
+	require.NoError(err)
+	require.Equal(initialValue, num, "Next() must return initialValue, not singletonID+1")
+}
+
 func TestWrongCacheSize(t *testing.T) {
 	require.Panics(t, func() { New(Params{LRUCacheSize: -1}, nil, nil) })
 }
