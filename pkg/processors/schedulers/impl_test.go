@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"iter"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -18,9 +19,15 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/iextengine"
+	iextenginebuiltin "github.com/voedger/voedger/pkg/iextengine/builtin"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
+
+func panickingSchedulerExtension(context.Context, iextengine.IExtensionIO) error {
+	panic("scheduler extension boom")
+}
 
 func TestSchedulerLogging(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
@@ -87,6 +94,56 @@ func TestSchedulerLogging(t *testing.T) {
 		cancel()
 		<-done
 	})
+
+	t.Run("built-in extension panic log", func(t *testing.T) {
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		fullJobQName := appDef.FullQName(jobQName)
+		extEngineFactory := iextenginebuiltin.ProvideExtensionEngineFactory(iextengine.BuiltInAppExtFuncs{
+			appName: iextengine.BuiltInExtFuncs{
+				fullJobQName: panickingSchedulerExtension,
+			},
+		}, nil)
+		extEngines, err := extEngineFactory.New(context.Background(), appName, nil, nil, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		extEngine := extEngines[0]
+		defer extEngine.Close(context.Background())
+
+		mockParts := &mockAppPartitions{appDef: appDef, part: &mockAppPartition{
+			invoke: func(ctx context.Context, _ appdef.QName, state istructs.IState, intents istructs.IIntents) error {
+				return extEngine.Invoke(ctx, fullJobQName, iextengine.NewExtensionIO(appDef, state, intents))
+			},
+		}}
+
+		mockTime := testingu.NewMockTime()
+		sr := newSchedulers(BasicSchedulerConfig{Time: mockTime})
+		sr.SetAppPartitions(mockParts)
+
+		isolatedTime := sr.SchedulersTime().(testingu.IMockTime)
+		isolatedTime.FireNextTimerImmediately()
+
+		vvmCtx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			sr.NewAndRun(vvmCtx, appName, 0, 0, wsid, jobQName)
+		}()
+		defer func() {
+			cancel()
+			<-done
+		}()
+
+		panicMessage := "extension " + fullJobQName.String() + " panic: scheduler extension boom"
+		logCap.EventuallyHasLine("level=ERROR", "stage=job.error", vapp, wsidStr, extension, panicMessage, "goroutine ", "[running]:", "panickingSchedulerExtension")
+
+		for _, line := range strings.Split(logCap.String(), "\n") {
+			if strings.Contains(line, "stage=job.error") {
+				t.Logf("actual built-in extension panic log:\n%s", line)
+				break
+			}
+		}
+	})
 }
 
 type mockAppPartitions struct {
@@ -124,7 +181,9 @@ func (m *mockAppPartitions) UpgradeAppDef(_ appdef.AppQName, _ appdef.IAppDef) {
 	panic("not implemented")
 }
 
-type mockAppPartition struct{}
+type mockAppPartition struct {
+	invoke func(context.Context, appdef.QName, istructs.IState, istructs.IIntents) error
+}
 
 func (m *mockAppPartition) App() appdef.AppQName             { panic("not implemented") }
 func (m *mockAppPartition) ID() istructs.PartitionID         { panic("not implemented") }
@@ -133,7 +192,10 @@ func (m *mockAppPartition) Release()                         {}
 func (m *mockAppPartition) DoSyncActualizer(_ context.Context, _ pipeline.IWorkpiece) error {
 	panic("not implemented")
 }
-func (m *mockAppPartition) Invoke(_ context.Context, _ appdef.QName, _ istructs.IState, _ istructs.IIntents) error {
+func (m *mockAppPartition) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
+	if m.invoke != nil {
+		return m.invoke(ctx, name, state, intents)
+	}
 	return nil
 }
 func (m *mockAppPartition) IsOperationAllowed(_ appdef.IWorkspace, _ appdef.OperationKind, _ appdef.QName, _ []appdef.FieldName, _ []appdef.QName) (bool, error) {

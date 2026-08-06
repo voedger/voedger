@@ -72,6 +72,13 @@ A key-value pair that provides additional context to log entries. Attributes are
 - Affected parts of both APIv1 and APIv2 must have the same logging, except when an attribute is not applicable in one of the API versions — in that case the attribute is set to the constant string `<not applicable in APIv1>`
 - If there is already some logging in the affected source code files that is not described in this document then this logging must be dropped
 
+### Built-in extension panic diagnostics
+
+- The [built-in extension engine](../../../../pkg/iextengine/builtin/impl.go) recovers an extension panic before its stack unwinds and returns one error containing `extension <full QName> panic: <panic value>`, followed by the current goroutine stack
+- The extension engine does not emit a separate log record; app partitions propagate the enriched error to the existing processor-specific error handlers
+- Each existing processor error handler logs the enriched error in one call, keeping the extension identity, panic value, stack, stage, and context attributes in the same correlated log record
+- WASM guest-runtime panic extraction and formatting remain unchanged
+
 ---
 
 ## Per-component logging

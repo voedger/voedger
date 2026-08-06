@@ -67,18 +67,19 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(42, statelessFuncValue)
 }
 
+func panickingExtension(context.Context, iextengine.IExtensionIO) error {
+	panic("boom")
+}
+
 func Test_Panics(t *testing.T) {
 
 	require := require.New(t)
 
 	ext1name := appdef.NewFullQName("test", "ext1")
-	ext1func := func(ctx context.Context, io iextengine.IExtensionIO) error {
-		panic("boom")
-	}
 
 	factory := ProvideExtensionEngineFactory(iextengine.BuiltInAppExtFuncs{
 		istructs.AppQName_test1_app1: iextengine.BuiltInExtFuncs{
-			ext1name: ext1func,
+			ext1name: panickingExtension,
 		},
 	}, nil)
 
@@ -86,6 +87,11 @@ func Test_Panics(t *testing.T) {
 	require.NoError(err)
 	require.Len(engines, 5)
 
-	require.ErrorContains(engines[0].Invoke(context.Background(), ext1name, nil), "extension test.ext1 panic: boom")
+	err = engines[0].Invoke(context.Background(), ext1name, nil)
+	require.ErrorContains(err, "extension test.ext1 panic: boom")
+	require.ErrorContains(err, "goroutine ")
+	require.ErrorContains(err, "[running]:")
+	require.ErrorContains(err, "panickingExtension")
+	t.Log(err.Error())
 
 }
