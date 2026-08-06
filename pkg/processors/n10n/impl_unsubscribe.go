@@ -25,13 +25,13 @@ func unsubscribePipeline(requestCtx context.Context, p *implIN10NProc) pipeline.
 	)
 }
 
-func (p *implIN10NProc) unsubscribe(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) unsubscribe(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	projectionKey := in10n.ProjectionKey{
 		App:        n10nWP.appQName,
 		Projection: n10nWP.entityFromURL,
 		WS:         n10nWP.wsidFromURL,
 	}
-	if err = p.n10nBroker.Unsubscribe(n10nWP.channelID, projectionKey); err != nil {
+	if err := p.n10nBroker.Unsubscribe(n10nWP.channelID, projectionKey); err != nil {
 		logger.ErrorCtx(n10nProjectionLogCtx(n10nWP.logCtx, projectionKey), "n10n.unsubscribe.error", err)
 		return err
 	}
@@ -39,7 +39,7 @@ func (p *implIN10NProc) unsubscribe(ctx context.Context, n10nWP *n10nWorkpiece) 
 	return nil
 }
 
-func logUnsubscribeSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func logUnsubscribeSuccess(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	if logger.IsVerbose() {
 		for _, pk := range n10nWP.subscribedProjectionKeys {
 			logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.unsubscribe.success")
@@ -48,6 +48,6 @@ func logUnsubscribeSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err erro
 	return nil
 }
 
-func reply204NoContent(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func reply204NoContent(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	return n10nWP.responder.Respond(bus.ResponseMeta{StatusCode: http.StatusNoContent}, nil)
 }

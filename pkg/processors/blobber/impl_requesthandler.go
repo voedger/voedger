@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) HandleRead(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, header map[string]string,
 	okResponseIniter func(headersKeyValue ...string) io.Writer,
 	errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender bus.IRequestSender, rLimiter iblobstorage.RLimiterType) bool {
 	doneCh := make(chan interface{})
@@ -37,7 +37,7 @@ func (r *implIRequestHandler) HandleRead(appQName appdef.AppQName, wsid istructs
 }
 
 // [~server.apiv2.blobs/cmp.blobber.implIRequestHandler_Read2~impl]
-func (r *implIRequestHandler) HandleRead_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) HandleRead_V2(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, header map[string]string,
 	okResponseIniter func(headersKeyValue ...string) io.Writer,
 	errorResponder ErrorResponder, ownerRecord appdef.QName, ownerRecordField string, ownerID istructs.RecordID,
 	requestSender bus.IRequestSender, rLimiter iblobstorage.RLimiterType) bool {
@@ -59,10 +59,9 @@ func (r *implIRequestHandler) HandleRead_V2(appQName appdef.AppQName, wsid istru
 		ownerID:          ownerID,
 		rLimiter:         rLimiter,
 	}, doneCh)
-
 }
 
-func (r *implIRequestHandler) HandleReadTemp_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) HandleReadTemp_V2(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, header map[string]string,
 	okResponseIniter func(headersKeyValue ...string) io.Writer,
 	errorResponder ErrorResponder, requestSender bus.IRequestSender, suuid iblobstorage.SUUID, rLimiter iblobstorage.RLimiterType) bool {
 	doneCh := make(chan interface{})
@@ -81,10 +80,9 @@ func (r *implIRequestHandler) HandleReadTemp_V2(appQName appdef.AppQName, wsid i
 		existingBLOBIDOrSUUID: string(suuid),
 		rLimiter:              rLimiter,
 	}, doneCh)
-
 }
 
-func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) handleWrite(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, header map[string]string,
 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 	errorResponder ErrorResponder, requestSender bus.IRequestSender, isAPIv2 bool, ownerRecord appdef.QName, ownerRecordField string) bool {
 	doneCh := make(chan interface{})
@@ -108,22 +106,22 @@ func (r *implIRequestHandler) handleWrite(appQName appdef.AppQName, wsid istruct
 	}, doneCh)
 }
 
-func (r *implIRequestHandler) HandleWrite(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) HandleWrite(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, header map[string]string,
 	urlQueryValues url.Values, okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
-	return r.handleWrite(appQName, wsid, header, requestCtx, urlQueryValues, okResponseIniter, reader, errorResponder, requestSender, false, appdef.NullQName, "")
+	return r.handleWrite(requestCtx, appQName, wsid, header, urlQueryValues, okResponseIniter, reader, errorResponder, requestSender, false, appdef.NullQName, "")
 }
 
-func (r *implIRequestHandler) HandleWrite_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) HandleWrite_V2(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, header map[string]string,
 	okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 	errorResponder ErrorResponder, requestSender bus.IRequestSender, ownerRecord appdef.QName, ownerRecordField string) bool {
-	return r.handleWrite(appQName, wsid, header, requestCtx, nil, okResponseIniter, reader, errorResponder, requestSender, true, ownerRecord, ownerRecordField)
+	return r.handleWrite(requestCtx, appQName, wsid, header, nil, okResponseIniter, reader, errorResponder, requestSender, true, ownerRecord, ownerRecordField)
 }
 
-func (r *implIRequestHandler) HandleWriteTemp_V2(appQName appdef.AppQName, wsid istructs.WSID, header map[string]string, requestCtx context.Context,
+func (r *implIRequestHandler) HandleWriteTemp_V2(requestCtx context.Context, appQName appdef.AppQName, wsid istructs.WSID, header map[string]string,
 	okResponseIniter func(headersKeyValue ...string) io.Writer, reader io.ReadCloser,
 	errorResponder ErrorResponder, requestSender bus.IRequestSender) bool {
-	return r.handleWrite(appQName, wsid, header, requestCtx, nil, okResponseIniter, reader, errorResponder, requestSender, true,
+	return r.handleWrite(requestCtx, appQName, wsid, header, nil, okResponseIniter, reader, errorResponder, requestSender, true,
 		appdef.NullQName, appdef.NullName)
 }
 
