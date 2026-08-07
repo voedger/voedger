@@ -96,10 +96,10 @@ func (a *scheduler) runJob() error {
 	if err := borrowedPartition.Invoke(a.vvmCtx, a.job, state, state); err != nil {
 		return err
 	}
-	logger.VerboseCtx(a.logCtx, "job.success")
-	if err = state.ApplyIntents(); err != nil {
+	if err := state.ApplyIntents(); err != nil {
 		return err
 	}
+	logger.VerboseCtx(a.logCtx, "job.success")
 	if a.jobInErrAddr != nil {
 		if atomic.CompareAndSwapInt32(&a.projErrState, 1, 0) {
 			a.jobInErrAddr.Increase(-1)
