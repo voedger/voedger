@@ -1195,6 +1195,60 @@ func authnLoginAlias(t *testing.T) {
 		aliasToken := issuePrincipalToken(t, vit, clearedAlias, reuseLogin.Pwd, appQName)
 		assertPrincipalTokenClaims(t, vit, aliasToken, reuseLogin.Name, clearedAlias)
 	})
+
+	t.Run("authn: scn: Deactivated Login identifier can become another Login Alias without exposing profile data", func(t *testing.T) {
+		const workspaceName = "shared"
+
+		// Given Profile Workspace of User Login "active@example.com" owns child Workspace "shared" containing value "active"
+		activeLogin := vit.SignUp(fmt.Sprintf("active%d@example.com", vit.NextNumber()), "active-password", appQName)
+		activePrincipal := vit.SignIn(activeLogin)
+		activeWSParams := it.SimpleWSParams(workspaceName)
+		activeWSParams.InitDataJSON = `{"IntFld":1,"StrFld":"active"}`
+		activeWorkspace := vit.CreateWorkspace(activeWSParams, activePrincipal)
+
+		// And Profile Workspace of User Login "retired@example.com" owns child Workspace "shared" containing value "retired"
+		retiredLogin := vit.SignUp(fmt.Sprintf("retired%d@example.com", vit.NextNumber()), "retired-password", appQName)
+		retiredPrincipal := vit.SignIn(retiredLogin)
+		retiredWSParams := it.SimpleWSParams(workspaceName)
+		retiredWSParams.InitDataJSON = `{"IntFld":2,"StrFld":"retired"}`
+		retiredWorkspace := vit.CreateWorkspace(retiredWSParams, retiredPrincipal)
+
+		// And Profile Workspace of User Login "retired@example.com" is deactivated
+		vit.PostProfile(retiredPrincipal, "c.sys.InitiateDeactivateWorkspace", "{}")
+		waitForDeactivate(vit, retiredPrincipal.AppQName, retiredPrincipal.ProfileWSID, retiredLogin.Name)
+
+		// When System sets Login Alias "retired@example.com" for User Login "active@example.com"
+		initiateSetLoginAlias(t, vit, activeLogin, retiredLogin.Name, sysRegistryToken)
+		waitForLoginAlias(t, vit, activeLogin, retiredLogin.Name)
+
+		// And Client signs in using Login Alias "retired@example.com" and the password of User Login "active@example.com"
+		aliasToken := issuePrincipalToken(t, vit, retiredLogin.Name, activeLogin.Pwd, appQName)
+
+		// Then the issued Principal Token identifies User Login "active@example.com" and its Profile Workspace
+		payload := payloads.PrincipalPayload{}
+		_, err := vit.ITokens.ValidateToken(aliasToken, &payload)
+		require.NoError(err)
+		require.Equal(activeLogin.Name, payload.Login)
+		require.Equal(retiredLogin.Name, payload.Alias)
+		require.Equal(activePrincipal.ProfileWSID, payload.ProfileWSID)
+		require.NotEqual(retiredPrincipal.ProfileWSID, payload.ProfileWSID)
+		aliasPrincipal := &it.Principal{
+			Login:       activeLogin,
+			Token:       aliasToken,
+			ProfileWSID: payload.ProfileWSID,
+		}
+
+		// And Client reads value "active" from child Workspace "shared"
+		aliasWorkspace := vit.WaitForWorkspace(workspaceName, aliasPrincipal)
+		require.Equal(activeWorkspace.WSID, aliasWorkspace.WSID)
+		body := `{"args":{"Schema":"app1pkg.test_ws"},"elements":[{"fields":["StrFld"]}]}`
+		actualValue := vit.PostWS(aliasWorkspace, "q.sys.Collection", body).SectionRow()[0].(string)
+		require.Equal("active", actualValue)
+
+		// But Client does not read value "retired" from child Workspace "shared"
+		require.NotEqual(retiredWorkspace.WSID, aliasWorkspace.WSID)
+		require.NotEqual("retired", actualValue)
+	})
 }
 
 func authnLoginAliasCollisionsAndValidation(t *testing.T) {

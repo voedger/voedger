@@ -87,6 +87,16 @@ Feature: Authentication
         | updates   | login        |
         | updates   | active alias |
 
+    Scenario: Deactivated Login identifier can become another Login Alias without exposing profile data
+      Given Profile Workspace of User Login "active@example.com" owns child Workspace "shared" containing value "active"
+      And Profile Workspace of User Login "retired@example.com" owns child Workspace "shared" containing value "retired"
+      And Profile Workspace of User Login "retired@example.com" is deactivated
+      When System sets Login Alias "retired@example.com" for User Login "active@example.com"
+      And Client signs in using Login Alias "retired@example.com" and the password of User Login "active@example.com"
+      Then the issued Principal Token identifies User Login "active@example.com" and its Profile Workspace
+      And Client reads value "active" from child Workspace "shared"
+      But Client does not read value "retired" from child Workspace "shared"
+
     Scenario: Alias creation rejects an invalid sign-in identifier
       Given a user login exists
       When System sets an invalid login alias for the user
