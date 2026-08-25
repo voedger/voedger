@@ -397,6 +397,27 @@ State and workspace lifecycle
   -> [(registry.Login)]: AliasError records conflict when best-effort write succeeds
 ```
 
+#### Deactivated Login identifier can become another Login Alias without exposing profile data
+
+```text
+@System
+  -> [/c.registry.InitiateSetLoginAlias/]: active Login, Alias = retired Login identifier
+  -> [(registry.Login)]: active Login records the alias intent
+  -> [aproj.registry.ApplySetLoginAlias]
+  -> [/c.registry.PutLoginAliasIndex/]
+      -> [(registry.LoginIdx)]: no active Login entry for the deactivated identifier
+      -> [(registry.LoginAlias)]: bind the identifier to the active Login source workspace
+  -> [(registry.Login)]: active Login stores the alias
+
+@Client
+  -> [/q.registry.IssuePrincipalToken/]: retired identifier, active Login password
+      -> [(registry.LoginIdx)]: canonical lookup misses because the retired Login is inactive
+      -> [(registry.LoginAlias)]: resolve the active Login source workspace
+      -> [/q.sys.GetCDoc/]: read the active Login and its ProfileWSID
+  -> [Token service]: issue PrincipalPayload with the active Login, alias, and ProfileWSID
+  -> @Client: child workspace resolution is rooted at the active ProfileWSID; the retired ProfileWSID is not exposed
+```
+
 #### Alias creation rejects an invalid sign-in identifier
 
 ```text
