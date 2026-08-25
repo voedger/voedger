@@ -156,7 +156,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	panic(wire.Build(
 		wire.Struct(new(VVM), "*"),
 		wire.Struct(new(builtinapps.APIs), "*"),
-		wire.Struct(new(schedulers.BasicSchedulerConfig), "VvmName", "SecretReader", "Tokens", "Metrics", "Broker", "Federation", "Time", "EmailSender"),
+		wire.Struct(new(schedulers.BasicSchedulerConfig), "VvmName", "SecretReader", "Tokens", "Metrics", "Broker", "Federation", "Time", "EmailSender", "HTTPClient"),
 		provideServicePipeline,
 		provideCommandProcessors,
 		provideQueryProcessors_V1,

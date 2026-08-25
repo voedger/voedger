@@ -28,14 +28,14 @@ func subscribeExtraPipeline(requestCtx context.Context, p *implIN10NProc) pipeli
 	)
 }
 
-func denyBody(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func denyBody(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	if len(n10nWP.body) > 0 {
 		return errors.New("unexpected body")
 	}
 	return nil
 }
 
-func addProjectionKeyFromURL(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func addProjectionKeyFromURL(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	n10nWP.subscriptions = append(n10nWP.subscriptions, subscription{
 		entity: n10nWP.entityFromURL,
 		wsid:   n10nWP.wsidFromURL,
@@ -43,7 +43,7 @@ func addProjectionKeyFromURL(ctx context.Context, n10nWP *n10nWorkpiece) (err er
 	return nil
 }
 
-func logSubscribeSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func logSubscribeSuccess(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	if logger.IsVerbose() {
 		for _, pk := range n10nWP.subscribedProjectionKeys {
 			logger.VerboseCtx(n10nProjectionLogCtx(n10nWP.logCtx, pk), "n10n.subscribe.success")
@@ -52,6 +52,6 @@ func logSubscribeSuccess(ctx context.Context, n10nWP *n10nWorkpiece) (err error)
 	return nil
 }
 
-func (p *implIN10NProc) replyOK(ctx context.Context, n10nWP *n10nWorkpiece) (err error) {
+func (p *implIN10NProc) replyOK(_ context.Context, n10nWP *n10nWorkpiece) (err error) {
 	return n10nWP.responder.Respond(bus.ResponseMeta{StatusCode: http.StatusOK}, nil)
 }

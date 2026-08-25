@@ -64,7 +64,7 @@ func (b *bundleImpl) values() (values []state.ApplyBatchItem) {
 	for el := b.list.Front(); el != nil; el = el.Next() {
 		values = append(values, el.Value.(*pair).value)
 	}
-	return
+	return values
 }
 func (b *bundleImpl) size() (size int) { return b.list.Len() }
 func (b *bundleImpl) clear()           { b.list = list.New() }

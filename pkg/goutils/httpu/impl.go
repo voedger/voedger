@@ -31,7 +31,6 @@ func newRequest(ctx context.Context, method, url, body string, bodyReader io.Rea
 	if err != nil {
 		return nil, fmt.Errorf("NewRequest() failed: %w", err)
 	}
-	req.Close = true
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}

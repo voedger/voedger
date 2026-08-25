@@ -347,6 +347,27 @@ func TestHTTPReqWithOptions(t *testing.T) {
 		require.Equal(int32(10), count)
 	})
 
+	t.Run("connections are reused", func(t *testing.T) {
+		handler = func(w http.ResponseWriter, _ *http.Request) {
+			_, err := w.Write([]byte("ok"))
+			require.NoError(err)
+		}
+		var dialCount atomic.Int32
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+			dialCount.Add(1)
+			return (&net.Dialer{}).DialContext(ctx, network, address)
+		}
+		client, cleanup := NewIHTTPClientWithTransport(transport)
+		defer cleanup()
+		for range 2 {
+			resp, err := client.Req(context.Background(), url, "body")
+			require.NoError(err)
+			require.Equal("ok", resp.Body)
+		}
+		require.Equal(int32(1), dialCount.Load())
+	})
+
 	t.Run("WithRetryPolicy replaces default policies", func(t *testing.T) {
 		var retryNum int
 		handler = func(w http.ResponseWriter, r *http.Request) {

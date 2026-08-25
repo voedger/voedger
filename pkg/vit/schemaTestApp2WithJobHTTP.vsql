@@ -1,0 +1,17 @@
+-- Copyright (c) 2026-present unTill Software Development Group B.V.
+-- @author Denis Gribanov
+
+APPLICATION app2();
+
+ALTER WORKSPACE sys.AppWorkspaceWS (
+	VIEW HTTPResults (
+		RequestID int32 NOT NULL,
+		Dummy int32 NOT NULL,
+		StorageObtained bool NOT NULL,
+		PRIMARY KEY((RequestID), Dummy)
+	) AS RESULT OF JobHTTP;
+
+	EXTENSION ENGINE BUILTIN (
+		JOB JobHTTP '* * * * *' STATE(sys.Http) INTENTS(sys.View(HTTPResults));
+	);
+);

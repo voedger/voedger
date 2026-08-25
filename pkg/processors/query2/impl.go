@@ -90,7 +90,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel,
 					var respWriter bus.IResponseWriter
 					statusCode := http.StatusOK
 					if err != nil {
-						statusCode = err.(coreutils.SysError).HTTPStatus // nolint:errorlint
+						statusCode = err.(coreutils.SysError).HTTPStatus // nolint error-lint
 						logger.ErrorCtx(qwork.msg.RequestCtx(), "qp.error", err)
 					}
 					if qwork.apiPathHandler.isArrayResult {
@@ -123,7 +123,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources,
 	stateOpts state.StateOpts, httpClient httpu.IHTTPClient) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
-		operator("get api path handler", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("get api path handler", func(_ context.Context, qw *queryWork) (err error) {
 			switch qw.msg.APIPath() {
 			case processors.APIPath_Queries:
 				qw.apiPathHandler = queryHandler()
@@ -160,7 +160,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return qw.apiPathHandler.checkRateLimit(ctx, qw)
 		}),
-		operator("authenticate query request", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("authenticate query request", func(_ context.Context, qw *queryWork) (err error) {
 			if processors.SetPrincipalsForAnonymousOnlyFunc(qw.appStructs.AppDef(), qw.msg.QName(), qw.msg.WSID(), qw) {
 				// grant to anonymous -> set token == "" to avoid validating an expired token accidentally kept in cookies
 				return nil
@@ -173,15 +173,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.principals, qw.profileWSID, err = authn.Authenticate(qw.msg.RequestCtx(), qw.appStructs, qw.appStructs.AppTokens(), req)
 			return coreutils.WrapSysError(err, http.StatusUnauthorized)
 		}),
-		operator("get workspace descriptor", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("get workspace descriptor", func(_ context.Context, qw *queryWork) (err error) {
 			qw.wsDesc, err = processors.GetWSDesc(qw.msg.WSID(), qw.appStructs)
 			return err
 		}),
-		operator("get principals roles", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("get principals roles", func(_ context.Context, qw *queryWork) (err error) {
 			qw.roles = processors.GetRoles(qw.principals)
 			return nil
 		}),
-		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("check workspace active", func(_ context.Context, qw *queryWork) (err error) {
 			for _, prn := range qw.principals {
 				if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == qw.msg.WSID() {
 					// system -> allow to work in any case
@@ -193,7 +193,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-		operator("get IWorkspace", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("get IWorkspace", func(_ context.Context, qw *queryWork) (err error) {
 			if qw.iWorkspace = qw.appStructs.AppDef().WorkspaceByDescriptor(qw.wsDesc.AsQName(authnz.Field_WSKind)); qw.iWorkspace == nil {
 				return coreutils.NewHTTPErrorf(http.StatusInternalServerError, fmt.Sprintf("workspace is not found in AppDef by cdoc.sys.WorkspaceDescriptor.WSKind %s",
 					qw.wsDesc.AsQName(authnz.Field_WSKind)))
@@ -206,7 +206,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return qw.apiPathHandler.setRequestType(ctx, qw)
 		}),
-		operator("parse query params", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("parse query params", func(_ context.Context, qw *queryWork) (err error) {
 			argQName := appdef.NullQName
 			if qw.iQuery != nil && qw.iQuery.Param() != nil {
 				argQName = qw.iQuery.Param().QName()
@@ -218,7 +218,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.queryParams = *qp
 			return nil
 		}),
-		operator("authorize query request", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("authorize query request", func(_ context.Context, qw *queryWork) (err error) {
 			if qw.apiPathHandler.requestOpKind == appdef.OperationKind_null {
 				return nil
 			}
@@ -231,13 +231,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			return nil
 		}),
-		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("validate: get exec query args", func(_ context.Context, qw *queryWork) (err error) {
 			if qw.msg.APIPath() == processors.APIPath_Queries {
 				qw.execQueryArgs, err = newExecQueryArgs(qw.msg.WSID(), qw)
 			}
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
-		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("create callback func", func(_ context.Context, qw *queryWork) (err error) {
 			qw.callbackFunc = func(o istructs.IObject) (err error) {
 				if _, ok := o.(objectBackedByMap); !ok {
 					o = objectBackedByMap{
@@ -247,7 +247,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 						},
 							qw.appStructs.AppDef(),
 							coreutils.WithAllFields(), // we do not know which fields are specified because `o` is different on each query -> read all fields of the result
-							coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+							coreutils.Filter(func(name string, _ appdef.DataKind) bool {
 								// system fields like sys.QName, sys.Container are emitted due of WithAllFields
 								// skip them in the query result
 								return !appdef.IsSysField(name)
@@ -257,13 +257,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				}
 				return qw.rowsProcessor.SendAsync(o.(pipeline.IWorkpiece))
 			}
-			return
+			return nil
 		}),
-		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("create state", func(_ context.Context, qw *queryWork) (err error) {
 			qw.state = stateprovide.ProvideQueryProcessorStateFactory()(
 				qw.msg.RequestCtx(),
 				func() istructs.IAppStructs { return qw.appStructs },
-				state.SimplePartitionIDFunc(qw.msg.PartitionID()),
 				state.SimpleWSIDFunc(qw.msg.WSID()),
 				qw.secretReader,
 				func() []iauthnz.Principal { return qw.principals },
@@ -283,7 +282,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			)
 			qw.execQueryArgs.State = qw.state
 			qw.execQueryArgs.Intents = qw.state
-			return
+			return nil
 		}),
 		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.apiPathHandler.setResultType == nil {
@@ -322,11 +321,11 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 	requestArgs := istructs.NewNullObject()
 	if argsType == nil {
 		if len(qw.queryParams.Argument) > 0 {
-			return execQueryArgs, fmt.Errorf("args are not expected")
+			return execQueryArgs, errors.New("args are not expected")
 		}
 	} else {
 		if argsType.QName() != istructs.QNameRaw {
-			if err = processors.CheckUnexpectedFields(qw.queryParams.Argument, argsType); err != nil {
+			if err := processors.CheckUnexpectedFields(qw.queryParams.Argument, argsType); err != nil {
 				return execQueryArgs, err
 			}
 		}

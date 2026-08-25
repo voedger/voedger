@@ -27,7 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func queryRateLimitExceeded(ctx context.Context, qw *queryWork) error {
+func queryRateLimitExceeded(_ context.Context, qw *queryWork) error {
 	exceeded, limit := qw.appPart.IsLimitExceeded(qw.msg.QName(), appdef.OperationKind_Execute, qw.msg.WSID(), qw.msg.Host())
 	if !exceeded {
 		return nil
@@ -35,7 +35,7 @@ func queryRateLimitExceeded(ctx context.Context, qw *queryWork) error {
 	retryAfter := processors.RetryAfterSecondsOnLimitExceeded(qw.appStructs.AppDef(), limit)
 	return coreutils.NewHTTPErrorf(http.StatusTooManyRequests).AddHeader(httpu.RetryAfter, strconv.Itoa(retryAfter))
 }
-func querySetRequestType(ctx context.Context, qw *queryWork) error {
+func querySetRequestType(_ context.Context, qw *queryWork) error {
 	if qw.iQuery = appdef.Query(qw.iWorkspace.Type, qw.msg.QName()); qw.iQuery == nil {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in %v", qw.msg.QName(), qw.iWorkspace))
 	}
@@ -187,7 +187,7 @@ func NewIQueryMessage(requestCtx context.Context, appQName appdef.AppQName, wsid
 	}
 }
 
-func (qw *queryWork) getArraySender() (pipeline.IAsyncOperator, func() bus.IResponseWriter) {
+func (qw *queryWork) getArraySender() (arraySenderOp pipeline.IAsyncOperator, responseWriter func() bus.IResponseWriter) {
 	res := &arraySender{
 		sender: sender{
 			responder:          qw.msg.Responder(),

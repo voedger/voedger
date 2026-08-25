@@ -388,7 +388,7 @@ func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsKind, wsDescr
 	if err != nil {
 		panic(err)
 	}
-	if err = appStructs.Records().Apply(wsEvent); err != nil {
+	if err := appStructs.Records().Apply(wsEvent); err != nil {
 		panic(err)
 	}
 }

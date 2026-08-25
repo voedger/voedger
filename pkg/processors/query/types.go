@@ -96,7 +96,7 @@ type IQueryMessage interface {
 	Body() []byte
 	RequestCtx() context.Context
 	QName() appdef.QName
-	//TODO Denis provide partition
+	// TODO Denis provide partition
 	Partition() istructs.PartitionID
 	Host() string
 	Token() string

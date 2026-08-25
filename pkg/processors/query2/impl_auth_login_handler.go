@@ -22,8 +22,7 @@ import (
 // [~server.authnz/cmp.authLoginHandler~impl]
 func authLoginHandler() apiPathHandler {
 	return apiPathHandler{
-		exec: func(ctx context.Context, qw *queryWork) (err error) {
-
+		exec: func(_ context.Context, qw *queryWork) (err error) {
 			args := coreutils.MapObject(qw.queryParams.Argument)
 			login, _, err := args.AsString(fieldLogin)
 			if err != nil {
@@ -66,14 +65,14 @@ func authLoginHandler() apiPathHandler {
 			}
 
 			if wsid == 0 {
-				return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf("profile workspace is not yet ready, try again later"))
+				return coreutils.NewHTTPError(http.StatusConflict, errors.New("profile workspace is not yet ready, try again later"))
 			}
 
 			expiresInSeconds := authnz.DefaultPrincipalTokenExpiration.Seconds()
 			json := fmt.Sprintf(`{
-				"%s": "%s",
-				"%s": %d,
-				"%s": %d
+				%q: %q,
+				%q: %d,
+				%q: %d
 			}`, fieldPrincipalToken, token, fieldExpiresInSeconds, int(expiresInSeconds), fieldProfileWSID, int(wsid))
 			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
 		},

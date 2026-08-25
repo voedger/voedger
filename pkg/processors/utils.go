@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -50,7 +50,7 @@ func CheckUnexpectedFields(args map[string]any, argsType appdef.IType) error {
 		}
 	}
 	if len(unexpected) > 0 {
-		sort.Strings(unexpected)
+		slices.Sort(unexpected)
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unexpected field(s): "+strings.Join(unexpected, ", "))
 	}
 	return nil

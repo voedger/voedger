@@ -17,6 +17,7 @@ import (
 )
 
 func readBody(resp *http.Response) (string, error) {
+	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	return string(respBody), err
 }

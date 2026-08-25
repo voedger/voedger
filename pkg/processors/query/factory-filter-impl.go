@@ -87,6 +87,7 @@ func newNotEqualsFilter(field string, value interface{}, args coreutils.MapObjec
 	}, nil
 }
 
+//nolint:unparam
 func newGreaterFilter(field string, value interface{}, _ coreutils.MapObject) (IFilter, error) {
 	return &GreaterFilter{
 		field: field,
@@ -94,6 +95,7 @@ func newGreaterFilter(field string, value interface{}, _ coreutils.MapObject) (I
 	}, nil
 }
 
+//nolint:unparam
 func newLessFilter(field string, value interface{}, _ coreutils.MapObject) (IFilter, error) {
 	return &LessFilter{
 		field: field,
@@ -139,9 +141,9 @@ func epsilon(args coreutils.MapObject) (float64, error) {
 		return 0.0, err
 	}
 	// TODO (FILTER0001) move it to filter prepare or validate
-	//if epsilon == 0 {
+	// if epsilon == 0 {
 	//	return 0, ErrJsonFieldNotFound
-	//}
+	// }
 	return epsilon, nil
 }
 
@@ -158,31 +160,31 @@ func nearlyEqual(a, b, epsilon float64) bool {
 	return diff/(absA+absB) < epsilon
 }
 
-//TODO (FILTER0002) dynamic prepare and validation?
-//type baseFilter struct {
+// TODO (FILTER0002) dynamic prepare and validation?
+// type baseFilter struct {
 //	field       string
 //	value       interface{}
 //	kind        appdef.DataKind
-//}
+// }
 //
-//func (f *baseFilter) Prepare(fd utils.FieldsDef) error {
+// func (f *baseFilter) Prepare(fd utils.FieldsDef) error {
 //	kind, ok := fd[f.field]
 //	if !ok {
 //		return fmt.Errorf(errLayout, f.field, ErrNameNotFound)
 //	}
 //	f.kind = kind
 //	return f.validateValue()
-//}
+// }
 //
-//func (f *baseFilter) IsMatch(istructs.IObject) (bool, error) {
+// func (f *baseFilter) IsMatch(istructs.IObject) (bool, error) {
 //	panic("implement me")
-//}
+// }
 //
-//func (f *baseFilter) validateValue() error {
+// func (f *baseFilter) validateValue() error {
 //	_, ok := f.value.(float64)
 //	if (f.kind == appdef.DataKind_int32 || f.kind == appdef.DataKind_int64 || f.kind == appdef.DataKind_float32) && !ok {
 //		return fmt.Errorf(errLayout, f.field, ErrWrongDataType)
 //	}
 //	return nil
-//}
-//TODO (FILTER0002)
+// }
+// TODO (FILTER0002)

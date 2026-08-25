@@ -6,7 +6,7 @@ package authnz
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 )
@@ -22,5 +22,4 @@ func Provide(sr istructsmem.IStatelessResources, itokens itokens.ITokens, atf pa
 			provideExecQryEnrichPrincipalToken(atf),
 		),
 	)
-
 }

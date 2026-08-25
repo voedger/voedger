@@ -6,6 +6,7 @@ package queryprocessor
 
 import (
 	"context"
+	"maps"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -26,12 +27,8 @@ func (o FilterOperator) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (
 	}()
 	outputRow := work.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0]
 	mergedFields := make(map[string]appdef.DataKind)
-	for n, k := range o.rootFields {
-		mergedFields[n] = k
-	}
-	for n, k := range work.(IWorkpiece).EnrichedRootFieldsKinds() {
-		mergedFields[n] = k
-	}
+	maps.Copy(mergedFields, o.rootFields)
+	maps.Copy(mergedFields, work.(IWorkpiece).EnrichedRootFieldsKinds())
 	for _, filter := range o.filters {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()

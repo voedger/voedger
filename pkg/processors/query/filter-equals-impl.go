@@ -45,7 +45,7 @@ func (f EqualsFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, error
 			return false, err
 		}
 		return nearlyEqual(float64Intf.(float64), outputRow.Value(f.field).(float64), f.epsilon), nil
-	case appdef.DataKind_string:
+	case appdef.DataKind_string, appdef.DataKind_QName:
 		return outputRow.Value(f.field).(string) == f.value.(string), nil
 	case appdef.DataKind_bool:
 		return outputRow.Value(f.field).(bool) == f.value.(bool), nil
@@ -55,8 +55,6 @@ func (f EqualsFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, error
 			return false, err
 		}
 		return outputRow.Value(f.field).(istructs.RecordID) == recordIDIntf.(istructs.RecordID), nil
-	case appdef.DataKind_QName:
-		return outputRow.Value(f.field).(string) == f.value.(string), nil
 	case appdef.DataKind_null:
 		return false, nil
 	default:

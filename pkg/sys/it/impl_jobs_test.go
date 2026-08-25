@@ -157,6 +157,34 @@ func TestJobs_SendEmail(t *testing.T) {
 	require.Equal(t, "Test body", email.Body)
 }
 
+func TestJobs_HTTPStorage(t *testing.T) {
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJobHTTP(), it.WithUserLogin("login", "1")),
+	)
+	vit := it.NewVIT(t, &cfg)
+	defer vit.TearDown()
+
+	anyAppWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID)
+	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app2).Token
+
+	// trigger the job
+	vit.SchedulerTimeAdd(testJobFireInterval)
+
+	// the job in shared_cfgs.go must use the http storage and then update StorageObtained
+	// checking that simple http storage usage causes no errors
+	var result map[string]interface{}
+	require.Eventually(t, func() bool {
+		body := `{"args":{"Query":"select * from a1.app2pkg.HTTPResults where RequestID = 1 and Dummy = 1"},"elements":[{"fields":["Result"]}]}`
+		resp := vit.PostApp(istructs.AppQName_test1_app2, anyAppWSID, "q.sys.SqlQuery", body, httpu.WithAuthorizeBy(sysToken))
+		if resp.IsEmpty() {
+			return false
+		}
+		return json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &result) == nil
+	}, 5*time.Second, 100*time.Millisecond)
+
+	require.True(t, result["StorageObtained"].(bool))
+}
+
 func waitForSidecarJobCounter(vit *it.VIT, wsid istructs.WSID, token string, expectedMinimalCounterValue int) {
 	vit.T.Helper()
 	start := time.Now()

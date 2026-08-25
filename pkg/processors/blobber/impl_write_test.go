@@ -90,8 +90,8 @@ func TestBLOBWriteLogging(t *testing.T) {
 		require.NoError(p.SendSync(bw))
 
 		logCap.HasLine("bp.meta", "testfile.txt",
-			fmt.Sprintf(`ownerqname="%s"`, notApplicableInAPIv1),
-			fmt.Sprintf(`ownerfield="%s"`, notApplicableInAPIv1))
+			fmt.Sprintf(`ownerqname=%q`, notApplicableInAPIv1),
+			fmt.Sprintf(`ownerfield=%q`, notApplicableInAPIv1))
 		logCap.HasLine("bp.register.success", "blobid=")
 		logCap.HasLine("bp.write.success")
 		logCap.HasLine("bp.setcompleted.success")

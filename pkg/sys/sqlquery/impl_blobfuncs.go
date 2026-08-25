@@ -139,7 +139,7 @@ func executeBlobRead(
 		blobErr = fmt.Errorf("blob read error: %w", sysErr)
 	}
 
-	ok := (*blobHandlerPtr).HandleRead_V2(appQName, wsid, header, ctx,
+	ok := (*blobHandlerPtr).HandleRead_V2(ctx, appQName, wsid, header,
 		okResponseIniter, errorResponder,
 		ownerRecord, fieldName, ownerID, *requestSenderPtr, rLimiter)
 

@@ -29,7 +29,7 @@ func queryHandler() apiPathHandler {
 		exec:            queryExec,
 	}
 }
-func querySetResultType(ctx context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
+func querySetResultType(_ context.Context, qw *queryWork, statelessResources istructsmem.IStatelessResources) error {
 	qw.resultType = qw.iQuery.Result()
 	if qw.resultType == nil || qw.resultType.QName() != appdef.QNameANY {
 		return nil
@@ -56,7 +56,7 @@ func querySetResultType(ctx context.Context, qw *queryWork, statelessResources i
 	}
 	return nil
 }
-func queryAuthorizeResult(ctx context.Context, qw *queryWork) error {
+func queryAuthorizeResult(context.Context, *queryWork) error {
 	// the entire result is allowed if execute on query is granted
 	return nil
 }
@@ -87,7 +87,7 @@ func queryRowsProcessor(ctx context.Context, qw *queryWork) (err error) {
 	oo = append(oo, pipeline.WireAsyncOperator("Sender", sender))
 	qw.rowsProcessor = pipeline.NewAsyncPipeline(ctx, "View rows processor", oo[0], oo[1:]...)
 	qw.responseWriterGetter = respWriterGetter
-	return
+	return nil
 }
 func queryExec(ctx context.Context, qw *queryWork) (err error) {
 	defer func() {

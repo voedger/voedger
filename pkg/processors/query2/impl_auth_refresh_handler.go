@@ -6,6 +6,7 @@ package query2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -18,9 +19,9 @@ import (
 // [~server.authnz/cmp.authRefreshHandler~impl]
 func authRefreshHandler() apiPathHandler {
 	return apiPathHandler{
-		exec: func(ctx context.Context, qw *queryWork) (err error) {
+		exec: func(_ context.Context, qw *queryWork) (err error) {
 			if qw.msg.Token() == "" {
-				return coreutils.NewHTTPErrorf(http.StatusUnauthorized, fmt.Errorf("authorization header is empty"))
+				return coreutils.NewHTTPErrorf(http.StatusUnauthorized, errors.New("authorization header is empty"))
 			}
 
 			url := fmt.Sprintf("api/v2/apps/%s/%s/workspaces/%d/queries/sys.RefreshPrincipalToken", qw.msg.AppQName().Owner(), qw.msg.AppQName().Name(),
@@ -47,7 +48,6 @@ func authRefreshHandler() apiPathHandler {
 			expiresInSeconds := gp.Duration.Seconds()
 			json := fmt.Sprintf(`{%q: %q, %q: %d, %q: %d}`, fieldPrincipalToken, newToken, fieldExpiresInSeconds, int(expiresInSeconds), fieldProfileWSID, qw.profileWSID)
 			return qw.msg.Responder().Respond(bus.ResponseMeta{ContentType: httpu.ContentType_ApplicationJSON, StatusCode: http.StatusOK}, json)
-
 		},
 	}
 }

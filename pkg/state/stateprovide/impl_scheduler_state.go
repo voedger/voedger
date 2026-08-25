@@ -25,7 +25,6 @@ type schedulerState struct {
 func implProvideSchedulerState(vvmCtx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
 	secretReader isecrets.ISecretReader, tokensFunc itokens.ITokens, federationFunc federation.IFederation, unixTimeFunc state.UnixTimeFunc,
 	intentsLimit int, stateOpts state.StateOpts, emailSender state.IEmailSender, httpClient httpu.IHTTPClient) state.IHostState {
-
 	state := &schedulerState{
 		hostState: newHostState(vvmCtx, "Scheduler", intentsLimit, appStructsFunc),
 	}

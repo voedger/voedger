@@ -371,7 +371,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, cmd *cmdWorkpiece) (err error
 	} else {
 		cmd.appPartition.nextPLogOffset++
 	}
-	return
+	return nil
 }
 
 func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -471,7 +471,7 @@ func (cmdProc *cmdProc) authenticate(_ context.Context, cmd *cmdWorkpiece) (err 
 		cmd.appStructs.AppTokens(), req); err != nil {
 		return coreutils.NewHTTPError(http.StatusUnauthorized, err)
 	}
-	return
+	return nil
 }
 
 func getPrincipalsRoles(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -479,7 +479,7 @@ func getPrincipalsRoles(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	return nil
 }
 
-func (cmdProc *cmdProc) authorizeRequest(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) authorizeRequest(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	ws := cmd.iWorkspace
 	if ws == nil {
 		// c.sys.CreateWorkspace
@@ -501,15 +501,15 @@ func (cmdProc *cmdProc) authorizeRequest(ctx context.Context, cmd *cmdWorkpiece)
 	return nil
 }
 
-func unmarshalRequestBody(_ context.Context, cmd *cmdWorkpiece) (err error) {
+func unmarshalRequestBody(_ context.Context, cmd *cmdWorkpiece) error {
 	if cmd.iCommand.Param() != nil && cmd.iCommand.Param().QName() == istructs.QNameRaw {
 		cmd.requestData[args] = map[string]interface{}{
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
-	} else if err = coreutils.JSONUnmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
-		err = fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
+	} else if err := coreutils.JSONUnmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
+		return fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
 	}
-	return
+	return nil
 }
 
 func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) error {
@@ -537,12 +537,12 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 	if args, exists, err := cmd.requestData.AsObject(args); err != nil {
 		return err
 	} else if exists && len(args) > 0 && cmd.iCommand.Param() == nil {
-		return fmt.Errorf("args are not expected")
+		return errors.New("args are not expected")
 	}
 	if unloggedArgs, exists, err := cmd.requestData.AsObject("unloggedArgs"); err != nil {
 		return err
 	} else if exists && len(unloggedArgs) > 0 && cmd.iCommand.UnloggedParam() == nil {
-		return fmt.Errorf("unloggedArgs are not expected")
+		return errors.New("unloggedArgs are not expected")
 	}
 	return nil
 }
@@ -600,7 +600,7 @@ func getArgsObject(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.argsObject, err = aob.Build(); err != nil {
 		err = fmt.Errorf("argument object build failed: %w", err)
 	}
-	return
+	return err
 }
 
 func getUnloggedArgsObject(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -618,7 +618,7 @@ func getUnloggedArgsObject(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.unloggedArgsObject, err = auob.Build(); err != nil {
 		err = fmt.Errorf("unlogged argument object build failed: %w", err)
 	}
-	return
+	return err
 }
 
 func (xp xPath) Errorf(mes string, args ...interface{}) error {
@@ -640,7 +640,7 @@ func execCommand(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 
 // [~server.blobs/cmp.UpdateBLOBOwnership~impl]
 // [~server.blobs/tuc.HandleBLOBReferences~impl]
-func appendBLOBOwnershipUpdaters(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+func appendBLOBOwnershipUpdaters(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	for _, cmdParsedCUD := range cmd.parsedCUDs {
 		cudSchemaType := cmd.appStructs.AppDef().Type(cmdParsedCUD.qName)
 		cudSchema := cudSchemaType.(appdef.IWithFields)
@@ -686,11 +686,10 @@ func buildRawEvent(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if errors.Is(err, istructsmem.ErrRecordIDUniqueViolationError) {
 		status = http.StatusConflict
 	}
-	err = coreutils.WrapSysError(err, status)
-	return
+	return coreutils.WrapSysError(err, status)
 }
 
-func validateCmdResult(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+func validateCmdResult(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.cmdResultBuilder != nil {
 		cmdResult, err := cmd.cmdResultBuilder.Build()
 		if err != nil {
@@ -703,7 +702,7 @@ func validateCmdResult(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 
 func (cmdProc *cmdProc) eventValidators(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	for _, appEventValidator := range cmd.appStructs.EventValidators() {
-		if err = appEventValidator(ctx, cmd.rawEvent, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
+		if err := appEventValidator(ctx, cmd.rawEvent, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
 			return coreutils.WrapSysError(err, http.StatusForbidden)
 		}
 	}
@@ -723,7 +722,7 @@ func (cmdProc *cmdProc) cudsValidators(ctx context.Context, cmd *cmdWorkpiece) (
 	return nil
 }
 
-func getCommandCtxStorage(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+func getCommandCtxStorage(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	skbCommandContext, err := cmd.eca.State.KeyBuilder(sys.Storage_CommandContext, sys.Storage_CommandContext)
 	if err != nil {
 		// notest
@@ -733,7 +732,7 @@ func getCommandCtxStorage(ctx context.Context, cmd *cmdWorkpiece) (err error) {
 	return err
 }
 
-func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) validateCUDsQNames(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.iWorkspace == nil {
 		// c.sys.CreateWorkspace
 		return nil
@@ -789,7 +788,7 @@ func parseCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 		if idToUpdate > 0 {
 			parsedCUD.id = idToUpdate
 			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil { // nolint G115
-				return
+				return err
 			}
 			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {
 				return coreutils.NewHTTPError(http.StatusNotFound, cudXPath.Errorf("record with queried id %d does not exist", parsedCUD.id))
@@ -820,7 +819,7 @@ func parseCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 				return cudXPath.Error(fmt.Errorf("failed to parse sys.QName: %w", err))
 			}
 		} else {
-			return cudXPath.Error(fmt.Errorf(`"sys.ID" field missing`))
+			return cudXPath.Error(errors.New(`"sys.ID" field missing`))
 		}
 
 		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, parsedCUD.opKind, parsedCUD.qName))
@@ -839,7 +838,7 @@ func checkCUDsAllowedInCUDCmdOnly(_ context.Context, cmd *cmdWorkpiece) (err err
 
 func checkArgsRefIntegrity(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if cmd.argsObject != nil {
-		if err = builtin.CheckRefIntegrity(cmd.argsObject, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
+		if err := builtin.CheckRefIntegrity(cmd.argsObject, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
 			return err
 		}
 	}
@@ -851,11 +850,9 @@ func checkArgsRefIntegrity(_ context.Context, cmd *cmdWorkpiece) (err error) {
 
 func getStatusCodeOfSuccess(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	cmd.statusCodeOfSuccess = http.StatusOK
-	if cmd.cmdMes.APIPath() == processors.APIPath_Docs {
-		switch cmd.cmdMes.Method() {
-		case http.MethodPost:
-			cmd.statusCodeOfSuccess = http.StatusCreated
-		}
+	if cmd.cmdMes.APIPath() == processors.APIPath_Docs &&
+		cmd.cmdMes.Method() == http.MethodPost {
+		cmd.statusCodeOfSuccess = http.StatusCreated
 	}
 	return nil
 }
@@ -886,7 +883,7 @@ func checkIsActiveInCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	return nil
 }
 
-func (cmdProc *cmdProc) authorizeRequestCUDs(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) authorizeRequestCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	ws := cmd.iWorkspace
 	if ws == nil {
 		// c.sys.CreateWorkspace
@@ -908,7 +905,7 @@ func (cmdProc *cmdProc) authorizeRequestCUDs(ctx context.Context, cmd *cmdWorkpi
 			logger.VerboseCtx(cmd.cmdMes.RequestCtx(), "", "newACL not ok, but oldACL ok. ", parsedCUD.opKind, parsedCUD.qName, cmd.roles)
 		}
 	}
-	return
+	return nil
 }
 
 func (cmdProc *cmdProc) writeCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -931,7 +928,7 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 	return coreutils.WrapSysError(err, http.StatusBadRequest)
 }
 
-func (cmdProc *cmdProc) notifyAsyncActualizers(ctx context.Context, cmd *cmdWorkpiece) (err error) {
+func (cmdProc *cmdProc) notifyAsyncActualizers(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
 		Projection: actualizers.PLogUpdatesQName,
@@ -943,7 +940,7 @@ func (cmdProc *cmdProc) notifyAsyncActualizers(ctx context.Context, cmd *cmdWork
 func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	if handlingError != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)
-		//if error occurred somewhere in syncProjectors we have to measure elapsed time
+		// if error occurred somewhere in syncProjectors we have to measure elapsed time
 		if !cmd.syncProjectorsStart.IsZero() {
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
@@ -996,6 +993,8 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 
 func (idGen *implIDGeneratorReporter) NextID(rawID istructs.RecordID) (storageID istructs.RecordID, err error) {
 	storageID, err = idGen.IIDGenerator.NextID(rawID)
-	idGen.generatedIDs[rawID] = storageID
-	return
+	if err == nil {
+		idGen.generatedIDs[rawID] = storageID
+	}
+	return storageID, err
 }

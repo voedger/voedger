@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/storages"
 
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 type enrichPrincipalTokenRR struct {
@@ -29,7 +29,7 @@ func (r *enrichPrincipalTokenRR) AsString(string) string {
 // targetApp/parentWS/q.sys.EnrichPrincipalToken
 // basic auth, WorkspaceOwner
 func provideExecQryEnrichPrincipalToken(atf payloads.IAppTokensFactory) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		appTokens := atf.New(args.State.App())
 
 		principalToken, err := storages.GetPrincipalTokenFromState(args.State)

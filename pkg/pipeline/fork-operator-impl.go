@@ -37,14 +37,12 @@ func (f forkOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
 	errs := make(chan error, len(f.branches))
 
 	for i, branch := range f.branches {
-		wg.Add(1)
-		go func(i int, branch ISyncOperator) {
-			defer wg.Done()
+		wg.Go(func() {
 			e := branch.DoSync(ctx, forks[i])
 			if e != nil {
 				errs <- e
 			}
-		}(i, branch)
+		})
 	}
 
 	wg.Wait()

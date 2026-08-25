@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"sort"
 	"strings"
 	"sync"
@@ -173,7 +174,7 @@ func TestBasicUsage_AsyncSwitchOperator(t *testing.T) {
 
 	const NumIters = 100
 
-	for i := 0; i < NumIters; i++ {
+	for i := range NumIters {
 		var branchNo int
 		if i%2 == 1 {
 			branchNo = 1
@@ -192,9 +193,7 @@ func TestBasicUsage_ForkOperator(t *testing.T) {
 	operator := ForkOperator(
 		func(work IWorkpiece, branchNumber int) (fork IWorkpiece, err error) {
 			fork = newTestWork()
-			for k, v := range work.(testwork).slots {
-				fork.(testwork).slots[k] = v
-			}
+			maps.Copy(fork.(testwork).slots, work.(testwork).slots)
 			return fork, nil
 		},
 		ForkBranch(mockSyncOp().

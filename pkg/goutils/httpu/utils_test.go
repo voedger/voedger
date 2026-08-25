@@ -7,14 +7,53 @@ package httpu
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+type closeTrackingBody struct {
+	io.Reader
+	closed bool
+}
+
+func (b *closeTrackingBody) Close() error {
+	b.closed = true
+	return nil
+}
+
+type failingReader struct {
+	err error
+}
+
+func (r failingReader) Read([]byte) (int, error) {
+	return 0, r.err
+}
+
+func TestReadBodyClosesResponseBody(t *testing.T) {
+	t.Run("successful read", func(t *testing.T) {
+		body := &closeTrackingBody{Reader: strings.NewReader("body")}
+		got, err := readBody(&http.Response{Body: body})
+		require.NoError(t, err)
+		require.Equal(t, "body", got)
+		require.True(t, body.closed)
+	})
+
+	t.Run("read error", func(t *testing.T) {
+		readErr := errors.New("read failed")
+		body := &closeTrackingBody{Reader: failingReader{err: readErr}}
+		got, err := readBody(&http.Response{Body: body})
+		require.ErrorIs(t, err, readErr)
+		require.Empty(t, got)
+		require.True(t, body.closed)
+	})
+}
 
 func TestIsWSAEError(t *testing.T) {
 	require := require.New(t)

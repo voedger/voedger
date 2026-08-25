@@ -6,6 +6,7 @@ package query2
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -22,7 +23,7 @@ func (g *schemaGenerator) generateSchema(ischema ischema, op appdef.OperationKin
 		// 	continue
 		// }
 
-		if fieldNames != nil && len(*fieldNames) > 0 && !containsFieldName(*fieldNames, field.Name()) {
+		if fieldNames != nil && len(*fieldNames) > 0 && !slices.Contains(*fieldNames, field.Name()) {
 			continue
 		}
 
@@ -74,7 +75,6 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 
 	// Handle reference fields
 	if refField, isRef := field.(appdef.IRefField); isRef {
-
 		oneOf := make([]map[string]interface{}, 0, len(refField.Refs())+1)
 		oneOf = append(oneOf, map[string]interface{}{
 			schemaKeyType:   schemaTypeInteger,
@@ -83,7 +83,7 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 		refNames := make([]string, 0, len(refField.Refs()))
 
 		if len(refField.Refs()) > 0 && op == appdef.OperationKind_Select {
-			for i := 0; i < len(refField.Refs()); i++ {
+			for i := range refField.Refs() {
 				schemaRef, ok := g.docSchemaRefIfExist(refField.Refs()[i], op)
 				if !ok {
 					continue // referenced document not available to this role
@@ -113,7 +113,7 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 	case appdef.DataKind_int32:
 		schema[schemaKeyType] = schemaTypeInteger
 		schema[schemaKeyFormat] = schemaFormatInt32
-	case appdef.DataKind_int64:
+	case appdef.DataKind_int64, appdef.DataKind_RecordID:
 		schema[schemaKeyType] = schemaTypeInteger
 		schema[schemaKeyFormat] = schemaFormatInt64
 	case appdef.DataKind_float32:
@@ -143,9 +143,6 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 		schema[schemaKeyType] = schemaTypeString
 		schema[propertyPattern] = qNamePatternRegex
 		schema[propertyExample] = qNameExample
-	case appdef.DataKind_RecordID:
-		schema[schemaKeyType] = schemaTypeInteger
-		schema[schemaKeyFormat] = schemaFormatInt64
 	default:
 		schema[schemaKeyType] = schemaTypeString
 	}
@@ -156,14 +153,4 @@ func (g *schemaGenerator) generateFieldSchema(field appdef.IField, op appdef.Ope
 	}
 
 	return schema
-}
-
-// Helper function to check if a field name is in a list of field names
-func containsFieldName(fieldNames []appdef.FieldName, name appdef.FieldName) bool {
-	for _, n := range fieldNames {
-		if n == name {
-			return true
-		}
-	}
-	return false
 }

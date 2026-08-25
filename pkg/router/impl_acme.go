@@ -5,6 +5,6 @@
 
 package router
 
-func (s *acmeService) Prepare(work interface{}) error {
+func (s *acmeService) Prepare(interface{}) error {
 	return s.prepareBasicServer(s.handler)
 }

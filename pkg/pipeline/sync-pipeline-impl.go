@@ -65,12 +65,12 @@ func processSyncOp(wo *WiredOperator, work IWorkpiece) IWorkpiece {
 		pipelinePanic("nil work in processSyncOp", wo.name, wo.wctx)
 	}
 	if err, ok := work.(IErrorPipeline); ok {
-		if catch, ok := wo.Operator.(ICatch); ok {
-			if newerr := catch.OnErr(err, err.GetWork(), wo.wctx); newerr != nil {
-				return wo.NewError(fmt.Errorf("nested error '%w' while handling '%w'", newerr, err), err.GetWork(), placeCatchOnErr)
-			}
-		} else {
+		catch, ok := wo.Operator.(ICatch)
+		if !ok {
 			return err
+		}
+		if newerr := catch.OnErr(err, err.GetWork(), wo.wctx); newerr != nil {
+			return wo.NewError(fmt.Errorf("nested error '%w' while handling '%w'", newerr, err), err.GetWork(), placeCatchOnErr)
 		}
 		work = err.GetWork() // restore from error
 	}

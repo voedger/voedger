@@ -53,7 +53,7 @@ func apiV2UpdateToCUDs(cmd *cmdWorkpiece) (res []parsedCUD, err error) {
 	}
 	if updateCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(updateCUD.id)); err != nil { // nolint G115
 		// notest
-		return
+		return nil, err
 	}
 	if updateCUD.qName = updateCUD.existingRecord.QName(); updateCUD.qName == appdef.NullQName {
 		return nil, coreutils.NewHTTPError(http.StatusNotFound, cudXPath.Errorf("record with queried id %d does not exist", updateCUD.id))
@@ -98,7 +98,7 @@ func apiV2InsertToCUDs(requestData coreutils.MapObject, parentSysID int64, nextR
 		if requestCUDChildsIntfs, ok := rootFieldValue.([]interface{}); ok {
 			for _, requestCUDChildsIntf := range requestCUDChildsIntfs {
 				requestCUDChildsMap := requestCUDChildsIntf.(map[string]interface{})
-				parsedCUDsChilds, err := apiV2InsertToCUDs(requestCUDChildsMap, parsedCUD.id, nextRawID /*already bumped here*/, cudNumber,
+				parsedCUDsChilds, err := apiV2InsertToCUDs(requestCUDChildsMap, parsedCUD.id, nextRawID /* already bumped here*/, cudNumber,
 					appdef.NewQName(qName.Pkg(), rootFieldName))
 				if err != nil {
 					return nil, err

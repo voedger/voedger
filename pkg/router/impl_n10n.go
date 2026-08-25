@@ -47,7 +47,7 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 			WriteTextResponse(rw, errMsg, http.StatusBadRequest)
 			return
 		}
-		if err = json.Unmarshal([]byte(jsonParam[0]), &urlParams); err != nil {
+		if err := json.Unmarshal([]byte(jsonParam[0]), &urlParams); err != nil {
 			logger.ErrorCtx(logCtx, n10nErrorStage, fmt.Sprintf("cannot unmarshal input payload %v,rawkeys=%s", err, jsonParam[0]))
 			WriteTextResponse(rw, "cannot unmarshal input payload "+err.Error(), http.StatusBadRequest)
 			return
@@ -75,7 +75,7 @@ func (s *routerService) subscribeAndWatchHandler() http.HandlerFunc {
 			return
 		}
 		for _, projection := range urlParams.ProjectionKey {
-			if err = s.n10n.Subscribe(channel, projection); err != nil {
+			if err := s.n10n.Subscribe(channel, projection); err != nil {
 				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), "n10n.subscribe.error", err)
 				writeResponse(rw, fmt.Sprintf("event: error\ndata: subscribe failed: %s\n\n", err.Error()))
 				return
@@ -170,7 +170,7 @@ func (s *routerService) subscribeHandler() http.HandlerFunc {
 			return
 		}
 		for _, projection := range parameters.ProjectionKey {
-			if err = s.n10n.Subscribe(parameters.Channel, projection); err != nil {
+			if err := s.n10n.Subscribe(parameters.Channel, projection); err != nil {
 				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), n10nErrorStage, err)
 				http.Error(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
@@ -202,7 +202,7 @@ func (s *routerService) unSubscribeHandler() http.HandlerFunc {
 			return
 		}
 		for _, projection := range parameters.ProjectionKey {
-			if err = s.n10n.Unsubscribe(parameters.Channel, projection); err != nil {
+			if err := s.n10n.Unsubscribe(parameters.Channel, projection); err != nil {
 				logger.ErrorCtx(n10nProjectionLogCtx(logCtx, projection), "n10n.unsubscribe.error", err)
 				http.Error(rw, err.Error(), n10nErrorToStatusCode(err))
 				return
