@@ -288,7 +288,7 @@ State and workspace lifecycle
   -> @Client: generated login and password
 ```
 
-#### Login creation rejects duplicate login
+#### Login creation rejects an active duplicate login
 
 ```text
 @Client
@@ -296,6 +296,20 @@ State and workspace lifecycle
   -> [/c.registry.CreateEmailLogin/]
   -> [(registry.LoginIdx)]: active login already exists
   -> @Client: 409 Conflict
+```
+
+#### Login creation succeeds for a deactivated login name
+
+```text
+@Client
+  -> [User login handler] or [Device login handler]
+  -> [/c.registry.CreateEmailLogin/] or [/c.registry.CreateLogin/]
+  -> [(registry.LoginIdx)]: resolves the previously created Login CDoc
+  -> [(registry.Login)]: sys.IsActive = false; treat the identifier as available
+  -> [(registry.Login)]: create a new active Login CDoc with a fresh profile workspace request
+  -> [(registry.LoginIdx)]: replace the index target with the new Login CDoc
+  -> [[Profile workspace lifecycle]]
+  -> @Client: 201 Created; the deactivated Login is no longer reachable
 ```
 
 #### Login creation rejects an existing active alias
@@ -328,7 +342,7 @@ State and workspace lifecycle
 
 ### Login alias management
 
-#### System sets the first login alias
+#### System sets the first Login Alias
 
 ```text
 @System
@@ -340,7 +354,7 @@ State and workspace lifecycle
   -> [(registry.Login)]: Alias = j.smith, AliasInProc = 0, AliasError = ""
 ```
 
-#### System replaces an existing login alias
+#### System replaces an existing Login Alias
 
 ```text
 @System
@@ -352,7 +366,7 @@ State and workspace lifecycle
   -> [(registry.Login)]: Alias = john.smith, AliasInProc = 0, AliasError = ""
 ```
 
-#### System clears a login alias
+#### System clears a Login Alias
 
 ```text
 @System
@@ -371,29 +385,19 @@ State and workspace lifecycle
   -> @Client: rejected before alias state changes
 ```
 
-#### Alias creation or update rejects alias-vs-login collision
+#### Alias creation or update rejects a colliding identifier
 
 ```text
 @System
-  -> [/c.registry.InitiateSetLoginAlias/]: Alias = existing-login
+  -> [/c.registry.InitiateSetLoginAlias/]: create or update Alias
   -> [aproj.registry.ApplySetLoginAlias]
   -> [/c.registry.PutLoginAliasIndex/]
-  -> [(registry.LoginIdx)]: active login already uses the alias string
+      -> [(registry.LoginIdx)]: branch when an active login already uses the identifier
+      -> [(registry.LoginAlias)]: branch when an active alias already uses the identifier for another Login
   -> [(registry.Login)]: AliasError records conflict when best-effort write succeeds
 ```
 
-#### Alias creation or update rejects alias-vs-alias collision
-
-```text
-@System
-  -> [/c.registry.InitiateSetLoginAlias/]: Alias = existing-alias
-  -> [aproj.registry.ApplySetLoginAlias]
-  -> [/c.registry.PutLoginAliasIndex/]
-  -> [(registry.LoginAlias)]: active alias already exists for another source login
-  -> [(registry.Login)]: AliasError records conflict when best-effort write succeeds
-```
-
-#### Alias creation rejects invalid alias format
+#### Alias creation rejects an invalid sign-in identifier
 
 ```text
 @System
@@ -570,6 +574,20 @@ Both branches reuse their existing unknown-login or invalid-Credential response 
   -> @Client: principalToken, expiresInSeconds, profileWSID
 ```
 
+#### User signs in with original login while alias is active
+
+```text
+@Client
+  -> [/POST /api/v2/apps/{owner}/{app}/auth/login/]: original login, password
+  -> [API v2 auth routes]
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]
+  -> [(registry.LoginIdx)]: direct canonical Login hit
+  -> [(registry.Login)]: canonical Login enabled; password matches; profileWSID is non-zero; Alias is active
+  -> [Token service]: issue principal token with Login (canonical login) and Alias (active alias)
+  -> @Client: principalToken, expiresInSeconds, profileWSID
+```
+
 #### User signs in with active alias
 
 ```text
@@ -586,7 +604,7 @@ Both branches reuse their existing unknown-login or invalid-Credential response 
   -> @Client: principalToken, expiresInSeconds, profileWSID
 ```
 
-#### Sign-in rejects previous alias after alias update
+#### Sign-in rejects a previous alias after alias update
 
 ```text
 @Client
@@ -596,7 +614,7 @@ Both branches reuse their existing unknown-login or invalid-Credential response 
   -> @Client: 401 Unauthorized
 ```
 
-#### Sign-in rejects cleared alias
+#### Sign-in rejects a cleared alias
 
 ```text
 @Client
@@ -673,7 +691,20 @@ Both branches reuse their existing unknown-login or invalid-Credential response 
   -> @Client: new principalToken, expiresInSeconds, profileWSID
 ```
 
-#### Existing principal token keeps alias snapshot after alias changes
+#### Principal token carries the canonical login and the active alias
+
+```text
+@Client
+  -> [/q.registry.IssuePrincipalToken/]: alias or original login, password
+      -> [(registry.LoginIdx)]: direct canonical hit or alias-path miss
+      -> [(registry.LoginAlias)]: resolve active alias when the canonical lookup misses
+      -> [/q.sys.GetCDoc/]: read the canonical [(registry.Login)] on the alias path
+      -> [(registry.Login)]: canonical login, active Alias or empty Alias, subject kind, profileWSID
+  -> [Token service]: PrincipalPayload(Login = canonical login, Alias = active alias or empty)
+  -> @Client: principalToken with canonical Login and the current Alias snapshot
+```
+
+#### Existing principal token retains login and alias after alias changes
 
 ```text
 @Client
@@ -696,6 +727,26 @@ Both branches reuse their existing unknown-login or invalid-Credential response 
   -> [(registry.LoginIdx)]
   -> [(registry.Login)]: old password matches; write new password hash
   -> @Client: 200 OK
+```
+
+#### Password change rejects malformed request
+
+```text
+@Client
+  -> [/POST /api/v2/apps/{owner}/{app}/users/change-password/]: missing login, oldPassword, or newPassword
+  -> [Password handler]
+  -> @Client: 400 Bad Request
+```
+
+#### Password change rejects unknown login or wrong current password
+
+```text
+@Client
+  -> [Password handler]
+  -> [/c.registry.ChangePassword/]
+  -> [(registry.LoginIdx)]
+  -> [(registry.Login)]: login missing or password mismatch
+  -> @Client: 401 Unauthorized
 ```
 
 #### Client resets password by verified email
@@ -770,26 +821,6 @@ Case 2: alias is set by a user who controls either the canonical account email/s
 
 Sum-up: Step 2 currently issues the reset token for the current active owner of E, not necessarily the owner resolved at Step 1. This is safe only when the reset flow intentionally targets the current active owner of the alias, and every alias-binding path requires authority over the target account. Otherwise, Step 2 must reject if the alias binding changed during verification.
 
-#### Password change rejects malformed request
-
-```text
-@Client
-  -> [/POST /api/v2/apps/{owner}/{app}/users/change-password/]: missing login, oldPassword, or newPassword
-  -> [Password handler]
-  -> @Client: 400 Bad Request
-```
-
-#### Password change rejects unknown login or wrong current password
-
-```text
-@Client
-  -> [Password handler]
-  -> [/c.registry.ChangePassword/]
-  -> [(registry.LoginIdx)]
-  -> [(registry.Login)]: login missing or password mismatch
-  -> @Client: 401 Unauthorized
-```
-
 #### Password reset initiation rejects an inactive alias
 
 ```text
@@ -850,6 +881,18 @@ Sum-up: Step 2 currently issues the reset token for the current active owner of 
   -> [(registry.LoginIdx)]
   -> [(registry.Login)]: login missing or password mismatch
   -> @Client: 401 Unauthorized
+```
+
+#### Sign-in rejects a deactivated login with the same error as a missing login
+
+```text
+@Client
+  -> [Auth login handler]
+  -> [/q.registry.IssuePrincipalToken/]: deactivated login, password
+  -> [(registry.LoginIdx)]: resolves the deactivated Login CDoc
+  -> [(registry.Login)]: sys.IsActive = false; treat the canonical Login as missing
+  -> [(registry.LoginAlias)]: no active alias for the submitted identifier
+  -> @Client: 401 Unauthorized; login or password is incorrect
 ```
 
 #### Principal token refresh requires an existing token
