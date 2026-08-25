@@ -105,6 +105,8 @@ type sourceIdentity struct {
 	line        int
 }
 
+const bindingResolutionPassLimit = 4
+
 var placeholderPattern = regexp.MustCompile(`<([^<>]+)>`)
 
 // Test reports every conformance diagnostic through t.
@@ -751,31 +753,38 @@ func parseGoSubtests(path, scenarioPrefix string) ([]goSubtest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: parse Go source: %w", path, err)
 	}
-	bindings := collectStringBindings(file)
-	scenarioBindings := collectScenarioBindings(file, scenarioPrefix, bindings)
-
 	var subtests []goSubtest
-	ast.Inspect(file, func(node ast.Node) bool {
-		call, ok := node.(*ast.CallExpr)
-		if !ok || !isSubtestCall(call) {
+	globalStringBindings := collectStringBindings(file, nil, true)
+	globalScenarioBindings := collectScenarioBindings(file, scenarioPrefix, globalStringBindings, nil, true)
+	for _, declaration := range file.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok || function.Body == nil {
+			continue
+		}
+		stringBindings := collectStringBindings(function.Body, withoutParameterBindings(globalStringBindings, function.Type), false)
+		scenarioBindings := collectScenarioBindings(function.Body, scenarioPrefix, stringBindings, withoutParameterBindings(globalScenarioBindings, function.Type), false)
+		ast.Inspect(function.Body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok || !isSubtestCall(call) {
+				return true
+			}
+			argument := call.Args[0]
+			name, literal := stringLiteral(argument)
+			if !literal {
+				name, _ = staticString(argument, stringBindings)
+			}
+			funcLiteral := call.Args[1].(*ast.FuncLit)
+			subtests = append(subtests, goSubtest{
+				path:                   path,
+				line:                   fileSet.Position(argument.Pos()).Line,
+				name:                   name,
+				literal:                literal,
+				mayContainScenarioName: strings.HasPrefix(name, scenarioPrefix) || expressionMayContainScenarioName(argument, scenarioPrefix, stringBindings, scenarioBindings),
+				comments:               commentsInRange(file.Comments, funcLiteral.Body.Pos(), funcLiteral.Body.End()),
+			})
 			return true
-		}
-		argument := call.Args[0]
-		name, literal := stringLiteral(argument)
-		if !literal {
-			name, _ = staticString(argument, bindings)
-		}
-		funcLiteral := call.Args[1].(*ast.FuncLit)
-		subtests = append(subtests, goSubtest{
-			path:                   path,
-			line:                   fileSet.Position(argument.Pos()).Line,
-			name:                   name,
-			literal:                literal,
-			mayContainScenarioName: strings.HasPrefix(name, scenarioPrefix) || expressionMayContainScenarioName(argument, scenarioPrefix, bindings, scenarioBindings),
-			comments:               commentsInRange(file.Comments, funcLiteral.Body.Pos(), funcLiteral.Body.End()),
 		})
-		return true
-	})
+	}
 	return subtests, nil
 }
 
@@ -800,40 +809,50 @@ func isTestingCallback(callback *ast.FuncLit) bool {
 	return ok && selector.Sel.Name == "T"
 }
 
-func collectStringBindings(file *ast.File) map[*ast.Object]string {
-	bindings := map[*ast.Object]string{}
-	resolveObjectBindings(file, func(object *ast.Object, expression ast.Expr) bool {
+func collectStringBindings(node ast.Node, initial map[string]string, skipFunctions bool) map[string]string {
+	bindings := cloneBindings(initial)
+	if initial != nil {
+		visitNameAssignments(node, skipFunctions, func(name string, _ ast.Expr) {
+			delete(bindings, name)
+		})
+	}
+	resolveNameBindings(node, skipFunctions, func(name string, expression ast.Expr) bool {
 		value, ok := staticString(expression, bindings)
 		if !ok {
 			return false
 		}
-		previous, exists := bindings[object]
+		previous, exists := bindings[name]
 		if exists && previous == value {
 			return false
 		}
-		bindings[object] = value
+		bindings[name] = value
 		return true
 	})
 	return bindings
 }
 
-func collectScenarioBindings(file *ast.File, scenarioPrefix string, stringBindings map[*ast.Object]string) map[*ast.Object]bool {
-	bindings := map[*ast.Object]bool{}
-	resolveObjectBindings(file, func(object *ast.Object, expression ast.Expr) bool {
-		if bindings[object] || !expressionMayContainScenarioName(expression, scenarioPrefix, stringBindings, bindings) {
+func collectScenarioBindings(node ast.Node, scenarioPrefix string, stringBindings map[string]string, initial map[string]bool, skipFunctions bool) map[string]bool {
+	bindings := cloneBindings(initial)
+	if initial != nil {
+		visitNameAssignments(node, skipFunctions, func(name string, _ ast.Expr) {
+			delete(bindings, name)
+		})
+	}
+	resolveNameBindings(node, skipFunctions, func(name string, expression ast.Expr) bool {
+		if bindings[name] || !expressionMayContainScenarioName(expression, scenarioPrefix, stringBindings, bindings) {
 			return false
 		}
-		bindings[object] = true
+		bindings[name] = true
 		return true
 	})
 	return bindings
 }
 
-func resolveObjectBindings(file *ast.File, resolve func(*ast.Object, ast.Expr) bool) {
-	for pass := 0; pass < 4; pass++ {
+func resolveNameBindings(node ast.Node, skipFunctions bool, resolve func(string, ast.Expr) bool) {
+	for pass := 0; pass < bindingResolutionPassLimit; pass++ {
 		changed := false
-		visitObjectAssignments(file, func(object *ast.Object, expression ast.Expr) {
-			if resolve(object, expression) {
+		visitNameAssignments(node, skipFunctions, func(name string, expression ast.Expr) {
+			if resolve(name, expression) {
 				changed = true
 			}
 		})
@@ -843,16 +862,21 @@ func resolveObjectBindings(file *ast.File, resolve func(*ast.Object, ast.Expr) b
 	}
 }
 
-func visitObjectAssignments(file *ast.File, visit func(*ast.Object, ast.Expr)) {
-	ast.Inspect(file, func(node ast.Node) bool {
+func visitNameAssignments(root ast.Node, skipFunctions bool, visit func(string, ast.Expr)) {
+	ast.Inspect(root, func(node ast.Node) bool {
+		if skipFunctions {
+			if _, ok := node.(*ast.FuncDecl); ok {
+				return false
+			}
+		}
 		switch declaration := node.(type) {
 		case *ast.ValueSpec:
 			if len(declaration.Names) != len(declaration.Values) {
 				return true
 			}
 			for index, name := range declaration.Names {
-				if name.Obj != nil {
-					visit(name.Obj, declaration.Values[index])
+				if name.Name != "_" {
+					visit(name.Name, declaration.Values[index])
 				}
 			}
 		case *ast.AssignStmt:
@@ -861,8 +885,8 @@ func visitObjectAssignments(file *ast.File, visit func(*ast.Object, ast.Expr)) {
 			}
 			for index, left := range declaration.Lhs {
 				name, ok := left.(*ast.Ident)
-				if ok && name.Obj != nil {
-					visit(name.Obj, declaration.Rhs[index])
+				if ok && name.Name != "_" {
+					visit(name.Name, declaration.Rhs[index])
 				}
 			}
 		}
@@ -870,17 +894,35 @@ func visitObjectAssignments(file *ast.File, visit func(*ast.Object, ast.Expr)) {
 	})
 }
 
-func staticString(expression ast.Expr, bindings map[*ast.Object]string) (string, bool) {
+func cloneBindings[T any](source map[string]T) map[string]T {
+	clone := make(map[string]T, len(source))
+	for name, value := range source {
+		clone[name] = value
+	}
+	return clone
+}
+
+func withoutParameterBindings[T any](bindings map[string]T, functionType *ast.FuncType) map[string]T {
+	clone := cloneBindings(bindings)
+	if functionType.Params == nil {
+		return clone
+	}
+	for _, field := range functionType.Params.List {
+		for _, name := range field.Names {
+			delete(clone, name.Name)
+		}
+	}
+	return clone
+}
+
+func staticString(expression ast.Expr, bindings map[string]string) (string, bool) {
 	switch value := expression.(type) {
 	case *ast.BasicLit:
 		return stringLiteral(value)
 	case *ast.ParenExpr:
 		return staticString(value.X, bindings)
 	case *ast.Ident:
-		if value.Obj == nil {
-			return "", false
-		}
-		resolved, ok := bindings[value.Obj]
+		resolved, ok := bindings[value.Name]
 		return resolved, ok
 	case *ast.BinaryExpr:
 		if value.Op != token.ADD {
@@ -909,14 +951,14 @@ func stringLiteral(expression ast.Expr) (string, bool) {
 	return value, true
 }
 
-func expressionMayContainScenarioName(expression ast.Expr, scenarioPrefix string, stringBindings map[*ast.Object]string, scenarioBindings map[*ast.Object]bool) bool {
+func expressionMayContainScenarioName(expression ast.Expr, scenarioPrefix string, stringBindings map[string]string, scenarioBindings map[string]bool) bool {
 	if value, ok := staticString(expression, stringBindings); ok && strings.HasPrefix(value, scenarioPrefix) {
 		return true
 	}
 	found := false
 	ast.Inspect(expression, func(node ast.Node) bool {
 		identifier, ok := node.(*ast.Ident)
-		if ok && identifier.Obj != nil && scenarioBindings[identifier.Obj] {
+		if ok && scenarioBindings[identifier.Name] {
 			found = true
 			return false
 		}
