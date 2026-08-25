@@ -60,7 +60,7 @@ func newAppPartitions(
 	a.asyncActualizersRunner.SetAppPartitions(a)
 	a.schedulerRunner.SetAppPartitions(a)
 	a.partBorrowRetryCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, err error) {
-		if !errors.Is(err, ErrNotAvailableEngines) {
+		if errors.Is(opErr, ErrNotAvailableEngines) {
 			return true, nil
 		}
 		// notest: ErrNotAvailableEngines is only possible in [borrowedPartition.borrow]
