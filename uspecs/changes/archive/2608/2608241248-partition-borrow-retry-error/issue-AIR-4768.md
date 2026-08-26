@@ -15,19 +15,21 @@ The `WaitForBorrow` retry handler checks the named return variable `err` instead
 if !errors.Is(err, ErrNotAvailableEngines)
 ```
 
-At this point, `err` is always `nil`. Consequently, `ErrNotAvailableEngines` is never recognized and borrowing is retried indefinitely. This can cause processors to hang when an engine pool is exhausted and can amplify re-entrant scheduler failures.
+At this point, `err` is always `nil`, so the condition is always true and every borrow error is retried. Retrying `ErrNotAvailableEngines` is intentional because an engine can become available after another processor releases it. The defect is that permanent errors, such as an unknown application or partition, are also suppressed and retried until the caller's context is cancelled.
 
 ## What
 
-Update the retry handler to inspect `opErr`:
+Update the retry handler to inspect `opErr` and retry only engine-availability errors:
 
 ```
-if !errors.Is(opErr, ErrNotAvailableEngines)
+if errors.Is(opErr, ErrNotAvailableEngines) {
+    return true, nil
+}
+return false, opErr
 ```
 
 Add a regression test verifying that:
 
-* `ErrNotAvailableEngines` aborts immediately and is returned to the caller.
-* Other transient borrow errors continue to be retried.
+* `ErrNotAvailableEngines` continues to be retried.
+* Every other borrow error aborts immediately and is returned to the caller.
 * The behavior applies to all processor engine pools, including schedulers.
-

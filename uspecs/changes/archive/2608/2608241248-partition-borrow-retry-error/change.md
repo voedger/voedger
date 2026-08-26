@@ -14,47 +14,43 @@ Refs:
 
 ## Why
 
-Application processors can hang when their extension engine pool is exhausted because partition borrowing does not recognize the terminal engine-availability error. The retry decision must use the operation error so engine exhaustion is reported instead of retried indefinitely.
+`WaitForBorrow` must keep waiting while an extension engine is temporarily unavailable, but it must return every other borrow error. Its retry handler checked the named return variable `err` instead of the received operation error `opErr`. Because `err` was always `nil`, the handler classified every failure as retryable. Permanent errors such as an unknown application or partition could therefore be suppressed and retried until the caller's context was cancelled.
 
 ### Why existing tests passed
 
-The existing test suite did not expose the incorrect retry
-classification because:
+The existing test suite did not expose the incorrect retry classification because:
 
-- regression coverage asserted the same reversed classification as the
-  implementation, so it confirmed the defect instead of detecting it
-- the deployment-test runner handled a surfaced
-  `ErrNotAvailableEngines` by immediately continuing its own loop,
-  masking the behavior at the `WaitForBorrow` boundary
-- VIT normally provisions engine pools large enough that integration
-  tests rarely exhaust them
-- query processor integration tests call `Borrow` directly and therefore
-  do not exercise the `WaitForBorrow` retry policy
+- integration tests exercised `WaitForBorrow` only with deployed applications and valid partitions; in that state, `Borrow` either succeeds or returns `ErrNotAvailableEngines`, which is supposed to be retried
+- there was no focused coverage passing a non-engine-availability error through the retry policy
+- processor-focused tests either mock `IAppPartitions` or call `Borrow` directly, so they do not exercise the real `WaitForBorrow` error-classification branch
 
 ## What
 
-Symptom: A processor waits indefinitely when partition borrowing fails because no extension engine is available.
+Symptom: A processor keeps waiting when partition borrowing fails with a non-retryable error.
 
 ```text
 processor requests an application partition through WaitForBorrow
       |
       v
-Borrow returns ErrNotAvailableEngines
+Borrow returns an application or partition lookup error
       |
       v
 partBorrowRetryCfg.OnError receives opErr
       |
       v
-OnError checks named return variable err instead of opErr   <-- fault
+OnError checks named return variable err (nil) instead of opErr   <-- fault
+      |
+      v
+!errors.Is(nil, ErrNotAvailableEngines) is true
       |
       v
 OnError requests another retry
       |
       v
-WaitForBorrow retries indefinitely   (symptom)
+WaitForBorrow retries a permanent error until context cancellation   (symptom)
 ```
 
-Corrected behavior: `ErrNotAvailableEngines` aborts partition borrowing and is returned to the processor, while other transient borrow errors remain retryable.
+Corrected behavior: `ErrNotAvailableEngines` remains retryable because it represents temporary engine-pool contention. Every other borrow error aborts the retry loop and is returned to the processor.
 
 ## How
 
