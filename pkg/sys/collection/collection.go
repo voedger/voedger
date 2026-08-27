@@ -32,13 +32,13 @@ var collectionProjector = istructs.Projector{
 			kb, err = s.KeyBuilder(sys.Storage_View, QNameCollectionView)
 			if err != nil {
 				// notest
-				return
+				return nil, err
 			}
 			kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 			kb.PutQName(Field_DocQName, docQname)
 			kb.PutRecordID(Field_DocID, docID)
 			kb.PutRecordID(field_ElementID, elementID)
-			return
+			return kb, nil
 		}
 
 		apply := func(kb istructs.IStateKeyBuilder, record istructs.IRecord, isNew bool) (err error) {
@@ -87,7 +87,7 @@ var collectionProjector = istructs.Projector{
 		for i, kbID := range keyBuildersAndIDs {
 			keyBuilders[i] = kbID.IStateKeyBuilder
 		}
-		err = is.state.MustExistAll(keyBuilders, func(key istructs.IKeyBuilder, sv istructs.IStateValue, ok bool) (err error) {
+		err = is.state.MustExistAll(keyBuilders, func(_ istructs.IKeyBuilder, sv istructs.IStateValue, _ bool) (err error) {
 			record := sv.(istructs.IStateRecordValue).AsRecord()
 			is.cache[record.ID()] = record
 			return nil
@@ -110,7 +110,7 @@ var collectionProjector = istructs.Projector{
 				// notest
 				return err
 			}
-			if err = apply(kb, record, kbAndID.isNew); err != nil {
+			if err := apply(kb, record, kbAndID.isNew); err != nil {
 				return err
 			}
 		}

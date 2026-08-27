@@ -104,7 +104,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	waitForDeactivate(vit, newWS.Owner.AppQName, newWS.WSID, newWS.Name)
 
 	// check cdoc.sys.JoinedWorkspace.IsActive == false
-	joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, testEmail2Prn)
+	joinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, testEmail2Prn)
 	require.False(joinedWorkspace.isActive)
 
 	// check appWS/cdoc.sys.WorkspaceID.IsActive == false

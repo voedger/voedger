@@ -57,7 +57,7 @@ func TestVSqlUpdate_NoDeadlockOnSharedCommandProcessor(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	categoryName := vit.NextName()
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 	categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
@@ -94,13 +94,13 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
-		require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
+		require.Contains(t, resStr, fmt.Sprintf(`"name":%q`, newName))
 	}
 
 	t.Run("apiv1", func(t *testing.T) {
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 		categoryName := vit.NextName()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 		updateAndCheck(t, categoryID, vit.NextName(), func(body string) {
@@ -114,7 +114,7 @@ func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 		categoryName := vit.NextName()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 		updateAndCheck(t, categoryID, vit.NextName(), func(body string) {
@@ -157,12 +157,12 @@ func TestVSqlUpdate2_DirectQuery_AllKinds(t *testing.T) {
 
 		selectBody := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, int64(row[2].(float64)))
 		selResp := vit.PostWS(ws, "q.sys.SqlQuery", selectBody)
-		require.Contains(selResp.SectionRow()[0].(string), fmt.Sprintf(`"name":"%s"`, categoryName))
+		require.Contains(selResp.SectionRow()[0].(string), fmt.Sprintf(`"name":%q`, categoryName))
 	})
 
 	t.Run("update table", func(t *testing.T) {
 		categoryName := vit.NextName()
-		cudBody := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		cudBody := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		categoryID := vit.PostWS(ws, "c.sys.CUD", cudBody).NewID()
 
 		newName := vit.NextName()
@@ -176,12 +176,12 @@ func TestVSqlUpdate2_DirectQuery_AllKinds(t *testing.T) {
 
 		selectBody := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
 		selResp := vit.PostWS(ws, "q.sys.SqlQuery", selectBody)
-		require.Contains(selResp.SectionRow(len(selResp.Sections[0].Elements) - 1)[0].(string), fmt.Sprintf(`"name":"%s"`, newName))
+		require.Contains(selResp.SectionRow(len(selResp.Sections[0].Elements) - 1)[0].(string), fmt.Sprintf(`"name":%q`, newName))
 	})
 
 	t.Run("unlogged update", func(t *testing.T) {
 		categoryName := vit.NextName()
-		cudBody := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		cudBody := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		vit.PostWS(ws, "c.sys.CUD", cudBody)
 
 		newName := vit.NextName()
@@ -195,7 +195,7 @@ func TestVSqlUpdate2_DirectQuery_AllKinds(t *testing.T) {
 
 	t.Run("update corrupted", func(t *testing.T) {
 		categoryName := vit.NextName()
-		cudBody := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		cudBody := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		wlogOffset := vit.PostWS(ws, "c.sys.CUD", cudBody).CurrentWLogOffset
 
 		query := fmt.Sprintf(`update corrupted test1.app1.%d.sys.WLog.%d`, ws.WSID, wlogOffset)
@@ -252,7 +252,7 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 	t.Run("wlog", func(t *testing.T) {
 		// make an event
 		categoryName := vit.NextName()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		wlogOffset := resp.CurrentWLogOffset
 
@@ -280,7 +280,7 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 	t.Run("plog", func(t *testing.T) {
 		// make an event
 		categoryName := vit.NextName()
-		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		wlogOffset := resp.CurrentWLogOffset
 
@@ -359,7 +359,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	// insert a cdoc
 	// p.ap1pkg.ApplyCategoryIdx will insert the single hardcoded record view.CategoryIdx(Name = category.Name, IntFld = 43, Dummy = 1, Val = 42) (see shared_cfgs.go)
 	categoryName := vit.NextName()
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q}}]}`, categoryName)
 	lastTest1App1Offset := vit.PostWS(ws, "c.sys.CUD", body).CurrentWLogOffset
 
 	// check view values
@@ -429,7 +429,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 
 	// insert a doc
 	categoryName := vit.NextName()
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s", "hq_id":"hq value","int_fld1":42,"int_fld2":43}}]}`, categoryName)
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":%q, "hq_id":"hq value","int_fld1":42,"int_fld2":43}}]}`, categoryName)
 	categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
@@ -555,7 +555,7 @@ func TestDirectUpdateManyTypes(t *testing.T) {
 	// create a record with fields of different types
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	_, bts := getUniqueNumber(vit)
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocManyTypes","Int":1,"Int64":2,"Float32":3.4,"Float64":5.6,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocManyTypes","Int":1,"Int64":2,"Float32":3.4,"Float64":5.6,"Str":"str","Bool":true,"Bytes":%q}}]}`, bts)
 	id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
@@ -730,7 +730,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 	for sql, expectedError := range cases {
 		t.Run(expectedError, func(t *testing.T) {
-			body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
+			body := fmt.Sprintf(`{"args": {"Query":%q}}`, sql)
 			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 				httpu.WithAuthorizeBy(sysPrn.Token),
 				it.Expect400(expectedError),

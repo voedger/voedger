@@ -27,11 +27,11 @@ func execCmdInitiateLeaveWorkspace(_ timeu.ITime) func(args istructs.ExecCommand
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbPrincipal, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 		if err != nil {
-			return
+			return err
 		}
 		svPrincipal, err := args.State.MustExist(skbPrincipal)
 		if err != nil {
-			return
+			return err
 		}
 
 		canonicalLogin := svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
@@ -70,6 +70,6 @@ func execCmdInitiateLeaveWorkspace(_ timeu.ITime) func(args istructs.ExecCommand
 		}
 		svbCDocInvite.PutInt32(Field_Version, 1)
 
-		return
+		return nil
 	}
 }

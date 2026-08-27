@@ -111,7 +111,7 @@ type joinedWorkspaceDesc struct {
 	wsName                string
 }
 
-func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login *it.Principal) joinedWorkspaceDesc {
+func findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login *it.Principal) joinedWorkspaceDesc {
 	vit.T.Helper()
 	resp := vit.PostProfile(login, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.JoinedWorkspace"},

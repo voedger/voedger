@@ -189,7 +189,7 @@ func TestInvites(t *testing.T) {
 		require.Equal(t, f.principal.ProfileWSID, invitation.inviteeProfileWSID)
 		require.Equal(t, istructs.SubjectKind_User, invitation.subjectKind)
 		require.NotEqual(t, istructs.NullRecordID, invitation.subjectID)
-		joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal)
+		joinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal)
 		require.Equal(t, initialRoles, joinedWorkspace.roles)
 		require.Equal(t, f.ws.Name, joinedWorkspace.wsName)
 	})
@@ -329,7 +329,7 @@ func TestInvites(t *testing.T) {
 
 		// And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
 		require.Equal(t, newRoles, subject.roles)
-		joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal)
+		joinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal)
 		require.True(t, joinedWorkspace.isActive)
 		require.Equal(t, newRoles, joinedWorkspace.roles)
 	})
@@ -373,7 +373,7 @@ func TestInvites(t *testing.T) {
 
 		// And User Login "jsmith@example.com" has Role "app1pkg.SpecialAPITokenRole" in Workspace "Acme"
 		require.Equal(t, newRoles, subject.roles)
-		joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal)
+		joinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal)
 		require.True(t, joinedWorkspace.isActive)
 		require.Equal(t, newRoles, joinedWorkspace.roles)
 	})
@@ -403,7 +403,7 @@ func TestInvites(t *testing.T) {
 		// And the invitation for "j.smith@example.com" remains joined
 		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, currentInviteID).state)
 		require.Equal(t, invite.State_Cancelled, getInvitesFeatureInvitation(t, f, retiredInviteID).state)
-		require.True(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+		require.True(t, findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
 	})
 
 	t.Run("invites: scn: Workspace owner cannot manage a retired invitation: update roles", func(t *testing.T) {
@@ -433,7 +433,7 @@ func TestInvites(t *testing.T) {
 		// And the invitation for "j.smith@example.com" remains joined
 		require.Equal(t, invite.State_Joined, getInvitesFeatureInvitation(t, f, currentInviteID).state)
 		require.Equal(t, invite.State_Cancelled, getInvitesFeatureInvitation(t, f, retiredInviteID).state)
-		require.True(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+		require.True(t, findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
 	})
 
 	for _, tc := range []struct {
@@ -529,7 +529,7 @@ func TestInvites(t *testing.T) {
 
 		// And the invitation for "j.smith@example.com" remains pending
 		require.Equal(t, invite.State_Invited, getInvitesFeatureInvitation(t, f, newInviteID).state)
-		require.True(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+		require.True(t, findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
 	})
 
 	t.Run("current controlling invitation: owner cancellation retains InviteEmail and rejoin overwrites it", func(t *testing.T) {
@@ -543,7 +543,7 @@ func TestInvites(t *testing.T) {
 
 		subject := requireInvitesFeatureMembership(t, f, f.email, false)
 		require.Equal(t, alias, subject.inviteEmail)
-		require.False(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+		require.False(t, findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
 
 		_, canonicalCode := resendInvitesFeatureInvitation(t, f, previousInviteID, f.email, initialRoles)
 		acceptInvitesFeatureInvitation(t, f, previousInviteID, principal, canonicalCode)
@@ -564,7 +564,7 @@ func TestInvites(t *testing.T) {
 
 		subject := requireInvitesFeatureMembership(t, f, f.email, false)
 		require.Equal(t, alias, subject.inviteEmail)
-		require.False(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
+		require.False(t, findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, principal).isActive)
 
 		_, canonicalCode := resendInvitesFeatureInvitation(t, f, previousInviteID, f.email, initialRoles)
 		acceptInvitesFeatureInvitation(t, f, previousInviteID, principal, canonicalCode)
@@ -592,7 +592,7 @@ func TestInvites(t *testing.T) {
 		require.Equal(t, newRoles, subject.roles)
 
 		// And the user's joined-workspace record has Role "app1pkg.SpecialAPITokenRole"
-		joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal)
+		joinedWorkspace := findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal)
 		require.Equal(t, newRoles, joinedWorkspace.roles)
 
 		// And "alice@example.com" receives a role-update email
@@ -620,7 +620,7 @@ func TestInvites(t *testing.T) {
 		requireInvitesFeatureMembership(t, f, f.email, false)
 
 		// And the user's joined-workspace record is inactive
-		require.False(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal).isActive)
+		require.False(t, findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal).isActive)
 	})
 
 	t.Run("invites: scn: Workspace membership ends: member leaves", func(t *testing.T) {
@@ -641,7 +641,7 @@ func TestInvites(t *testing.T) {
 		requireInvitesFeatureMembership(t, f, f.email, false)
 
 		// And the user's joined-workspace record is inactive
-		require.False(t, FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal).isActive)
+		require.False(t, findCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(f.vit, f.ws.WSID, f.principal).isActive)
 	})
 
 	t.Run("invites: scn: Previous member accepts a new invitation: removed member", func(t *testing.T) {

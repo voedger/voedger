@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"slices"
+
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -72,7 +73,7 @@ func TestTTL(t *testing.T) {
 
 	t.Run("custom TTL", func(t *testing.T) {
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "%s","AppName": "%s", "TTLHours":15},"elements":[{"fields":["PrincipalToken"]}]}`,
+		body := fmt.Sprintf(`{"args": {"Login": %q,"Password": %q,"AppName": %q, "TTLHours":15},"elements":[{"fields":["PrincipalToken"]}]}`,
 			prn.Name, prn.Pwd, prn.AppQName.String())
 		resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
 		token := resp.SectionRow()[0].(string)
@@ -178,16 +179,16 @@ func TestGlobalRoles(t *testing.T) {
 		httpu.WithAuthorizeBy(prn.Token), httpu.Expect403())
 
 	// update global roles not allowed by default
-	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	body := fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.Expect403())
 
 	sysRegistryToken := vit.GetSystemPrincipal(istructs.AppQName_sys_registry).Token
 	// incorrect role name
-	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
+	body = fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"GlobalRoles":"LimitedAccessRole,sys.role2"},"elements":[]}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken), httpu.Expect400())
 
 	// update global roles allowed for the System principal
-	body = fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"}}`, login.Name, login.AppQName.String())
+	body = fmt.Sprintf(`{"args":{"Login":%q,"AppName":%q,"GlobalRoles":"app1pkg.LimitedAccessRole,sys.role2"}}`, login.Name, login.AppQName.String())
 	vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "c.registry.UpdateGlobalRoles", body, httpu.WithAuthorizeBy(sysRegistryToken))
 
 	// now global roles are in the new token

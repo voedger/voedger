@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 const (
@@ -66,7 +66,7 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 	defer cleanup()
 
 	wg := sync.WaitGroup{}
-	for i := 0; i < cntItems; i++ {
+	for i := range cntItems {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType, i int) {
 			defer wg.Done()
@@ -85,7 +85,7 @@ func Test_Race_SimpleInsertMany(t *testing.T) {
 	defer cleanup()
 
 	wg := sync.WaitGroup{}
-	for i := 0; i < cntItems; i++ {
+	for i := range cntItems {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType, ai int) {
 			defer wg.Done()

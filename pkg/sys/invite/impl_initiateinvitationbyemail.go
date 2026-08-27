@@ -40,7 +40,7 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		// because login is Inviter here, not Invitee
 		_, subjectIsActive, err := SubjectExistsByLogin(cmdInitiateInvitation_ArgEmail, args.State)
 		if err != nil {
-			return
+			return err
 		}
 
 		if err := coreutils.ValidateEMail(cmdInitiateInvitation_ArgEmail); err != nil {
@@ -49,13 +49,13 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 
 		skbViewInviteIndex, err := args.State.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
 		if err != nil {
-			return
+			return err
 		}
 		skbViewInviteIndex.PutInt32(field_Dummy, value_Dummy_One)
 		skbViewInviteIndex.PutString(Field_Login, cmdInitiateInvitation_ArgEmail)
 		svViewInviteIndex, ok, err := args.State.CanExist(skbViewInviteIndex)
 		if err != nil {
-			return
+			return err
 		}
 
 		if ok {
@@ -112,6 +112,6 @@ func execCmdInitiateInvitationByEMail(tm timeu.ITime) func(args istructs.ExecCom
 		svbCDocInvite.PutInt32(Field_Version, 1)
 		// do not fill cdoc.sys.Invite.ActualLogin because it must be Invitee's login. It is unknown here
 
-		return
+		return nil
 	}
 }

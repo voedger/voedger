@@ -57,7 +57,7 @@ func Test_Race_CUDSimpleRead(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(cnt)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	for i := 0; i < cnt; i++ {
+	for range cnt {
 		go func() {
 			defer wg.Done()
 			writeArt(ws, vit)
@@ -79,7 +79,7 @@ func Test_Race_CUDSimpleWrite(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(cnt)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	for i := 0; i < cnt; i++ {
+	for range cnt {
 		go func() {
 			defer wg.Done()
 			writeArt(ws, vit)
@@ -102,7 +102,7 @@ func Test_Race_CUDOneWriteManyRead(t *testing.T) {
 		writeArt(ws, vit)
 	}()
 
-	for i := 0; i < readCnt; i++ {
+	for i := range readCnt {
 		wg.Add(1)
 		go func(_ *testing.T, _ int) {
 			defer wg.Done()
@@ -124,21 +124,17 @@ func Test_Race_CUDManyWriteOneRead(t *testing.T) {
 	cnt := writeCnt
 	wg := sync.WaitGroup{}
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	for i := 0; i < cnt; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range cnt {
+		wg.Go(func() {
 			writeArt(ws, vit)
-		}()
+		})
 	}
 	wg.Wait()
 
 	wgr := sync.WaitGroup{}
-	wgr.Add(1)
-	go func(_ *testing.T) {
-		defer wgr.Done()
+	wgr.Go(func() {
 		readArt(vit, ws)
-	}(t)
+	})
 	wgr.Wait()
 }
 
@@ -155,7 +151,7 @@ func Test_Race_CUDManyWriteManyReadNoResult(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2 * cnt)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	for i := 0; i < cnt; i++ {
+	for range cnt {
 		go func() {
 			defer wg.Done()
 			writeArt(ws, vit)
@@ -182,7 +178,7 @@ func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
 	wgW.Add(cnt)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	artNumbers := make(chan int, cnt)
-	for i := 0; i < cnt; i++ {
+	for range cnt {
 		go func() {
 			defer wgW.Done()
 			artNumbers <- writeArt(ws, vit)
@@ -193,10 +189,10 @@ func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
 
 	wgR := sync.WaitGroup{}
 	wgR.Add(cnt)
-	for i := 0; i < cnt; i++ {
-		go func(at *testing.T) {
+	for range cnt {
+		go func(t *testing.T) {
 			defer wgR.Done()
-			readAndCheckArt(at, <-artNumbers, vit, ws)
+			readAndCheckArt(t, <-artNumbers, vit, ws)
 		}(t)
 	}
 	wgR.Wait()
@@ -220,7 +216,7 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 	wgW.Add(cntw)
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	artNumbers := make(chan int, cntw)
-	for i := 0; i < cntw; i++ {
+	for range cntw {
 		go func() {
 			defer wgW.Done()
 			artNumbers <- writeArt(ws, vit)
@@ -229,9 +225,9 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 	wgW.Wait()
 	close(artNumbers)
 
-	for k := 0; k < 5; k++ {
+	for range 5 {
 		wgUR := sync.WaitGroup{}
-		for i := 0; i < cntw; i++ {
+		for range cntw {
 			wgUR.Add(1)
 			go func(acnt int) {
 				defer wgUR.Done()
@@ -240,12 +236,10 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 		}
 
 		cntr := writeCnt
-		for i := 0; i < cntr; i++ {
-			wgUR.Add(1)
-			go func() {
-				defer wgUR.Done()
+		for range cntr {
+			wgUR.Go(func() {
 				readArt(vit, ws)
-			}()
+			})
 		}
 
 		wgUR.Wait()
@@ -382,7 +376,7 @@ func updateArtByName(idx, num int, vit *it.VIT, ws *it.AppWorkspace) {
 	resp := readArt(vit, ws)
 
 	var actualName string
-	for i := 0; i < num; i++ {
+	for i := range num {
 		actualName = resp.SectionRow(i)[0].(string)
 		if artname == actualName {
 			id := resp.SectionRow()[2].(float64)

@@ -33,12 +33,12 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(a
 		inviteID := args.ArgumentObject.AsRecordID(field_InviteID)
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocInvite)
 		if err != nil {
-			return
+			return err
 		}
 		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, inviteID)
 		svCDocInvite, ok, err := args.State.CanExist(skbCDocInvite)
 		if err != nil {
-			return
+			return err
 		}
 		if !ok {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteNotExists)
@@ -56,11 +56,11 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(a
 
 		skbPrincipal, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 		if err != nil {
-			return
+			return err
 		}
 		svPrincipal, err := args.State.MustExist(skbPrincipal)
 		if err != nil {
-			return
+			return err
 		}
 
 		principalPayload := payloads.PrincipalPayload{}
@@ -87,7 +87,7 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(a
 
 		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
 		if err != nil {
-			return
+			return err
 		}
 		svbCDocInvite.PutInt64(Field_InviteeProfileWSID, svPrincipal.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
 		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(sys.Storage_RequestSubject_Field_Kind))
@@ -95,7 +95,7 @@ func execCmdInitiateJoinWorkspace(tm timeu.ITime, tokens itokens.ITokens) func(a
 		svbCDocInvite.PutChars(field_ActualLogin, loginFromToken)
 		svbCDocInvite.PutInt32(Field_Version, 1)
 
-		return
+		return nil
 	}
 }
 

@@ -152,7 +152,7 @@ func TestInvite_VersionMarker(t *testing.T) {
 
 		// 5. InitiateUpdateInviteRoles (state stays Joined)
 		vit.PostWS(ws, "c.sys.InitiateUpdateInviteRoles", fmt.Sprintf(
-			`{"args":{"InviteID":%d,"Roles":"%s","EmailTemplate":"%s","EmailSubject":"%s"}}`,
+			`{"args":{"InviteID":%d,"Roles":%q,"EmailTemplate":%q,"EmailSubject":%q}}`,
 			inviteID, newRoles, inviteEmailTemplate, inviteEmailSubject))
 		vit.CaptureEmail()
 		require.Equal(int32(1), getInviteVersion(ws, inviteID), "after InitiateUpdateInviteRoles")

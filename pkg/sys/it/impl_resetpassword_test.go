@@ -32,13 +32,13 @@ func TestResetPasswordLimits(t *testing.T) {
 		// deplete the real bucket
 		for range verifierRateMaxAllowed {
 			_, _ = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-				body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+				body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 				return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 			})
 		}
 
 		// next call -> limit exceeded
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+		body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, httpu.Expect429())
 
 		// proceed to the next period to restore rates
@@ -46,7 +46,7 @@ func TestResetPasswordLimits(t *testing.T) {
 
 		// call again to get actual token and code
 		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+			body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 			resp := vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 
 			// here in test we're actually know the profileWSID. But in the realife we don't. So let's show how it should be got:
@@ -58,7 +58,7 @@ func TestResetPasswordLimits(t *testing.T) {
 
 	t.Run("IssueVerifiedValueTokenForResetPassword", func(t *testing.T) {
 		wrongCode := code + "1"
-		wrongCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, wrongCode, profileWSID,
+		wrongCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, wrongCode, profileWSID,
 			istructs.AppQName_test1_app1)
 
 		// deplete the real bucket with wrong code calls
@@ -67,7 +67,7 @@ func TestResetPasswordLimits(t *testing.T) {
 		}
 
 		// next call with correct code -> 429 anyway because limit is exceeded
-		goodCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
+		goodCodeBody := fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
 			istructs.AppQName_test1_app1)
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", goodCodeBody, httpu.Expect429())
 
@@ -76,10 +76,10 @@ func TestResetPasswordLimits(t *testing.T) {
 
 		// regenerate token and code because previous ones are expired already
 		token, code = InitiateEmailVerificationFunc(vit, func() *federation.FuncResponse {
-			body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
+			body := fmt.Sprintf(`{"args":{"AppName":%q,"Email":%q},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
 			return vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body)
 		})
-		goodCodeBody = fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"%s"},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
+		goodCodeBody = fmt.Sprintf(`{"args":{"VerificationToken":%q,"VerificationCode":%q,"ProfileWSID":%d,"AppName":%q},"elements":[{"fields":["VerifiedValueToken"]}]}`, token, code, profileWSID,
 			istructs.AppQName_test1_app1)
 
 		// expect no errors now

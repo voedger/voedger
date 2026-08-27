@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
@@ -22,7 +22,7 @@ func provideStateFunc(sr istructsmem.IStatelessResources) {
 		stateFuncExec))
 }
 
-func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func stateFuncExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	after := args.ArgumentObject.AsInt64(field_After)
 
 	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameCollectionView)
@@ -34,29 +34,30 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 	data := make(map[string]map[istructs.RecordID]map[string]interface{})
 	appDef := args.State.AppStructs().AppDef()
 	maxRelevantOffset := int64(0)
-	if err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
+	if err := args.State.Read(kb, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 		if value.AsInt64(state.ColOffset) <= after {
-			return
+			return nil
 		}
 		record := value.(istructs.IStateViewValue).AsRecord(Field_Record)
 		_, ok := data[record.QName().String()]
 		if !ok {
 			data[record.QName().String()] = make(map[istructs.RecordID]map[string]interface{})
 		}
-		recordData := coreutils.FieldsToMap(record, appDef, coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+		recordData := coreutils.FieldsToMap(record, appDef, coreutils.Filter(func(name string, _ appdef.DataKind) bool {
 			return name != appdef.SystemField_QName && name != appdef.SystemField_Container
 		}), coreutils.WithAllFields())
 		data[record.QName().String()][record.ID()] = recordData
 		if value.AsInt64(state.ColOffset) > maxRelevantOffset {
 			maxRelevantOffset = value.AsInt64(state.ColOffset)
 		}
-		return err
+		return nil
 	}); err != nil {
-		return
+		// notest
+		return err
 	}
 	bb, err := json.Marshal(data)
 	if err != nil {
-		return
+		return err
 	}
 	return callback(&stateObject{data: string(bb), maxRelevantOffset: maxRelevantOffset})
 }

@@ -140,10 +140,10 @@ func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istr
 
 func provideRefIntegrityValidator() istructs.CUDValidator {
 	return istructs.CUDValidator{
-		Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
+		Match: func(_ istructs.ICUDRow, _ istructs.WSID, cmdQName appdef.QName) bool {
 			return cmdQName != QNameCommandInit
 		},
-		Validate: func(ctx context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName, _ istructs.IStateValue) (err error) {
+		Validate: func(_ context.Context, appStructs istructs.IAppStructs, cudRow istructs.ICUDRow, wsid istructs.WSID, _ appdef.QName, _ istructs.IStateValue) (err error) {
 			if err = CheckRefIntegrity(cudRow, appStructs, wsid); err == nil {
 				return nil
 			}
