@@ -35,6 +35,7 @@ func execCmdCancelInvite(cmdQName appdef.QName) func(args istructs.ExecCommandAr
 		if err != nil {
 			return err
 		}
+		// no-op CUD: marks this as a post-refactor event (ap.sys.ApplyInviteEvents skips Version==0)
 		svbCDocInvite.PutInt32(Field_Version, 1)
 		return nil
 	}
