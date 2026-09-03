@@ -22,7 +22,7 @@ func provideStateFunc(sr istructsmem.IStatelessResources) {
 		stateFuncExec))
 }
 
-func stateFuncExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func stateFuncExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 	after := args.ArgumentObject.AsInt64(field_After)
 
 	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameCollectionView)
@@ -57,6 +57,7 @@ func stateFuncExec(_ context.Context, args istructs.ExecQueryArgs, callback istr
 	}
 	bb, err := json.Marshal(data)
 	if err != nil {
+		// notest
 		return err
 	}
 	return callback(&stateObject{data: string(bb), maxRelevantOffset: maxRelevantOffset})
