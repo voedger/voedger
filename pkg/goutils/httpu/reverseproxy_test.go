@@ -60,6 +60,27 @@ func TestRestoreForwardedHeaders(t *testing.T) {
 			},
 		},
 		{
+			// RemoteAddr may be assigned by a custom handler; Director uses its host verbatim.
+			name:       "non-IP peer host matches Director",
+			remoteAddr: "host:port",
+			headers:    http.Header{"X-Forwarded-For": {"198.51.100.2"}},
+			expected:   http.Header{"X-Forwarded-For": {"198.51.100.2, host"}},
+		},
+		{
+			// TCPAddr.String includes the IPv6 zone, which net.ParseIP rejects.
+			name:       "scoped IPv6 peer retains zone",
+			remoteAddr: "[fe80::1%eth0]:1234",
+			headers:    nil,
+			expected:   http.Header{"X-Forwarded-For": {"fe80::1%eth0"}},
+		},
+		{
+			// net.IP.String would convert this to IPv4, changing the forwarded value.
+			name:       "IPv4-mapped IPv6 peer retains address text",
+			remoteAddr: "[::ffff:192.0.2.1]:1234",
+			headers:    nil,
+			expected:   http.Header{"X-Forwarded-For": {"::ffff:192.0.2.1"}},
+		},
+		{
 			name:       "nil header suppresses client IP",
 			remoteAddr: "192.0.2.1:1234",
 			headers:    http.Header{"X-Forwarded-For": nil},

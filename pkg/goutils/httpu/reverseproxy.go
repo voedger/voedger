@@ -14,7 +14,7 @@ import (
 )
 
 // RestoreForwardedHeaders is a ReverseProxy.Rewrite callback that preserves
-// incoming forwarding headers and appends the client IP to X-Forwarded-For.
+// incoming forwarding headers and appends the peer host to X-Forwarded-For.
 // Incoming values named by Connection stay excluded, as with a Director callback.
 func RestoreForwardedHeaders(req *httputil.ProxyRequest) {
 	// With Director, Go appends the client IP even if the callback is empty.
@@ -29,9 +29,11 @@ func RestoreForwardedHeaders(req *httputil.ProxyRequest) {
 			req.Out.Header[name] = slices.Clone(values)
 		}
 	}
-	// Append the peer IP without SetXForwarded: even after restoring the chain,
+	// Append the peer host without SetXForwarded: even after restoring the chain,
 	// that method overwrites X-Forwarded-Host from In.Host and X-Forwarded-Proto
 	// from In.TLS. Director preserved supplied values and left absent ones unset.
+	// Match Director's SplitHostPort behavior, including custom non-IP hosts.
+	// ParseIP would reject IPv6 zones, and IP.String would normalize address text.
 	clientIP, _, err := net.SplitHostPort(req.In.RemoteAddr)
 	if err != nil {
 		return
