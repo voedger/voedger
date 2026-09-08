@@ -13,9 +13,9 @@
 * [httputil.ReverseProxy.Director](https://github.com/host6/voedger/blob/64edb2046f78b8e4c0929805ba4d645d9b2670d5/pkg/router/impl_reverseproxy.go#L43) field is deprecated
 * Replacing `httputil.ReverseProxy.Director` with an empty `Rewrite` callback changed header handling: incoming forwarding headers are stripped, and the client IP is no longer appended to `X-Forwarded-For`. Upstream services lose forwarding information, and `TestBasicUsage_ReverseProxy` fails.
 
-### Why did worked with Director?
+### Why did it work with Director?
 
-The empty `Director` callback did nothing, but **Go’s** `ReverseProxy` **added** `X-Forwarded-For` **automatically after calling it**. 
+The empty `Director` callback did nothing, but **Go’s** `ReverseProxy` **added** `X-Forwarded-For` **automatically after calling it**.
 
 For ordinary HTTP requests:
 
