@@ -15,7 +15,7 @@ import (
 )
 
 // partitionRecoveryHooks provides deterministic synchronization points for package tests.
-// Production command processors leave it nil.
+// Production command processors uses nopHooks()
 type partitionRecoveryHooks struct {
 	scheduled        func(partitionKey)
 	beforeAttempt    func(context.Context, partitionKey) error
