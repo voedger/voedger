@@ -17,6 +17,10 @@ import (
 // incoming forwarding headers and appends the client IP to X-Forwarded-For.
 // Incoming values named by Connection stay excluded, as with a Director callback.
 func RestoreForwardedHeaders(req *httputil.ProxyRequest) {
+	// With Director, Go appends the client IP even if the callback is empty.
+	// With Rewrite, Go first strips all four forwarding headers from Out.
+	// Restore incoming values: SetXForwarded alone would lose the existing
+	// X-Forwarded-For chain and leave Forwarded unset.
 	for _, name := range []string{"X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto", "Forwarded"} {
 		if connectionListsHeader(req.In.Header, name) {
 			continue
@@ -25,6 +29,9 @@ func RestoreForwardedHeaders(req *httputil.ProxyRequest) {
 			req.Out.Header[name] = slices.Clone(values)
 		}
 	}
+	// Append the peer IP without SetXForwarded: even after restoring the chain,
+	// that method overwrites X-Forwarded-Host from In.Host and X-Forwarded-Proto
+	// from In.TLS. Director preserved supplied values and left absent ones unset.
 	clientIP, _, err := net.SplitHostPort(req.In.RemoteAddr)
 	if err != nil {
 		return

@@ -292,6 +292,9 @@ type router struct {
 }
 
 func newRouter() *router {
+	// redirectRequest rewrites req.URL and req.Host before Rewrite runs.
+	// SetXForwarded would put the upstream host in X-Forwarded-Host;
+	// preserve incoming forwarding metadata through the shared helper.
 	return &router{
 		router:        mux.NewRouter(),
 		staticContent: make(map[string]http.HandlerFunc),

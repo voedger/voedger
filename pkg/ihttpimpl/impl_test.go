@@ -319,6 +319,9 @@ func TestReverseProxy(t *testing.T) {
 		{"/static/embedded/test2.txt", "", http.StatusNotFound, "404 page not found\n"},
 	}
 	// Match Director behavior: append the peer IP and preserve other forwarding metadata.
+	// SetXForwarded alone would lose the incoming chain and Forwarded. It would
+	// also replace original.example/https with the upstream host/http, and
+	// generate host/protocol headers in the case with no incoming headers.
 	headerCases := []struct {
 		name         string
 		headers      http.Header
