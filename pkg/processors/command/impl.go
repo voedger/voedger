@@ -223,6 +223,7 @@ func (m *partitionManager) getOrStart(vvmCtx context.Context, key partitionKey, 
 	state := m.partitions[key]
 
 	if state == nil {
+		// no state -> 503 + start recover
 		state = &partitionState{}
 		m.partitions[key] = state
 		m.startRecover(vvmCtx, key, cmd, state, recoverPartitionFunc)
@@ -230,13 +231,16 @@ func (m *partitionManager) getOrStart(vvmCtx context.Context, key partitionKey, 
 	}
 
 	if state.appPartition != nil {
+		// partition exists -> recovered successfully already
 		return state.appPartition, nil
 	}
 
 	if state.recoveryErr == nil {
+		// no partition and no error -> still recovering
 		return nil, partitionRecoveringError(key.partitionID)
 	}
 
+	// no partition and has error -> the last recovery failed
 	// handle the last recovery error
 	lastErr := state.recoveryErr
 
@@ -404,7 +408,7 @@ func (cmdProc *cmdProc) recovery(vvmCtx context.Context, cmd *cmdWorkpiece) (ap 
 
 		for rec := range event.CUDs {
 			// note: not needed to check for Singleton here
-			// because within UpdateOnSync: syncID<nextRecordID -> skip
+			// because within `idGenerator.UpdateOnSync()`: `syncID < nextRecordID` -> skip
 			if rec.IsNew() {
 				ws.idGenerator.UpdateOnSync(rec.ID())
 			}
@@ -416,7 +420,7 @@ func (cmdProc *cmdProc) recovery(vvmCtx context.Context, cmd *cmdWorkpiece) (ap 
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
 		if lastPLogEvent != nil {
-			lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
+			lastPLogEvent.Release()
 		}
 		lastPLogEvent = event
 		lastPLogOffset = plogOffset
