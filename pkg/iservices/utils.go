@@ -17,7 +17,7 @@ func WiredStructPtrToMap(addresOfWiredStruct interface{}) (res map[string]IServi
 	for i := range val.NumField() {
 		valueField := val.Field(i)
 		typeField := val.Type().Field(i)
-		service, ok := valueField.Interface().(IService)
+		service, ok := reflect.TypeAssert[IService](valueField)
 		if !ok {
 			continue
 		}

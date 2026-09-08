@@ -247,8 +247,8 @@ func ProvideApp2WithJobHTTP() builtinapps.Builder {
 				err = st.Read(httpKey, func(istructs.IKey, istructs.IStateValue) error {
 					return errors.New("unexpected HTTP storage response")
 				})
-				var urlErr *url.Error
-				if !errors.As(err, &urlErr) {
+				_, ok := errors.AsType[*url.Error](err)
+				if !ok {
 					return errors.New("HTTP storage did not return the expected invalid URL error")
 				}
 

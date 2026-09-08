@@ -87,8 +87,7 @@ func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
 	}
 
 	a.retrierCfg.OnError = func(_ int, _ time.Duration, opErr error) (retry bool, err error) {
-		var errPipeline pipeline.IErrorPipeline
-		if errors.As(opErr, &errPipeline) {
+		if errPipeline, ok := errors.AsType[pipeline.IErrorPipeline](opErr); ok {
 			if wp, ok := errPipeline.GetWork().(*workpiece); ok && wp != nil {
 				logger.ErrorCtx(wp.logCtx, "ap.error", opErr)
 				return true, nil
