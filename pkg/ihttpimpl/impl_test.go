@@ -19,8 +19,10 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -33,7 +35,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/ihttp"
-	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 )
@@ -263,62 +264,114 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 }
 
 func TestReverseProxy(t *testing.T) {
-	require := require.New(t)
+	// Exercise route matching and proxying through the HTTP processor's real listener.
 	testApp := setUp(t)
 	defer tearDown(testApp)
 
-	testAppPort := testApp.processor.ListeningPort()
-	targetListener, err := net.Listen("tcp", httpu.LocalhostDynamic())
-	require.NoError(err)
-	targetListenerPort := targetListener.Addr().(*net.TCPAddr).Port
-
-	errs := make(chan error)
-	defer close(errs)
-
-	paths := map[string]string{
-		"/static/embedded/test.txt":  fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test.txt", testAppPort),
-		"/grafana":                   fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/grafana/":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/grafana/report":            fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
-		"/prometheus":                fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/prometheus/":               fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/prometheus/report":         fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
-		"/grafanawhatever":           fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
-		"/a/grafana":                 fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
-		"/a/b/grafana/whatever":      fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
-		"/z/prometheus":              fmt.Sprintf("http://127.0.0.1:%d/unknown/z/prometheus", targetListenerPort),
-		"/z/v/prometheus/whatever":   fmt.Sprintf("http://127.0.0.1:%d/unknown/z/v/prometheus/whatever", targetListenerPort),
-		"/some_unregistered_path":    fmt.Sprintf("http://127.0.0.1:%d/unknown/some_unregistered_path", targetListenerPort),
-		"/static/embedded/test2.txt": fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test2.txt", testAppPort),
-	}
-
-	targetHandler := targetHandler{t: t}
-	targetServer := http.Server{
-		Handler: &targetHandler,
-	}
-	// target server's goroutine
-	go func() {
-		errs <- targetServer.Serve(targetListener)
-	}()
-
-	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
-	require.NoError(err)
-
-	testRedirectionRoutes := func() ihttpctl.RedirectRoutes {
-		return ihttpctl.RedirectRoutes{
-			"(https?://[^/]*)/grafana($|/.*)":    fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort),
-			"(https?://[^/]*)/prometheus($|/.*)": fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort),
+	// Buffer the upstream request so the handler can reply before the subtest receives it.
+	receivedRequests := make(chan *http.Request, 1)
+	targetServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		select {
+		case receivedRequests <- req.Clone(req.Context()):
+		default:
+			// A failed case must not leave later handlers blocked on a full channel.
+			http.Error(rw, "previous upstream observation was not consumed", http.StatusInternalServerError)
+			return
 		}
-	}
+		_, _ = io.WriteString(rw, "proxied")
+	}))
+	defer targetServer.Close()
+	// The test server also owns and cleans up this client's connection pool.
+	client := targetServer.Client()
 
-	for srcRegExp, dstRegExp := range testRedirectionRoutes() {
-		testApp.processor.AddReverseProxyRoute(srcRegExp, dstRegExp)
+	testAppURL := "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(testApp.processor.ListeningPort()))
+	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
+	require.NoError(t, err)
+	staticBody, err := fs.ReadFile(testContentSubFs, "test.txt")
+	require.NoError(t, err)
+	// Strip service prefixes; similar-looking and nested prefixes use the fallback.
+	for _, prefix := range []string{"grafana", "prometheus"} {
+		testApp.processor.AddReverseProxyRoute("(https?://[^/]*)/"+prefix+"($|/.*)", targetServer.URL+"$2")
 	}
-	testApp.processor.SetReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
+	testApp.processor.SetReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", targetServer.URL+"/unknown/$3")
 	testApp.processor.DeployStaticContent("embedded", testContentSubFs)
-	for requestedPath, expectedPath := range paths {
-		targetHandler.expectedURLPath = expectedPath
-		testApp.get(requestedPath)
+
+	// Static files take precedence over the fallback, including the 404 for a missing file.
+	cases := []struct {
+		path         string
+		upstreamPath string
+		status       int
+		body         string
+	}{
+		{"/static/embedded/test.txt", "", http.StatusOK, string(staticBody)},
+		{"/grafana", "/", http.StatusOK, "proxied"},
+		{"/grafana/", "/", http.StatusOK, "proxied"},
+		{"/grafana/report", "/report", http.StatusOK, "proxied"},
+		{"/prometheus", "/", http.StatusOK, "proxied"},
+		{"/prometheus/", "/", http.StatusOK, "proxied"},
+		{"/prometheus/report", "/report", http.StatusOK, "proxied"},
+		{"/grafanawhatever", "/unknown/grafanawhatever", http.StatusOK, "proxied"},
+		{"/a/grafana", "/unknown/a/grafana", http.StatusOK, "proxied"},
+		{"/a/b/grafana/whatever", "/unknown/a/b/grafana/whatever", http.StatusOK, "proxied"},
+		{"/z/prometheus", "/unknown/z/prometheus", http.StatusOK, "proxied"},
+		{"/z/v/prometheus/whatever", "/unknown/z/v/prometheus/whatever", http.StatusOK, "proxied"},
+		{"/some_unregistered_path", "/unknown/some_unregistered_path", http.StatusOK, "proxied"},
+		{"/static/embedded/test2.txt", "", http.StatusNotFound, "404 page not found\n"},
+	}
+	// Match Director behavior: append the peer IP and preserve other forwarding metadata.
+	headerCases := []struct {
+		name         string
+		headers      http.Header
+		forwardedFor string
+	}{
+		{name: "no incoming forwarding headers", forwardedFor: "127.0.0.1"},
+		{
+			name: "preserve forwarding headers and append client IP",
+			headers: http.Header{
+				"X-Forwarded-For":   {"192.0.2.1, 198.51.100.2"},
+				"X-Forwarded-Host":  {"original.example"},
+				"X-Forwarded-Proto": {"https"},
+				"Forwarded":         {"for=192.0.2.1;host=original.example;proto=https"},
+			},
+			forwardedFor: "192.0.2.1, 198.51.100.2, 127.0.0.1",
+		},
+	}
+	// Check both header cases for every path so header handling cannot mask routing regressions.
+	for _, tc := range cases {
+		for _, hc := range headerCases {
+			t.Run(tc.path+"/"+hc.name, func(t *testing.T) {
+				require := require.New(t)
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, testAppURL+tc.path, http.NoBody)
+				require.NoError(err)
+				req.Header = hc.headers.Clone()
+				resp, err := client.Do(req)
+				require.NoError(err)
+				defer resp.Body.Close()
+				body, err := io.ReadAll(resp.Body)
+				// Capture precedes the response; drain it before assertions can end this case.
+				var actual *http.Request
+				select {
+				case actual = <-receivedRequests:
+				default:
+				}
+				require.NoError(err)
+				require.Equal(tc.status, resp.StatusCode)
+				require.Equal(tc.body, string(body))
+
+				if tc.upstreamPath == "" {
+					require.Nil(actual, "static requests must not reach the upstream")
+					require.Equal(testAppURL+tc.path, resp.Request.URL.String())
+					return
+				}
+				require.NotNil(actual, "request must reach the upstream")
+				require.Equal(targetServer.URL+tc.upstreamPath, getFullRequestedURL(actual))
+				require.Equal([]string{hc.forwardedFor}, actual.Header.Values("X-Forwarded-For"))
+				// Unset forwarding metadata must stay unset; supplied values must survive.
+				for _, name := range []string{"X-Forwarded-Host", "X-Forwarded-Proto", "Forwarded"} {
+					require.Equal(hc.headers.Values(name), actual.Header.Values(name), name)
+				}
+			})
+		}
 	}
 }
 
@@ -473,18 +526,4 @@ func makeTmpContent(t *testing.T, pattern string) (dir string, fileName string) 
 	fileName = "tmpcontext.txt"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), filesu.FileMode_DefaultForFile))
 	return dir, fileName
-}
-
-type targetHandler struct {
-	t               *testing.T
-	expectedURLPath string
-}
-
-func (h *targetHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rw.WriteHeader(http.StatusOK)
-	_, err := io.ReadAll(req.Body)
-	require.NoError(h.t, err)
-	req.Close = true
-	req.Body.Close()
-	require.Equal(h.t, h.expectedURLPath, getFullRequestedURL(req))
 }

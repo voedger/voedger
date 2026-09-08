@@ -295,7 +295,7 @@ func newRouter() *router {
 	return &router{
 		router:        mux.NewRouter(),
 		staticContent: make(map[string]http.HandlerFunc),
-		reverseProxy:  &httputil.ReverseProxy{Director: func(*http.Request) {}},
+		reverseProxy:  &httputil.ReverseProxy{Rewrite: httpu.RestoreForwardedHeaders},
 		redirections:  make([]*redirectionRoute, 1),
 	}
 }
