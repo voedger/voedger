@@ -129,7 +129,8 @@ func fetch(url, token string) (string, error) {
   - [Long polling: impl_opts.go#L30](impl_opts.go#L30)
   - [Response discard: impl_opts.go#L46](impl_opts.go#L46)
 
-- **[Body replay](types.go#L39)** - Preserve reader payloads on retries
+- **[Body replay](types.go#L41)** - Buffer `ReqReader` payloads
+  for retries
 
 - **[Discard validation](utils.go#L37)** - Reject GET requests with
   discarded responses when installed through `WithOptsValidator`

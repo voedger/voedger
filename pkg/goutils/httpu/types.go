@@ -36,6 +36,8 @@ type RetryPolicyOpt func(opts IReqOpts)
 
 type IHTTPClient interface {
 	Req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	// ReqReader reads bodyReader once and reuses its contents on retries.
+	// If bodyReader implements io.Closer, it is closed after reading.
 	ReqReader(ctx context.Context, urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	CloseIdleConnections()
 }
