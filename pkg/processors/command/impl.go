@@ -1112,8 +1112,8 @@ func (idGen *implIDGeneratorReporter) NextID(rawID istructs.RecordID) (storageID
 
 func nopHooks() *partitionRecoveryHooks {
 	return &partitionRecoveryHooks{
-		scheduled:        func(pk partitionKey) {},
-		beforeAttempt:    func(ctx context.Context, pk partitionKey) error { return nil },
-		attemptCompleted: func(pk partitionKey, err error) {},
+		scheduled:        func(partitionKey) {},
+		beforeAttempt:    func(context.Context, partitionKey) error { return nil },
+		attemptCompleted: func(partitionKey, error) {},
 	}
 }
