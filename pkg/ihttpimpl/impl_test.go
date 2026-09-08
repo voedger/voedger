@@ -268,16 +268,18 @@ func TestReverseProxy(t *testing.T) {
 	testApp := setUp(t)
 	defer tearDown(testApp)
 
-	// Buffer the upstream request so the handler can reply before the subtest receives it.
-	receivedRequests := make(chan *http.Request, 1)
+	// Return the observation with its response so failed subtests leave no shared state.
+	type upstreamRequest struct {
+		URL     string
+		Headers http.Header
+	}
 	targetServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		select {
-		case receivedRequests <- req.Clone(req.Context()):
-		default:
-			// A failed case must not leave later handlers blocked on a full channel.
-			http.Error(rw, "previous upstream observation was not consumed", http.StatusInternalServerError)
+		recorded, err := json.Marshal(upstreamRequest{URL: getFullRequestedURL(req), Headers: req.Header})
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		rw.Header().Set("X-Test-Upstream-Request", string(recorded))
 		_, _ = io.WriteString(rw, "proxied")
 	}))
 	defer targetServer.Close()
@@ -351,27 +353,25 @@ func TestReverseProxy(t *testing.T) {
 				require.NoError(err)
 				defer resp.Body.Close()
 				body, err := io.ReadAll(resp.Body)
-				// Capture precedes the response; drain it before assertions can end this case.
-				var actual *http.Request
-				select {
-				case actual = <-receivedRequests:
-				default:
-				}
 				require.NoError(err)
 				require.Equal(tc.status, resp.StatusCode)
 				require.Equal(tc.body, string(body))
 
+				recorded := resp.Header.Get("X-Test-Upstream-Request")
 				if tc.upstreamPath == "" {
-					require.Nil(actual, "static requests must not reach the upstream")
+					require.Empty(recorded, "static requests must not reach the upstream")
 					require.Equal(testAppURL+tc.path, resp.Request.URL.String())
 					return
 				}
-				require.NotNil(actual, "request must reach the upstream")
-				require.Equal(targetServer.URL+tc.upstreamPath, getFullRequestedURL(actual))
-				require.Equal([]string{hc.forwardedFor}, actual.Header.Values("X-Forwarded-For"))
+				// This snapshot belongs to this response; there is nothing to wait for or drain.
+				require.NotEmpty(recorded, "request must reach the upstream")
+				var actual upstreamRequest
+				require.NoError(json.Unmarshal([]byte(recorded), &actual))
+				require.Equal(targetServer.URL+tc.upstreamPath, actual.URL)
+				require.Equal([]string{hc.forwardedFor}, actual.Headers.Values("X-Forwarded-For"))
 				// Unset forwarding metadata must stay unset; supplied values must survive.
 				for _, name := range []string{"X-Forwarded-Host", "X-Forwarded-Proto", "Forwarded"} {
-					require.Equal(hc.headers.Values(name), actual.Header.Values(name), name)
+					require.Equal(hc.headers.Values(name), actual.Headers.Values(name), name)
 				}
 			})
 		}
