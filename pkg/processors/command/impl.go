@@ -159,7 +159,9 @@ func (c *cmdWorkpiece) Release() {
 		c.appPart = nil
 		ap.Release()
 	}
-	c.hostState.wp = nil
+	if c.hostState != nil {
+		c.hostState.wp = nil
+	}
 }
 
 func borrowAppPart(_ context.Context, cmd *cmdWorkpiece) error {
@@ -178,21 +180,122 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	return ws
 }
 
-func (cmdProc *cmdProc) getAppPartition(ctx context.Context, cmd *cmdWorkpiece) (err error) {
-	appPartitions, ok := cmdProc.appsPartitions[cmd.cmdMes.AppQName()]
-	if !ok {
-		appPartitions = map[istructs.PartitionID]*appPartition{}
-		cmdProc.appsPartitions[cmd.cmdMes.AppQName()] = appPartitions
+func (cmdProc *cmdProc) getAppPartition(vvmCtx context.Context, cmd *cmdWorkpiece) (err error) {
+	key := partitionKey{
+		appQName:    cmd.cmdMes.AppQName(),
+		partitionID: cmd.cmdMes.PartitionID(),
 	}
-	appPartition, ok := appPartitions[cmd.cmdMes.PartitionID()]
-	if !ok {
-		if appPartition, err = cmdProc.recovery(ctx, cmd); err != nil {
-			return fmt.Errorf("partition %d recovery failed: %w", cmd.cmdMes.PartitionID(), err)
-		}
-		appPartitions[cmd.cmdMes.PartitionID()] = appPartition
+	appPartition, err := cmdProc.partitionManager.getOrStart(vvmCtx, key, cmd, cmdProc.recovery)
+	if err != nil {
+		return err
 	}
 	cmd.appPartition = appPartition
 	return nil
+}
+
+func partitionRecoveringError(partitionID istructs.PartitionID) error {
+	return coreutils.NewHTTPError(http.StatusServiceUnavailable, fmt.Errorf("partition %d is recovering", partitionID))
+}
+
+func partitionRecoveryFailedError(partitionID istructs.PartitionID, err error) error {
+	return coreutils.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("partition %d recovery failed: %w", partitionID, err))
+}
+
+func toRecoveryWorkpiece(cmd *cmdWorkpiece, key partitionKey) *cmdWorkpiece {
+	recoveryCmd := &cmdWorkpiece{
+		appParts:   cmd.appParts,
+		appPart:    cmd.appPart,
+		appStructs: cmd.appStructs,
+		cmdMes: &implICommandMessage{
+			appQName:    key.appQName,
+			partitionID: key.partitionID,
+			requestCtx:  cmd.cmdMes.RequestCtx(),
+		},
+		metrics: cmd.metrics,
+	}
+	cmd.appPart = nil // needed because cmd.Release() would release cmd.appPart while it is used as recoveryCmd.appPart
+	return recoveryCmd
+}
+
+func (m *partitionManager) getOrStart(vvmCtx context.Context, key partitionKey, cmd *cmdWorkpiece, recoverPartitionFunc recoverPartitionFunc) (*appPartition, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	state := m.partitions[key]
+
+	if state == nil {
+		// no state -> 503 + start recover
+		state = &partitionState{}
+		m.partitions[key] = state
+		m.startRecover(vvmCtx, key, cmd, state, recoverPartitionFunc)
+		return nil, partitionRecoveringError(key.partitionID)
+	}
+
+	if state.appPartition != nil {
+		// partition exists -> recovered successfully already
+		return state.appPartition, nil
+	}
+
+	if state.recoveryErr == nil {
+		// no partition and no error -> still recovering
+		return nil, partitionRecoveringError(key.partitionID)
+	}
+
+	// no partition and has error -> the last recovery failed
+	// handle the last recovery error
+	lastErr := state.recoveryErr
+
+	// should be here instead of recover(), otherwise the next request to the partition
+	// will return 500 instead of 503 and will start duplicating recover
+	state.recoveryErr = nil
+
+	m.startRecover(vvmCtx, key, cmd, state, recoverPartitionFunc)
+	return nil, partitionRecoveryFailedError(key.partitionID, lastErr)
+}
+
+func (m *partitionManager) startRecover(vvmCtx context.Context, key partitionKey, cmd *cmdWorkpiece, state *partitionState, recoverPartitionFunc recoverPartitionFunc) {
+	recoveryCmdWorkpiece := toRecoveryWorkpiece(cmd, key)
+	m.workers.Add(1)
+	m.recoveryHooks.scheduled(key)
+	go m.recover(vvmCtx, key, state, recoveryCmdWorkpiece, recoverPartitionFunc)
+}
+
+func (m *partitionManager) recover(vvmCtx context.Context, key partitionKey, state *partitionState, cmd *cmdWorkpiece, recoverPartition recoverPartitionFunc) {
+	defer m.workers.Done()
+	var (
+		recoveredPartition *appPartition
+		err                error
+	)
+	err = m.recoveryHooks.beforeAttempt(vvmCtx, key)
+	if err == nil {
+		recoveredPartition, err = recoverPartition(vvmCtx, cmd)
+	}
+	cmd.Release()
+
+	if err == nil {
+		err = vvmCtx.Err()
+	}
+	defer m.recoveryHooks.attemptCompleted(key, err)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err != nil {
+		state.recoveryErr = err
+		return
+	}
+	state.appPartition = recoveredPartition
+}
+
+// resetPartitionState removes the current state so the next request starts a fresh recovery.
+func (m *partitionManager) resetPartitionState(key partitionKey) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.partitions, key)
+}
+
+func (m *partitionManager) shutdown() {
+	m.workers.Wait()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.partitions = map[partitionKey]*partitionState{}
 }
 
 func getIWorkspace(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -285,7 +388,7 @@ func newRecoveryCtx(ctx context.Context, partID istructs.PartitionID) context.Co
 	})
 }
 
-func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *appPartition, err error) {
+func (cmdProc *cmdProc) recovery(vvmCtx context.Context, cmd *cmdWorkpiece) (ap *appPartition, err error) {
 	recoveryCtx := newRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID())
 	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.start", "")
 	ap = &appPartition{
@@ -294,12 +397,18 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 	}
 	var lastPLogEvent istructs.IPLogEvent
 	var lastPLogOffset istructs.Offset
+	releaseLastPLogEvent := true
+	defer func() {
+		if releaseLastPLogEvent && lastPLogEvent != nil {
+			lastPLogEvent.Release()
+		}
+	}()
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 
 		for rec := range event.CUDs {
 			// note: not needed to check for Singleton here
-			// because within UpdateOnSync: syncID<nextRecordID -> skip
+			// because within `idGenerator.UpdateOnSync()`: `syncID < nextRecordID` -> skip
 			if rec.IsNew() {
 				ws.idGenerator.UpdateOnSync(rec.ID())
 			}
@@ -311,14 +420,14 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
 		if lastPLogEvent != nil {
-			lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
+			lastPLogEvent.Release()
 		}
 		lastPLogEvent = event
 		lastPLogOffset = plogOffset
 		return nil
 	}
 
-	if err := cmd.appStructs.Events().ReadPLog(ctx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
+	if err := cmd.appStructs.Events().ReadPLog(vvmCtx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.readplog.error", err)
 		return nil, err
 	}
@@ -332,11 +441,12 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 			return nil, err
 		}
 		cmd.pLogEvent = lastPLogEvent
+		releaseLastPLogEvent = false
 		cmd.workspace = ap.getWorkspace(lastPLogEvent.Workspace())
 		cmd.workspace.NextWLogOffset-- // cmdProc.storeOp will bump it
 		cmd.reapplier = cmd.appStructs.GetEventReapplier(cmd.pLogEvent)
 		cmd.pLogOffset = lastPLogOffset // need to get PLogOffset in sync projectors on logging
-		if err := cmdProc.storeOp.DoSync(ctx, cmd); err != nil {
+		if err := cmdProc.storeOp.DoSync(vvmCtx, cmd); err != nil {
 			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.storeop.error", err)
 			return nil, err
 		}
@@ -346,6 +456,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (ap *ap
 		cmd.pLogEvent = nil
 		cmd.logCtx = nil
 		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
+		lastPLogEvent = nil
 	}
 
 	worskapcesJSON, err := json.Marshal(ap.workspaces)
@@ -997,4 +1108,12 @@ func (idGen *implIDGeneratorReporter) NextID(rawID istructs.RecordID) (storageID
 		idGen.generatedIDs[rawID] = storageID
 	}
 	return storageID, err
+}
+
+func nopHooks() *partitionRecoveryHooks {
+	return &partitionRecoveryHooks{
+		scheduled:        func(pk partitionKey) {},
+		beforeAttempt:    func(ctx context.Context, pk partitionKey) error { return nil },
+		attemptCompleted: func(pk partitionKey, err error) {},
+	}
 }

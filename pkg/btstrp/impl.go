@@ -26,7 +26,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 )
 
-func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, appparts appparts.IAppPartitions,
+func Bootstrap(federationRetry federation.IFederationWithRetry, asp istructs.IAppStructsProvider, time timeu.ITime, appparts appparts.IAppPartitions,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	postWiredInterfacePtrs PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler,
 	requestSender bus.IRequestSender) (err error) {
@@ -69,11 +69,11 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 	// For each app in otherApps: check apps compatibility by calling c.cluster.DeployApp
 	for _, app := range otherApps {
 		logger.InfoCtx(logCtx, "bootstrap.appdeploy.builtin", app.Name)
-		callDeployApp(federation, sysToken, app)
+		callDeployApp(federationRetry, sysToken, app)
 	}
 	for _, sidecarApp := range sidecarApps {
 		logger.InfoCtx(logCtx, "bootstrap.appdeploy.sidecar", sidecarApp.BuiltInApp.Name)
-		callDeployApp(federation, sysToken, sidecarApp.BuiltInApp)
+		callDeployApp(federationRetry, sysToken, sidecarApp.BuiltInApp)
 	}
 
 	// For each app builtInApps: deploy a builtin app
@@ -98,10 +98,10 @@ func deployAppPartitions(ctx context.Context, stage string, appparts appparts.IA
 	appparts.DeployAppPartitions(app.Name, partitionIDs)
 }
 
-func callDeployApp(federation federation.IFederation, sysToken string, app appparts.BuiltInApp) {
+func callDeployApp(federationRetry federation.IFederationWithRetry, sysToken string, app appparts.BuiltInApp) {
 	// Use Admin Endpoint to send requests
 	body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
-	_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
+	_, err := federationRetry.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 		httpu.WithDiscardResponse(),
 		httpu.WithAuthorizeBy(sysToken),
 	)

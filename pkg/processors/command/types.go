@@ -6,6 +6,7 @@ package commandprocessor
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -161,3 +162,22 @@ func newReusableHostState(vvmCtx context.Context, secretReader isecrets.ISecretR
 func (b *reusableHostState) bind(wp *cmdWorkpiece) {
 	b.wp = wp
 }
+
+type partitionKey struct {
+	appQName    appdef.AppQName
+	partitionID istructs.PartitionID
+}
+
+type partitionManager struct {
+	mu            sync.Mutex
+	partitions    map[partitionKey]*partitionState
+	workers       sync.WaitGroup
+	recoveryHooks *partitionRecoveryHooks
+}
+
+type partitionState struct {
+	*appPartition // not nil -> the partition is successfully recovered
+	recoveryErr   error
+}
+
+type recoverPartitionFunc func(context.Context, *cmdWorkpiece) (*appPartition, error)

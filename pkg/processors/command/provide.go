@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
@@ -31,11 +30,18 @@ type workspace struct {
 }
 
 type cmdProc struct {
-	appsPartitions map[appdef.AppQName]map[istructs.PartitionID]*appPartition
-	n10nBroker     in10n.IN10nBroker
-	time           timeu.ITime
-	authenticator  iauthnz.IAuthenticator
-	storeOp        pipeline.ISyncOperator
+	partitionManager *partitionManager
+	n10nBroker       in10n.IN10nBroker
+	time             timeu.ITime
+	authenticator    iauthnz.IAuthenticator
+	storeOp          pipeline.ISyncOperator
+}
+
+func newPartitionManager(recoveryHooks *partitionRecoveryHooks) *partitionManager {
+	return &partitionManager{
+		partitions:    map[partitionKey]*partitionState{},
+		recoveryHooks: recoveryHooks,
+	}
 }
 
 type appPartition struct {
@@ -47,12 +53,18 @@ type appPartition struct {
 func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator,
 	secretReader isecrets.ISecretReader) ServiceFactory {
+	return provideServiceFactory(appParts, tm, n10nBroker, metrics, vvm, authenticator, secretReader, nopHooks())
+}
+
+func provideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
+	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator,
+	secretReader isecrets.ISecretReader, recoveryHooks *partitionRecoveryHooks) ServiceFactory {
 	return func(commandsChannel CommandChannel) pipeline.IService {
 		cmdProc := &cmdProc{
-			appsPartitions: map[appdef.AppQName]map[istructs.PartitionID]*appPartition{},
-			n10nBroker:     n10nBroker,
-			time:           tm,
-			authenticator:  authenticator,
+			partitionManager: newPartitionManager(recoveryHooks),
+			n10nBroker:       n10nBroker,
+			time:             tm,
+			authenticator:    authenticator,
 		}
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
@@ -102,7 +114,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("borrowAppPart", borrowAppPart),
 				pipeline.WireFunc("getCmdQName", getCmdQName),
-				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
 				pipeline.WireFunc("getPrincipalsRoles", getPrincipalsRoles),
@@ -110,6 +121,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 				pipeline.WireFunc("checkWSActive", checkWSActive),
 				pipeline.WireFunc("getIWorkspace", getIWorkspace),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
+				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getICommand", getICommand),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),
@@ -147,7 +159,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 				pipeline.WireFunc("notifyAsyncActualizers", cmdProc.notifyAsyncActualizers),
 			)
 			// TODO: later make so that each partition has its own plogOffset, wsid has its own wlogOffset
-			defer cmdPipeline.Close()
 			for vvmCtx.Err() == nil {
 				select {
 				case intf := <-commandsChannel:
@@ -175,14 +186,19 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 						}
 						if cmd.appPartitionRestartScheduled {
 							logger.WarningCtx(newRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID()), "cp.partition_recovery", "partition will be restarted due of an error on writing to Log: ", cmdHandlingErr)
-							delete(cmdProc.appsPartitions, cmd.cmdMes.AppQName())
+							cmdProc.partitionManager.resetPartitionState(partitionKey{
+								appQName:    cmd.cmdMes.AppQName(),
+								partitionID: cmd.cmdMes.PartitionID(),
+							})
 						}
 					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
 				}
 			}
-			cmdProc.appsPartitions = map[appdef.AppQName]map[istructs.PartitionID]*appPartition{}
+			cmdProc.partitionManager.shutdown()
+			cmdPipeline.Close()
+			cmdProc.storeOp.Close()
 		})
 	}
 }

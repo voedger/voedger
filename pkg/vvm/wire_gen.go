@@ -380,7 +380,7 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		return btstrp.Bootstrap(federation2, asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, postWireInterfacePtrs, blobHandler, requestSender)
+		return btstrp.Bootstrap(federation2.WithRetry(), asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, postWireInterfacePtrs, blobHandler, requestSender)
 	}), nil
 }
 

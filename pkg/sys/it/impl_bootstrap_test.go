@@ -64,7 +64,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		postWiredInterfacePtrs := newPostWiredInterfacePtrs()
 		testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 		testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
-		err := btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
+		err := btstrp.Bootstrap(vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
 			nil, vit.ITokens, vit.IAppStorageProvider, postWiredInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		require.NoError(err)
 		require.NotNil(*postWiredInterfacePtrs.BlobberAppStorage)
@@ -87,7 +87,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num partitions changed: app %[1]s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumParts, otherApps[0].AppDeploymentDescriptor.NumParts-1), func() {
-			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
+			btstrp.Bootstrap(vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
 				nil, vit.ITokens, vit.IAppStorageProvider, postWiredInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		})
 	})
@@ -106,7 +106,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 			postWiredInterfacePtrs := newPostWiredInterfacePtrs()
 			testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 			testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
-			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
+			btstrp.Bootstrap(vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
 				nil, vit.ITokens, vit.IAppStorageProvider, postWiredInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		})
 	})
