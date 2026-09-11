@@ -115,8 +115,7 @@ func reply_v2(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		if sendSuccess = writeResponse(w, ","); !sendSuccess {
 			return
 		}
-		var sysError coreutils.SysError
-		if errors.As(*responseErr, &sysError) {
+		if sysError, ok := errors.AsType[coreutils.SysError](*responseErr); ok {
 			jsonErr := sysError.ToJSON_APIV2()
 			sendSuccess = writeResponse(w, `"error":`+jsonErr)
 		} else {

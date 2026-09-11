@@ -138,8 +138,7 @@ func reply_v1(requestCtx context.Context, w http.ResponseWriter, responseCh <-ch
 		if !sendSuccess {
 			return
 		}
-		var sysError coreutils.SysError
-		if errors.As(*responseErr, &sysError) {
+		if sysError, ok := errors.AsType[coreutils.SysError](*responseErr); ok {
 			if !headerWritten {
 				applySysErrorHeaders(w, sysError)
 			}

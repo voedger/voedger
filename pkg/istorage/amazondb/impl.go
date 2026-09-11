@@ -52,8 +52,7 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	keySpace := appName.String()
 	client := getClient(cfg)
 	if err := newTableExistsWaiter(keySpace, client); err != nil {
-		var awsErr *types.ResourceInUseException
-		if errors.As(err, &awsErr) {
+		if _, ok := errors.AsType[*types.ResourceInUseException](err); ok {
 			return istorage.ErrStorageAlreadyExists
 		}
 		return err
@@ -548,8 +547,7 @@ func doesTableExist(name string, client *dynamodb.Client) (bool, error) {
 
 	if _, err := client.DescribeTable(context.Background(), describeTableInput); err != nil {
 		// Check if the error indicates that the table doesn't exist
-		var resourceNotFoundException *types.ResourceNotFoundException
-		if errors.As(err, &resourceNotFoundException) {
+		if _, ok := errors.AsType[*types.ResourceNotFoundException](err); ok {
 			return false, nil
 		}
 		// Any other error

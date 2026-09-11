@@ -42,10 +42,8 @@ func DenyGETAndDiscardResponse(opts IReqOpts) (panicMessage string) {
 }
 
 func IsWSAEError(err error, errno syscall.Errno) bool {
-	var sysCallErr *os.SyscallError
-	if errors.As(err, &sysCallErr) {
-		var syscallErrno syscall.Errno
-		if errors.As(sysCallErr.Err, &syscallErrno) {
+	if sysCallErr, ok := errors.AsType[*os.SyscallError](err); ok {
+		if syscallErrno, ok := errors.AsType[syscall.Errno](sysCallErr.Err); ok {
 			return syscallErrno == errno
 		}
 	}

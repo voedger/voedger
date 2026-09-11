@@ -188,8 +188,7 @@ func (b *catchReadError) OnErr(err error, work interface{}, _ pipeline.IWorkpiec
 
 func (b *catchReadError) DoSync(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	bw := work.(*blobWorkpiece)
-	var sysError coreutils.SysError
-	if errors.As(bw.resultErr, &sysError) {
+	if sysError, ok := errors.AsType[coreutils.SysError](bw.resultErr); ok {
 		if sysError.HTTPStatus == http.StatusBadRequest {
 			logger.ErrorCtx(bw.logCtx, "bp.error", bw.resultErr, ", headers=", bw.blobMessageRead.header)
 		} else {

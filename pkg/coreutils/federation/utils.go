@@ -94,8 +94,7 @@ func HTTPRespToFuncResp(httpResp *httpu.HTTPResponse, httpRespErr error) (funcRe
 		}
 	}
 
-	var sysErr coreutils.SysError
-	if errors.As(funcResp.SysError, &sysErr) {
+	if sysErr, ok := errors.AsType[coreutils.SysError](funcResp.SysError); ok {
 		if !slices.Contains(httpResp.Opts.ExpectedHTTPCodes(), sysErr.HTTPStatus) {
 			return nil, unexpectedStatusErr(httpResp.Opts.ExpectedHTTPCodes(), sysErr.HTTPStatus, funcResp.SysError)
 		}

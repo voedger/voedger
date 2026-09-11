@@ -128,8 +128,7 @@ func TestFederationFunc(t *testing.T) {
 					c.handler(string(body), w, r)
 				}
 				resp, err := federation.Func("/api/123456789/c.sys.CUD", `{"fld":"val"}`, c.opts...)
-				var se coreutils.SysError
-				if errors.As(err, &se) {
+				if se, ok := errors.AsType[coreutils.SysError](err); ok {
 					require.Equal(c.expectedErr, se, c.name)
 				} else {
 					require.Equal(c.expectedErr.Error(), err.Error(), c.name)
