@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package pool_test
+package safepool_test
 
 import (
 	"bytes"
@@ -14,35 +14,35 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/bytebufferpool"
-	"github.com/voedger/voedger/pkg/goutils/pool"
+	"github.com/voedger/voedger/pkg/goutils/safepool"
 )
 
 type myStruct struct {
 	// each pooled struct must include IReleaser field that provides Release() ability.
 	// this field will initialized in the instantiator
-	pool.IReleaser
+	safepool.IReleaser
 
 	// example nested field that requires personal handling (e.g. borrow\release)
 	bb   *bytebufferpool.ByteBuffer
 	fld1 int
 }
 
-// optional Cleanup() will be called automatically right before returning the myStruct instance to the pool
+// Cleanup runs automatically before myStruct returns to the pool.
 func (ms *myStruct) Cleanup() {
 	bytebufferpool.Put(ms.bb)
 	ms.bb = nil
 }
 
-// optional Init() will be called automatically on each myStruct instance borrow. It should init the current instance
+// Init runs automatically on every borrow.
 func (ms *myStruct) Init() {
 	ms.bb = bytebufferpool.Get()
 }
 
 func TestBasicUsage_Simple(t *testing.T) {
 	require := require.New(t)
-	p := pool.NewPool(func(releaser pool.IReleaser) *myStruct {
+	p := safepool.NewPool(func(releaser safepool.IReleaser) *myStruct {
 		// instantiator must manually initialize IReleaser field with the provided implementation
-		return &myStruct{IReleaser: releaser}
+		return &myStruct{IReleaser: releaser, bb: nil, fld1: 0}
 	})
 
 	// borrow an instance of *myStruct
@@ -52,7 +52,7 @@ func TestBasicUsage_Simple(t *testing.T) {
 	require.NotNil(myStructInstance.bb)
 
 	// 1 object in use
-	require.Equal(uint64(1), pool.GetObjectsInUse())
+	require.Equal(uint64(1), safepool.GetObjectsInUse())
 
 	// return the instance back to the pool
 	myStructInstance.Release()
@@ -64,7 +64,7 @@ func TestBasicUsage_Simple(t *testing.T) {
 	require.Panics(func() { myStructInstance.Release() })
 
 	// no objects in use
-	require.Zero(pool.GetObjectsInUse())
+	require.Zero(safepool.GetObjectsInUse())
 }
 
 // TestKnownIssue_StaleAliasReleasesReusedObject documents that aliases from
@@ -72,9 +72,9 @@ func TestBasicUsage_Simple(t *testing.T) {
 func TestKnownIssue_StaleAliasReleasesReusedObject(t *testing.T) {
 	t.Skip("demonstration only")
 	require := require.New(t)
-	objectsBefore := pool.GetObjectsInUse()
+	objectsBefore := safepool.GetObjectsInUse()
 	var cleanupCalls atomic.Int32
-	items := pool.NewPool(func(releaser pool.IReleaser) *referenceCountItem {
+	items := safepool.NewPool(func(releaser safepool.IReleaser) *referenceCountItem {
 		return &referenceCountItem{
 			IReleaser: releaser,
 			cleanup:   func() { cleanupCalls.Add(1) },
@@ -89,14 +89,14 @@ func TestKnownIssue_StaleAliasReleasesReusedObject(t *testing.T) {
 	// The stale alias releases the second, still-active borrow.
 	require.NotPanics(first.Release)
 	require.Equal(int32(2), cleanupCalls.Load())
-	require.Equal(objectsBefore, pool.GetObjectsInUse())
+	require.Equal(objectsBefore, safepool.GetObjectsInUse())
 
 	// The legitimate borrower now appears to be already released.
 	require.PanicsWithValue("already released", second.Release)
 }
 
 type referenceCountItem struct {
-	pool.IReleaser
+	safepool.IReleaser
 	cleanup func()
 }
 
@@ -106,11 +106,11 @@ func (i *referenceCountItem) Cleanup() {
 
 func TestReferenceCount(t *testing.T) {
 	require := require.New(t)
-	objectsBefore := pool.GetObjectsInUse()
-	pool.SetDebug(true)
-	t.Cleanup(func() { pool.SetDebug(false) })
+	objectsBefore := safepool.GetObjectsInUse()
+	safepool.SetDebug(true)
+	t.Cleanup(func() { safepool.SetDebug(false) })
 	var cleanupCalls atomic.Int32
-	items := pool.NewPool(func(releaser pool.IReleaser) *referenceCountItem {
+	items := safepool.NewPool(func(releaser safepool.IReleaser) *referenceCountItem {
 		return &referenceCountItem{
 			IReleaser: releaser,
 			cleanup:   func() { cleanupCalls.Add(1) },
@@ -122,15 +122,15 @@ func TestReferenceCount(t *testing.T) {
 
 	item.Release()
 	var whileReferenced bytes.Buffer
-	pool.PrintNonReleased(&whileReferenced)
-	require.Equal(objectsBefore+1, pool.GetObjectsInUse())
+	safepool.PrintNonReleased(&whileReferenced)
+	require.Equal(objectsBefore+1, safepool.GetObjectsInUse())
 	require.Zero(cleanupCalls.Load(), "a remaining reference keeps the object borrowed")
 	require.Contains(whileReferenced.String(), "TestReferenceCount")
 
 	item.Release()
 	var afterFinalRelease bytes.Buffer
-	pool.PrintNonReleased(&afterFinalRelease)
-	require.Equal(objectsBefore, pool.GetObjectsInUse())
+	safepool.PrintNonReleased(&afterFinalRelease)
+	require.Equal(objectsBefore, safepool.GetObjectsInUse())
 	require.Equal(int32(1), cleanupCalls.Load(), "the final reference releases the object")
 	require.Empty(afterFinalRelease.String())
 	require.PanicsWithValue("already released", func() { item.Release() })
@@ -139,9 +139,9 @@ func TestReferenceCount(t *testing.T) {
 
 func TestConcurrentReferenceRelease(t *testing.T) {
 	require := require.New(t)
-	objectsBefore := pool.GetObjectsInUse()
+	objectsBefore := safepool.GetObjectsInUse()
 	var cleanupCalls atomic.Int32
-	items := pool.NewPool(func(releaser pool.IReleaser) *referenceCountItem {
+	items := safepool.NewPool(func(releaser safepool.IReleaser) *referenceCountItem {
 		return &referenceCountItem{
 			IReleaser: releaser,
 			cleanup:   func() { cleanupCalls.Add(1) },
@@ -166,15 +166,15 @@ func TestConcurrentReferenceRelease(t *testing.T) {
 	require.Nil(<-results)
 	require.Nil(<-results)
 	require.Equal(int32(1), cleanupCalls.Load())
-	require.Equal(objectsBefore, pool.GetObjectsInUse())
+	require.Equal(objectsBefore, safepool.GetObjectsInUse())
 }
 
 func TestObjectsUsageTrackInDebugMode(t *testing.T) {
 	require := require.New(t)
-	pool.SetDebug(true)
-	defer pool.SetDebug(false)
-	p := pool.NewPool(func(releaser pool.IReleaser) *myStruct {
-		return &myStruct{IReleaser: releaser}
+	safepool.SetDebug(true)
+	defer safepool.SetDebug(false)
+	p := safepool.NewPool(func(releaser safepool.IReleaser) *myStruct {
+		return &myStruct{IReleaser: releaser, bb: nil, fld1: 0}
 	})
 
 	// borrow 10 instances
@@ -190,7 +190,7 @@ func TestObjectsUsageTrackInDebugMode(t *testing.T) {
 	roots[5].Release()
 
 	// prints code points where objects were borrowed but not released
-	pool.PrintNonReleased(os.Stdout)
+	safepool.PrintNonReleased(os.Stdout)
 
 	for i, root := range roots {
 		if i != 5 {
@@ -199,31 +199,35 @@ func TestObjectsUsageTrackInDebugMode(t *testing.T) {
 	}
 
 	// prints nothing
-	pool.PrintNonReleased(os.Stdout)
+	safepool.PrintNonReleased(os.Stdout)
 
-	require.Zero(pool.GetObjectsInUse())
+	require.Zero(safepool.GetObjectsInUse())
 }
 
 func TestStub(t *testing.T) {
 	require := require.New(t)
-	poolOwner := pool.NewPoolStub(func(releaser pool.IReleaser) *owner {
+	poolOwner := safepool.NewPoolStub(func(releaser safepool.IReleaser) *owner {
 		return &owner{
 			IReleaser: releaser,
+			nested:    nil,
+			bb:        nil,
 		}
 	})
 	originalPoolNested := poolNested
 	// Restore the real pool for later tests and benchmarks, even if an
 	// assertion fails while this test is using the stub.
 	t.Cleanup(func() { poolNested = originalPoolNested })
-	poolNested = pool.NewPoolStub(func(releaser pool.IReleaser) *nested {
+	poolNested = safepool.NewPoolStub(func(releaser safepool.IReleaser) *nested {
 		return &nested{
 			IReleaser: releaser,
+			internal:  nil,
+			bb:        nil,
 		}
 	})
 
 	// borrow a struct, initialize fields
 	owner := poolOwner.Get()
-	require.Equal(uint64(3), pool.GetObjectsInUse())
+	require.Equal(uint64(3), safepool.GetObjectsInUse())
 
 	// owned struct can not be accidentally released before owner
 	require.Panics(func() { owner.nested.Release() })
@@ -235,11 +239,13 @@ func TestStub(t *testing.T) {
 	// unable to release twice in stub mode as well to avoid cleanup() unexpected execution
 	require.Panics(func() { owner.Release() })
 
-	require.Zero(pool.GetObjectsInUse())
+	require.Zero(safepool.GetObjectsInUse())
 }
 
 func TestStress(t *testing.T) {
-	p := pool.NewPool(func(releaser pool.IReleaser) *myStruct { return &myStruct{IReleaser: releaser} })
+	p := safepool.NewPool(func(releaser safepool.IReleaser) *myStruct {
+		return &myStruct{IReleaser: releaser, bb: nil, fld1: 0}
+	})
 	ch := make(chan *myStruct)
 	nch := make(chan int, 1000)
 	for i := range 1000 {
@@ -265,15 +271,15 @@ func TestStress(t *testing.T) {
 		}
 		numbers[n] = struct{}{}
 	}
-	require.Zero(t, pool.GetObjectsInUse())
+	require.Zero(t, safepool.GetObjectsInUse())
 }
 
 // TestCounterCallbackCanPrintLeaks registers a counter that prints leak
 // diagnostics before returning its count. GetObjectsInUse should call
 // that counter, receive its result, and finish without getting stuck.
 func TestCounterCallbackCanPrintLeaks(t *testing.T) {
-	pool.SetDebug(true)
-	defer pool.SetDebug(false)
+	safepool.SetDebug(true)
+	defer safepool.SetDebug(false)
 	// Pretend an external pool has one object in use. Use an atomic counter
 	// because registered callbacks must be safe to call concurrently.
 	var externalObjectsInUse atomic.Uint64
@@ -283,24 +289,24 @@ func TestCounterCallbackCanPrintLeaks(t *testing.T) {
 	t.Cleanup(func() { externalObjectsInUse.Store(0) })
 
 	// Registration saves the callback; it does not call it yet.
-	pool.RegisterObjectsInUseCounter(func() uint64 {
+	safepool.RegisterObjectsInUseCounter(func() uint64 {
 		// GetObjectsInUse is now calling our counter. Before returning
 		// the count, request a report of unreleased pooled objects.
 		// Discard the report text; we only need this call to finish.
-		pool.PrintNonReleased(io.Discard)
+		safepool.PrintNonReleased(io.Discard)
 		return externalObjectsInUse.Load()
 	})
 
 	// Before the fix, GetObjectsInUse held the lock while calling our external counter.
 	// The counter called PrintNonReleased, which tried to acquire the same lock -> stuck.
 	// GetObjectsInUse must release the lock before calling counters so this check can finish.
-	require.Equal(t, uint64(1), pool.GetObjectsInUse())
+	require.Equal(t, uint64(1), safepool.GetObjectsInUse())
 }
 
 // An application object gets Release from IReleaser and supplies its own
 // Cleanup hook, just as it would when using the pool outside this test.
 type concurrentReleaseItem struct {
-	pool.IReleaser
+	safepool.IReleaser
 	cleanup func()
 }
 
@@ -316,7 +322,7 @@ func TestConcurrentRelease(t *testing.T) {
 	continueCleanup := make(chan struct{})
 	// Cleanup can be entered by both callers, so count calls atomically.
 	var cleanupCalls atomic.Int32
-	p := pool.NewPool(func(releaser pool.IReleaser) *concurrentReleaseItem {
+	p := safepool.NewPool(func(releaser safepool.IReleaser) *concurrentReleaseItem {
 		return &concurrentReleaseItem{
 			IReleaser: releaser,
 			cleanup: func() {
@@ -358,7 +364,7 @@ func TestConcurrentRelease(t *testing.T) {
 	require.Equal(t, int32(1), cleanupCalls.Load(), "cleanup must run once per borrow")
 	// One successful release balances the single Get. If both releases
 	// decrement the counter, it underflows instead of returning to zero.
-	require.Zero(t, pool.GetObjectsInUse(), "one borrow must be counted as released exactly once")
+	require.Zero(t, safepool.GetObjectsInUse(), "one borrow must be counted as released exactly once")
 }
 
 // TestReleaseClearsLeakReportAfterDebugDisabled borrows with debug mode
@@ -366,51 +372,55 @@ func TestConcurrentRelease(t *testing.T) {
 // disappear from the report, including after debug mode is enabled again.
 func TestReleaseClearsLeakReportAfterDebugDisabled(t *testing.T) {
 	type debugModeItem struct {
-		pool.IReleaser
+		safepool.IReleaser
 	}
 	for _, tc := range []struct {
 		name    string
-		newPool func(func(pool.IReleaser) *debugModeItem) pool.IPool[*debugModeItem]
+		newPool func(func(safepool.IReleaser) *debugModeItem) safepool.IPool[*debugModeItem]
 	}{
-		{name: "normal", newPool: pool.NewPool[*debugModeItem]},
-		{name: "stub", newPool: pool.NewPoolStub[*debugModeItem]},
+		{name: "normal", newPool: safepool.NewPool[*debugModeItem]},
+		{name: "stub", newPool: safepool.NewPoolStub[*debugModeItem]},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			pool.SetDebug(true)
-			t.Cleanup(func() { pool.SetDebug(false) })
-			items := tc.newPool(func(releaser pool.IReleaser) *debugModeItem {
+			safepool.SetDebug(true)
+			t.Cleanup(func() { safepool.SetDebug(false) })
+			items := tc.newPool(func(releaser safepool.IReleaser) *debugModeItem {
 				return &debugModeItem{IReleaser: releaser}
 			})
 
 			// Get records this borrow because debugging is enabled.
 			item := items.Get()
 			var before bytes.Buffer
-			pool.PrintNonReleased(&before)
+			safepool.PrintNonReleased(&before)
 
 			// Stop recording new borrows, then release the tracked object.
 			// Its recorded trace must still be removed during release.
-			pool.SetDebug(false)
+			safepool.SetDebug(false)
 			item.Release()
 			var whileDisabled bytes.Buffer
-			pool.PrintNonReleased(&whileDisabled)
+			safepool.PrintNonReleased(&whileDisabled)
 
 			// Enabling diagnostics again must not reveal a phantom leak.
-			pool.SetDebug(true)
+			safepool.SetDebug(true)
 			var after bytes.Buffer
-			pool.PrintNonReleased(&after)
+			safepool.PrintNonReleased(&after)
 
 			// Assert after release so a failure cannot leave the object borrowed.
 			require.Contains(t, before.String(), "TestReleaseClearsLeakReportAfterDebugDisabled")
 			require.Contains(t, before.String(), "1 not released borrowed at:")
-			require.Zero(t, pool.GetObjectsInUse(), "the object was released")
+			require.Zero(t, safepool.GetObjectsInUse(), "the object was released")
 			require.Empty(t, after.String(), "enabling debug again must not report a released object")
-			require.Empty(t, whileDisabled.String(), "release must remove the trace even with debug disabled")
+			require.Empty(
+				t,
+				whileDisabled.String(),
+				"release must remove the trace even with debug disabled",
+			)
 		})
 	}
 }
 
 type initPanicItem struct {
-	pool.IReleaser
+	safepool.IReleaser
 	initialize func(*initPanicItem)
 }
 
@@ -426,10 +436,10 @@ func (i *initPanicItem) Init() {
 func TestGetTracksInitPanic(t *testing.T) {
 	for _, mode := range []struct {
 		name    string
-		newPool func(func(pool.IReleaser) *initPanicItem) pool.IPool[*initPanicItem]
+		newPool func(func(safepool.IReleaser) *initPanicItem) safepool.IPool[*initPanicItem]
 	}{
-		{name: "normal", newPool: pool.NewPool[*initPanicItem]},
-		{name: "stub", newPool: pool.NewPoolStub[*initPanicItem]},
+		{name: "normal", newPool: safepool.NewPool[*initPanicItem]},
+		{name: "stub", newPool: safepool.NewPoolStub[*initPanicItem]},
 	} {
 		for _, withChild := range []bool{false, true} {
 			scenario := "standalone"
@@ -438,14 +448,14 @@ func TestGetTracksInitPanic(t *testing.T) {
 			}
 			t.Run(mode.name+"/"+scenario, func(t *testing.T) {
 				// Record the global count to check this borrow and its cleanup.
-				beforeCount := pool.GetObjectsInUse()
-				pool.SetDebug(true)
-				t.Cleanup(func() { pool.SetDebug(false) })
+				beforeCount := safepool.GetObjectsInUse()
+				safepool.SetDebug(true)
+				t.Cleanup(func() { safepool.SetDebug(false) })
 
-				var children pool.IPool[*initPanicItem]
+				var children safepool.IPool[*initPanicItem]
 				wantCount := uint64(1)
 				if withChild {
-					children = mode.newPool(func(releaser pool.IReleaser) *initPanicItem {
+					children = mode.newPool(func(releaser safepool.IReleaser) *initPanicItem {
 						return &initPanicItem{IReleaser: releaser, initialize: nil}
 					})
 					wantCount++
@@ -454,7 +464,7 @@ func TestGetTracksInitPanic(t *testing.T) {
 				// Keep the factory-created object only for test cleanup.
 				// A normal caller cannot obtain it from Get after the panic.
 				var created *initPanicItem
-				items := mode.newPool(func(releaser pool.IReleaser) *initPanicItem {
+				items := mode.newPool(func(releaser safepool.IReleaser) *initPanicItem {
 					created = &initPanicItem{
 						IReleaser: releaser,
 						initialize: func(item *initPanicItem) {
@@ -472,18 +482,18 @@ func TestGetTracksInitPanic(t *testing.T) {
 				// request boundary, then inspect diagnostics through the API.
 				require.PanicsWithValue(t, "init failed", func() { items.Get() })
 				var report bytes.Buffer
-				pool.PrintNonReleased(&report)
-				borrowedCount := pool.GetObjectsInUse() - beforeCount
+				safepool.PrintNonReleased(&report)
+				borrowedCount := safepool.GetObjectsInUse() - beforeCount
 
 				// A failed Init leaves the borrow tracked until explicitly released.
 				// Release the captured object and its children before checking the
 				// saved diagnostics, so a failed assertion cannot leave them borrowed.
 				created.Release()
 				var afterRelease bytes.Buffer
-				pool.PrintNonReleased(&afterRelease)
+				safepool.PrintNonReleased(&afterRelease)
 
 				require.Equal(t, wantCount, borrowedCount, "the failed owner must also be counted")
-				require.Equal(t, beforeCount, pool.GetObjectsInUse())
+				require.Equal(t, beforeCount, safepool.GetObjectsInUse())
 				require.Contains(t, report.String(), "TestGetTracksInitPanic")
 				require.Contains(t, report.String(), "1 not released borrowed at:")
 				require.Empty(t, afterRelease.String(), "release must remove the failed borrow's trace")

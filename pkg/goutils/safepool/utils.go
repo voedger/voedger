@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package pool
+package safepool
 
 import (
 	"fmt"
@@ -28,10 +28,10 @@ func GetObjectsInUse() uint64 {
 	return res
 }
 
-// RegisterObjectsInUseCounter registers pooled objects counter which will be considered by GetObjectsInUse()
-// called automatically on each NewPool() to track the new pool
-// useful if e.g. we have different pool somewhere else it is useful to register its counter here and use pool.GetObjectsInUse() only as a single pooled objects counter
-// note: func counter must be thread-safe
+// RegisterObjectsInUseCounter adds a counter to GetObjectsInUse.
+// NewPool calls it automatically for every pool it creates. Register counters from
+// other pool implementations to include them in the shared total.
+// The counter must be thread-safe.
 func RegisterObjectsInUseCounter(oc func() uint64) {
 	m.Lock()
 	objectsCounters = append(objectsCounters, oc)
@@ -39,7 +39,7 @@ func RegisterObjectsInUseCounter(oc func() uint64) {
 }
 
 // PrintNonReleased prints stacktraces that explains where non-released objects were borrowed
-// note: debug mode must be turned on by `pool.SetDebug(true)` call
+// Debug mode must be enabled with safepool.SetDebug(true).
 func PrintNonReleased(w io.Writer) {
 	nr := getNonReleased()
 	if len(nr) == 0 {

@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package pool
+package safepool
 
 // IPool manages standalone and owned object lifetimes.
 type IPool[T any] interface {

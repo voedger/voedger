@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package pool_test
+package safepool_test
 
 import (
 	"sync"
@@ -11,14 +11,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/goutils/pool"
+	"github.com/voedger/voedger/pkg/goutils/safepool"
 )
 
 // cpu: AMD Ryzen 7 7700 8-Core Processor
 // BenchmarkBasic/basic-16        42678502	        28.85 ns/op	       0 B/op	       0 allocs/op
 func BenchmarkBasic(b *testing.B) {
-	p := pool.NewPool(func(releaser pool.IReleaser) *myStruct {
-		return &myStruct{IReleaser: releaser}
+	p := safepool.NewPool(func(releaser safepool.IReleaser) *myStruct {
+		return &myStruct{IReleaser: releaser, bb: nil, fld1: 0}
 	})
 
 	b.Run("basic", func(b *testing.B) {
@@ -30,7 +30,7 @@ func BenchmarkBasic(b *testing.B) {
 }
 
 type simpleStruct struct {
-	pool.IReleaser
+	safepool.IReleaser
 	isReleased bool
 }
 
@@ -38,8 +38,8 @@ type simpleStruct struct {
 // BenchmarkExample/pool-16       71031975	        17.25 ns/op	       0 B/op	       0 allocs/op
 // BenchmarkExample/sync.Pool-16  146662080	        8.018 ns/op	       0 B/op	       0 allocs/op
 func BenchmarkExample(b *testing.B) {
-	p := pool.NewPool(func(releaser pool.IReleaser) *simpleStruct {
-		return &simpleStruct{IReleaser: releaser}
+	p := safepool.NewPool(func(releaser safepool.IReleaser) *simpleStruct {
+		return &simpleStruct{IReleaser: releaser, isReleased: false}
 	})
 
 	b.Run("pool", func(b *testing.B) {
@@ -52,7 +52,7 @@ func BenchmarkExample(b *testing.B) {
 	b.Run("sync.Pool", func(b *testing.B) {
 		syncPool := sync.Pool{
 			New: func() interface{} {
-				return &simpleStruct{}
+				return &simpleStruct{IReleaser: nil, isReleased: false}
 			},
 		}
 		objectsInUse := uint64(0)
@@ -72,7 +72,7 @@ func BenchmarkExample(b *testing.B) {
 		}
 	})
 
-	require.Zero(b, pool.GetObjectsInUse())
+	require.Zero(b, safepool.GetObjectsInUse())
 }
 
 func BenchmarkOwned(b *testing.B) {

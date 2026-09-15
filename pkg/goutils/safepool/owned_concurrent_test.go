@@ -2,7 +2,7 @@
  * Copyright (c) 2026-present unTill Software Development Group B.V.
  */
 
-package pool_test
+package safepool_test
 
 import (
 	"sync"
@@ -10,15 +10,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/goutils/pool"
+	"github.com/voedger/voedger/pkg/goutils/safepool"
 )
 
 type concurrentOwner struct {
-	pool.IReleaser
+	safepool.IReleaser
 }
 
 type concurrentOwnedItem struct {
-	pool.IReleaser
+	safepool.IReleaser
 	cleanupCalls *atomic.Int32
 }
 
@@ -29,13 +29,13 @@ func (i *concurrentOwnedItem) Cleanup() {
 func newConcurrentOwnershipPools(
 	cleanupCalls *atomic.Int32,
 ) (
-	owners pool.IPool[*concurrentOwner],
-	items pool.IPool[*concurrentOwnedItem],
+	owners safepool.IPool[*concurrentOwner],
+	items safepool.IPool[*concurrentOwnedItem],
 ) {
-	owners = pool.NewPool(func(releaser pool.IReleaser) *concurrentOwner {
+	owners = safepool.NewPool(func(releaser safepool.IReleaser) *concurrentOwner {
 		return &concurrentOwner{IReleaser: releaser}
 	})
-	items = pool.NewPool(func(releaser pool.IReleaser) *concurrentOwnedItem {
+	items = safepool.NewPool(func(releaser safepool.IReleaser) *concurrentOwnedItem {
 		return &concurrentOwnedItem{
 			IReleaser:    releaser,
 			cleanupCalls: cleanupCalls,
@@ -47,7 +47,7 @@ func newConcurrentOwnershipPools(
 func TestConcurrentGetOwnedPreservesEveryItem(t *testing.T) {
 	const itemCount = 100
 	require := require.New(t)
-	objectsBefore := pool.GetObjectsInUse()
+	objectsBefore := safepool.GetObjectsInUse()
 	var cleanupCalls atomic.Int32
 	owners, items := newConcurrentOwnershipPools(&cleanupCalls)
 	owner := owners.Get()
@@ -73,18 +73,18 @@ func TestConcurrentGetOwnedPreservesEveryItem(t *testing.T) {
 	}
 	require.Equal(
 		objectsBefore+itemCount+1,
-		pool.GetObjectsInUse(),
+		safepool.GetObjectsInUse(),
 	)
 
 	owner.Release()
 	require.Equal(int32(itemCount), cleanupCalls.Load())
-	require.Equal(objectsBefore, pool.GetObjectsInUse())
+	require.Equal(objectsBefore, safepool.GetObjectsInUse())
 }
 
 func TestGetOwnedConcurrentWithOwnerRelease(t *testing.T) {
 	const attemptCount = 100
 	require := require.New(t)
-	objectsBefore := pool.GetObjectsInUse()
+	objectsBefore := safepool.GetObjectsInUse()
 	var cleanupCalls atomic.Int32
 	owners, items := newConcurrentOwnershipPools(&cleanupCalls)
 	owner := owners.Get()
@@ -122,12 +122,12 @@ func TestGetOwnedConcurrentWithOwnerRelease(t *testing.T) {
 		}
 	}
 	require.Equal(succeeded, cleanupCalls.Load())
-	require.Equal(objectsBefore, pool.GetObjectsInUse())
+	require.Equal(objectsBefore, safepool.GetObjectsInUse())
 }
 
 func TestGetOwnedRejectsReleasedOwner(t *testing.T) {
 	require := require.New(t)
-	objectsBefore := pool.GetObjectsInUse()
+	objectsBefore := safepool.GetObjectsInUse()
 	var cleanupCalls atomic.Int32
 	owners, items := newConcurrentOwnershipPools(&cleanupCalls)
 	owner := owners.Get()
@@ -138,5 +138,5 @@ func TestGetOwnedRejectsReleasedOwner(t *testing.T) {
 		func() { items.GetOwned(owner) },
 	)
 	require.Zero(cleanupCalls.Load())
-	require.Equal(objectsBefore, pool.GetObjectsInUse())
+	require.Equal(objectsBefore, safepool.GetObjectsInUse())
 }

@@ -4,7 +4,7 @@
  */
 
 //nolint:testableexamples // This example documents nondeterministic sync.Pool reuse.
-package pool
+package safepool
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ type pooled_wrong struct {
 
 var pool = sync.Pool{
 	New: func() interface{} {
-		return &pooled_wrong{}
+		return &pooled_wrong{b: nil}
 	},
 }
 

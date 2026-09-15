@@ -1,6 +1,6 @@
-# Pool
+# SafePool
 
-Package `pool` manages reusable Go objects with reference counting. It
+Package `safepool` manages reusable Go objects with reference counting. It
 initializes an object on every borrow, cleans it before reuse, protects
 against duplicate releases, and can tie a borrowed object's lifetime to
 an owner.
@@ -65,9 +65,9 @@ any of that bookkeeping can corrupt the pool or hide leaks.
 </details>
 
 <details>
-<summary>With pool</summary>
+<summary>With safepool</summary>
 
-Embed `pool.IReleaser` in the pooled type and assign the releaser
+Embed `safepool.IReleaser` in the pooled type and assign the releaser
 supplied to the `NewPool` factory. The optional `Init()` hook runs on
 every `Get()`; the optional `Cleanup()` hook runs on `Release()`, before
 the object is returned to the pool.
@@ -79,12 +79,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/voedger/voedger/pkg/goutils/pool"
+	"github.com/voedger/voedger/pkg/goutils/safepool"
 )
 
 type object struct {
 	// Embed this interface in every pooled type.
-	pool.IReleaser
+	safepool.IReleaser
 
 	value string
 }
@@ -99,7 +99,7 @@ func (o *object) Cleanup() {
 	o.value = "" // Clear application state before reuse.
 }
 
-var objects = pool.NewPool(func(releaser pool.IReleaser) *object {
+var objects = safepool.NewPool(func(releaser safepool.IReleaser) *object {
 	return &object{
 		// Store the implementation supplied by the pool.
 		IReleaser: releaser,
@@ -108,19 +108,19 @@ var objects = pool.NewPool(func(releaser pool.IReleaser) *object {
 
 func main() {
 	// Record where outstanding objects were borrowed.
-	pool.SetDebug(true)
-	defer pool.SetDebug(false)
+	safepool.SetDebug(true)
+	defer safepool.SetDebug(false)
 
 	o := objects.Get()                  // Starts with one reference.
 	fmt.Println(o.value)                // Set by Init: "initialized"
 	o.AddRef()                           // Adds another reference.
 	o.Release()                          // One reference remains.
-	fmt.Println(pool.GetObjectsInUse()) // The object remains in use.
-	pool.PrintNonReleased(os.Stdout)     // Still reports the Get call.
+	fmt.Println(safepool.GetObjectsInUse()) // The object remains in use.
+	safepool.PrintNonReleased(os.Stdout)     // Still reports the Get call.
 
 	o.Release()                         // Final release runs Cleanup.
-	fmt.Println(pool.GetObjectsInUse()) // No objects are in use.
-	pool.PrintNonReleased(os.Stdout)     // Reports nothing.
+	fmt.Println(safepool.GetObjectsInUse()) // No objects are in use.
+	safepool.PrintNonReleased(os.Stdout)     // Reports nothing.
 
 	// Calling o.Release() again panics: "already released".
 }
@@ -221,7 +221,7 @@ release attempts.
 </details>
 
 <details>
-<summary>With pool</summary>
+<summary>With safepool</summary>
 
 Use `GetOwned(owner)` when a pooled object's lifetime must not be
 shorter than its owner's. An owned object cannot be released directly;
@@ -235,20 +235,20 @@ package main
 import (
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/goutils/pool"
+	"github.com/voedger/voedger/pkg/goutils/safepool"
 )
 
 // An item can be borrowed either standalone or owned.
 type item struct {
-	pool.IReleaser
+	safepool.IReleaser
 }
 
-var items = pool.NewPool(func(releaser pool.IReleaser) *item {
+var items = safepool.NewPool(func(releaser safepool.IReleaser) *item {
 	return &item{IReleaser: releaser}
 })
 
 type owner struct {
-	pool.IReleaser
+	safepool.IReleaser
 	item *item
 }
 
@@ -262,7 +262,7 @@ func (o *owner) Cleanup() {
 	o.item = nil
 }
 
-var owners = pool.NewPool(func(releaser pool.IReleaser) *owner {
+var owners = safepool.NewPool(func(releaser safepool.IReleaser) *owner {
 	return &owner{IReleaser: releaser}
 })
 
@@ -271,11 +271,11 @@ func main() {
 	standaloneItem := items.Get()
 	fmt.Println(standaloneItem.IsOwned()) // false: not owned
 	standaloneItem.Release()              // Direct release succeeds.
-	fmt.Println(pool.GetObjectsInUse())   // No objects are in use.
+	fmt.Println(safepool.GetObjectsInUse()) // No objects are in use.
 
 	// Borrow the same item type with an owner.
 	o := owners.Get()                    // Borrows owner and owned item.
-	fmt.Println(pool.GetObjectsInUse())  // Two objects are in use.
+	fmt.Println(safepool.GetObjectsInUse()) // Two objects are in use.
 	fmt.Println(o.IsOwned())             // false: not owned
 	fmt.Println(o.item.IsOwned())        // true: owned by o
 
@@ -283,7 +283,7 @@ func main() {
 	// o.item.Release() panics: "must be released by owner".
 
 	o.Release()                         // Releases the item and owner.
-	fmt.Println(pool.GetObjectsInUse()) // No objects are in use.
+	fmt.Println(safepool.GetObjectsInUse()) // No objects are in use.
 }
 ```
 

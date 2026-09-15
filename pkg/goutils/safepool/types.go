@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package pool
+package safepool
 
 import (
 	"sync"

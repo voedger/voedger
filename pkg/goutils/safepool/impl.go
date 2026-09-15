@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package pool
+package safepool
 
 import (
 	"bytes"
@@ -256,7 +256,8 @@ func NewPool[T any](instantiator func(releaser IReleaser) T) IPool[T] {
 }
 
 func newPool[T any](instantiator func(releaser IReleaser) T) *implPool[T] {
-	res := &implPool[T]{instantiator: instantiator}
+	res := new(implPool[T])
+	res.instantiator = instantiator
 	RegisterObjectsInUseCounter(func() uint64 { return res.GetObjectsInUse() })
 	return res
 }
