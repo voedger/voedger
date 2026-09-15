@@ -67,6 +67,80 @@ func TestBasicUsage_Simple(t *testing.T) {
 	require.Zero(pool.GetObjectsInUse())
 }
 
+type referenceCountItem struct {
+	pool.IReleaser
+	cleanup func()
+}
+
+func (i *referenceCountItem) Cleanup() {
+	i.cleanup()
+}
+
+func TestReferenceCount(t *testing.T) {
+	require := require.New(t)
+	objectsBefore := pool.GetObjectsInUse()
+	pool.SetDebug(true)
+	t.Cleanup(func() { pool.SetDebug(false) })
+	var cleanupCalls atomic.Int32
+	items := pool.NewPool(func(releaser pool.IReleaser) *referenceCountItem {
+		return &referenceCountItem{
+			IReleaser: releaser,
+			cleanup:   func() { cleanupCalls.Add(1) },
+		}
+	})
+
+	item := items.Get()
+	item.AddRef()
+
+	item.Release()
+	var whileReferenced bytes.Buffer
+	pool.PrintNonReleased(&whileReferenced)
+	require.Equal(objectsBefore+1, pool.GetObjectsInUse())
+	require.Zero(cleanupCalls.Load(), "a remaining reference keeps the object borrowed")
+	require.Contains(whileReferenced.String(), "TestReferenceCount")
+
+	item.Release()
+	var afterFinalRelease bytes.Buffer
+	pool.PrintNonReleased(&afterFinalRelease)
+	require.Equal(objectsBefore, pool.GetObjectsInUse())
+	require.Equal(int32(1), cleanupCalls.Load(), "the final reference releases the object")
+	require.Empty(afterFinalRelease.String())
+	require.PanicsWithValue("already released", func() { item.Release() })
+	require.PanicsWithValue("already released", func() { item.AddRef() })
+}
+
+func TestConcurrentReferenceRelease(t *testing.T) {
+	require := require.New(t)
+	objectsBefore := pool.GetObjectsInUse()
+	var cleanupCalls atomic.Int32
+	items := pool.NewPool(func(releaser pool.IReleaser) *referenceCountItem {
+		return &referenceCountItem{
+			IReleaser: releaser,
+			cleanup:   func() { cleanupCalls.Add(1) },
+		}
+	})
+	item := items.Get()
+	item.AddRef()
+
+	start := make(chan struct{})
+	results := make(chan any, 2)
+	for range 2 {
+		go func() {
+			<-start
+			func() {
+				defer func() { results <- recover() }()
+				item.Release()
+			}()
+		}()
+	}
+	close(start)
+
+	require.Nil(<-results)
+	require.Nil(<-results)
+	require.Equal(int32(1), cleanupCalls.Load())
+	require.Equal(objectsBefore, pool.GetObjectsInUse())
+}
+
 func TestObjectsUsageTrackInDebugMode(t *testing.T) {
 	require := require.New(t)
 	pool.SetDebug(true)

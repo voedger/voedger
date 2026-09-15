@@ -19,7 +19,7 @@ type implPool[T any] struct {
 
 type implIReleaser[T any] struct {
 	obj                  T
-	releaseStarted       atomic.Bool
+	refCount             atomic.Uint64
 	ownerPool            *implPool[T]
 	isOwned              bool
 	cleanupIntf          interface{ Cleanup() }

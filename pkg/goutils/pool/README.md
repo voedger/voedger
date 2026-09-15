@@ -1,8 +1,9 @@
 # Pool
 
-Package `pool` manages reusable Go objects. It initializes an object
-on every borrow, cleans it before reuse, protects against duplicate
-releases, and can tie a borrowed object's lifetime to an owner.
+Package `pool` manages reusable Go objects with reference counting. It
+initializes an object on every borrow, cleans it before reuse, protects
+against duplicate releases, and can tie a borrowed object's lifetime to
+an owner.
 
 There are two ways to borrow an object: without an owner by using
 `Get()`, or with an owner by using `GetOwned()`.
@@ -110,12 +111,14 @@ func main() {
 	pool.SetDebug(true)
 	defer pool.SetDebug(false)
 
-	o := objects.Get()                  // Runs Init automatically.
+	o := objects.Get()                  // Starts with one reference.
 	fmt.Println(o.value)                // Set by Init: "initialized"
-	fmt.Println(pool.GetObjectsInUse()) // One object is in use.
-	pool.PrintNonReleased(os.Stdout)     // Reports this Get call site.
+	o.AddRef()                           // Adds another reference.
+	o.Release()                          // One reference remains.
+	fmt.Println(pool.GetObjectsInUse()) // The object remains in use.
+	pool.PrintNonReleased(os.Stdout)     // Still reports the Get call.
 
-	o.Release()                         // Runs Cleanup, then returns o.
+	o.Release()                         // Final release runs Cleanup.
 	fmt.Println(pool.GetObjectsInUse()) // No objects are in use.
 	pool.PrintNonReleased(os.Stdout)     // Reports nothing.
 
@@ -125,9 +128,11 @@ func main() {
 
 </details>
 
-After `Release()`, neither the object nor its fields may be accessed. A
-second release is rejected before `Cleanup()` or the pool return can
-happen again.
+`Get()` creates one reference. `AddRef()` creates another, and every
+reference requires a matching `Release()`. Only the final `Release()`
+runs `Cleanup()` and returns the object to the pool. After that, neither
+the object nor its fields may be accessed. Another release is rejected
+before `Cleanup()` or the pool return can happen again.
 
 `GetObjectsInUse()` always counts outstanding objects across all
 registered pools. Debug mode additionally records the call stacks of
@@ -135,6 +140,9 @@ outstanding `Get()` calls so that `PrintNonReleased()` can report where
 they occurred. Enable it before borrowing; it adds runtime overhead.
 Disabling debug mode stops recording new borrows, while existing records
 remain until their objects are released.
+
+The usage count measures borrowed objects, not references. `AddRef()`
+does not increase `GetObjectsInUse()`.
 
 Use `NewPoolStub()` instead of `NewPool()` when investigating
 reuse-related problems. A stub creates a fresh object for every borrow
@@ -271,6 +279,7 @@ func main() {
 	fmt.Println(o.IsOwned())             // false: not owned
 	fmt.Println(o.item.IsOwned())        // true: owned by o
 
+	// o.item.AddRef() panics: owned objects cannot add references.
 	// o.item.Release() panics: "must be released by owner".
 
 	o.Release()                         // Releases the item and owner.
@@ -284,6 +293,10 @@ Do not release owned objects from the owner's `Cleanup()` hook. The hook
 runs before the pool walks the ownership chain and releases the owned
 objects. As with any released object, the owner and its owned items must
 not be accessed after the owner's `Release()` call.
+
+`AddRef()` also panics on an owned object. A standalone owner may have
+additional references; its owned objects remain borrowed until the
+owner's final `Release()`.
 
 Owned borrows contribute to `GetObjectsInUse()`, but only standalone
 `Get()` calls have their own stack traces in `PrintNonReleased()`.

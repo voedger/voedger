@@ -7,22 +7,30 @@ package pool
 
 // IPool manages standalone and owned object lifetimes.
 type IPool[T any] interface {
+	// Get borrows an object with an initial reference count of one.
 	Get() T
 
-	// borrows an object from pool which can be released by releaser func only. obj.Release() causes panic.
-	// use case: pooled root object owns a nested pooled object. Borrow nested by GetOwned to avoid nested release before root release
+	// GetOwned borrows an object whose lifetime is managed by owner.
+	// AddRef and Release panic on an owned object. Releasing owner
+	// automatically releases the object.
 	GetOwned(owner IReleaser) T
 }
 
-// IReleaser provides ability to return the instance which holds the IReleaser to the pool
-// owner instance must set its internal IReleaser to the implementation obtained from the pool
-// see NewPool() instantiator argument
+// IReleaser manages references and returns its containing instance to the
+// pool. A NewPool instantiator must store the provided IReleaser in the
+// instance it creates.
 type IReleaser interface {
-	// Release returns the owner instance to the pool
-	// panics if released already avoiding returning the same object to the pool twice
-	// panics if the instance is owned, i.e. was borrowed by GetOwned()
-	// calls owner's Cleanup() if exists before returning to pool
+	// AddRef adds a reference to the instance. Each reference must be
+	// balanced by a Release call.
+	// Panics if the instance is owned or has already been released.
+	AddRef()
+
+	// Release removes a reference from the instance. When the last reference
+	// is removed, Release calls Cleanup if it exists and returns the instance
+	// to the pool. It panics if the instance is owned or already released.
 	Release()
+
+	// IsOwned reports whether the instance was borrowed with GetOwned.
 	IsOwned() bool
 
 	// for internal use

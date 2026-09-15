@@ -82,11 +82,29 @@ func (r *implIReleaser[T]) Release() {
 	if r.isOwned {
 		panic("must be released by owner")
 	}
-	r.releaseOwned()
+	r.releaseReference()
+}
+
+func (r *implIReleaser[T]) AddRef() {
+	if r.isOwned {
+		panic("cannot add reference to owned object")
+	}
+	for {
+		refCount := r.refCount.Load()
+		if refCount == 0 {
+			panic("already released")
+		}
+		if refCount == ^uint64(0) {
+			panic("reference count overflow")
+		}
+		if r.refCount.CompareAndSwap(refCount, refCount+1) {
+			return
+		}
+	}
 }
 
 func (r *implIReleaser[T]) reset() {
-	r.releaseStarted.Store(false)
+	r.refCount.Store(1)
 	r.isOwned = false
 	r.borrowStackTrace = ""
 }
@@ -104,10 +122,24 @@ func (r *implIReleaser[T]) setBorrowStackTrace(stackTrace string) {
 }
 
 func (r *implIReleaser[T]) releaseOwned() {
-	// Claim release before invoking cleanup or releasing owned objects.
-	if !r.releaseStarted.CompareAndSwap(false, true) {
-		panic("already released")
+	r.releaseReference()
+}
+
+func (r *implIReleaser[T]) releaseReference() {
+	for {
+		refCount := r.refCount.Load()
+		if refCount == 0 {
+			panic("already released")
+		}
+		if !r.refCount.CompareAndSwap(refCount, refCount-1) {
+			continue
+		}
+		if refCount > 1 {
+			return
+		}
+		break
 	}
+
 	if r.cleanupIntf != nil {
 		r.cleanupIntf.Cleanup()
 	}

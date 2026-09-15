@@ -94,5 +94,25 @@ func TestBasicUsage_Owned(t *testing.T) {
 	// owner is released, nested is released automatically as well
 	// neither owner, nor any of its fields, nor owner.nested itself and its fields must not be touched from now on
 
-	require.Equal(uint64(0), pool.GetObjectsInUse())
+	require.Zero(pool.GetObjectsInUse())
+}
+
+func TestOwnerReferenceCount(t *testing.T) {
+	require := require.New(t)
+	owner := poolOwner.Get()
+
+	require.PanicsWithValue(
+		"cannot add reference to owned object",
+		func() { owner.nested.AddRef() },
+	)
+
+	owner.AddRef()
+	owner.Release()
+	require.Equal(uint64(3), pool.GetObjectsInUse())
+	require.NotNil(owner.bb)
+	require.NotNil(owner.nested)
+	require.NotNil(owner.nested.internal)
+
+	owner.Release()
+	require.Zero(pool.GetObjectsInUse())
 }

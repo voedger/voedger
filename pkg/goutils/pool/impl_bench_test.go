@@ -14,6 +14,8 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/pool"
 )
 
+// cpu: AMD Ryzen 7 7700 8-Core Processor
+// BenchmarkBasic/basic-16        42678502	        28.85 ns/op	       0 B/op	       0 allocs/op
 func BenchmarkBasic(b *testing.B) {
 	p := pool.NewPool(func(releaser pool.IReleaser) *myStruct {
 		return &myStruct{IReleaser: releaser}
@@ -32,10 +34,13 @@ type simpleStruct struct {
 	isReleased bool
 }
 
-// BenchmarkExample/pool-4        20090349	        71.98 ns/op	       0 B/op	       0 allocs/op
-// BenchmarkExample/sync.Pool-4   39997732	        27.70 ns/op	       0 B/op	       0 allocs/op
+// cpu: AMD Ryzen 7 7700 8-Core Processor
+// BenchmarkExample/pool-16       71031975	        17.25 ns/op	       0 B/op	       0 allocs/op
+// BenchmarkExample/sync.Pool-16  146662080	        8.018 ns/op	       0 B/op	       0 allocs/op
 func BenchmarkExample(b *testing.B) {
-	p := pool.NewPool(func(releaser pool.IReleaser) *simpleStruct { return &simpleStruct{IReleaser: releaser} })
+	p := pool.NewPool(func(releaser pool.IReleaser) *simpleStruct {
+		return &simpleStruct{IReleaser: releaser}
+	})
 
 	b.Run("pool", func(b *testing.B) {
 		for range b.N {
