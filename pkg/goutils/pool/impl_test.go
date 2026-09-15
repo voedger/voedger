@@ -27,7 +27,7 @@ type myStruct struct {
 	fld1 int
 }
 
-// optional Clenaup() will be called automatically right before returning the myStruct instance to the pool
+// optional Cleanup() will be called automatically right before returning the myStruct instance to the pool
 func (ms *myStruct) Cleanup() {
 	bytebufferpool.Put(ms.bb)
 	ms.bb = nil
