@@ -50,9 +50,7 @@ func (p *implPool[T]) Get() T {
 func (p *implPool[T]) get() T {
 	var obj T
 	if p.isStub {
-		releaser := &implIReleaser[T]{
-			ownerPool: p,
-		}
+		releaser := newReleaser(p)
 		obj = p.instantiator(releaser)
 		releaser.cleanupIntf, _ = any(obj).(interface{ Cleanup() })
 		releaser.obj = obj
@@ -63,13 +61,17 @@ func (p *implPool[T]) get() T {
 }
 
 func (p *implPool[T]) GetOwned(owner IReleaser) T {
+	if !owner.beginOwnedBorrow() {
+		panic("owner already released")
+	}
+	defer owner.finishOwnedBorrow()
+
 	obj := p.get()
 	p.objectsInUse.Add(1)
 	releaseable := any(obj).(IReleaser)
 	releaseable.reset()
 	releaseable.setIsOwned()
-	releaseable.setOwnedTail(owner.getOwnedTail())
-	owner.setOwnedTail(releaseable)
+	owner.addOwned(releaseable)
 	releaseable.init(obj)
 	return obj
 }
@@ -140,12 +142,12 @@ func (r *implIReleaser[T]) releaseReference() {
 		break
 	}
 
+	r.waitOwnedBorrows()
 	if r.cleanupIntf != nil {
 		r.cleanupIntf.Cleanup()
 	}
-	if r.ownedTail != nil {
-		r.ownedTail.(IReleaser).releaseOwned()
-		r.ownedTail = nil
+	if ownedTail := r.takeOwnedTail(); ownedTail != nil {
+		ownedTail.releaseOwned()
 	}
 	r.ownerPool.objectsInUse.Add(^uint64(0))
 	// Remove the trace recorded for this borrow even if debug mode was
@@ -174,12 +176,59 @@ func (r *implIReleaser[T]) init(obj interface{}) {
 	}
 }
 
-func (r *implIReleaser[T]) setOwnedTail(tail interface{}) {
+func (r *implIReleaser[T]) beginOwnedBorrow() bool {
+	r.ownedMu.Lock()
+	defer r.ownedMu.Unlock()
+	if r.refCount.Load() == 0 {
+		return false
+	}
+	r.ownedInitializations++
+	return true
+}
+
+func (r *implIReleaser[T]) finishOwnedBorrow() {
+	r.ownedMu.Lock()
+	defer r.ownedMu.Unlock()
+	r.ownedInitializations--
+	if r.ownedInitializations == 0 {
+		r.ownedCond.Broadcast()
+	}
+}
+
+func (r *implIReleaser[T]) addOwned(owned IReleaser) {
+	r.ownedMu.Lock()
+	defer r.ownedMu.Unlock()
+	owned.setOwnedTail(r.ownedTail)
+	r.ownedTail = owned
+}
+
+func (r *implIReleaser[T]) waitOwnedBorrows() {
+	r.ownedMu.Lock()
+	defer r.ownedMu.Unlock()
+	for r.ownedInitializations > 0 {
+		r.ownedCond.Wait()
+	}
+}
+
+func (r *implIReleaser[T]) setOwnedTail(tail IReleaser) {
+	r.ownedMu.Lock()
+	defer r.ownedMu.Unlock()
 	r.ownedTail = tail
 }
 
-func (r *implIReleaser[T]) getOwnedTail() interface{} {
-	return r.ownedTail
+func (r *implIReleaser[T]) takeOwnedTail() IReleaser {
+	r.ownedMu.Lock()
+	defer r.ownedMu.Unlock()
+	tail := r.ownedTail
+	r.ownedTail = nil
+	return tail
+}
+
+func newReleaser[T any](ownerPool *implPool[T]) *implIReleaser[T] {
+	releaser := new(implIReleaser[T])
+	releaser.ownerPool = ownerPool
+	releaser.ownedCond = sync.NewCond(&releaser.ownedMu)
+	return releaser
 }
 
 // NewPoolStub creates pool which does not act as a pool. I.e. just creates a new instance on each Get()
@@ -197,9 +246,7 @@ func NewPool[T any](instantiator func(releaser IReleaser) T) IPool[T] {
 	res := newPool[T](nil)
 	res.Pool = sync.Pool{
 		New: func() interface{} {
-			releaser := &implIReleaser[T]{
-				ownerPool: res,
-			}
+			releaser := newReleaser(res)
 			newInstance := instantiator(releaser)
 			releaser.cleanupIntf, _ = any(newInstance).(interface{ Cleanup() })
 			releaser.obj = newInstance

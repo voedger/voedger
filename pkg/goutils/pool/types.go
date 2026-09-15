@@ -26,7 +26,10 @@ type implIReleaser[T any] struct {
 	borrowStackTrace     string
 	initIntf             interface{ Init() }
 	isInitIntfDetermined bool
-	ownedTail            interface{}
+	ownedMu              sync.Mutex
+	ownedCond            *sync.Cond
+	ownedInitializations uint64
+	ownedTail            IReleaser
 }
 
 type stackFrame struct {

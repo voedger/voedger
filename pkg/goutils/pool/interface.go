@@ -12,7 +12,8 @@ type IPool[T any] interface {
 
 	// GetOwned borrows an object whose lifetime is managed by owner.
 	// AddRef and Release panic on an owned object. Releasing owner
-	// automatically releases the object.
+	// automatically releases the object. Concurrent calls with the same
+	// owner are supported. GetOwned panics if owner is already released.
 	GetOwned(owner IReleaser) T
 }
 
@@ -39,6 +40,10 @@ type IReleaser interface {
 	setIsOwned()
 	setBorrowStackTrace(stackTrace string)
 	init(obj interface{})
-	setOwnedTail(interface{})
-	getOwnedTail() interface{}
+	beginOwnedBorrow() bool
+	finishOwnedBorrow()
+	addOwned(IReleaser)
+	waitOwnedBorrows()
+	setOwnedTail(IReleaser)
+	takeOwnedTail() IReleaser
 }

@@ -298,6 +298,11 @@ not be accessed after the owner's `Release()` call.
 additional references; its owned objects remain borrowed until the
 owner's final `Release()`.
 
+Concurrent `GetOwned()` calls for the same owner are supported. The
+owner's final `Release()` waits for owned objects that are still being
+initialized. A `GetOwned()` call that starts after final release panics
+with `"owner already released"`.
+
 Owned borrows contribute to `GetObjectsInUse()`, but only standalone
 `Get()` calls have their own stack traces in `PrintNonReleased()`.
 
