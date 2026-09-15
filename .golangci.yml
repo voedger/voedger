@@ -34,6 +34,7 @@ linters:
     - nonamedreturns
     - exhaustive
     - exhaustruct
+    - exhaustruct_v5
     - cyclop
     - err113
     - musttag
