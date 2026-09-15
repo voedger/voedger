@@ -231,10 +231,9 @@ func newReleaser[T any](ownerPool *implPool[T]) *implIReleaser[T] {
 	return releaser
 }
 
-// NewPoolStub creates pool which does not act as a pool. I.e. just creates a new instance on each Get()
-// Release() does nothing more but Cleanup() call if it exists
-// does not track borrow source code points in debug mode
-// useful for investigations
+// NewPoolStub creates a pool that allocates a new instance on every Get
+// instead of reusing returned instances. It retains initialization, cleanup,
+// ownership, reference counting, usage counters, and debug diagnostics.
 func NewPoolStub[T any](instantiator func(releaser IReleaser) T) IPool[T] {
 	res := newPool(instantiator)
 	res.instantiator = instantiator
