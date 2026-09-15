@@ -292,10 +292,13 @@ type router struct {
 }
 
 func newRouter() *router {
+	// SetXForwarded would put the upstream host in X-Forwarded-Host because
+	// the matcher rewrites req.URL and req.Host before Rewrite runs.
+	// Assuming we do not need to forward X-Forwarded-* headers so use nop func
 	return &router{
 		router:        mux.NewRouter(),
 		staticContent: make(map[string]http.HandlerFunc),
-		reverseProxy:  &httputil.ReverseProxy{Director: func(*http.Request) {}},
+		reverseProxy:  &httputil.ReverseProxy{Rewrite: func(*httputil.ProxyRequest) {}},
 		redirections:  make([]*redirectionRoute, 1),
 	}
 }
