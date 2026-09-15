@@ -67,6 +67,34 @@ func TestBasicUsage_Simple(t *testing.T) {
 	require.Zero(pool.GetObjectsInUse())
 }
 
+// TestKnownIssue_StaleAliasReleasesReusedObject documents that aliases from
+// different borrows cannot be distinguished when sync.Pool reuses a pointer.
+func TestKnownIssue_StaleAliasReleasesReusedObject(t *testing.T) {
+	t.Skip("demonstration only")
+	require := require.New(t)
+	objectsBefore := pool.GetObjectsInUse()
+	var cleanupCalls atomic.Int32
+	items := pool.NewPool(func(releaser pool.IReleaser) *referenceCountItem {
+		return &referenceCountItem{
+			IReleaser: releaser,
+			cleanup:   func() { cleanupCalls.Add(1) },
+		}
+	})
+
+	first := items.Get()
+	first.Release()
+	second := items.Get()
+	require.Same(first, second)
+
+	// The stale alias releases the second, still-active borrow.
+	require.NotPanics(first.Release)
+	require.Equal(int32(2), cleanupCalls.Load())
+	require.Equal(objectsBefore, pool.GetObjectsInUse())
+
+	// The legitimate borrower now appears to be already released.
+	require.PanicsWithValue("already released", second.Release)
+}
+
 type referenceCountItem struct {
 	pool.IReleaser
 	cleanup func()
