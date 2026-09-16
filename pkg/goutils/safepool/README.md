@@ -111,16 +111,16 @@ func main() {
 	safepool.SetDebug(true)
 	defer safepool.SetDebug(false)
 
-	o := objects.Get()                  // Starts with one reference.
-	fmt.Println(o.value)                // Set by Init: "initialized"
-	o.AddRef()                           // Adds another reference.
-	o.Release()                          // One reference remains.
+	o := objects.Get()                      // Starts with one reference.
+	fmt.Println(o.value)                    // Set by Init: "initialized"
+	o.AddRef()                              // Adds another reference.
+	o.Release()                             // One reference remains.
 	fmt.Println(safepool.GetObjectsInUse()) // The object remains in use.
-	safepool.PrintNonReleased(os.Stdout)     // Still reports the Get call.
+	safepool.PrintNonReleased(os.Stdout)    // Still reports the Get call.
 
-	o.Release()                         // Final release runs Cleanup.
+	o.Release()                             // Final release runs Cleanup.
 	fmt.Println(safepool.GetObjectsInUse()) // No objects are in use.
-	safepool.PrintNonReleased(os.Stdout)     // Reports nothing.
+	safepool.PrintNonReleased(os.Stdout)    // Reports nothing.
 
 	// Calling o.Release() again panics: "already released".
 }
@@ -269,20 +269,20 @@ var owners = safepool.NewPool(func(releaser safepool.IReleaser) *owner {
 func main() {
 	// Borrow the item without an owner.
 	standaloneItem := items.Get()
-	fmt.Println(standaloneItem.IsOwned()) // false: not owned
-	standaloneItem.Release()              // Direct release succeeds.
+	fmt.Println(standaloneItem.IsOwned())   // false: not owned
+	standaloneItem.Release()                // Direct release succeeds.
 	fmt.Println(safepool.GetObjectsInUse()) // No objects are in use.
 
 	// Borrow the same item type with an owner.
-	o := owners.Get()                    // Borrows owner and owned item.
+	o := owners.Get()                       // Borrows owner and owned item.
 	fmt.Println(safepool.GetObjectsInUse()) // Two objects are in use.
-	fmt.Println(o.IsOwned())             // false: not owned
-	fmt.Println(o.item.IsOwned())        // true: owned by o
+	fmt.Println(o.IsOwned())                // false: not owned
+	fmt.Println(o.item.IsOwned())           // true: owned by o
 
 	// o.item.AddRef() panics: owned objects cannot add references.
 	// o.item.Release() panics: "must be released by owner".
 
-	o.Release()                         // Releases the item and owner.
+	o.Release()                             // Releases the item and owner.
 	fmt.Println(safepool.GetObjectsInUse()) // No objects are in use.
 }
 ```
