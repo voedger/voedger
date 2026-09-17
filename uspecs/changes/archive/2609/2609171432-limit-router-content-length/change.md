@@ -19,7 +19,7 @@ Supporting bills with up to 300 items requires larger command and query requests
 
 ## What
 
-- The `prod` routing context caps every request body read by the shared buffered function-request validation boundary at 200K. This includes API v1 function calls and the non-streaming API v2 docs, cdocs, commands, queries, views, schemas and roles, auth, user, change-password, and device endpoints.
+- The `prod` routing context caps every request body read by the shared buffered function-request validation boundary at 200K. This includes API v1 function calls and the non-streaming API v2 docs, cdocs, commands, queries, views, schemas and roles, auth, users, change-password, and devices endpoints.
 - Buffered request content at or below the cap continues through the existing request validation and dispatch flow.
 - Buffered request content above the cap is rejected at the HTTP boundary before endpoint-specific processing or dispatch.
 
