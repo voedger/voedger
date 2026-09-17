@@ -67,10 +67,12 @@ func TestBasicUsage_Simple(t *testing.T) {
 	require.Zero(safepool.GetObjectsInUse())
 }
 
-// TestKnownIssue_StaleAliasReleasesReusedObject documents that aliases from
-// different borrows cannot be distinguished when sync.Pool reuses a pointer.
+// TestKnownIssue_StaleAliasReleasesReusedObject demonstrates undefined behavior:
+// an object is accessed after Release, when it must no longer be used. If
+// sync.Pool reuses the pointer, aliases from different borrows cannot be
+// distinguished.
 func TestKnownIssue_StaleAliasReleasesReusedObject(t *testing.T) {
-	t.Skip("demonstration only")
+	t.Skip("Demonstration only. Described problem caused by undefined behaviour.")
 	require := require.New(t)
 	objectsBefore := safepool.GetObjectsInUse()
 	var cleanupCalls atomic.Int32
@@ -86,7 +88,9 @@ func TestKnownIssue_StaleAliasReleasesReusedObject(t *testing.T) {
 	second := items.Get()
 	require.Same(first, second)
 
-	// The stale alias releases the second, still-active borrow.
+	// Calling Release through the stale alias is undefined behavior because first
+	// has already been released. It releases the second, still-active borrow only
+	// because sync.Pool happened to reuse the same object.
 	require.NotPanics(first.Release)
 	require.Equal(int32(2), cleanupCalls.Load())
 	require.Equal(objectsBefore, safepool.GetObjectsInUse())
