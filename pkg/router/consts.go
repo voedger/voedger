@@ -49,6 +49,8 @@ const (
 	hours24                       = 24 * time.Hour
 	DefaultRetryAfterSecondsOn503 = 1
 	DefaultMaxQueriesPerWSLimit   = 10
+	functionRequestBodySizeLimit  = 200_000
+	requestBodySizeLimitExceeded  = "request body size limit exceeded"
 	rejectionLogInterval          = 10 * time.Second
 	logAttrib_Origin              = "origin"
 	logAttrib_RemoteAddr          = "remoteaddr"

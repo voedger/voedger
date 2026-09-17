@@ -7,6 +7,7 @@ package router
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,7 +21,13 @@ import (
 )
 
 func withValidateForFuncs(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, handler func(req *http.Request, rw http.ResponseWriter, data validatedData)) http.HandlerFunc {
-	return withValidate(numsAppsWorkspaces, handler, readBody, cookiesTokenToHeaders)
+	validatedHandler := withValidate(numsAppsWorkspaces, handler, readBody, cookiesTokenToHeaders)
+	return func(rw http.ResponseWriter, req *http.Request) {
+		if req.Body != nil && req.Body != http.NoBody {
+			req.Body = http.MaxBytesReader(rw, req.Body, functionRequestBodySizeLimit)
+		}
+		validatedHandler(rw, req)
+	}
 }
 
 func withValidateForN10N(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces, handler func(req *http.Request, rw http.ResponseWriter, data validatedData)) http.HandlerFunc {
@@ -36,7 +43,13 @@ func withValidate(numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspac
 		data, err := validate(req, numsAppsWorkspaces, validators...)
 		if err != nil {
 			logger.ErrorCtx(req.Context(), "routing.validation", err)
-			ReplyCommonError(rw, err.Error(), http.StatusBadRequest)
+			status := http.StatusBadRequest
+			message := err.Error()
+			if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+				status = http.StatusRequestEntityTooLarge
+				message = requestBodySizeLimitExceeded
+			}
+			ReplyCommonError(rw, message, status)
 			return
 		}
 		handler(req, rw, data)

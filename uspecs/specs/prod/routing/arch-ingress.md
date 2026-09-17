@@ -1,6 +1,6 @@
 # Context subsystem architecture: prod/routing/ingress
 
-Routing ingress subsystem architecture for the public HTTP/HTTPS listener: API v1 and API v2 dispatch with CORS, BLOB transfer endpoints, N10N Server-Sent Events subscription endpoints, and the per-workspace concurrent-query limit. TLS termination uses certificates supplied by the TLS subsystem ([arch-tls.md](./arch-tls.md)). Context-level overview: [arch.md](./arch.md).
+Routing ingress subsystem architecture for the public HTTP/HTTPS listener: API v1 and API v2 dispatch with CORS, a fixed request-body limit for handlers using the shared buffered function-validation path, BLOB transfer endpoints, N10N Server-Sent Events subscription endpoints, and the per-workspace concurrent-query limit. TLS termination uses certificates supplied by the TLS subsystem ([arch-tls.md](./arch-tls.md)). Context-level overview: [arch.md](./arch.md).
 
 ## External actors
 
@@ -17,10 +17,13 @@ Systems:
 ## Scenarios overview
 
 - **`Dispatch API v1 request`**
-  - Validate the URL placeholders (`appOwner/appName/wsid/resourceName`), apply CORS, acquire the per-WS query limit on `q.*` and on the `q.cluster.VSqlUpdate2` shim, forward the request through `bus.IRequestSender` to the `apps` command or query processor, and stream the response back.
+  - Validate the URL placeholders (`appOwner/appName/wsid/resourceName`), apply CORS, bound the buffered function-request body, acquire the per-WS query limit on `q.*` and on the `q.cluster.VSqlUpdate2` shim, forward the request through `bus.IRequestSender` to the `apps` command or query processor, and stream the response back.
 
 - **`Dispatch API v2 request`**
-  - Match the path against the API v2 catalog (`docs`, `cdocs`, `commands`, `queries`, `views`, `schemas`, BLOB temporary/persistent), acquire the per-WS query limit, dispatch through `bus.IRequestSender` to the v2 processor, and stream rows.
+  - Match the path against the API v2 catalog, bound request bodies on the shared buffered path (`docs`, `cdocs`, `commands`, `queries`, `views`, `schemas` and roles, auth, users, change-password, and devices), acquire the per-WS query limit where applicable, dispatch or process the endpoint, and stream the response. BLOB and N10N handlers use separate body paths and are not subject to this limit.
+
+- **`Reject oversized buffered request`**
+  - Count the bytes read from a request body handled by `withValidateForFuncs` without trusting `Content-Length`; when the body exceeds 200,000 bytes, reply `413 Request Entity Too Large` with `request body size limit exceeded` and stop before endpoint-specific processing or dispatch to `apps`.
 
 - **`Transfer BLOB`**
   - Validate the BLOB URL and headers, delegate to the `apps`-owned `[BLOB processor]` (`blobprocessor.IRequestHandler.HandleWrite` / `HandleRead`) which streams bytes between the client and `[(BLOB storage)]`; return `503 Service Unavailable` with `Retry-After` when the handler is busy.
@@ -103,7 +106,7 @@ Boundary to apps
 ### In-pipeline operators
 
 - `[Request validator]`
-  - `withValidateForFuncs` / `withValidateForBLOBs` parse URL placeholders into a `validatedData` record (`appQName`, `wsid`, headers, body) and short-circuit malformed requests before any apps-side dispatch.
+  - `withValidateForFuncs` parses URL placeholders into a `validatedData` record (`appQName`, `wsid`, headers, body) and buffers each body through a reader bounded to 200,000 actual bytes. It is used by API v1 function calls and by non-streaming API v2 docs, cdocs, commands, queries, views, schemas and roles, auth, user, change-password, and device handlers. Enforcement does not rely on the declared `Content-Length`, so it also covers missing, inaccurate, and chunked lengths. The same function-validation boundary is mounted by the public and localhost-admin router instances. `withValidateForBLOBs` does not read or apply this limit to streaming BLOB bodies; N10N and reverse-proxy paths retain their existing body handling. Overflow behavior is defined by `Reject oversized buffered request`.
   - Path to file: [pkg/router/impl_validation.go](../../../../pkg/router/impl_validation.go)
 
 - `[CORS wrapper]`
@@ -147,7 +150,7 @@ Boundary to apps
 ```text
 *Client POST /api/{owner}/{app}/{wsid}/{resource}
   -> [Public listener] -> [Router (gorilla/mux)] match "api"
-  -> [CORS wrapper] -> [Request validator]
+  -> [CORS wrapper] -> [Request validator]: apply the buffered function-request body limit
   -> if q.* or VSqlUpdate shim: [Query limiter].acquire(WSID)
   -> if VSqlUpdate shim: [VSqlUpdate v1 shim] -> q.cluster.VSqlUpdate2
   -> else: [bus.IRequestSender].SendRequest -> apps processor
@@ -160,11 +163,23 @@ Boundary to apps
 ```text
 *Client {GET|POST|PATCH|DELETE} /api/v2/apps/{owner}/{app}/...
   -> [Public listener] -> [Router (gorilla/mux)] match by API v2 path
-  -> [CORS wrapper] -> [Request validator]
+  -> [CORS wrapper] -> [Request validator]: for `withValidateForFuncs` handlers, apply the buffered body limit
   -> if GET on queries/views/docs/cdocs, or VSqlUpdate v2 shim: [Query limiter].acquire(WSID)
   -> if VSqlUpdate shim: [VSqlUpdate v2 shim] -> q.cluster.VSqlUpdate2
   -> else: [API v2 handler] -> [bus.IRequestSender] -> apps v2 processor
   -> [Response writer]
+  -> *Client
+```
+
+### Reject oversized buffered request
+
+```text
+*Client sends a body longer than 200,000 bytes to an API v1 function or a non-streaming API v2 handler using `withValidateForFuncs`
+  -> [Public listener] -> [CORS wrapper]
+  -> [Request validator]: bounded read of actual body bytes
+  -> read attempts byte 200,001, regardless of declared Content-Length
+  -> stop before endpoint-specific processing or [bus.IRequestSender] dispatch
+  -> HTTP 413 JSON {"status":413,"message":"request body size limit exceeded"}
   -> *Client
 ```
 

@@ -6,7 +6,9 @@ package sys_it
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -51,5 +53,36 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 		require.Empty(sysErr.Data)
 		require.Empty(sysErr.QName)
 		resp.Println()
+	})
+}
+
+func TestFunctionRequestBodySizeLimit(t *testing.T) {
+	const (
+		requestBodySizeLimit = 200_000
+		validBody            = `{"args":{"Text":"ok"},"elements":[{"fields":["Res"]}]}`
+		overflowResponse     = `{"status":413,"message":"request body size limit exceeded"}`
+	)
+	require := require.New(t)
+	vit := vit.NewVIT(t, &vit.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	url := fmt.Sprintf("api/test1/app1/%d/q.sys.Echo", ws.WSID)
+
+	makeBody := func(size int) string {
+		body := validBody + strings.Repeat(" ", size-len(validBody))
+		require.Len([]byte(body), size)
+		return body
+	}
+
+	t.Run("accepts request at limit", func(t *testing.T) {
+		resp := vit.POST(url, makeBody(requestBodySizeLimit))
+		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
+		require.JSONEq(`{"sections":[{"type":"","elements":[[[["ok"]]]]}]}`, resp.Body)
+	})
+
+	t.Run("rejects request above limit", func(t *testing.T) {
+		resp := vit.POST(url, makeBody(requestBodySizeLimit+1), httpu.WithExpectedCode(http.StatusRequestEntityTooLarge))
+		require.Equal(http.StatusRequestEntityTooLarge, resp.HTTPResp.StatusCode)
+		require.JSONEq(overflowResponse, resp.Body)
 	})
 }
