@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -41,6 +42,136 @@ import (
 const (
 	testWSID = istructs.MaxPseudoBaseWSID + 1
 )
+
+func TestFunctionRequestBodyLimit(t *testing.T) {
+	const (
+		bodyLimit        = functionRequestBodySizeLimit
+		overflowResponse = `{"status":413,"message":"request body size limit exceeded"}`
+	)
+
+	type testCase struct {
+		name                  string
+		url                   func(*testRouter) string
+		bodySize              int
+		useGet                bool
+		chunked               bool
+		directValidation      bool
+		declaredContentLength int64
+		expectedStatus        int
+		forwarded             bool
+	}
+	publicV1URL := func(resource string) func(*testRouter) string {
+		return func(router *testRouter) string {
+			return fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/%s", router.port(), testWSID, resource)
+		}
+	}
+	publicV2URL := func(resourceType, resource string) func(*testRouter) string {
+		return func(router *testRouter) string {
+			return fmt.Sprintf("http://127.0.0.1:%d/api/v2/apps/test1/app1/workspaces/%d/%s/test.%s",
+				router.port(), testWSID, resourceType, resource)
+		}
+	}
+	adminV1URL := func(resource string) func(*testRouter) string {
+		return func(router *testRouter) string {
+			return fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/%s", router.adminPort(), testWSID, resource)
+		}
+	}
+
+	testCases := []testCase{
+		{name: "API v1 command accepts boundary", url: publicV1URL("c.test.Command"), bodySize: bodyLimit, expectedStatus: http.StatusOK, forwarded: true},
+		{name: "API v1 command rejects over boundary", url: publicV1URL("c.test.Command"), bodySize: bodyLimit + 1, expectedStatus: http.StatusRequestEntityTooLarge},
+		{name: "API v1 query accepts boundary", url: publicV1URL("q.test.Query"), bodySize: bodyLimit, expectedStatus: http.StatusOK, forwarded: true},
+		{name: "API v1 query rejects over boundary", url: publicV1URL("q.test.Query"), bodySize: bodyLimit + 1, expectedStatus: http.StatusRequestEntityTooLarge},
+		{name: "API v2 command accepts boundary", url: publicV2URL("commands", "command"), bodySize: bodyLimit, expectedStatus: http.StatusOK, forwarded: true},
+		{name: "API v2 command rejects over boundary", url: publicV2URL("commands", "command"), bodySize: bodyLimit + 1, expectedStatus: http.StatusRequestEntityTooLarge},
+		{name: "API v2 query accepts boundary", url: publicV2URL("queries", "query"), bodySize: bodyLimit, useGet: true, expectedStatus: http.StatusOK, forwarded: true},
+		{name: "API v2 query rejects chunked over boundary", url: publicV2URL("queries", "query"), bodySize: bodyLimit + 1, useGet: true, chunked: true, expectedStatus: http.StatusRequestEntityTooLarge},
+		{name: "admin command accepts boundary", url: adminV1URL("c.test.Command"), bodySize: bodyLimit, expectedStatus: http.StatusOK, forwarded: true},
+		{name: "admin query rejects over boundary", url: adminV1URL("q.test.Query"), bodySize: bodyLimit + 1, expectedStatus: http.StatusRequestEntityTooLarge},
+		{name: "underreported oversized body", bodySize: bodyLimit + 1, directValidation: true, declaredContentLength: 1, expectedStatus: http.StatusRequestEntityTooLarge},
+		{name: "overreported boundary body", bodySize: bodyLimit, directValidation: true, declaredContentLength: bodyLimit + 1, expectedStatus: http.StatusNoContent, forwarded: true},
+	}
+
+	handled := make(chan bus.Request, len(testCases))
+	router := setUp(t, func(_ context.Context, request bus.Request, responder bus.IResponder) {
+		handled <- request
+		bus.ReplyJSON(responder, http.StatusOK, map[string]bool{"ok": true})
+	})
+	defer tearDown(router)
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			body := bytes.Repeat([]byte("x"), test.bodySize)
+			method := http.MethodPost
+			if test.useGet {
+				method = http.MethodGet
+			}
+			var (
+				statusCode    int
+				responseBody  string
+				forwarded     bool
+				forwardedBody []byte
+			)
+
+			if test.directValidation {
+				req := httptest.NewRequest(method, "/api/test1/app1/1/c.test.Command", bytes.NewReader(body))
+				req.ContentLength = test.declaredContentLength
+				req = mux.SetURLVars(req, map[string]string{
+					URLPlaceholder_appOwner:     "test1",
+					URLPlaceholder_appName:      "app1",
+					URLPlaceholder_wsid:         strconv.FormatUint(uint64(testWSID), 10),
+					URLPlaceholder_resourceName: "c.test.Command",
+				})
+				rw := httptest.NewRecorder()
+				handler := withValidateForFuncs(
+					map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10},
+					func(_ *http.Request, rw http.ResponseWriter, data validatedData) {
+						forwarded = true
+						forwardedBody = data.body
+						rw.WriteHeader(http.StatusNoContent)
+					},
+				)
+				handler.ServeHTTP(rw, req)
+				statusCode = rw.Code
+				responseBody = rw.Body.String()
+			} else {
+				var bodyReader io.Reader = bytes.NewReader(body)
+				if test.chunked {
+					bodyReader = io.LimitReader(bytes.NewReader(body), int64(len(body)))
+				}
+				req, err := http.NewRequest(method, test.url(router), bodyReader)
+				require.NoError(t, err)
+				if test.chunked {
+					req.ContentLength = -1
+					req.TransferEncoding = []string{"chunked"}
+				}
+
+				resp, err := http.DefaultClient.Do(req)
+				require.NoError(t, err)
+				responseBytes, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				require.NoError(t, resp.Body.Close())
+				require.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
+				statusCode = resp.StatusCode
+				responseBody = string(responseBytes)
+				select {
+				case handledRequest := <-handled:
+					forwarded = true
+					forwardedBody = handledRequest.Body
+				default:
+				}
+			}
+
+			require.Equal(t, test.expectedStatus, statusCode, responseBody)
+			require.Equal(t, test.forwarded, forwarded)
+			if test.forwarded {
+				require.Equal(t, body, forwardedBody)
+				return
+			}
+			require.JSONEq(t, overflowResponse, responseBody)
+		})
+	}
+}
 
 func TestBasicUsage_ApiArray(t *testing.T) {
 	require := require.New(t)
