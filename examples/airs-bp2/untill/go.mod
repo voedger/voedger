@@ -1,5 +1,5 @@
 module untill
 
-go 1.26.6
+go 1.27.1
 
 require github.com/voedger/voedger v0.0.0-20251118115018-b14c6b2596f2

@@ -480,9 +480,11 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 		// Compare
 		require.Equal(fqn, fqn2)
 
-		t.Run("UnmarshalText must do nothing", func(t *testing.T) {
-			qname := appdef.NewFullQName("test.test/test", "test")
-			require.NoError(qname.UnmarshalText([]byte(qname.String())))
+		t.Run("UnmarshalText", func(t *testing.T) {
+			expected := appdef.NewFullQName("test.test/test", "test")
+			var actual appdef.FullQName
+			require.NoError(actual.UnmarshalText([]byte(expected.String())))
+			require.Equal(expected, actual)
 		})
 	})
 
@@ -887,9 +889,11 @@ func testJSONRoundtrip[T comparable, PT interface {
 		require.NoError(json.Unmarshal(j, &v2))
 		require.Equal(v, v2)
 
-		t.Run("UnmarshalText must do nothing", func(t *testing.T) {
-			x := ctor("test", "name")
-			require.NoError(PT(&x).UnmarshalText([]byte(PT(&x).String())))
+		t.Run("UnmarshalText", func(t *testing.T) {
+			expected := ctor("test", "name")
+			var actual T
+			require.NoError(PT(&actual).UnmarshalText([]byte(PT(&expected).String())))
+			require.Equal(expected, actual)
 		})
 	})
 
