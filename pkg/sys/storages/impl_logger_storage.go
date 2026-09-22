@@ -65,7 +65,7 @@ func (b *loggerStorageValueBuilder) BuildValue() istructs.IStateValue {
 
 func (s *loggerStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &loggerStorageKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Logger},
+		storage: sys.Storage_Logger,
 	}
 }
 

@@ -671,12 +671,10 @@ type pLogFiller struct {
 
 func (f *pLogFiller) fill(wsid istructs.WSID, idGen istructs.IIDGenerator) (offset istructs.Offset) {
 	reb := f.app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         wsid,
-			HandlingPartition: f.partition,
-			PLogOffset:        f.offset,
-			QName:             f.cmdQName,
-		},
+		Workspace:         wsid,
+		HandlingPartition: f.partition,
+		PLogOffset:        f.offset,
+		QName:             f.cmdQName,
 	})
 	if f.fillEvent != nil {
 		f.fillEvent(reb)

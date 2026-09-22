@@ -35,7 +35,7 @@ func NewResultStorage(resultBuilderFunc state.ObjectBuilderFunc) state.IStateSto
 
 func (s *resultStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &resultKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Result},
+		storage: sys.Storage_Result,
 	}
 }
 

@@ -212,8 +212,8 @@ func TestSequenceActualization(t *testing.T) {
 				{qName: testODocQName, wsid: 1, pLogOffset: 1, wLogOffset: 2, arg: obj{
 					cud: cud{qName: testODocQName, id: 1},
 					containers: []obj{
-						{cud: cud{qName: testORecordQName, id: 2}},
-						{cud: cud{qName: testORecordQName, id: 3}},
+						{qName: testORecordQName, id: 2},
+						{qName: testORecordQName, id: 3},
 					},
 				}, cuds: []cud{
 					{qName: testCDocQName, id: 4},

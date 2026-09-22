@@ -101,13 +101,11 @@ func newTSModify(app istructs.IAppStructs, gen *TSidsGeneratorType, cb eventCall
 	newOffset := gen.nextOffset()
 	builder := app.Events().GetSyncRawEventBuilder(
 		istructs.SyncRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				HandlingPartition: test.partition,
-				Workspace:         test.workspace,
-				QName:             appdef.NewQName("test", "modify"),
-				PLogOffset:        newOffset,
-				WLogOffset:        newOffset,
-			},
+			HandlingPartition: test.partition,
+			Workspace:         test.workspace,
+			QName:             appdef.NewQName("test", "modify"),
+			PLogOffset:        newOffset,
+			WLogOffset:        newOffset,
 		})
 	cb(builder)
 	return builder

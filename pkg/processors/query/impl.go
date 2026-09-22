@@ -643,12 +643,10 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 		}
 	}
 	return istructs.ExecQueryArgs{
-		PrepareArgs: istructs.PrepareArgs{
-			ArgumentObject: requestArgs,
-			WSID:           wsid,
-			Workpiece:      qw,
-			Workspace:      qw.iWorkspace,
-		},
+		ArgumentObject: requestArgs,
+		WSID:           wsid,
+		Workpiece:      qw,
+		Workspace:      qw.iWorkspace,
 	}, nil
 }
 

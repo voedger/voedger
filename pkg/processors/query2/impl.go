@@ -341,12 +341,10 @@ func newExecQueryArgs(wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs
 		}
 	}
 	return istructs.ExecQueryArgs{
-		PrepareArgs: istructs.PrepareArgs{
-			ArgumentObject: requestArgs,
-			WSID:           wsid,
-			Workpiece:      qw,
-			Workspace:      qw.iWorkspace,
-		},
+		ArgumentObject: requestArgs,
+		WSID:           wsid,
+		Workpiece:      qw,
+		Workspace:      qw.iWorkspace,
 	}, nil
 }
 func getCombinations(arrays [][]interface{}) [][]interface{} {

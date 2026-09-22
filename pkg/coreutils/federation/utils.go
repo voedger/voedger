@@ -82,10 +82,8 @@ func HTTPRespToFuncResp(httpResp *httpu.HTTPResponse, httpRespErr error) (funcRe
 	}
 
 	funcResp = &FuncResponse{
-		CommandResponse: CommandResponse{
-			NewIDs:    map[string]istructs.RecordID{},
-			CmdResult: map[string]interface{}{},
-		},
+		NewIDs:       map[string]istructs.RecordID{},
+		CmdResult:    map[string]interface{}{},
 		HTTPResponse: *httpResp,
 	}
 	if len(httpResp.Body) > 0 {

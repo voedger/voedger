@@ -364,11 +364,9 @@ func (vit *VIT) GetSystemPrincipal(appQName appdef.AppQName) *Principal {
 		prn = &Principal{
 			Token:       sysToken,
 			ProfileWSID: istructs.NullWSID,
-			Login: Login{
-				Name:        "___sys",
-				AppQName:    appQName,
-				subjectKind: istructs.SubjectKind_User,
-			},
+			Name:        "___sys",
+			AppQName:    appQName,
+			subjectKind: istructs.SubjectKind_User,
 		}
 		appPrincipals["___sys"] = prn
 	}
@@ -412,13 +410,11 @@ func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name st
 	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...httpu.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
-		DescrType: iblobstorage.DescrType{
-			Name:             name,
-			ContentType:      contentType,
-			OwnerRecord:      ownerRecord,
-			OwnerRecordField: ownerRecordField,
-		},
-		ReadCloser: io.NopCloser(bytes.NewReader(content)),
+		Name:             name,
+		ContentType:      contentType,
+		OwnerRecord:      ownerRecord,
+		OwnerRecordField: ownerRecordField,
+		ReadCloser:       io.NopCloser(bytes.NewReader(content)),
 	}
 	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...)}
 	o = append(o, opts...)
@@ -449,11 +445,9 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 	opts ...httpu.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
 	vit.T.Helper()
 	blobReader := iblobstorage.BLOBReader{
-		DescrType: iblobstorage.DescrType{
-			Name:        name,
-			ContentType: contentType,
-		},
-		ReadCloser: io.NopCloser(bytes.NewReader(content)),
+		Name:        name,
+		ContentType: contentType,
+		ReadCloser:  io.NopCloser(bytes.NewReader(content)),
 	}
 	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...)}
 	o = append(o, opts...)

@@ -34,7 +34,7 @@ func (b *jobContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (s *jobContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &jobContextKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_JobContext},
+		storage: sys.Storage_JobContext,
 	}
 }
 func (s *jobContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {

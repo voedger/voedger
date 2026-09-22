@@ -151,12 +151,10 @@ func (f *implIFederation) readBLOB(url string, optFuncs ...httpu.ReqOptFunc) (re
 		return iblobstorage.BLOBReader{}, err
 	}
 	res = iblobstorage.BLOBReader{
-		DescrType: iblobstorage.DescrType{
-			Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
-			ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
-		},
-		ReadCloser: resp.HTTPResp.Body,
-		BLOBSize:   blobSize,
+		Name:        resp.HTTPResp.Header.Get(coreutils.BlobName),
+		ContentType: resp.HTTPResp.Header.Get(httpu.ContentType),
+		ReadCloser:  resp.HTTPResp.Body,
+		BLOBSize:    blobSize,
 	}
 	return res, nil
 }

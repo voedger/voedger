@@ -21,16 +21,14 @@ func (r *implIRequestHandler) HandleRead(requestCtx context.Context, appQName ap
 	errorResponder ErrorResponder, existingBLOBIDOrSUUID string, requestSender bus.IRequestSender, rLimiter iblobstorage.RLimiterType) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Read{
-		implIBLOBMessage_base: implIBLOBMessage_base{
-			appQName:         appQName,
-			wsid:             wsid,
-			header:           header,
-			requestCtx:       requestCtx,
-			okResponseIniter: okResponseIniter,
-			errorResponder:   errorResponder,
-			done:             doneCh,
-			requestSender:    requestSender,
-		},
+		appQName:              appQName,
+		wsid:                  wsid,
+		header:                header,
+		requestCtx:            requestCtx,
+		okResponseIniter:      okResponseIniter,
+		errorResponder:        errorResponder,
+		done:                  doneCh,
+		requestSender:         requestSender,
 		existingBLOBIDOrSUUID: existingBLOBIDOrSUUID,
 		rLimiter:              rLimiter,
 	}, doneCh)
@@ -43,17 +41,15 @@ func (r *implIRequestHandler) HandleRead_V2(requestCtx context.Context, appQName
 	requestSender bus.IRequestSender, rLimiter iblobstorage.RLimiterType) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Read{
-		implIBLOBMessage_base: implIBLOBMessage_base{
-			appQName:         appQName,
-			wsid:             wsid,
-			header:           header,
-			requestCtx:       requestCtx,
-			okResponseIniter: okResponseIniter,
-			errorResponder:   errorResponder,
-			done:             doneCh,
-			requestSender:    requestSender,
-			isAPIv2:          true,
-		},
+		appQName:         appQName,
+		wsid:             wsid,
+		header:           header,
+		requestCtx:       requestCtx,
+		okResponseIniter: okResponseIniter,
+		errorResponder:   errorResponder,
+		done:             doneCh,
+		requestSender:    requestSender,
+		isAPIv2:          true,
 		ownerRecord:      ownerRecord,
 		ownerRecordField: ownerRecordField,
 		ownerID:          ownerID,
@@ -66,17 +62,15 @@ func (r *implIRequestHandler) HandleReadTemp_V2(requestCtx context.Context, appQ
 	errorResponder ErrorResponder, requestSender bus.IRequestSender, suuid iblobstorage.SUUID, rLimiter iblobstorage.RLimiterType) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Read{
-		implIBLOBMessage_base: implIBLOBMessage_base{
-			appQName:         appQName,
-			wsid:             wsid,
-			header:           header,
-			requestCtx:       requestCtx,
-			okResponseIniter: okResponseIniter,
-			errorResponder:   errorResponder,
-			done:             doneCh,
-			requestSender:    requestSender,
-			isAPIv2:          true,
-		},
+		appQName:              appQName,
+		wsid:                  wsid,
+		header:                header,
+		requestCtx:            requestCtx,
+		okResponseIniter:      okResponseIniter,
+		errorResponder:        errorResponder,
+		done:                  doneCh,
+		requestSender:         requestSender,
+		isAPIv2:               true,
 		existingBLOBIDOrSUUID: string(suuid),
 		rLimiter:              rLimiter,
 	}, doneCh)
@@ -87,17 +81,15 @@ func (r *implIRequestHandler) handleWrite(requestCtx context.Context, appQName a
 	errorResponder ErrorResponder, requestSender bus.IRequestSender, isAPIv2 bool, ownerRecord appdef.QName, ownerRecordField string) bool {
 	doneCh := make(chan interface{})
 	return r.handle(&implIBLOBMessage_Write{
-		implIBLOBMessage_base: implIBLOBMessage_base{
-			appQName:         appQName,
-			wsid:             wsid,
-			header:           header,
-			requestCtx:       requestCtx,
-			okResponseIniter: okResponseIniter,
-			errorResponder:   errorResponder,
-			done:             doneCh,
-			requestSender:    requestSender,
-			isAPIv2:          isAPIv2,
-		},
+		appQName:         appQName,
+		wsid:             wsid,
+		header:           header,
+		requestCtx:       requestCtx,
+		okResponseIniter: okResponseIniter,
+		errorResponder:   errorResponder,
+		done:             doneCh,
+		requestSender:    requestSender,
+		isAPIv2:          isAPIv2,
 		urlQueryValues:   urlQueryValues,
 		reader:           reader,
 		ownerRecord:      ownerRecord,

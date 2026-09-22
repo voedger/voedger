@@ -31,12 +31,10 @@ func GetTestVVMCfg(ip net.IP) *VVMConfig {
 	vvmCfg.VVMAppsBuilder.Add(istructs.AppQName_test1_app1, func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 		sysPackageFS := sysprovide.Provide(cfg)
 		return builtinapps.Def{
-			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
-				NumParts:         1,
-				EnginePoolSize:   appparts.PoolSize(10, 10, 20, 10),
-				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
-			},
-			AppQName: istructs.AppQName_test1_app1,
+			NumParts:         1,
+			EnginePoolSize:   appparts.PoolSize(10, 10, 20, 10),
+			NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
+			AppQName:         istructs.AppQName_test1_app1,
 			Packages: []parser.PackageFS{{
 				Path: "github.com/voedger/voedger/pkg/app1",
 				FS: fstest.MapFS{

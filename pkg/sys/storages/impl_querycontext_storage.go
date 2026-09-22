@@ -34,7 +34,7 @@ func (b *queryContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (s *queryContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &queryContextKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_QueryContext},
+		storage: sys.Storage_QueryContext,
 	}
 }
 func (s *queryContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {

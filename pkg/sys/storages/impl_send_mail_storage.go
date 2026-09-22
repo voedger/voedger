@@ -141,7 +141,7 @@ type sendMailValueBuilder struct {
 
 func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &mailKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_SendMail},
+		storage: sys.Storage_SendMail,
 	}
 }
 func (s *sendMailStorage) validateKey(k *mailKeyBuilder) (err error) {

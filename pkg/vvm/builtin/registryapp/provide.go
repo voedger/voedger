@@ -37,13 +37,11 @@ func Provide(numCP istructs.NumCommandProcessors) builtinapps.Builder {
 		}
 
 		return builtinapps.Def{
-			AppQName: istructs.AppQName_sys_registry,
-			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
-			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
-				NumParts:         istructs.NumAppPartitions(numCP), // nolint G115
-				EnginePoolSize:   appparts.PoolSize(uint(numCP), DefDeploymentQPCount, uint(numCP), DefDeploymentSPCount),
-				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
-			},
+			AppQName:         istructs.AppQName_sys_registry,
+			Packages:         []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
+			NumParts:         istructs.NumAppPartitions(numCP), // nolint G115
+			EnginePoolSize:   appparts.PoolSize(uint(numCP), DefDeploymentQPCount, uint(numCP), DefDeploymentSPCount),
+			NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 		}
 	}
 }

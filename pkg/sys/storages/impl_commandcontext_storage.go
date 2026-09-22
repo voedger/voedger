@@ -41,7 +41,7 @@ func (b *commandContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (s *commandContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &commandContextKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_CommandContext},
+		storage: sys.Storage_CommandContext,
 	}
 }
 func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {

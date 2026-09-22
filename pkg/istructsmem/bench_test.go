@@ -116,16 +116,14 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 		bld := appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
-				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-					HandlingPartition: 55,
-					PLogOffset:        10000,
-					Workspace:         1234,
-					WLogOffset:        1000,
-					QName:             cmdQName,
-					RegisteredAt:      100500,
-				},
-				Device:   762,
-				SyncedAt: 1005001,
+				HandlingPartition: 55,
+				PLogOffset:        10000,
+				Workspace:         1234,
+				WLogOffset:        1000,
+				QName:             cmdQName,
+				RegisteredAt:      100500,
+				Device:            762,
+				SyncedAt:          1005001,
 			})
 
 		cmd := bld.ArgumentObjectBuilder()
