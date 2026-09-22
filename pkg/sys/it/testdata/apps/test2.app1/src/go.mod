@@ -1,6 +1,6 @@
 module github.com/voedger/sidecartestapp
 
-go 1.26.6
+go 1.27.1
 
 require github.com/voedger/voedger v0.0.0-20241108143238-33e3a259dbe9
 
