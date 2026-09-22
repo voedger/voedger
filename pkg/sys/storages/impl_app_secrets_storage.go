@@ -63,7 +63,7 @@ func (v *appSecretValue) AsString(string) string {
 
 func (s *appSecretsStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &appSecretsStorageKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_AppSecret},
+		storage: sys.Storage_AppSecret,
 	}
 }
 func (s *appSecretsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {

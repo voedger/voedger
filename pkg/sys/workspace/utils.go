@@ -16,9 +16,7 @@ import (
 func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]interface{}, t appdef.IType) (err error) {
 	reb := as.Events().GetNewRawEventBuilder(
 		istructs.NewRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				QName: t.QName(),
-			},
+			QName: t.QName(),
 		},
 	)
 	aob := reb.ArgumentObjectBuilder()

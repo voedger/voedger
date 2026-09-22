@@ -19,13 +19,11 @@ func Benchmark_IssueTtoken(b *testing.B) {
 	// Prepare payloads
 
 	principalPayload := TestPayload_Principal{
-		TestPayload_Login: TestPayload_Login{
-			Login:       "login",
-			DisplayName: "displayName",
-			Cluster:     32,
-			SubjectKind: istructs.SubjectKind_User,
-			PwdHash:     []byte{1, 2, 3},
-		},
+		Login:       "login",
+		DisplayName: "displayName",
+		Cluster:     32,
+		SubjectKind: istructs.SubjectKind_User,
+		PwdHash:     []byte{1, 2, 3},
 		ProfileWSID: istructs.WSID(123),
 	}
 
@@ -46,13 +44,11 @@ func Benchmark_VerifyToken(b *testing.B) {
 	// Prepare payloads
 
 	principalPayload := TestPayload_Principal{
-		TestPayload_Login: TestPayload_Login{
-			Login:       "login",
-			DisplayName: "displayName",
-			Cluster:     32,
-			SubjectKind: istructs.SubjectKind_User,
-			PwdHash:     []byte{1, 2, 3},
-		},
+		Login:       "login",
+		DisplayName: "displayName",
+		Cluster:     32,
+		SubjectKind: istructs.SubjectKind_User,
+		PwdHash:     []byte{1, 2, 3},
 		ProfileWSID: istructs.WSID(123),
 	}
 

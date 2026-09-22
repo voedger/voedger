@@ -59,16 +59,14 @@ func updateCorrupted(ctx context.Context, update update, currentMillis istructs.
 		}
 	}
 	syncRawEventBuilder := update.appStructs.Events().GetSyncRawEventBuilder(istructs.SyncRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			EventBytes:        currentEventBytes,
-			HandlingPartition: partitionID,
-			PLogOffset:        plogOffset,
-			Workspace:         wsid,
-			WLogOffset:        wlogOffset,
-			QName:             istructs.QNameForCorruptedData,
-			RegisteredAt:      currentMillis,
-		},
-		SyncedAt: currentMillis,
+		EventBytes:        currentEventBytes,
+		HandlingPartition: partitionID,
+		PLogOffset:        plogOffset,
+		Workspace:         wsid,
+		WLogOffset:        wlogOffset,
+		QName:             istructs.QNameForCorruptedData,
+		RegisteredAt:      currentMillis,
+		SyncedAt:          currentMillis,
 	})
 	syncRawEvent, err := syncRawEventBuilder.BuildRawEvent()
 	if err != nil {

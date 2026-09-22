@@ -53,12 +53,10 @@ func TestEventStorage_Get(t *testing.T) {
 	tQname := appdef.NewQName("main", "t1")
 
 	reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         wsid,
-			HandlingPartition: partitionNr,
-			PLogOffset:        offset,
-			QName:             testQName,
-		},
+		Workspace:         wsid,
+		HandlingPartition: partitionNr,
+		PLogOffset:        offset,
+		QName:             testQName,
 	})
 	argb := reb.ArgumentObjectBuilder()
 	argb.PutInt32("i", 1)
