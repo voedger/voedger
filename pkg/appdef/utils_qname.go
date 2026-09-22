@@ -151,12 +151,11 @@ func (qn *QName) UnmarshalJSON(text []byte) (err error) {
 	return err
 }
 
-// need unmarshal map[QName]any
-// golang json looks on UnmarshalText presence only on unmarshal map[QName]any. UnmarshalJSON() will be used anyway
-// but no UnmarshalText -> fail to unmarshal map[QName]any
-// see https://github.com/golang/go/issues/29732
-func (qn *QName) UnmarshalText([]byte) error {
-	return nil
+// UnmarshalText implements encoding.TextUnmarshaler and supports QName as a map key.
+func (qn *QName) UnmarshalText(text []byte) (err error) {
+	*qn = QName{}
+	qn.pkg, qn.entity, err = ParseQualifiedName(string(text), QNameQualifierChar)
+	return err
 }
 
 // —————————————————————————————
@@ -375,12 +374,11 @@ func (fqn *FullQName) UnmarshalJSON(text []byte) error {
 	return err
 }
 
-// need unmarshal map[FullQName]any
-// golang json looks on UnmarshalText presence only on unmarshal map[FullQName]any. UnmarshalJSON() will be used anyway
-// but no UnmarshalText -> fail to unmarshal map[FullQName]any
-// see https://github.com/golang/go/issues/29732
-func (fqn *FullQName) UnmarshalText([]byte) error {
-	return nil
+// UnmarshalText implements encoding.TextUnmarshaler and supports FullQName as a map key.
+func (fqn *FullQName) UnmarshalText(text []byte) (err error) {
+	*fqn = FullQName{}
+	fqn.pkgPath, fqn.entity, err = ParseFullQualifiedName(string(text))
+	return err
 }
 
 // —————————————————————————————
@@ -448,11 +446,9 @@ func (aqn *AppQName) UnmarshalJSON(text []byte) (err error) {
 	return err
 }
 
-// need to unmarshal map[AppQName]any
-// golang json looks on UnmarshalText presence only on unmarshal map[QName]any. UnmarshalJSON() will be used anyway
-// but no UnmarshalText -> fail to unmarshal map[AppQName]any
-// see https://github.com/golang/go/issues/29732
-func (aqn *AppQName) UnmarshalText([]byte) error {
-	// notest
-	return nil
+// UnmarshalText implements encoding.TextUnmarshaler and supports AppQName as a map key.
+func (aqn *AppQName) UnmarshalText(text []byte) (err error) {
+	*aqn = AppQName{}
+	aqn.owner, aqn.name, err = ParseQualifiedName(string(text), AppQNameQualifierChar)
+	return err
 }

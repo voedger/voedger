@@ -84,12 +84,9 @@ func (san *SafeAppName) UnmarshalJSON(text []byte) (err error) {
 	return nil
 }
 
-// need to unmarshal map[SafeAppName]any
-// golang json looks on UnmarshalText presence only on unmarshal map[SafeAppName]any. UnmarshalJSON() will be used anyway
-// but no UnmarshalText -> fail to unmarshal map[SafeAppName]any
-// see https://github.com/golang/go/issues/29732
-func (san *SafeAppName) UnmarshalText([]byte) error {
-	// notest
+// UnmarshalText implements encoding.TextUnmarshaler and supports SafeAppName as a map key.
+func (san *SafeAppName) UnmarshalText(text []byte) error {
+	*san = SafeAppName{name: string(text)}
 	return nil
 }
 
