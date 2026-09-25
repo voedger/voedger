@@ -9,7 +9,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/sys"
-	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
 var (
@@ -27,7 +26,7 @@ const (
 	defaultRetryInitialDelay     = 100 * time.Millisecond
 	defaultRetryMaxDelay         = 3 * time.Minute
 	n10nChannelDuration          = 100 * 365 * 24 * time.Hour
-	DefaultIntentsLimit          = builtin.MaxCUDs * 10
+	DefaultIntentsLimit          = 1_000 // ex. MaxCUDs*10
 )
 
 var PLogUpdatesQName = appdef.NewQName(appdef.SysPackage, "PLogUpdates")
