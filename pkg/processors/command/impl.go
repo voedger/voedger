@@ -865,9 +865,6 @@ func parseCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	if err != nil {
 		return err
 	}
-	if len(cuds) > builtin.MaxCUDs {
-		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "too many cuds: ", len(cuds), " is in the request, max is ", builtin.MaxCUDs)
-	}
 	for cudNumber, cudIntf := range cuds {
 		cudXPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
 		cudDataMap, ok := cudIntf.(map[string]interface{})

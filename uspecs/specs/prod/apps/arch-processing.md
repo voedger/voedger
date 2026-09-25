@@ -77,6 +77,7 @@ State
 
 - `[Command processor]`
   - Sync pipeline that borrows the partition, applies rate limits, authenticates, authorizes the command and parsed CUDs, executes the extension, runs the sync actualizer branch, validates and writes the PLog event and CUDs, and emits an N10n update on success.
+  - Parses and processes every CUD present in a command request without imposing a fixed CUD-count limit. The [routing ingress request validator](../routing/arch-ingress.md#request-validator) bounds external request bodies before dispatch; apps retains per-CUD authorization and validation and commits the resulting event transactionally.
   - Path to file: [pkg/processors/command/provide.go](../../../../pkg/processors/command/provide.go)
 
 - `[Query v1 processor]`
