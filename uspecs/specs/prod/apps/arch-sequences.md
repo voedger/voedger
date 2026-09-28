@@ -76,8 +76,8 @@ The WSID counter is written directly before the command event is persisted, so a
   - impl: [pkg/processors/command/impl.go](../../../../pkg/processors/command/impl.go)
 
 - `[Partition recovery manager]`
-  - Owns partitions states keyed by application QName and partition ID: absent, recovering, recovered, or failed. A mutex protects lookup/publication/reset; a worker wait group is joined before the command service closes its pipelines.
-  - A workpiece assotiated with the received command is detached from the command and sent to re-apply last event sub-pipeline, then is released after the attempt. If error occured on `Put*Log` or `ApplyRecords` stage then the partition is removed from the map of recovered partitions and thus scheduled to re-recover
+  - Owns partition states keyed by application QName and partition ID: absent, recovering, recovered, or failed. A mutex protects lookup/publication/reset; a worker wait group is joined before the command service closes its pipelines.
+  - A workpiece associated with the received command is detached from the command and sent to the re-apply-last-event sub-pipeline, then is released after the attempt. If an error occurs on a `Put*Log` or `ApplyRecords` stage, the partition is removed from the map of recovered partitions and the next request schedules recovery.
   - Recovery logs use `sys._Recovery`, `partid`, and the platform VApp attributes. They include `cp.partition_recovery.start`, `cp.partition_recovery.complete`, and read/reapply error events; the completion entry includes the next PLog offset and workspace WLog offsets. A scheduled reset emits a warning. Log conventions are defined in [Logging](./logging--td.md).
   - decl: [pkg/processors/command/types.go](../../../../pkg/processors/command/types.go)
   - impl: [pkg/processors/command/impl.go](../../../../pkg/processors/command/impl.go)
