@@ -28,31 +28,34 @@ func (p queryParams) Count() int64         { return p.count }
 func newQueryParams(data coreutils.MapObject, elementFactory ElementFactory, filterFactory FilterFactory, orderByFactory OrderByFactory, rootFieldsKinds FieldsKinds,
 	rootType appdef.IType) (res IQueryParams, err error) {
 	qp := queryParams{}
-	if err = qp.fillArray(data, "elements", func(elem coreutils.MapObject) error {
+	err = qp.fillArray(data, "elements", func(elem coreutils.MapObject) error {
 		element, err := elementFactory(elem)
 		if err == nil {
 			qp.elements = append(qp.elements, element)
 		}
 		return err
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, fmt.Errorf("elements: %w", err)
 	}
-	if err = qp.fillArray(data, "filters", func(elem coreutils.MapObject) error {
+	err = qp.fillArray(data, "filters", func(elem coreutils.MapObject) error {
 		filter, err := filterFactory(elem)
 		if err == nil {
 			qp.filters = append(qp.filters, filter)
 		}
 		return err
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, fmt.Errorf("filters: %w", err)
 	}
-	if err = qp.fillArray(data, "orderBy", func(elem coreutils.MapObject) error {
+	err = qp.fillArray(data, "orderBy", func(elem coreutils.MapObject) error {
 		orderBy, err := orderByFactory(elem)
 		if err == nil {
 			qp.orderBy = append(qp.orderBy, orderBy)
 		}
 		return err
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, fmt.Errorf("orderBy: %w", err)
 	}
 	if qp.count, _, err = data.AsInt64("count"); err != nil {

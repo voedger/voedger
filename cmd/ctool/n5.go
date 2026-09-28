@@ -58,8 +58,7 @@ func setHostname(node *nodeType) error {
 
 	loggerInfo(fmt.Sprintf("Setting hostname to %s for a %s host...", node.nodeName(), node.DesiredNodeState.Address))
 
-	if err := newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
-		run("node-set-hostname.sh", node.DesiredNodeState.Address, node.nodeName()); err != nil {
+	if err := newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).run("node-set-hostname.sh", node.DesiredNodeState.Address, node.nodeName()); err != nil {
 		loggerError(err.Error())
 		node.Error = err.Error()
 	} else {
@@ -83,8 +82,7 @@ func updateHosts(node *nodeType) (err error) {
 				addr = node.cluster.Nodes[i].ActualNodeState.Address
 			}
 			for hostname, host := range hosts {
-				if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
-					run("node-update-hosts.sh", addr, host, hostname); err != nil {
+				if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).run("node-update-hosts.sh", addr, host, hostname); err != nil {
 					loggerError(err.Error())
 					node.Error = err.Error()
 					break
@@ -101,8 +99,7 @@ func updateHosts(node *nodeType) (err error) {
 	}
 
 	for hostname, host := range hosts {
-		if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
-			run("node-update-hosts.sh", addr, host, hostname); err != nil {
+		if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).run("node-update-hosts.sh", addr, host, hostname); err != nil {
 			loggerError(err.Error())
 			node.Error = err.Error()
 			break
@@ -123,8 +120,7 @@ func seNodeValidate(n *nodeType) error {
 		minRAM = n.minAmountOfRAM()
 	}
 
-	if err := newScriptExecuter(n.cluster.sshKey, n.DesiredNodeState.Address).
-		run("host-validate.sh", n.DesiredNodeState.Address, minRAM); err != nil {
+	if err := newScriptExecuter(n.cluster.sshKey, n.DesiredNodeState.Address).run("host-validate.sh", n.DesiredNodeState.Address, minRAM); err != nil {
 		n.Error = err.Error()
 		return err
 	}
@@ -232,8 +228,7 @@ func deploySeSwarm(cluster *clusterType) error {
 
 	err := func() error {
 		loggerInfo("Swarm init on", managerHostname)
-		if err := newScriptExecuter(cluster.sshKey, managerAddress).
-			run("swarm-init.sh", managerAddress); err != nil {
+		if err := newScriptExecuter(cluster.sshKey, managerAddress).run("swarm-init.sh", managerAddress); err != nil {
 			node.Error = err.Error()
 			return err
 		}
@@ -263,8 +258,7 @@ func deploySeSwarm(cluster *clusterType) error {
 		err = func(n *nodeType) error {
 			var e error
 			loggerInfo("Swarm add node on ", n.ActualNodeState.Address)
-			if e := newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).
-				run("swarm-add-node.sh", managerAddress, n.ActualNodeState.Address); e != nil {
+			if e := newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).run("swarm-add-node.sh", managerAddress, n.ActualNodeState.Address); e != nil {
 				return e
 			}
 
@@ -279,14 +273,12 @@ func deploySeSwarm(cluster *clusterType) error {
 
 				loggerInfo("Use datacenter: ", dc)
 
-				if e := newScriptExecuter(cluster.sshKey, "localhost").
-					run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); e != nil {
+				if e := newScriptExecuter(cluster.sshKey, "localhost").run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); e != nil {
 					return e
 				}
 
 				loggerInfo("Db node prepare ", n.ActualNodeState.Address)
-				if e = newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).
-					run("db-node-prepare.sh", n.ActualNodeState.Address, dc); e != nil {
+				if e = newScriptExecuter(cluster.sshKey, n.ActualNodeState.Address).run("db-node-prepare.sh", n.ActualNodeState.Address, dc); e != nil {
 					n.Error = e.Error()
 					return e
 				}
@@ -308,8 +300,7 @@ func deploySeDockerStack(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
-		run("se-cluster-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).run("se-cluster-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
 		return err
 	}
 
@@ -322,8 +313,7 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	if err := newScriptExecuter(cluster.sshKey, "localhost").
-		run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "localhost").run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
 		loggerError(err.Error())
 		return err
 	}
@@ -333,8 +323,7 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 	// prepare DBNode1
 	loggerInfo(s, conf.DBNode1DC)
 	loggerInfo("Db node prepare ", conf.DBNode1)
-	if err := newScriptExecuter(cluster.sshKey, conf.DBNode1).
-		run("db-node-prepare.sh", conf.DBNode1, conf.DBNode1DC); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, conf.DBNode1).run("db-node-prepare.sh", conf.DBNode1, conf.DBNode1DC); err != nil {
 		loggerError(err.Error())
 		return err
 	}
@@ -342,8 +331,7 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 	// prepare DBNode2
 	loggerInfo(s, conf.DBNode2DC)
 	loggerInfo("Prepare node", conf.DBNode2)
-	if err := newScriptExecuter(cluster.sshKey, conf.DBNode2).
-		run("db-node-prepare.sh", conf.DBNode2, conf.DBNode2DC); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, conf.DBNode2).run("db-node-prepare.sh", conf.DBNode2, conf.DBNode2DC); err != nil {
 		loggerError(err.Error())
 		return err
 	}
@@ -351,15 +339,13 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 	// prepare DBNode3
 	loggerInfo(s, conf.DBNode3DC)
 	loggerInfo("Prepare node", conf.DBNode3)
-	if err := newScriptExecuter(cluster.sshKey, conf.DBNode3).
-		run("db-node-prepare.sh", conf.DBNode3, conf.DBNode3DC); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, conf.DBNode3).run("db-node-prepare.sh", conf.DBNode3, conf.DBNode3DC); err != nil {
 		loggerError(err.Error())
 		return err
 	}
 
 	loggerInfo("DBMS docker stack start on", conf.DBNode1, conf.DBNode2, conf.DBNode3)
-	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s %s", conf.DBNode1, conf.DBNode2, conf.DBNode3)).
-		run("db-cluster-start.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s %s", conf.DBNode1, conf.DBNode2, conf.DBNode3)).run("db-cluster-start.sh", conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		return err
 	}
 
@@ -377,20 +363,17 @@ func setNodeSwarmLabels(cluster *clusterType, node *nodeType, managerAddress str
 		switch node.NodeRole {
 		case nrAppNode:
 			loggerInfo("Swarm set label", node.label(swarmDbmsLabelKey), "on", node.nodeName(), node.address())
-			if err = newScriptExecuter(cluster.sshKey, node.address()).
-				run("swarm-set-label.sh", managerAddress, node.address(), node.label(swarmMonLabelKey)[0], "true"); err != nil {
+			if err = newScriptExecuter(cluster.sshKey, node.address()).run("swarm-set-label.sh", managerAddress, node.address(), node.label(swarmMonLabelKey)[0], "true"); err != nil {
 				return err
 			}
 
 			loggerInfo("Swarm set label", node.label(swarmAppLabelKey), "on", node.nodeName(), node.address())
-			if err = newScriptExecuter(cluster.sshKey, node.address()).
-				run("swarm-set-label.sh", managerAddress, node.address(), node.label(swarmAppLabelKey)[0], "true"); err != nil {
+			if err = newScriptExecuter(cluster.sshKey, node.address()).run("swarm-set-label.sh", managerAddress, node.address(), node.label(swarmAppLabelKey)[0], "true"); err != nil {
 				return err
 			}
 		case nrDBNode:
 			loggerInfo("Swarm set label", node.label(swarmDbmsLabelKey), "on", node.nodeName(), node.address())
-			if err = newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).
-				run("swarm-set-label.sh", managerAddress, node.ActualNodeState.Address, node.label(swarmDbmsLabelKey)[0], "true"); err != nil {
+			if err = newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).run("swarm-set-label.sh", managerAddress, node.ActualNodeState.Address, node.label(swarmDbmsLabelKey)[0], "true"); err != nil {
 				return err
 			}
 		case nrAppDbNode:
@@ -399,8 +382,7 @@ func setNodeSwarmLabels(cluster *clusterType, node *nodeType, managerAddress str
 			labels = append(labels, node.label(swarmAppLabelKey)...)
 			loggerInfo("Swarm set label", node.label(swarmDbmsLabelKey), "on", node.nodeName(), node.address())
 			for i := 0; i < len(labels); i++ {
-				if err = newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).
-					run("swarm-set-label.sh", managerAddress, node.ActualNodeState.Address, labels[i], "true"); err != nil {
+				if err = newScriptExecuter(cluster.sshKey, node.ActualNodeState.Address).run("swarm-set-label.sh", managerAddress, node.ActualNodeState.Address, labels[i], "true"); err != nil {
 					return err
 				}
 			}
@@ -418,15 +400,13 @@ func deployMonDockerStack(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
-		//		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
-		run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
+	//		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		return err
 	}
 
-	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
-		//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
-		run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
+	//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
 		return err
 	}
 
@@ -509,8 +489,7 @@ func deployDocker(node *nodeType) error {
 
 	loggerInfo(fmt.Sprintf("Deploy docker on a %s %s host...", node.nodeName(), node.DesiredNodeState.Address))
 
-	if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).
-		run("docker-install.sh", node.DesiredNodeState.Address); err != nil {
+	if err = newScriptExecuter(node.cluster.sshKey, node.DesiredNodeState.Address).run("docker-install.sh", node.DesiredNodeState.Address); err != nil {
 		loggerError(err.Error())
 		node.Error = err.Error()
 	} else {
@@ -552,8 +531,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	if err := newScriptExecuter(cluster.sshKey, "localhost").
-		run("swarm-get-manager-token.sh", conf.AppNode1); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "localhost").run("swarm-get-manager-token.sh", conf.AppNode1); err != nil {
 		return err
 	}
 
@@ -568,13 +546,11 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	}
 
 	// nolint
-	if err = newScriptExecuter(cluster.sshKey, "localhost").
-		run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
+	if err = newScriptExecuter(cluster.sshKey, "localhost").run("docker-compose-prepare.sh", conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name, boolToStr(devMode)); err != nil {
 		return err
 	}
 	// nolint
-	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldAddr, newAddr)).
-		run("ctool-scylla-replace-node.sh", oldAddr, newAddr, conf.AppNode1, dc); err != nil {
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", oldAddr, newAddr)).run("ctool-scylla-replace-node.sh", oldAddr, newAddr, conf.AppNode1, dc); err != nil {
 		return err
 	}
 
@@ -609,22 +585,19 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	// nolint
-	if err := newScriptExecuter(cluster.sshKey, "localhost").
-		run("swarm-get-manager-token.sh", conf.DBNode1); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "localhost").run("swarm-get-manager-token.sh", conf.DBNode1); err != nil {
 		return err
 	}
 
 	loggerInfo("Swarm remove node ", oldAddr)
 	// nolint
-	if err := newScriptExecuter(cluster.sshKey, oldAddr).
-		run("swarm-rm-node.sh", conf.DBNode1, oldAddr); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, oldAddr).run("swarm-rm-node.sh", conf.DBNode1, oldAddr); err != nil {
 		return err
 	}
 
 	loggerInfo("Swarm add node on ", newAddr)
 	// nolint
-	if err := newScriptExecuter(cluster.sshKey, newAddr).
-		run("swarm-add-node.sh", conf.DBNode1, newAddr); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, newAddr).run("swarm-add-node.sh", conf.DBNode1, newAddr); err != nil {
 		return err
 	}
 
@@ -640,28 +613,24 @@ func replaceSeAppNode(cluster *clusterType) error {
 
 	args := []string{password, hash, liveOldHost}
 
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("prometheus-voedger-password.sh", args...); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "").run("prometheus-voedger-password.sh", args...); err != nil {
 		return err
 	}
 
 	loggerInfo("Copy prometheus data base from", liveOldAddr, "to", newAddr)
 	// nolint
-	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", liveOldAddr, newAddr)).
-		run("prometheus-tsdb-copy.sh", liveOldAddr, newAddr); err != nil {
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", liveOldAddr, newAddr)).run("prometheus-tsdb-copy.sh", liveOldAddr, newAddr); err != nil {
 		return err
 	}
 
 	loggerInfo("Mon node prepare ", newAddr)
 	// nolint
-	if err = newScriptExecuter(cluster.sshKey, newAddr).
-		run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
+	if err = newScriptExecuter(cluster.sshKey, newAddr).run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		return err
 	}
 
-	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
-		//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
-		run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
+	//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
 		return err
 	}
 
@@ -690,13 +659,11 @@ func hostIsAvailable(cluster *clusterType, host string) error {
 // checks that the node is down in the Swarm cluster
 func nodeIsDown(node *nodeType) error {
 	if node.cluster.SubEdition != clusterSubEditionSE3 {
-		if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
-			run("host-is-down.sh", node.hostNames()[0], node.hostNames()[0]); err != nil {
+		if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).run("host-is-down.sh", node.hostNames()[0], node.hostNames()[0]); err != nil {
 			return err
 		}
 	} else {
-		if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
-			run("host-is-down.sh", node.hostNames()[0], node.nodeName()); err != nil {
+		if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).run("host-is-down.sh", node.hostNames()[0], node.nodeName()); err != nil {
 			return err
 		}
 	}
@@ -712,8 +679,7 @@ func copyCtoolAndKeyToNode(node *nodeType) error {
 	}
 
 	loggerInfo(fmt.Sprintf("Copying ctool and key to %s %s", node.nodeName(), node.address()))
-	if err := newScriptExecuter(node.cluster.sshKey, node.hostNames()[0]).
-		run("copy-ctool.sh", ctoolPath, node.cluster.sshKey, node.address()); err != nil {
+	if err := newScriptExecuter(node.cluster.sshKey, node.hostNames()[0]).run("copy-ctool.sh", ctoolPath, node.cluster.sshKey, node.address()); err != nil {
 		node.Error = err.Error()
 		return err
 	}
@@ -729,8 +695,7 @@ func setCronBackup(cluster *clusterType, backupTime string) error {
 		if cluster.Cron.ExpireTime != "" {
 			args = append(args, cluster.Cron.ExpireTime)
 		}
-		if err := newScriptExecuter("", "").
-			run("ce/set-cron-backup.sh", args...); err != nil {
+		if err := newScriptExecuter("", "").run("ce/set-cron-backup.sh", args...); err != nil {
 			return err
 		}
 	} else {
@@ -738,8 +703,7 @@ func setCronBackup(cluster *clusterType, backupTime string) error {
 		if cluster.Cron.ExpireTime != "" {
 			args = append(args, cluster.Cron.ExpireTime)
 		}
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run("set-cron-backup-ssh.sh", args...); err != nil {
+		if err := newScriptExecuter(cluster.sshKey, "").run("set-cron-backup-ssh.sh", args...); err != nil {
 			return err
 		}
 	}

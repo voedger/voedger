@@ -96,8 +96,7 @@ func backupExists(cluster *clusterType, backupPath string) error {
 			continue
 		}
 
-		if e := newScriptExecuter(cluster.sshKey, "").
-			run("check-remote-folder.sh", node.address(), backupPath); e != nil {
+		if e := newScriptExecuter(cluster.sshKey, "").run("check-remote-folder.sh", node.address(), backupPath); e != nil {
 			err = errors.Join(err, fmt.Errorf(errBackupNotExistOnHost, backupPath, node.nodeName(), ErrBackupNotExist))
 		}
 	}

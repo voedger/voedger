@@ -115,7 +115,7 @@ func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 		case appdef.ConstraintKind_Enum:
 			if enum, ok := c.Value().([]T); ok {
 				if l := len(enum); l > 0 {
-					if _, ok := sort.Find(l, func(i int) int {
+					_, found := sort.Find(l, func(i int) int {
 						if value > enum[i] {
 							return 1
 						}
@@ -123,7 +123,8 @@ func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 							return -1
 						}
 						return 0
-					}); !ok {
+					})
+					if !found {
 						err = errors.Join(err, ErrDataConstraintViolation(fld, c))
 					}
 				}

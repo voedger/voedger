@@ -75,8 +75,9 @@ func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, 
 
 		// c.sys.SendEmailVerificationCode
 		body := jsonu.Jprintf(`{"args":{"VerificationCode":%q,"Email":%q,"Reason":%q,"Language":%q}}`, verificationCode, email, verifyEmailReason, lng)
-		if _, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", as.AppQName(), args.WSID), body,
-			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(systemPrincipalToken)); err != nil {
+		_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", as.AppQName(), args.WSID), body,
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(systemPrincipalToken))
+		if err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
 		}
 

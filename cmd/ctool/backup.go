@@ -235,8 +235,7 @@ func backupCENode(cmd *cobra.Command, args []string) error {
 	}
 
 	loggerInfo("Backup node", strings.Join(args, " "))
-	if err = newScriptExecuter("", "").
-		run("ce/backup-node.sh", args...); err != nil {
+	if err = newScriptExecuter("", "").run("ce/backup-node.sh", args...); err != nil {
 		if e := newBackupErrorEvent(host, err).postAlert(cluster); e != nil {
 			err = errors.Join(err, e)
 		}
@@ -273,8 +272,7 @@ func backupNode(cmd *cobra.Command, args []string) error {
 	}
 
 	loggerInfo("Backup node", strings.Join(args, " "))
-	if err = newScriptExecuter(cluster.sshKey, "").
-		run("backup-node.sh", args...); err != nil {
+	if err = newScriptExecuter(cluster.sshKey, "").run("backup-node.sh", args...); err != nil {
 		if e := newBackupErrorEvent(host, err).postAlert(cluster); e != nil {
 			err = errors.Join(err, e)
 		}
@@ -313,15 +311,13 @@ func backupNow(cmd *cobra.Command, _ []string) error {
 	for _, n := range cluster.Nodes {
 		if n.NodeRole == nrDBNode {
 			loggerInfo(sBackupNode, n.nodeName(), n.address())
-			if err := newScriptExecuter(cluster.sshKey, "").
-				run("backup-node.sh", n.address(), folder); err != nil {
+			if err := newScriptExecuter(cluster.sshKey, "").run("backup-node.sh", n.address(), folder); err != nil {
 				return err
 			}
 		}
 		if n.NodeRole == nrN1Node {
 			loggerInfo(sBackupNode, n.nodeName(), n.address())
-			if err := newScriptExecuter("", "").
-				run("ce/backup-node.sh", folder); err != nil {
+			if err := newScriptExecuter("", "").run("ce/backup-node.sh", folder); err != nil {
 				return err
 			}
 		}
@@ -374,14 +370,12 @@ func checkBackupFolders(cluster *clusterType) error {
 	var err error
 	for _, n := range cluster.Nodes {
 		if n.NodeRole == nrDBNode {
-			if e := newScriptExecuter(cluster.sshKey, "").
-				run("check-remote-folder.sh", n.address(), backupFolder); e != nil {
+			if e := newScriptExecuter(cluster.sshKey, "").run("check-remote-folder.sh", n.address(), backupFolder); e != nil {
 				err = errors.Join(err, fmt.Errorf(errBackupFolderIsNotPrepared, n.nodeName()+" "+n.address(), ErrBackupFolderIsNotPrepared))
 			}
 		}
 		if n.NodeRole == nrN1Node {
-			if e := newScriptExecuter("", "").
-				run("ce/check-folder.sh", backupFolder); e != nil {
+			if e := newScriptExecuter("", "").run("ce/check-folder.sh", backupFolder); e != nil {
 				err = errors.Join(err, fmt.Errorf(errBackupFolderIsNotPrepared, n.nodeName()+" "+n.address(), ErrBackupFolderIsNotPrepared))
 			}
 		}
@@ -392,8 +386,7 @@ func checkBackupFolders(cluster *clusterType) error {
 // Checking the presence of a Backup folder on node
 // nolint
 func checkBackupFolderOnHost(cluster *clusterType, addr string) error {
-	if e := newScriptExecuter(cluster.sshKey, "").
-		run("check-remote-folder.sh", addr, backupFolder); e != nil {
+	if e := newScriptExecuter(cluster.sshKey, "").run("check-remote-folder.sh", addr, backupFolder); e != nil {
 		return fmt.Errorf(errBackupFolderIsNotPrepared, addr, ErrBackupFolderIsNotPrepared)
 	}
 	return nil

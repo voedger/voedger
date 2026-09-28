@@ -88,8 +88,7 @@ func ceNodeControllerFunction(n *nodeType) error {
 	}
 
 	loggerInfo(fmt.Sprintf("Deploying docker on a %s %s host...", n.nodeName(), n.address()))
-	if err := newScriptExecuter(n.cluster.sshKey, "").
-		run("ce/docker-install.sh", n.address()); err != nil {
+	if err := newScriptExecuter(n.cluster.sshKey, "").run("ce/docker-install.sh", n.address()); err != nil {
 		return err
 	}
 
@@ -121,8 +120,7 @@ func copyCtoolToCeNode(node *nodeType) error {
 	}
 
 	loggerInfo("Copying ctool and configuration file to " + ctoolPath)
-	if err := newScriptExecuter("", "").
-		run("ce/copy-ctool.sh", filepath.Dir(ctoolPath)); err != nil {
+	if err := newScriptExecuter("", "").run("ce/copy-ctool.sh", filepath.Dir(ctoolPath)); err != nil {
 		node.Error = err.Error()
 		return err
 	}
@@ -138,8 +136,7 @@ func setupPasswordlessSudo(n *nodeType) error {
 	}
 
 	loggerInfo("Configuring passwordless sudo (you may be prompted for password)...")
-	if err := newScriptExecuter("", "").
-		run("ce/setup-passwordless-sudo.sh", n.address()); err != nil {
+	if err := newScriptExecuter("", "").run("ce/setup-passwordless-sudo.sh", n.address()); err != nil {
 		return fmt.Errorf("failed to setup passwordless sudo: %w", err)
 	}
 

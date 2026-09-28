@@ -444,10 +444,11 @@ func (s *implIAppStorage) read(ctx context.Context, pKey []byte, startCCols, fin
 				continue
 			}
 
-			if err := cb(
+			err = cb(
 				unprefixZero(item[sortKeyAttributeName].(*types.AttributeValueMemberB).Value),
 				item[valueAttributeName].(*types.AttributeValueMemberB).Value,
-			); err != nil {
+			)
+			if err != nil {
 				return err
 			}
 		}

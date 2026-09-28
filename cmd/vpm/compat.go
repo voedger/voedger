@@ -108,7 +108,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 
 	// gather schema files from baseline dir
 	var schemaFiles []string
-	if err := filepath.Walk(pkgDirPath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(pkgDirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -116,7 +116,8 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 			schemaFiles = append(schemaFiles, path)
 		}
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		errs = append(errs, err)
 	}
 

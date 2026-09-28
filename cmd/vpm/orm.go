@@ -452,14 +452,15 @@ func processITypeObj(
 			)
 		}
 
-		if resultObj := processITypeObj(
+		resultObj := processITypeObj(
 			pkgInfos,
 			pkgData,
 			uniquePkgQNames,
 			wsQName,
 			t.(appdef.IFunction).Result(),
 			uniqueProjectorCommandEvents,
-		); resultObj != nil {
+		)
+		if resultObj != nil {
 			if tableData, ok := resultObj.(ormTableItem); ok {
 				resultFields = tableData.Fields
 			}

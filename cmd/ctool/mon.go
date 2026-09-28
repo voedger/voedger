@@ -87,18 +87,21 @@ func setMonPassword(cluster *clusterType, password string) error {
 
 	scriptName := "g-ds-update.sh"
 	if cluster.Edition == clusterEditionN1 {
-		if err := newScriptExecuter("", "").
-			run(scriptName, cluster.nodeByHost(n1NodeName).address(), admin, admin, password); err != nil {
+		err := newScriptExecuter("", "").
+			run(scriptName, cluster.nodeByHost(n1NodeName).address(), admin, admin, password)
+		if err != nil {
 			return err
 		}
 	} else {
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run(scriptName, cluster.nodeByHost("app-node-1").address(), admin, admin, password); err != nil {
+		err := newScriptExecuter(cluster.sshKey, "").
+			run(scriptName, cluster.nodeByHost("app-node-1").address(), admin, admin, password)
+		if err != nil {
 			return err
 		}
 
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run(scriptName, cluster.nodeByHost("app-node-2").address(), admin, admin, password); err != nil {
+		err = newScriptExecuter(cluster.sshKey, "").
+			run(scriptName, cluster.nodeByHost("app-node-2").address(), admin, admin, password)
+		if err != nil {
 			return err
 		}
 	}
@@ -123,18 +126,19 @@ func setGrafanaPassword(cluster *clusterType, password string) error {
 	}
 
 	if cluster.Edition == clusterEditionN1 {
-		if err := newScriptExecuter("", "").
-			run("g-user-password-set.sh", cluster.nodeByHost(n1NodeName).address(), admin, admin, password); err != nil {
+		if err := newScriptExecuter("", "").run("g-user-password-set.sh", cluster.nodeByHost(n1NodeName).address(), admin, admin, password); err != nil {
 			return err
 		}
 	} else {
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run("g-user-password-set.sh", cluster.nodeByHost("app-node-1").address(), admin, admin, password); err != nil {
+		err := newScriptExecuter(cluster.sshKey, "").
+			run("g-user-password-set.sh", cluster.nodeByHost("app-node-1").address(), admin, admin, password)
+		if err != nil {
 			return err
 		}
 
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run("g-user-password-set.sh", cluster.nodeByHost("app-node-2").address(), admin, admin, password); err != nil {
+		err = newScriptExecuter(cluster.sshKey, "").
+			run("g-user-password-set.sh", cluster.nodeByHost("app-node-2").address(), admin, admin, password)
+		if err != nil {
 			return err
 		}
 
@@ -149,18 +153,15 @@ func setGrafanaPassword(cluster *clusterType, password string) error {
 // password installation for admin user in Grafana
 func setGrafanaAdminPassword(cluster *clusterType, password string) error {
 	if cluster.Edition == clusterEditionN1 {
-		if err := newScriptExecuter("", "").
-			run("ce/grafana-admin-password.sh", password); err != nil {
+		if err := newScriptExecuter("", "").run("ce/grafana-admin-password.sh", password); err != nil {
 			return err
 		}
 	} else {
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run("grafana-admin-password.sh", password, cluster.nodeByHost("app-node-1").address()); err != nil {
+		if err := newScriptExecuter(cluster.sshKey, "").run("grafana-admin-password.sh", password, cluster.nodeByHost("app-node-1").address()); err != nil {
 			return err
 		}
 
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run("grafana-admin-password.sh", password, cluster.nodeByHost("app-node-2").address()); err != nil {
+		if err := newScriptExecuter(cluster.sshKey, "").run("grafana-admin-password.sh", password, cluster.nodeByHost("app-node-2").address()); err != nil {
 			return err
 		}
 	}
@@ -183,15 +184,13 @@ func setPrometheusPassword(cluster *clusterType, password string) error {
 	if cluster.Edition == clusterEditionN1 {
 		args := []string{password, hash}
 
-		if err := newScriptExecuter("", "").
-			run("ce/prometheus-voedger-password.sh", args...); err != nil {
+		if err := newScriptExecuter("", "").run("ce/prometheus-voedger-password.sh", args...); err != nil {
 			return err
 		}
 	} else {
 		args := append([]string{password, hash}, cluster.nodeByHost("app-node-1").address(), cluster.nodeByHost("app-node-2").address())
 
-		if err := newScriptExecuter(cluster.sshKey, "").
-			run("prometheus-voedger-password.sh", args...); err != nil {
+		if err := newScriptExecuter(cluster.sshKey, "").run("prometheus-voedger-password.sh", args...); err != nil {
 			return err
 		}
 	}
@@ -206,6 +205,7 @@ func setPrometheusRandomPassword(cluster *clusterType) error {
 }
 
 // adding to Grafana user voedger
+//
 //nolint:unparam
 func addGrafanUser(node *nodeType, password string) error {
 	if err := checkMonPassword(password); err != nil {
@@ -216,13 +216,11 @@ func addGrafanUser(node *nodeType, password string) error {
 		return err
 	}
 
-	if err := newScriptExecuter(node.cluster.sshKey, "").
-		run("g-user-preferences-set.sh", node.address(), admin, admin); err != nil {
+	if err := newScriptExecuter(node.cluster.sshKey, "").run("g-user-preferences-set.sh", node.address(), admin, admin); err != nil {
 		return err
 	}
 
-	if err := newScriptExecuter(node.cluster.sshKey, "").
-		run("g-user-add.sh", node.address(), admin, admin); err != nil {
+	if err := newScriptExecuter(node.cluster.sshKey, "").run("g-user-add.sh", node.address(), admin, admin); err != nil {
 		return err
 	}
 

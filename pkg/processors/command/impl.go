@@ -578,8 +578,9 @@ func (cmdProc *cmdProc) authenticate(_ context.Context, cmd *cmdWorkpiece) (err 
 		RequestWSID: cmd.cmdMes.WSID(),
 		Token:       cmd.cmdMes.Token(),
 	}
-	if cmd.principals, _, err = cmdProc.authenticator.Authenticate(cmd.cmdMes.RequestCtx(), cmd.appStructs,
-		cmd.appStructs.AppTokens(), req); err != nil {
+	cmd.principals, _, err = cmdProc.authenticator.Authenticate(cmd.cmdMes.RequestCtx(), cmd.appStructs,
+		cmd.appStructs.AppTokens(), req)
+	if err != nil {
 		return coreutils.NewHTTPError(http.StatusUnauthorized, err)
 	}
 	return nil

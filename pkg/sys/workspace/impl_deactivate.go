@@ -256,22 +256,25 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 			cdocWorkspaceIDAppToken = projectorAppToken
 			cdocWorkspaceIDWSID = coreutils.GetPseudoWSID(istructs.NullWSID, wsName, event.Workspace().ClusterID())
 		}
-		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", cdocWorkspaceIDApp, cdocWorkspaceIDWSID), body,
-			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(cdocWorkspaceIDAppToken)); err != nil {
+		_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", cdocWorkspaceIDApp, cdocWorkspaceIDWSID), body,
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(cdocWorkspaceIDAppToken))
+		if err != nil {
 			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)
 		}
 
 		// c.sys.OnChildWorkspaceDeactivated(ownerID))
 		body = fmt.Sprintf(`{"args":{"OwnerID":%d}}`, ownerID)
-		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnChildWorkspaceDeactivated", ownerApp, ownerWSID), body,
-			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(ownerAppToken)); err != nil {
+		_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnChildWorkspaceDeactivated", ownerApp, ownerWSID), body,
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(ownerAppToken))
+		if err != nil {
 			return fmt.Errorf("c.sys.OnChildWorkspaceDeactivated failed: %w", err)
 		}
 
 		// cdoc.sys.WorkspaceDescriptor.Status = Inactive
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Status":%d}}]}`, wsDesc.AsRecordID(appdef.SystemField_ID), authnz.WorkspaceStatus_Inactive)
-		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", projectorAppQName, event.Workspace()), body,
-			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(projectorAppToken)); err != nil {
+		_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", projectorAppQName, event.Workspace()), body,
+			httpu.WithDiscardResponse(), httpu.WithAuthorizeBy(projectorAppToken))
+		if err != nil {
 			return fmt.Errorf("cdoc.sys.WorkspaceDescriptor.Status=Inactive failed: %w", err)
 		}
 

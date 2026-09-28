@@ -342,13 +342,14 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 
 		plog := ap.AppStructs().Events()
 		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-			if err = plog.ReadPLog(ctx, a.conf.PartitionID, readOffset, 1,
+			err = plog.ReadPLog(ctx, a.conf.PartitionID, readOffset, 1,
 				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 					if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 						return errBatchFull
 					}
 					return nil
-				}); err != nil {
+				})
+			if err != nil {
 				break
 			}
 		}
@@ -434,8 +435,9 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		return nil, nil
 	}
 
-	if w.logCtx, err = logEventAndCUDs(w.logCtx, w.event, w.pLogOffset,
-		p.borrowedPartition.AppStructs().AppDef(), triggeredByQName); err != nil {
+	w.logCtx, err = logEventAndCUDs(w.logCtx, w.event, w.pLogOffset,
+		p.borrowedPartition.AppStructs().AppDef(), triggeredByQName)
+	if err != nil {
 		// notest
 		return nil, err
 	}

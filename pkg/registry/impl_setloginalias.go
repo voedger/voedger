@@ -112,9 +112,10 @@ func applySetLoginAlias(fed federationCaller, tokens itokens.ITokens) func(event
 			// Create the new alias index before committing Login.Alias. Sign-in
 			// still verifies Login.Alias, so a partially created index is inert.
 			targetAppWSID := coreutils.GetPseudoWSID(istructs.NullWSID, newAlias, event.Workspace().ClusterID())
-			if err := callRegistryCommand(fed, tokens, s.App(), targetAppWSID, QNameCommandPutLoginAliasIndex, jsonu.Jprintf(
+			err = callRegistryCommand(fed, tokens, s.App(), targetAppWSID, QNameCommandPutLoginAliasIndex, jsonu.Jprintf(
 				`{"args":{"AppName":%q,"SourceAppWSID":%d,"Alias":%q,"CDocLoginID":%d,"Login":%q}}`,
-				appName, event.Workspace(), newAlias, cdocLoginID, login)); err != nil {
+				appName, event.Workspace(), newAlias, cdocLoginID, login))
+			if err != nil {
 				return updateSourceLoginAliasErrorViaCUD(fed, tokens, s.App(), event.Workspace(), cdocLoginID, err.Error())
 			}
 		}
@@ -123,9 +124,10 @@ func applySetLoginAlias(fed federationCaller, tokens itokens.ITokens) func(event
 			// Drop the old index before the source commit so old aliases stop
 			// resolving as soon as the source Login moves to the new value.
 			oldTargetAppWSID := coreutils.GetPseudoWSID(istructs.NullWSID, oldAlias, event.Workspace().ClusterID())
-			if err := callRegistryCommand(fed, tokens, s.App(), oldTargetAppWSID, QNameCommandDeactivateLoginAliasIndex, jsonu.Jprintf(
+			err = callRegistryCommand(fed, tokens, s.App(), oldTargetAppWSID, QNameCommandDeactivateLoginAliasIndex, jsonu.Jprintf(
 				`{"args":{"AppName":%q,"SourceAppWSID":%d,"Alias":%q,"CDocLoginID":%d}}`,
-				appName, event.Workspace(), oldAlias, cdocLoginID)); err != nil {
+				appName, event.Workspace(), oldAlias, cdocLoginID))
+			if err != nil {
 				return updateSourceLoginAliasErrorViaCUD(fed, tokens, s.App(), event.Workspace(), cdocLoginID, err.Error())
 			}
 		}

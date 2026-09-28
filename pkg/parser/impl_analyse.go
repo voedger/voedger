@@ -255,11 +255,12 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 
 	// ALL COMMANDS WITH TAG
 	if grant.AllCommandsWithTag != nil {
-		if err := resolveInCtx(*grant.AllCommandsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+		err = resolveInCtx(*grant.AllCommandsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
 			grant.AllCommandsWithTag.qName = tagPkg.NewQName(tag.Name)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			c.stmtErr(&grant.AllCommandsWithTag.Pos, err)
 		}
 	}
@@ -271,11 +272,12 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 
 	// ALL QUERIES WITH TAG
 	if grant.AllQueriesWithTag != nil {
-		if err := resolveInCtx(*grant.AllQueriesWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+		err = resolveInCtx(*grant.AllQueriesWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
 			grant.AllQueriesWithTag.qName = tagPkg.NewQName(tag.Name)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			c.stmtErr(&grant.AllQueriesWithTag.Pos, err)
 		}
 	}
@@ -286,11 +288,12 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 
 	// ALL VIEWS WITH TAG
 	if grant.AllViewsWithTag != nil {
-		if err := resolveInCtx(*grant.AllViewsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+		err = resolveInCtx(*grant.AllViewsWithTag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			grant.ops = append(grant.ops, appdef.OperationKind_Select)
 			grant.AllViewsWithTag.qName = tagPkg.NewQName(tag.Name)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			c.stmtErr(&grant.AllViewsWithTag.Pos, err)
 		}
 	}
@@ -302,7 +305,7 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 
 	// ALL TABLES WITH TAG
 	if grant.AllTablesWithTag != nil {
-		if err := resolveInCtx(grant.AllTablesWithTag.Tag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
+		err = resolveInCtx(grant.AllTablesWithTag.Tag, c, func(tag *TagStmt, tagPkg *PackageSchemaAST) error {
 			for _, item := range grant.AllTablesWithTag.Items {
 				if item.Insert {
 					grant.ops = append(grant.ops, appdef.OperationKind_Insert)
@@ -318,7 +321,8 @@ func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 			}
 			grant.AllTablesWithTag.Tag.qName = tagPkg.NewQName(tag.Name)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			c.stmtErr(&grant.AllTablesWithTag.Tag.Pos, err)
 		}
 	}
@@ -593,38 +597,42 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 	}
 	if limit.SingleItem != nil {
 		if limit.SingleItem.Command != nil {
-			if err = resolveInCtx(*limit.SingleItem.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error {
+			err = resolveInCtx(*limit.SingleItem.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error {
 				limit.SingleItem.Command.qName = schema.NewQName(t.Name)
 				allowedOps(set.From(appdef.OperationKind_Execute))
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&limit.SingleItem.Command.Pos, err)
 			}
 		}
 		if limit.SingleItem.Query != nil {
-			if err = resolveInCtx(*limit.SingleItem.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error {
+			err = resolveInCtx(*limit.SingleItem.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error {
 				limit.SingleItem.Query.qName = schema.NewQName(t.Name)
 				allowedOps(set.From(appdef.OperationKind_Execute))
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&limit.SingleItem.Query.Pos, err)
 			}
 		}
 		if limit.SingleItem.View != nil {
-			if err = resolveInCtx(*limit.SingleItem.View, c, func(t *ViewStmt, schema *PackageSchemaAST) error {
+			err = resolveInCtx(*limit.SingleItem.View, c, func(t *ViewStmt, schema *PackageSchemaAST) error {
 				limit.SingleItem.View.qName = schema.NewQName(t.Name)
 				allowedOps(set.From(appdef.OperationKind_Select))
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&limit.SingleItem.View.Pos, err)
 			}
 		}
 		if limit.SingleItem.Table != nil {
-			if err = resolveInCtx(*limit.SingleItem.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error {
+			err = resolveInCtx(*limit.SingleItem.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error {
 				limit.SingleItem.Table.qName = schema.NewQName(t.Name)
 				allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&limit.SingleItem.Table.Pos, err)
 			}
 		}
@@ -640,10 +648,11 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 		}
 		if limit.AllItems.WithTag != nil {
-			if err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
+			err = resolveInCtx(*limit.AllItems.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
 				limit.AllItems.WithTag.qName = schema.NewQName(t.Name)
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&limit.AllItems.WithTag.Pos, err)
 			}
 		}
@@ -659,10 +668,11 @@ func analyzeLimit(limit *LimitStmt, c *iterateCtx) {
 			allowedOps(set.From(appdef.OperationKind_Insert, appdef.OperationKind_Update, appdef.OperationKind_Select, appdef.OperationKind_Activate, appdef.OperationKind_Deactivate))
 		}
 		if limit.EachItem.WithTag != nil {
-			if err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
+			err = resolveInCtx(*limit.EachItem.WithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error {
 				limit.EachItem.WithTag.qName = schema.NewQName(t.Name)
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&limit.EachItem.WithTag.Pos, err)
 			}
 		}
@@ -948,10 +958,11 @@ func checkStorageEntity(key *StateStorage, f *StorageStmt, c *iterateCtx) error 
 			return ErrStorageRequiresEntity(key.Storage.String())
 		}
 		for _, entity := range key.Entities {
-			if err2 := resolveInCtx(entity, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
+			err2 := resolveInCtx(entity, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
 				key.entityQNames = append(key.entityQNames, pkg.NewQName(view.Name))
 				return nil
-			}); err2 != nil {
+			})
+			if err2 != nil {
 				return err2
 			}
 		}
@@ -964,7 +975,7 @@ type checkScopeFunc func(sc *StorageScope) bool
 func checkState(state []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 	for i := range state {
 		key := &state[i]
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
+		err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
 			if e := checkStorageEntity(key, f, c); e != nil {
 				return e
 			}
@@ -984,7 +995,8 @@ func checkState(state []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 			}
 			key.storageQName = pkg.NewQName(key.Storage.Name)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			c.stmtErr(&key.Storage.Pos, err)
 		}
 	}
@@ -993,7 +1005,7 @@ func checkState(state []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 func checkIntents(intents []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 	for i := range intents {
 		key := &intents[i]
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
+		err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
 			if e := checkStorageEntity(key, f, c); e != nil {
 				return e
 			}
@@ -1013,7 +1025,8 @@ func checkIntents(intents []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 			}
 			key.storageQName = pkg.NewQName(key.Storage.Name)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			c.stmtErr(&key.Storage.Pos, err)
 		}
 	}
@@ -1153,11 +1166,12 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 		}
 		for j := range item.Tags {
 			tag := item.Tags[j]
-			if err := resolveInCtx(tag, c, func(t *TagStmt, tPkg *PackageSchemaAST) error {
+			err := resolveInCtx(tag, c, func(t *TagStmt, tPkg *PackageSchemaAST) error {
 				qname := tPkg.NewQName(t.Name)
 				item.tags = append(item.tags, qname)
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&tag.Pos, err)
 			}
 		}
@@ -1383,10 +1397,11 @@ func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 	for i := range items {
 		item := items[i]
 		if item.FieldSet != nil {
-			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, _ *PackageSchemaAST) error {
+			err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, _ *PackageSchemaAST) error {
 				item.FieldSet.typ = t
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&item.FieldSet.Type.Pos, err)
 				continue
 			}
@@ -1412,10 +1427,11 @@ func lookupField(items []TableItemExpr, name Ident, c *iterateCtx) (found bool) 
 			}
 		}
 		if item.FieldSet != nil {
-			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, _ *PackageSchemaAST) error {
+			err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, _ *PackageSchemaAST) error {
 				found = lookupField(t.Items, name, c)
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				c.stmtErr(&item.FieldSet.Pos, err)
 				return false
 			}
@@ -1520,7 +1536,7 @@ func analyseRefFields(items []TableItemExpr, c *iterateCtx, tableTypeKind appdef
 		if item.RefField != nil {
 			rf := item.RefField
 			for i := range rf.RefDocs {
-				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, tblPkg *PackageSchemaAST) error {
+				err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, tblPkg *PackageSchemaAST) error {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
@@ -1531,7 +1547,8 @@ func analyseRefFields(items []TableItemExpr, c *iterateCtx, tableTypeKind appdef
 					rf.refQNames = append(rf.refQNames, tblPkg.NewQName(f.Name))
 					rf.refTables = append(rf.refTables, tableAddr{f, tblPkg})
 					return nil
-				}); err != nil {
+				})
+				if err != nil {
 					c.stmtErr(&rf.RefDocs[i].Pos, err)
 					continue
 				}
@@ -1550,12 +1567,13 @@ func analyseViewRefFields(items []ViewItemExpr, c *iterateCtx) {
 		if item.RefField != nil {
 			rf := item.RefField
 			for i := range rf.RefDocs {
-				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
+				err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
 					if f.Abstract {
 						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
 					}
 					return nil
-				}); err != nil {
+				})
+				if err != nil {
 					c.stmtErr(&rf.RefDocs[i].Pos, err)
 					continue
 				}

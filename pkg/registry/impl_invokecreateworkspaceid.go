@@ -46,8 +46,9 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederationWithRetry
 			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(istructs.NullWSID, wsName, targetClusterID)
 			templateName := ""
 			templateParams := ""
-			if err := workspace.ApplyInvokeCreateWorkspaceID(federation, s.App(), tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt,
-				targetApp, templateName, templateParams, rec, ownerWSID); err != nil {
+			err = workspace.ApplyInvokeCreateWorkspaceID(federation, s.App(), tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt,
+				targetApp, templateName, templateParams, rec, ownerWSID)
+			if err != nil {
 				return err
 			}
 		}

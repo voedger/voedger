@@ -49,8 +49,9 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederationWithRetry
 			targetApp := appQName.String()
 			targetClusterID := istructs.CurrentClusterID() // TODO: on https://github.com/voedger/voedger/commit/1e7ce3f2c546e9bf1332edb31a5beed5954bc476 was NullClusetrID!
 			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
-			if err := ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt, targetApp,
-				templateName, templateParams, rec, ownerWSID); err != nil {
+			err := ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt, targetApp,
+				templateName, templateParams, rec, ownerWSID)
+			if err != nil {
 				return err
 			}
 		}
@@ -85,12 +86,13 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederationWithRetry, ap
 		return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
 	}
 
-	if _, createWSIDCmdErr := federation.Func(createWSIDCmdURL, body,
+	_, createWSIDCmdErr := federation.Func(createWSIDCmdURL, body,
 		httpu.WithAuthorizeBy(systemPrincipalToken),
 		httpu.WithDiscardResponse(),
 		httpu.WithExpectedCode(http.StatusOK),
 		httpu.WithExpectedCode(http.StatusConflict),
-	); createWSIDCmdErr != nil {
+	)
+	if createWSIDCmdErr != nil {
 		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr.Error(), body))
 		return updateOwner(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, tokensAPI, federation)
 	}
@@ -226,11 +228,12 @@ func invokeCreateWorkspaceProjector(federation federation.IFederationWithRetry, 
 				// notest
 				return fmt.Errorf("aproj.sys.InvokeCreateWorkspace: %w", err)
 			}
-			if _, err = federation.Func(createWSCmdURL, body, httpu.WithAuthorizeBy(systemPrincipalToken),
+			_, err = federation.Func(createWSCmdURL, body, httpu.WithAuthorizeBy(systemPrincipalToken),
 				httpu.WithDiscardResponse(),
 				httpu.WithExpectedCode(http.StatusOK),
 				httpu.WithExpectedCode(http.StatusConflict),
-			); err != nil {
+			)
+			if err != nil {
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
 				// nolint G115 ownerWSID came from WSID so its highest bit is always 0 -> no data loss possible
 				if err := updateOwner(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, tokensAPI, federation); err != nil {
@@ -394,8 +397,9 @@ func initializeWorkspaceProjector(time timeu.ITime, federation federation.IFeder
 
 				wsKind := wsDescr.AsQName(authnz.Field_WSKind)
 				ep := eps[s.App()]
-				if wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, istructs.WSID(newWSID), // nolint G115
-					targetAppQName, newWSName, systemPrincipalToken_TargetApp); wsError != nil {
+				wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, istructs.WSID(newWSID), // nolint G115
+					targetAppQName, newWSName, systemPrincipalToken_TargetApp)
+				if wsError != nil {
 					wsError = fmt.Errorf("workspace %s building: %w", wsDescr.AsString(field_TemplateName), wsError)
 				}
 

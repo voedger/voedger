@@ -116,14 +116,16 @@ func setDiscordWebhook(cluster *clusterType, webhook string) error {
 		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s and %s", webhook, appNode1, appNode2))
 	}
 
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("file-upload.sh", localConfigFile, remoteConfigFile, appNode1, appNode2); err != nil {
+	err := newScriptExecuter(cluster.sshKey, "").
+		run("file-upload.sh", localConfigFile, remoteConfigFile, appNode1, appNode2)
+	if err != nil {
 		return err
 	}
 
 	loggerInfo(fmt.Sprintf("Restarting alertmanager service on %s and %s", appNode1, appNode2))
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("docker-service-restart.sh", appNode1, alertmanager); err != nil {
+	err = newScriptExecuter(cluster.sshKey, "").
+		run("docker-service-restart.sh", appNode1, alertmanager)
+	if err != nil {
 		return err
 	}
 
@@ -170,8 +172,9 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 	}
 
 	loggerInfo("Restarting alertmanager on " + host)
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("ce/docker-container-restart.sh", alertmanager); err != nil {
+	err = newScriptExecuter(cluster.sshKey, "").
+		run("ce/docker-container-restart.sh", alertmanager)
+	if err != nil {
 		return err
 	}
 
@@ -263,8 +266,7 @@ func alertConfigsDownload(cmd *cobra.Command, _ []string) error {
 	dir, _ := os.Getwd()
 	localFile := filepath.Join(dir, filepath.Base(alertManagerConfigFile))
 
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("file-download.sh", host, remoteFile, localFile); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "").run("file-download.sh", host, remoteFile, localFile); err != nil {
 		return err
 	}
 
@@ -303,14 +305,12 @@ func alertConfigsUpload(cmd *cobra.Command, _ []string) error {
 
 	loggerInfo(fmt.Sprintf("Uploading alert's configuration file %s to %s and %s", localFile, appNode1, appNode2))
 
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("file-upload.sh", localFile, remoteFile, appNode1, appNode2); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "").run("file-upload.sh", localFile, remoteFile, appNode1, appNode2); err != nil {
 		return err
 	}
 
 	loggerInfo("Restarting alertmanager service on", appNode1, "and", appNode2)
-	if err := newScriptExecuter(cluster.sshKey, "").
-		run("docker-service-restart.sh", appNode1, alertmanager); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "").run("docker-service-restart.sh", appNode1, alertmanager); err != nil {
 		return err
 	}
 

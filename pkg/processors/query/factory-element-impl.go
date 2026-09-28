@@ -19,7 +19,7 @@ func NewElement(data coreutils.MapObject) (IElement, error) {
 		return nil, fmt.Errorf("element: %w", err)
 	}
 	e.path = strings.Split(path, "/")
-	if err := fillArray(data, "fields", func(elem interface{}) error {
+	err = fillArray(data, "fields", func(elem interface{}) error {
 		resultField, err := NewField(elem)
 		if _, ok := resultField.(IRefField); ok {
 			return errors.New("fields: it accepts only array of strings")
@@ -28,16 +28,18 @@ func NewElement(data coreutils.MapObject) (IElement, error) {
 			e.fields = append(e.fields, resultField.(IResultField))
 		}
 		return err
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, fmt.Errorf("element: %w", err)
 	}
-	if err := fillArray(data, "refs", func(elem interface{}) error {
+	err = fillArray(data, "refs", func(elem interface{}) error {
 		refField, err := NewField(elem)
 		if err == nil {
 			e.refs = append(e.refs, refField.(IRefField))
 		}
 		return err
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, fmt.Errorf("element: %w", err)
 	}
 	return e, nil

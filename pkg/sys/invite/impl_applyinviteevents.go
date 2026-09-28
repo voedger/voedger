@@ -210,10 +210,11 @@ func handleApplyInvitation(event istructs.IPLogEvent, s istructs.IState, intents
 		EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(Field_Email),
 	)
 
-	if err := sendEmail(s, intents, smtpCfg,
+	err = sendEmail(s, intents, smtpCfg,
 		event.ArgumentObject().AsString(field_EmailSubject),
 		event.ArgumentObject().AsString(Field_Email),
-		replacer.Replace(emailTemplate)); err != nil {
+		replacer.Replace(emailTemplate))
+	if err != nil {
 		return err
 	}
 
@@ -392,10 +393,11 @@ func handleApplyUpdateInviteRoles(event istructs.IPLogEvent, s istructs.IState, 
 	emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 	replacer := strings.NewReplacer(EmailTemplatePlaceholder_Roles, event.ArgumentObject().AsString(Field_Roles))
 
-	if err := sendEmail(s, intents, smtpCfg,
+	err = sendEmail(s, intents, smtpCfg,
 		event.ArgumentObject().AsString(field_EmailSubject),
 		svCDocInvite.AsString(Field_Email),
-		replacer.Replace(emailTemplate)); err != nil {
+		replacer.Replace(emailTemplate))
+	if err != nil {
 		return err
 	}
 

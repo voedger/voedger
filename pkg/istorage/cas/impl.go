@@ -120,8 +120,9 @@ func (p implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	// prepare storage tables
 	q = fmt.Sprintf(`create table if not exists %s.values (p_key blob, c_col blob, value blob, primary key ((p_key), c_col))`, keyspace)
 	logScript(q)
-	if err = session.Query(q).
-		Consistency(gocql.Quorum).Exec(); err != nil {
+	err = session.Query(q).
+		Consistency(gocql.Quorum).Exec()
+	if err != nil {
 		return fmt.Errorf("can't create table «values»: %w", err)
 	}
 	return nil

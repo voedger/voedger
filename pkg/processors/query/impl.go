@@ -618,7 +618,7 @@ func (r *outputRow) Set(alias string, value interface{}) {
 }
 func (r *outputRow) Values() []interface{}          { return r.values }
 func (r *outputRow) Value(alias string) interface{} { return r.values[r.keyToIdx[alias]] }
-func (r *outputRow) MarshalJSON() ([]byte, error)   { return json.Marshal(r.values) }
+func (r outputRow) MarshalJSON() ([]byte, error)   { return json.Marshal(r.values) }
 
 func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")

@@ -34,7 +34,7 @@ func stateFuncExec(_ context.Context, args istructs.ExecQueryArgs, callback istr
 	data := make(map[string]map[istructs.RecordID]map[string]interface{})
 	appDef := args.State.AppStructs().AppDef()
 	maxRelevantOffset := int64(0)
-	if err := args.State.Read(kb, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
+	err = args.State.Read(kb, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 		if value.AsInt64(state.ColOffset) <= after {
 			return nil
 		}
@@ -51,7 +51,8 @@ func stateFuncExec(_ context.Context, args istructs.ExecQueryArgs, callback istr
 			maxRelevantOffset = value.AsInt64(state.ColOffset)
 		}
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		// notest
 		return err
 	}
