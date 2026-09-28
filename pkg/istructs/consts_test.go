@@ -22,10 +22,6 @@ const (
 	_ = uint16(2 - QNameIDCommandCUD)
 	_ = uint16(QNameIDForCorruptedData - 3)
 	_ = uint16(3 - QNameIDForCorruptedData)
-	_ = uint16(QNameIDWLogOffsetSequence - 4)
-	_ = uint16(4 - QNameIDWLogOffsetSequence)
-	_ = uint16(QNameIDRecordIDSequence - 5)
-	_ = uint16(5 - QNameIDRecordIDSequence)
 
 	_ = uint16(QNameIDSysLast - 0xFF)
 	_ = uint16(0xFF - QNameIDSysLast)

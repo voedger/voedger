@@ -42,10 +42,6 @@ var (
 	QNameCRecord = appdef.NewQName(appdef.SysPackage, "CRecord")
 	QNameWRecord = appdef.NewQName(appdef.SysPackage, "WRecord")
 	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
-
-	// sequences QNames has hardcoded QNameIDs: [QNameIDWLogOffsetSequence] etc
-	QNameWLogOffsetSequence = appdef.NewQName(appdef.SysPackage, "WLogOffsetSequence")
-	QNameRecordIDSequence   = appdef.NewQName(appdef.SysPackage, "RecordIDSequence")
 )
 
 // *********************************************************************************************************
@@ -220,8 +216,6 @@ const (
 	QNameIDForError
 	QNameIDCommandCUD
 	QNameIDForCorruptedData
-	QNameIDWLogOffsetSequence
-	QNameIDRecordIDSequence
 
 	QNameIDSysLast QNameID = 0xFF
 )

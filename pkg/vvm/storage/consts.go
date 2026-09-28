@@ -12,8 +12,10 @@ const (
 	// [~server.design.orch/KeyPrefix_VVMLeader~impl]
 	pKeyPrefix_VVMLeader
 
+	// Deprecated: retained to preserve value of pKeyPrefix_AppTTL only
 	pKeyPrefix_SeqStorage_Part
 
+	// Deprecated: retained to preserve value of pKeyPrefix_AppTTL only
 	pKeyPrefix_SeqStorage_WS
 
 	pKeyPrefix_AppTTL

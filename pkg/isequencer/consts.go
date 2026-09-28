@@ -5,18 +5,6 @@
 
 package isequencer
 
-import (
-	"time"
-)
-
-const (
-	DefaultLRUCacheSize                      = 100_000
-	DefaultMaxNumUnflushedValues             = 500
-	defaultBatcherDelayOnToBeFlushedOverflow = 5 * time.Millisecond
-	baseRetryDelay                           = 500 * time.Millisecond
-	maxRetryDelay                            = baseRetryDelay
-)
-
 const (
 	// no trust at all, InsertIfNotExists only
 	SequencesTrustLevel_0 SequencesTrustLevel = iota

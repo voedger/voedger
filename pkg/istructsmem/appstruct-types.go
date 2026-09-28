@@ -6,10 +6,7 @@
 package istructsmem
 
 import (
-	"fmt"
-
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
@@ -75,7 +72,6 @@ type AppConfigType struct {
 	eventValidators  []istructs.EventValidator
 	numAppWorkspaces istructs.NumAppWorkspaces
 	jobs             []BuiltinJob
-	seqTypes         map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -86,7 +82,6 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 		syncProjectors:   make(istructs.Projectors),
 		asyncProjectors:  make(istructs.Projectors),
 		numAppWorkspaces: wsCount,
-		seqTypes:         map[isequencer.WSKind]map[isequencer.SeqID]isequencer.Number{},
 	}
 
 	cfg.AppDef = def
@@ -165,19 +160,6 @@ func (cfg *AppConfigType) prepare(appStorage istorage.IAppStorage) error {
 		return ErrNumAppWorkspacesNotSet(cfg.Name)
 	}
 
-	for _, iWorkspace := range cfg.AppDef.Workspaces() {
-		if iWorkspace.Abstract() {
-			continue
-		}
-		wsKindQNameID, err := cfg.QNameID(iWorkspace.Descriptor())
-		if err != nil {
-			// notest
-			return err
-		}
-		cfg.AddSeqType(isequencer.WSKind(wsKindQNameID), isequencer.SeqID(istructs.QNameIDRecordIDSequence), isequencer.Number(istructs.FirstUserRecordID))
-		cfg.AddSeqType(isequencer.WSKind(wsKindQNameID), isequencer.SeqID(istructs.QNameIDWLogOffsetSequence), isequencer.Number(istructs.FirstOffset))
-	}
-
 	cfg.prepared = true
 	return nil
 }
@@ -221,18 +203,6 @@ func (cfg *AppConfigType) SyncProjectors() istructs.Projectors {
 
 func (cfg *AppConfigType) BuiltingJobs() []BuiltinJob {
 	return cfg.jobs
-}
-
-func (cfg *AppConfigType) AddSeqType(wsKind isequencer.WSKind, seqID isequencer.SeqID, initialNumber isequencer.Number) {
-	wsKindSeqTypes, ok := cfg.seqTypes[wsKind]
-	if !ok {
-		wsKindSeqTypes = map[isequencer.SeqID]isequencer.Number{}
-		cfg.seqTypes[wsKind] = wsKindSeqTypes
-	}
-	if _, ok := wsKindSeqTypes[seqID]; ok {
-		panic(fmt.Sprintf("initial number for SeqID %d in WSKind %d is already set", seqID, wsKind))
-	}
-	wsKindSeqTypes[seqID] = initialNumber
 }
 
 // need to build view.sys.NextBaseWSID and view.sys.projectionOffsets
