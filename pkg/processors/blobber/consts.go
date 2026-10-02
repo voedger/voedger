@@ -23,7 +23,8 @@ const (
 
 var (
 	durationToRegisterFuncs = map[iblobstorage.DurationType]appdef.QName{
-		iblobstorage.DurationType_1Day: appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB1d"),
+		iblobstorage.DurationType_1Day:   appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB1d"),
+		iblobstorage.DurationType_90Days: appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB90d"),
 	}
 	registerPersistentBLOBFuncQName = appdef.NewQName(appdef.SysPackage, "UploadBLOBHelper")
 	downloadPersistentBLOBFuncQName = appdef.NewQName(appdef.SysPackage, "DownloadBLOBAuthnz")
