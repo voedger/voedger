@@ -278,16 +278,13 @@ func TestBlobberErrors(t *testing.T) {
 }
 
 func TestBasicUsage_Temporary(t *testing.T) {
-	tests := []struct {
-		name        string
-		expectedTTL iblobstorage.DurationType
-	}{
-		{name: "1d", expectedTTL: iblobstorage.DurationType_1Day},
-		{name: "90d", expectedTTL: iblobstorage.DurationType(90)},
+	expectedTTLs := []iblobstorage.DurationType{
+		iblobstorage.DurationType_1Day,
+		iblobstorage.DurationType_90Days,
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			testBasicUsageTemporary(t, test.expectedTTL)
+	for _, expectedTTL := range expectedTTLs {
+		t.Run(fmt.Sprintf("%dd", expectedTTL), func(t *testing.T) {
+			testBasicUsageTemporary(t, expectedTTL)
 		})
 	}
 }
