@@ -61,6 +61,10 @@ References:
   - update: supply the expected TTL to each invocation, advance the mock clock to that boundary, and verify the BLOB is readable immediately before expiration and unavailable when the TTL elapses
   - preserve: use the shared flow for both durations; do not add a dedicated test targeted specifically at 90-day expiration
 
+- [x] update: [pkg/sys/sys.vsql](../../../../../pkg/sys/it/testdata/apps/test2.app1/image/pkg/sys/sys.vsql)
+  - add: declare `RegisterTempBLOB90d` in the copied system schema used by the sidecar application fixture
+  - preserve: keep the fixture schema aligned with runtime command registration so sidecar deployment succeeds
+
 ### Duration contract
 
 - [x] update: [iblobstorage/consts.go](../../../../../pkg/iblobstorage/consts.go)
