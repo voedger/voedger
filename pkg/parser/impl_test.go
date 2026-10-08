@@ -1454,6 +1454,35 @@ func Test_Projectors(t *testing.T) {
 		require.Equal([]appdef.QName{appdef.NewQName("pkg", "CreateOrder")}, prj.Events()[0].Filter().QNames())
 	})
 
+	t.Run("ON ALL COMMANDS requires non-parameterized execute", func(t *testing.T) {
+		for _, trigger := range []string{
+			"AFTER INSERT ON ALL COMMANDS",
+			"AFTER EXECUTE WITH PARAM ON ALL COMMANDS",
+		} {
+			t.Run(trigger, func(t *testing.T) {
+				require := assertions(t)
+				_, err := require.AppSchema(fmt.Sprintf(`APPLICATION test();
+					WORKSPACE Ws (
+						EXTENSION ENGINE WASM (
+							PROJECTOR Invalid %s;
+						);
+					);`, trigger))
+				require.ErrorContains(err, ErrAllCommandsRequiresExecute.Error())
+			})
+		}
+	})
+
+	t.Run("scheduled projector cannot target all commands", func(t *testing.T) {
+		require := require.New(t)
+		_, err := ParseFile("file.vsql", `APPLICATION test();
+			WORKSPACE Ws (
+				EXTENSION ENGINE WASM (
+					PROJECTOR Invalid CRON '1 0 * * *' ON ALL COMMANDS;
+				);
+			);`)
+		require.ErrorContains(err, "unexpected token \"ON ALL COMMANDS\"")
+	})
+
 	t.Run("Errors", func(t *testing.T) {
 		require := require.New(t)
 		fs, err := ParseFile("example.vsql", `APPLICATION test();

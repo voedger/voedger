@@ -32,6 +32,7 @@ var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported
 var ErrSysWorkspaceNotFound = errors.New("sys.Workspace type not found")
 var ErrInheritanceFromSysWorkspaceNotAllowed = errors.New("explicit inheritance from sys.Workspace not allowed")
 var ErrScheduledProjectorDeprecated = errors.New("scheduled projector deprecated; use jobs instead")
+var ErrAllCommandsRequiresExecute = errors.New("ON ALL COMMANDS requires AFTER EXECUTE without WITH PARAM")
 
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 var ErrCircularReferenceInInherits = errors.New("circular reference in INHERITS")
