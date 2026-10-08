@@ -19,10 +19,10 @@ The unused sequence-storage feature adds obsolete code and maintenance burden to
 
 ## What
 
-- The unused sequence-storage capability is removed with no change to externally observable sequence allocation, storage, or partition-recovery behavior.
+- The unused sequence-storage capability and the now-empty `isequencer` package are removed with no change to externally observable sequence allocation, storage, or partition-recovery behavior.
 - Existing primary-key prefix values remain reserved and compatible; the legacy sequence-storage prefixes remain declared as deprecated compatibility markers.
-- Sequence Trust Level behavior and configuration remain unchanged.
-- Documentation remains unchanged in this change and is cleaned up separately under AIR-4980.
+- Sequence Trust Level behavior and configuration remain unchanged, while their shared type and constants move to `istructs`.
+- Obsolete package-local `isequencer` documentation is deleted with the package; maintained product specifications remain unchanged and are cleaned up separately under AIR-4980.
 
 ## How
 
@@ -30,7 +30,7 @@ Decisions:
 
 - Remove the dormant feature end to end instead of retaining compatibility facades: delete the sequencer lifecycle and storage contracts, their implementations and adapters, and the application-parts sequence-storage bridge.
 - Remove sequence-type metadata from the application-structures contract and configuration, including its automatic system-sequence registration, rather than replacing it with another abstraction.
-- Keep the Sequence Trust Level type and constants in the existing sequencer package namespace and preserve all current consumers and configuration signatures; shrink the package to that surviving contract instead of relocating it.
+- Move the Sequence Trust Level type and constants to the shared `istructs` contract package, preserve their names and numeric values, and migrate every caller before deleting `isequencer` completely.
 - Leave any previously persisted sequence-storage rows untouched and inaccessible: retain the deprecated primary-key prefix slots, do not reuse their numeric values, and introduce no data migration or cleanup path.
 - Remove tests that exercise only the dormant subsystem while retaining the prefix-value contract and using the existing command-recovery, identifier-generation, and Sequence Trust Level suites to verify the active behavior remains intact.
 
@@ -69,25 +69,44 @@ References:
 
 - [x] update: [istructs/consts_test.go](../../../../../pkg/istructs/consts_test.go)
   - remove fixed-value assertions for the deleted system sequence QName identifiers while preserving assertions for all remaining identifiers
+  - add compile-time assertions that the three Sequence Trust Level numeric values remain `0`, `1`, and `2`
+
+- [x] update: [appparts/example_limit_test.go](../../../../../pkg/appparts/example_limit_test.go), [appparts/example_test.go](../../../../../pkg/appparts/example_test.go), and [appparts/impl_test.go](../../../../../pkg/appparts/impl_test.go)
+  - use the relocated `istructs.SequencesTrustLevel_0` constant in application-structures test setup
+
+- [x] update: [istructsmem/appstruct-types_test.go](../../../../../pkg/istructsmem/appstruct-types_test.go), [istructsmem/bench_test.go](../../../../../pkg/istructsmem/bench_test.go), [istructsmem/event-types_test.go](../../../../../pkg/istructsmem/event-types_test.go), [istructsmem/impl_test.go](../../../../../pkg/istructsmem/impl_test.go), and [istructsmem/records-types_test.go](../../../../../pkg/istructsmem/records-types_test.go)
+  - replace test and benchmark imports of `isequencer` with the relocated `istructs` trust-level contract
+
+- [x] update: [istructsmem/resources-types_test.go](../../../../../pkg/istructsmem/resources-types_test.go), [istructsmem/test_test.go](../../../../../pkg/istructsmem/test_test.go), [istructsmem/validation_test.go](../../../../../pkg/istructsmem/validation_test.go), and [istructsmem/viewrecords-types_test.go](../../../../../pkg/istructsmem/viewrecords-types_test.go)
+  - replace test fixture imports of `isequencer` with `istructs`
+
+- [x] update: [wazero/impl_test.go](../../../../../pkg/iextengine/wazero/impl_test.go), [parser/impl_test.go](../../../../../pkg/parser/impl_test.go), [actualizers/impl_test.go](../../../../../pkg/processors/actualizers/impl_test.go), [command/impl_test.go](../../../../../pkg/processors/command/impl_test.go), and [query/impl_test.go](../../../../../pkg/processors/query/impl_test.go)
+  - migrate application-structures test setup to `istructs.SequencesTrustLevel_0`
+
+- [x] update: [collection/collection_test.go](../../../../../pkg/sys/collection/collection_test.go) and [storages/impl_event_storage_test.go](../../../../../pkg/sys/storages/impl_event_storage_test.go)
+  - migrate system test setup to the relocated trust-level constant
 
 ### Sequencer and application contracts
 
-- [x] update: [isequencer/types.go](../../../../../pkg/isequencer/types.go)
-  - remove obsolete sequence identifiers, values, parameters, runtime state, and mock-storage types
-  - retain the Sequence Trust Level type unchanged in its current package
-
-- [x] update: [isequencer/consts.go](../../../../../pkg/isequencer/consts.go)
-  - remove sequencer runtime defaults and retry timing constants
-  - retain the three Sequence Trust Level constants unchanged
+- [x] delete: [isequencer/types.go](../../../../../pkg/isequencer/types.go) and [isequencer/consts.go](../../../../../pkg/isequencer/consts.go)
+  - remove obsolete sequence identifiers, values, parameters, runtime state, mock-storage types, runtime defaults, and retry timing constants
+  - relocate the surviving Sequence Trust Level contract to `istructs` before deleting the final package declarations
 
 - [x] delete: [isequencer/errors.go](../../../../../pkg/isequencer/errors.go), [isequencer/interface.go](../../../../../pkg/isequencer/interface.go), [isequencer/impl.go](../../../../../pkg/isequencer/impl.go), [isequencer/provide.go](../../../../../pkg/isequencer/provide.go), and [isequencer/test_utils.go](../../../../../pkg/isequencer/test_utils.go)
-  - remove the unused sequencer API, implementation, constructor, errors, and test support without changing the package documentation
+  - remove the unused sequencer API, implementation, constructor, errors, and test support
+
+- [x] delete: [isequencer/README.md](../../../../../pkg/isequencer/README.md) and [isequencer/design.md](../../../../../pkg/isequencer/design.md)
+  - remove obsolete documentation for the deleted sequencer package and implementation
 
 - [x] update: [istructs/interface.go](../../../../../pkg/istructs/interface.go)
   - remove sequence-type metadata from the application-structures interface
 
 - [x] update: [istructs/consts.go](../../../../../pkg/istructs/consts.go)
   - remove the unused system sequence QNames and their fixed QName identifiers without renumbering any remaining identifier
+  - host the three relocated Sequence Trust Level constants with their existing names and values
+
+- [x] update: [istructs/types.go](../../../../../pkg/istructs/types.go)
+  - host the relocated `SequencesTrustLevel` shared contract type
 
 ### Application structures
 
@@ -96,7 +115,21 @@ References:
 
 - [x] update: [istructsmem/impl.go](../../../../../pkg/istructsmem/impl.go)
   - remove the application-structures sequence-metadata accessor
-  - preserve all Sequence Trust Level state and enforcement paths unchanged
+  - preserve all Sequence Trust Level state and enforcement paths while consuming the type and constants from `istructs`
+
+- [x] update: [istructsmem/provide.go](../../../../../pkg/istructsmem/provide.go)
+  - accept the relocated `istructs.SequencesTrustLevel` contract without changing provider behavior
+
+### Trust-level consumers and wiring
+
+- [x] update: [teststate/impl.go](../../../../../pkg/state/teststate/impl.go), [teststate/impl_new.go](../../../../../pkg/state/teststate/impl_new.go), and [vit/impl.go](../../../../../pkg/vit/impl.go)
+  - update shared test environments to configure Sequence Trust Level through `istructs`
+
+- [x] update: [vvm/impl_cfg.go](../../../../../pkg/vvm/impl_cfg.go), [vvm/provide.go](../../../../../pkg/vvm/provide.go), and [vvm/types.go](../../../../../pkg/vvm/types.go)
+  - expose, default, and pass through the relocated `istructs.SequencesTrustLevel` type without changing configuration behavior
+
+- [x] regenerate: [vvm/wire_gen.go](../../../../../pkg/vvm/wire_gen.go)
+  - remove the `isequencer` import and wire the relocated trust-level type through the generated provider graph
 
 ### Sequence-storage adapters
 
