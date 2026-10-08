@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"testing"
 	"time"
 
@@ -139,6 +140,44 @@ func TestBasicUsage_CUD(t *testing.T) {
 			}`, istructs.NonExistingRecordID)
 		vit.PostWS(ws, "c.sys.CUD", body, httpu.Expect404())
 	})
+}
+
+func TestCUDCountBoundedByRequestBodySize(t *testing.T) {
+	const (
+		cudCount             = 300
+		requestBodySizeLimit = 200_000
+	)
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	// Use WDocs to isolate command request sizing from the CDoc collection projector's independent batch limit.
+	cuds := make([]map[string]any, 0, cudCount)
+	for rawID := 1; rawID <= cudCount; rawID++ {
+		cuds = append(cuds, map[string]any{
+			"fields": map[string]any{
+				appdef.SystemField_ID:    rawID,
+				appdef.SystemField_QName: it.QNameApp1_WDocCapabilities.String(),
+			},
+		})
+	}
+	bodyBytes, err := json.Marshal(map[string]any{"cuds": cuds})
+	require.NoError(err)
+	require.Less(len(bodyBytes), requestBodySizeLimit)
+
+	resp := vit.PostWS(ws, "c.sys.CUD", string(bodyBytes))
+	require.Len(resp.NewIDs, cudCount)
+
+	appStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	for rawID := 1; rawID <= cudCount; rawID++ {
+		recordID, ok := resp.NewIDs[strconv.Itoa(rawID)]
+		require.True(ok)
+		record, err := appStructs.Records().Get(ws.WSID, true, recordID)
+		require.NoError(err)
+		require.Equal(it.QNameApp1_WDocCapabilities, record.QName())
+	}
 }
 
 // Deprecated: use c.sys.CUD. Kept to not to break the exitsing events only
