@@ -26,7 +26,6 @@ import (
 	"github.com/voedger/voedger/pkg/iextengine"
 	iextenginebuiltin "github.com/voedger/voedger/pkg/iextengine/builtin"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -142,7 +141,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 	appStructs := istructsmem.Provide(
 		appConfigs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
+		provider.Provide(mem.Provide(testingu.MockTime), ""), istructs.SequencesTrustLevel_0, nil)
 
 	mockActualizers := &mockActualizerRunner{}
 	mockActualizers.On("SetAppPartitions", mock.Anything).Once()
@@ -326,7 +325,7 @@ func TestDeployApp_ValidateExtensions_MatchVSQLAndCode(t *testing.T) {
 		appStructs := istructsmem.Provide(
 			appConfigs,
 			payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-			provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
+			provider.Provide(mem.Provide(testingu.MockTime), ""), istructs.SequencesTrustLevel_0, nil)
 		ctx, cancel := context.WithCancel(context.Background())
 		appParts, cleanup, err := appparts.New2(ctx, appStructs,
 			appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,

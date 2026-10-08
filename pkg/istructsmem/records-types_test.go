@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/isequencer"
 
 	gojson "encoding/json"
 
@@ -206,7 +205,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
-	provider := Provide(test.AppConfigs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(test.AppConfigs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)

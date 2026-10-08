@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -256,7 +255,7 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 		cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
-		isequencer.SequencesTrustLevel_0, nil)
+		istructs.SequencesTrustLevel_0, nil)
 	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)

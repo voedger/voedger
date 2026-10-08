@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
-	"github.com/voedger/voedger/pkg/isequencer"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/storages"
 
@@ -62,7 +62,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		SchemasCache:                     &NullSchemasCache{},
 		BusyProcessorLogMode:             BusyProcessorLogMode_Error,
 		PolicyOptsForFederationWithRetry: httpu.DefaultRetryPolicyOpts,
-		SequencesTrustLevel:              isequencer.SequencesTrustLevel_0,
+		SequencesTrustLevel:              istructs.SequencesTrustLevel_0,
 		RouterUseProxyProtocol:           true,
 	}
 	return res

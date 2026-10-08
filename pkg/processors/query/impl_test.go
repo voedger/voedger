@@ -33,7 +33,6 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -237,7 +236,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	atf := payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
-	asp := istructsmem.Provide(cfgs, atf, storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	asp := istructsmem.Provide(cfgs, atf, storageProvider, istructs.SequencesTrustLevel_0, nil)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{

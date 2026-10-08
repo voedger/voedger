@@ -37,7 +37,6 @@ import (
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -1079,7 +1078,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	require.NoError(err)
 
 	appStructsProvider := istructsmem.Provide(cfgs,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider, isequencer.SequencesTrustLevel_0, nil)
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider, istructs.SequencesTrustLevel_0, nil)
 
 	secretReader := isecretsimpl.ProvideSecretReader()
 	n10nBroker, n10nBrokerCleanup := in10nmem.NewN10nBroker(in10n.Quotas{

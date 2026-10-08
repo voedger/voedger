@@ -36,7 +36,6 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istoragecache"
@@ -145,6 +144,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	}
 	iSchedulerRunner := provideSchedulerRunner(basicSchedulerConfig)
 	bucketsFactoryType := provideBucketsFactory(iTime)
+	iblobStorage := provideBlobStorage(blobAppStoragePtr, iTime)
 	v4, err := provideSidecarApps(vvmConfig)
 	if err != nil {
 		cleanup3()
@@ -152,7 +152,6 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		cleanup()
 		return nil, nil, err
 	}
-	iblobStorage := provideBlobStorage(blobAppStoragePtr, iTime)
 	apIs := builtinapps.APIs{
 		ITokens:             iTokens,
 		IAppStructsProvider: iAppStructsProvider,
@@ -160,8 +159,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		IAppTokensFactory:   iAppTokensFactory,
 		IFederation:         iFederation,
 		ITime:               iTime,
-		SidecarApps:         v4,
 		IBLOBStorage:        iblobStorage,
+		SidecarApps:         v4,
 	}
 	iSchemasCache := vvmConfig.SchemasCache
 	builtInAppsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2, iSchemasCache)
@@ -397,7 +396,7 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, appTokensFactory payloads.IAppTokensFactory,
-	storageProvider istorage.IAppStorageProvider, seqTrustLevel isequencer.SequencesTrustLevel, sysVvmStorage storage.ISysVvmStorage) istructs.IAppStructsProvider {
+	storageProvider istorage.IAppStorageProvider, seqTrustLevel istructs.SequencesTrustLevel, sysVvmStorage storage.ISysVvmStorage) istructs.IAppStructsProvider {
 	appTTLStorageFactory := func(clusterAppID istructs.ClusterAppID) istructs.IAppTTLStorage {
 		return storage.NewAppTTLStorage(sysVvmStorage, clusterAppID)
 	}

@@ -20,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -3217,7 +3216,7 @@ func TestIsOperationAllowedOnNestedTable(t *testing.T) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(appdef.SysPackage, "UPTerminalWebhook"), istructsmem.NullQueryExec))
 	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
-		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)
+		provider.Provide(mem.Provide(testingu.MockTime)), istructs.SequencesTrustLevel_0, nil)
 	statelessResources := istructsmem.NewStatelessResources()
 	vvmCtx, cancel := context.WithCancel(context.Background())
 	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,
@@ -3280,7 +3279,7 @@ func TestIsOperationAllowedOnGrantRoleToRole(t *testing.T) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(appdef.SysPackage, "UPTerminalWebhook"), istructsmem.NullQueryExec))
 	appStructsProvider := istructsmem.Provide(cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testingu.MockTime)),
-		provider.Provide(mem.Provide(testingu.MockTime)), isequencer.SequencesTrustLevel_0, nil)
+		provider.Provide(mem.Provide(testingu.MockTime)), istructs.SequencesTrustLevel_0, nil)
 	statelessResources := istructsmem.NewStatelessResources()
 	vvmCtx, cancel := context.WithCancel(context.Background())
 	appParts, cleanup, err := appparts.New2(vvmCtx, appStructsProvider, appparts.NullSyncActualizerFactory, appparts.NullActualizerRunner, appparts.NullSchedulerRunner,

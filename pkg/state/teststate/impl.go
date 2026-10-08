@@ -22,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
@@ -453,7 +452,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 		cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
-		isequencer.SequencesTrustLevel_0,
+		istructs.SequencesTrustLevel_0,
 		nil,
 	)
 	structs, err := prov.BuiltIn(appName)

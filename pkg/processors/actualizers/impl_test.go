@@ -27,7 +27,6 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -313,7 +312,7 @@ func deployTestAppEx(
 		cfgs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider,
-		isequencer.SequencesTrustLevel_0, nil)
+		istructs.SequencesTrustLevel_0, nil)
 
 	appStructs, err = appStructsProvider.BuiltIn(appName)
 	if err != nil {

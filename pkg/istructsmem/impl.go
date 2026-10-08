@@ -14,7 +14,6 @@ import (
 	bytespool "github.com/valyala/bytebufferpool"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/descr"
@@ -37,7 +36,7 @@ type appStructsProviderType struct {
 	structures           map[appdef.AppQName]*appStructsType
 	appTokensFactory     payloads.IAppTokensFactory
 	storageProvider      istorage.IAppStorageProvider
-	seqTrustLevel        isequencer.SequencesTrustLevel
+	seqTrustLevel        istructs.SequencesTrustLevel
 	appTTLStorageFactory istructs.AppTTLStorageFactory
 }
 
@@ -104,11 +103,11 @@ type appStructsType struct {
 	viewRecords   appViewRecords
 	descr         *descr.Application
 	appTokens     istructs.IAppTokens
-	seqTrustLevel isequencer.SequencesTrustLevel
+	seqTrustLevel istructs.SequencesTrustLevel
 	appTTLStorage istructs.IAppTTLStorage
 }
 
-func newAppStructs(appCfg *AppConfigType, appTokens istructs.IAppTokens, seqTrustLevel isequencer.SequencesTrustLevel, appTTLStorage istructs.IAppTTLStorage) *appStructsType {
+func newAppStructs(appCfg *AppConfigType, appTokens istructs.IAppTokens, seqTrustLevel istructs.SequencesTrustLevel, appTTLStorage istructs.IAppTTLStorage) *appStructsType {
 	app := appStructsType{
 		config:        appCfg,
 		appTokens:     appTokens,
@@ -182,21 +181,6 @@ func (app *appStructsType) CUDValidators() []istructs.CUDValidator {
 
 func (app *appStructsType) EventValidators() []istructs.EventValidator {
 	return app.config.eventValidators
-}
-
-func (app *appStructsType) SeqTypes() map[istructs.QNameID]map[istructs.QNameID]uint64 {
-	res := map[istructs.QNameID]map[istructs.QNameID]uint64{}
-	for wsKind, seqTypes := range app.config.seqTypes {
-		wsKindSeqTypes, ok := res[istructs.QNameID(wsKind)]
-		if !ok {
-			wsKindSeqTypes = map[istructs.QNameID]uint64{}
-			res[istructs.QNameID(wsKind)] = wsKindSeqTypes
-		}
-		for seqID, number := range seqTypes {
-			wsKindSeqTypes[istructs.QNameID(seqID)] = uint64(number)
-		}
-	}
-	return res
 }
 
 func (app *appStructsType) QNameID(qName appdef.QName) (istructs.QNameID, error) {
@@ -380,9 +364,9 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 	evData := dbEvent.storeToBytes()
 
 	switch {
-	case dbEvent.name == istructs.QNameForCorruptedData, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_2:
+	case dbEvent.name == istructs.QNameForCorruptedData, e.app.seqTrustLevel == istructs.SequencesTrustLevel_2:
 		err = e.app.config.storage.Put(pKey, cCols, evData)
-	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
+	case e.app.seqTrustLevel == istructs.SequencesTrustLevel_0, e.app.seqTrustLevel == istructs.SequencesTrustLevel_1:
 		ok := false
 		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
 			if !ok {
@@ -412,9 +396,9 @@ func getEventBytes(ev istructs.IPLogEvent) (pKey, cCols, data []byte) {
 func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 	pKey, cCols, evData := getEventBytes(ev)
 	switch {
-	case ev.QName() == istructs.QNameForCorruptedData, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_2:
+	case ev.QName() == istructs.QNameForCorruptedData, e.app.seqTrustLevel == istructs.SequencesTrustLevel_2:
 		err = e.app.config.storage.Put(pKey, cCols, evData)
-	case e.app.seqTrustLevel == isequencer.SequencesTrustLevel_0, e.app.seqTrustLevel == isequencer.SequencesTrustLevel_1:
+	case e.app.seqTrustLevel == istructs.SequencesTrustLevel_0, e.app.seqTrustLevel == istructs.SequencesTrustLevel_1:
 		ok := false
 		if ok, err = e.app.config.storage.InsertIfNotExists(pKey, cCols, evData, 0); err == nil {
 			if !ok {
@@ -585,13 +569,13 @@ type recordBatchItemType struct {
 func (recs *appRecordsType) putRecordsBatch(workspace istructs.WSID, records []recordBatchItemType, isReapply bool) (err error) {
 	batch := make([]istorage.BatchItem, len(records))
 	switch {
-	case isReapply, recs.app.seqTrustLevel == isequencer.SequencesTrustLevel_1, recs.app.seqTrustLevel == isequencer.SequencesTrustLevel_2:
+	case isReapply, recs.app.seqTrustLevel == istructs.SequencesTrustLevel_1, recs.app.seqTrustLevel == istructs.SequencesTrustLevel_2:
 		for i, r := range records {
 			batch[i].PKey, batch[i].CCols = recordKey(workspace, r.id)
 			batch[i].Value = r.data
 		}
 		return recs.app.config.storage.PutBatch(batch)
-	case recs.app.seqTrustLevel == isequencer.SequencesTrustLevel_0:
+	case recs.app.seqTrustLevel == istructs.SequencesTrustLevel_0:
 		for _, r := range records {
 			pKey, cCols := recordKey(workspace, r.id)
 			// [~tuc.SequencesTrustLevelForRecords~]

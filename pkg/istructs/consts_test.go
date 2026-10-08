@@ -22,13 +22,16 @@ const (
 	_ = uint16(2 - QNameIDCommandCUD)
 	_ = uint16(QNameIDForCorruptedData - 3)
 	_ = uint16(3 - QNameIDForCorruptedData)
-	_ = uint16(QNameIDWLogOffsetSequence - 4)
-	_ = uint16(4 - QNameIDWLogOffsetSequence)
-	_ = uint16(QNameIDRecordIDSequence - 5)
-	_ = uint16(5 - QNameIDRecordIDSequence)
 
 	_ = uint16(QNameIDSysLast - 0xFF)
 	_ = uint16(0xFF - QNameIDSysLast)
+
+	_ = uint8(SequencesTrustLevel_0 - 0)
+	_ = uint8(0 - SequencesTrustLevel_0)
+	_ = uint8(SequencesTrustLevel_1 - 1)
+	_ = uint8(1 - SequencesTrustLevel_1)
+	_ = uint8(SequencesTrustLevel_2 - 2)
+	_ = uint8(2 - SequencesTrustLevel_2)
 )
 
 func TestConst(t *testing.T) {

@@ -35,7 +35,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/itokens"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/parser"
@@ -325,7 +324,7 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, appTokensFactory payloads.IAppTokensFactory,
-	storageProvider istorage.IAppStorageProvider, seqTrustLevel isequencer.SequencesTrustLevel, sysVvmStorage storage.ISysVvmStorage) istructs.IAppStructsProvider {
+	storageProvider istorage.IAppStorageProvider, seqTrustLevel istructs.SequencesTrustLevel, sysVvmStorage storage.ISysVvmStorage) istructs.IAppStructsProvider {
 	appTTLStorageFactory := func(clusterAppID istructs.ClusterAppID) istructs.IAppTTLStorage {
 		return storage.NewAppTTLStorage(sysVvmStorage, clusterAppID)
 	}

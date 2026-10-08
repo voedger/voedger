@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/constraints"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/isequencer"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -79,7 +78,7 @@ func Test_KeyType(t *testing.T) {
 	appCfgs := appConfigs()
 	appCfg := appCfgs.GetConfig(appName)
 
-	appProvider := Provide(appCfgs, testTokensFactory(), teststore.NewStorageProvider(teststore.NewStorage(appName)), isequencer.SequencesTrustLevel_0, nil)
+	appProvider := Provide(appCfgs, testTokensFactory(), teststore.NewStorageProvider(teststore.NewStorage(appName)), istructs.SequencesTrustLevel_0, nil)
 	app, err := appProvider.BuiltIn(appName)
 	require.NoError(err)
 	require.NotNil(app)
@@ -266,7 +265,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	appCfgs := appConfigs()
 	appCfg := appCfgs.GetConfig(istructs.AppQName_test1_app1)
-	p := Provide(appCfgs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	p := Provide(appCfgs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil)
 	app, err := p.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := app.ViewRecords()
@@ -916,7 +915,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 		return cfgs
 	}()
 
-	app, err := Provide(appCfgs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil).BuiltIn(appName)
+	app, err := Provide(appCfgs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil).BuiltIn(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put view record via PutJSON", func(t *testing.T) {
@@ -1188,7 +1187,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	p := Provide(appConfigs(), testTokensFactory(), simpleStorageProvider(), istructs.SequencesTrustLevel_0, nil)
 	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -1272,7 +1271,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	cfgs := make(AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	provider := Provide(cfgs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(cfgs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)

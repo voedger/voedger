@@ -12,7 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -60,7 +59,7 @@ func TestSequencesTrustLevel(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(appConfigs, testTokensFactory(), simpleStorageProvider(), isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(appConfigs, testTokensFactory(), simpleStorageProvider(), istructs.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -97,7 +96,7 @@ func TestSequencesTrustLevel(t *testing.T) {
 
 	t.Run("plog", func(t *testing.T) {
 		t.Run("trust level 0", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_0
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_0
 			t.Run("panic on write the same PLogOffset", func(t *testing.T) {
 				ev, err := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
 				require.ErrorIs(err, ErrSequencesViolation)
@@ -105,7 +104,7 @@ func TestSequencesTrustLevel(t *testing.T) {
 			})
 		})
 		t.Run("trust level 1", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_1
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_1
 			t.Run("panic on write the same PLogOffset", func(t *testing.T) {
 				ev, err := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
 				require.ErrorIs(err, ErrSequencesViolation)
@@ -114,7 +113,7 @@ func TestSequencesTrustLevel(t *testing.T) {
 		})
 
 		t.Run("trust level 2", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_2
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_2
 			t.Run("ok to overwrite PLog (dangerous)", func(t *testing.T) {
 				_, err := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
 				require.NoError(err)
@@ -127,21 +126,21 @@ func TestSequencesTrustLevel(t *testing.T) {
 
 	t.Run("records", func(t *testing.T) {
 		t.Run("trust level 0", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_0
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_0
 			t.Run("panic on write the same RecordIDs", func(t *testing.T) {
 				err := app.Records().Apply(pLogEvent)
 				require.ErrorIs(err, ErrSequencesViolation)
 			})
 		})
 		t.Run("trust level 1", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_1
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_1
 			t.Run("ok to overwrite records (dangerous)", func(t *testing.T) {
 				require.NoError(app.Records().Apply(pLogEvent))
 			})
 		})
 
 		t.Run("trust level 2", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_2
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_2
 			t.Run("ok to overwrite records (dangerous)", func(t *testing.T) {
 				require.NoError(app.Records().Apply(pLogEvent))
 			})
@@ -155,14 +154,14 @@ func TestSequencesTrustLevel(t *testing.T) {
 
 	t.Run("wlog", func(t *testing.T) {
 		t.Run("trust level 0", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_0
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_0
 			t.Run("panic on overwrite the same WLogOffset", func(t *testing.T) {
 				err := app.Events().PutWlog(pLogEvent)
 				require.ErrorIs(err, ErrSequencesViolation)
 			})
 		})
 		t.Run("trust level 1", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_1
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_1
 			t.Run("panic on write the same WLogOffset", func(t *testing.T) {
 				err := app.Events().PutWlog(pLogEvent)
 				require.ErrorIs(err, ErrSequencesViolation)
@@ -170,7 +169,7 @@ func TestSequencesTrustLevel(t *testing.T) {
 		})
 
 		t.Run("trust level 2", func(t *testing.T) {
-			app.(*appStructsType).seqTrustLevel = isequencer.SequencesTrustLevel_2
+			app.(*appStructsType).seqTrustLevel = istructs.SequencesTrustLevel_2
 			t.Run("ok to overwrite WLog (dangerous)", func(t *testing.T) {
 				err := app.Events().PutWlog(pLogEvent)
 				require.NoError(err)
@@ -205,7 +204,7 @@ func TestEventReapplier(t *testing.T) {
 	}()
 
 	storageProvider := simpleStorageProvider()
-	provider := Provide(appConfigs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+	provider := Provide(appConfigs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil)
 
 	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
@@ -249,7 +248,7 @@ func TestEventReapplier(t *testing.T) {
 			require.NoError(reapplier.PutWLog())
 		})
 		t.Run("initially read from storage", func(t *testing.T) {
-			provider := Provide(appConfigs, testTokensFactory(), storageProvider, isequencer.SequencesTrustLevel_0, nil)
+			provider := Provide(appConfigs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil)
 			app, err := provider.BuiltIn(appName)
 			require.NoError(err)
 			var dbPLogEvent istructs.IPLogEvent

@@ -369,15 +369,13 @@ func (c *cmdType) apply(cluster *clusterType) error {
 	cluster.Draft = false
 
 	var wg sync.WaitGroup
-	wg.Add(len(cluster.Nodes))
-
 	for i := range len(cluster.Nodes) {
-		go func(node *nodeType) {
-			defer wg.Done()
+		node := &cluster.Nodes[i]
+		wg.Go(func() {
 			if err := node.nodeControllerFunction(); err != nil {
 				loggerError(err.Error)
 			}
-		}(&cluster.Nodes[i])
+		})
 	}
 
 	wg.Wait()

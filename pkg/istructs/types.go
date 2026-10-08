@@ -148,3 +148,5 @@ func CollectRowBuilder(b RowBuilder) bool {
 }
 
 var builders []RowBuilder
+
+type SequencesTrustLevel byte

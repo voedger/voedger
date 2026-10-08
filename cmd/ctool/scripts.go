@@ -149,18 +149,16 @@ func updateTemplateScripts() error {
 }
 
 func prepareScripts(scriptFileNames ...string) error {
+	if err := createScriptsTempDir(); err != nil {
+		return err
+	}
 	if err := os.Chdir(scriptsTempDir); err != nil {
 		// notest
 		return err
 	}
 
-	err := createScriptsTempDir()
-	if err != nil {
-		return err
-	}
-
 	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
-	err = filesu.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, filesu.WithFilterFilesWithRelativePaths(scriptFileNames),
+	err := filesu.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, filesu.WithFilterFilesWithRelativePaths(scriptFileNames),
 		filesu.WithSkipExisting(), filesu.WithFileMode(filesu.FileMode_DefaultForDir))
 	if err != nil {
 		loggerError(err.Error())
