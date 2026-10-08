@@ -6,9 +6,10 @@
 package iblobstorage
 
 const (
-	DurationType_1Day  = DurationType(1)
-	SUUIDRandomPartLen = 16
-	secondsInDay       = 86400
+	DurationType_1Day   = DurationType(1)
+	DurationType_90Days = DurationType(90)
+	SUUIDRandomPartLen  = 16
+	secondsInDay        = 86400
 )
 
 const (

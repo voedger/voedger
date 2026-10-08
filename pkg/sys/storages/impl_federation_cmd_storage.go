@@ -123,7 +123,7 @@ func (b *federationCommandKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (s *federationCommandStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &federationCommandKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_FederationCommand},
+		storage: sys.Storage_FederationCommand,
 	}
 }
 func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.IStateValue, error) {

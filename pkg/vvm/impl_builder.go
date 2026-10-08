@@ -7,7 +7,6 @@ package vvm
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
@@ -62,12 +61,10 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis builtinapps.APIs, emptyCfgs App
 			return builtinAppsArtefacts, err
 		}
 		builtInAppPackages := BuiltInAppPackages{
-			BuiltInApp: appparts.BuiltInApp{
-				Name:                    appQName,
-				Def:                     cfg.AppDef,
-				AppDeploymentDescriptor: builtInAppDef.AppDeploymentDescriptor,
-			},
-			Packages: builtInAppDef.Packages,
+			Name:                    appQName,
+			Def:                     cfg.AppDef,
+			AppDeploymentDescriptor: builtInAppDef.AppDeploymentDescriptor,
+			Packages:                builtInAppDef.Packages,
 		}
 		builtinAppsArtefacts.builtInAppPackages = append(builtinAppsArtefacts.builtInAppPackages, builtInAppPackages)
 	}

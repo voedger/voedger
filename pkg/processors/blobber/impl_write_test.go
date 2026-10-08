@@ -72,18 +72,16 @@ func TestBLOBWriteLogging(t *testing.T) {
 		defer p.Close()
 
 		msg := &implIBLOBMessage_Write{
-			implIBLOBMessage_base: implIBLOBMessage_base{
-				appQName:         istructs.AppQName_test1_app1,
-				wsid:             1,
-				requestCtx:       context.Background(),
-				header:           map[string]string{},
-				requestSender:    sender,
-				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
-				errorResponder:   func(_ coreutils.SysError) {},
-				done:             make(chan interface{}),
-			},
-			urlQueryValues: url.Values{"name": {"testfile.txt"}, "mimeType": {"text/plain"}},
-			reader:         io.NopCloser(strings.NewReader("test data")),
+			appQName:         istructs.AppQName_test1_app1,
+			wsid:             1,
+			requestCtx:       context.Background(),
+			header:           map[string]string{},
+			requestSender:    sender,
+			okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+			errorResponder:   func(_ coreutils.SysError) {},
+			done:             make(chan interface{}),
+			urlQueryValues:   url.Values{"name": {"testfile.txt"}, "mimeType": {"text/plain"}},
+			reader:           io.NopCloser(strings.NewReader("test data")),
 		}
 		bw := &blobWorkpiece{blobMessage: msg}
 
@@ -112,21 +110,19 @@ func TestBLOBWriteLogging(t *testing.T) {
 		defer p.Close()
 
 		msg := &implIBLOBMessage_Write{
-			implIBLOBMessage_base: implIBLOBMessage_base{
-				appQName:   istructs.AppQName_test1_app1,
-				wsid:       1,
-				requestCtx: context.Background(),
-				header: map[string]string{
-					coreutils.BlobName: "testfile.txt",
-					httpu.ContentType:  "text/plain",
-					"Ttl":              "1d",
-				},
-				requestSender:    sender,
-				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
-				errorResponder:   func(_ coreutils.SysError) {},
-				done:             make(chan interface{}),
-				isAPIv2:          true,
+			appQName:   istructs.AppQName_test1_app1,
+			wsid:       1,
+			requestCtx: context.Background(),
+			header: map[string]string{
+				coreutils.BlobName: "testfile.txt",
+				httpu.ContentType:  "text/plain",
+				"Ttl":              "1d",
 			},
+			requestSender:    sender,
+			okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+			errorResponder:   func(_ coreutils.SysError) {},
+			done:             make(chan interface{}),
+			isAPIv2:          true,
 			ownerRecord:      ownerRecord,
 			ownerRecordField: ownerRecordField,
 			reader:           io.NopCloser(strings.NewReader("test data")),
@@ -154,18 +150,16 @@ func TestBLOBWriteLogging(t *testing.T) {
 		defer p.Close()
 
 		msg := &implIBLOBMessage_Write{
-			implIBLOBMessage_base: implIBLOBMessage_base{
-				appQName:         istructs.AppQName_test1_app1,
-				wsid:             1,
-				requestCtx:       context.Background(),
-				header:           map[string]string{},
-				requestSender:    sender,
-				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
-				errorResponder:   func(se coreutils.SysError) { capturedErr = se },
-				done:             make(chan interface{}),
-			},
-			urlQueryValues: url.Values{"name": {"testfile.txt"}, "mimeType": {"text/plain"}},
-			reader:         io.NopCloser(strings.NewReader("test data")),
+			appQName:         istructs.AppQName_test1_app1,
+			wsid:             1,
+			requestCtx:       context.Background(),
+			header:           map[string]string{},
+			requestSender:    sender,
+			okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+			errorResponder:   func(se coreutils.SysError) { capturedErr = se },
+			done:             make(chan interface{}),
+			urlQueryValues:   url.Values{"name": {"testfile.txt"}, "mimeType": {"text/plain"}},
+			reader:           io.NopCloser(strings.NewReader("test data")),
 		}
 		bw := &blobWorkpiece{blobMessage: msg}
 

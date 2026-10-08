@@ -35,7 +35,7 @@ func (b *subjectKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &subjectKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_RequestSubject},
+		storage: sys.Storage_RequestSubject,
 	}
 }
 func (s *subjectStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {

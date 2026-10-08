@@ -18,7 +18,6 @@ var (
 const (
 	field_ExistingQName = "ExistingQName"
 	field_NewQName      = "NewQName"
-	MaxCUDs             = 100
 )
 
 // Records registry view

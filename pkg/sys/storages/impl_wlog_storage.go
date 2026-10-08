@@ -83,8 +83,8 @@ func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 
 func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &wLogKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_WLog},
-		wsid:           s.wsidFunc(),
+		storage: sys.Storage_WLog,
+		wsid:    s.wsidFunc(),
 	}
 }
 func (s *wLogStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {

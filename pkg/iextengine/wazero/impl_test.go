@@ -99,13 +99,11 @@ func Test_BasicUsage(t *testing.T) {
 
 	// Build NewOrder event
 	reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         ws,
-			HandlingPartition: partition,
-			PLogOffset:        plogOffset + 1,
-			QName:             newOrderCmd,
-			WLogOffset:        wlogOffset + 1,
-		},
+		Workspace:         ws,
+		HandlingPartition: partition,
+		PLogOffset:        plogOffset + 1,
+		QName:             newOrderCmd,
+		WLogOffset:        wlogOffset + 1,
 	})
 	orderBuilder := reb.ArgumentObjectBuilder()
 	orderBuilder.PutRecordID(appdef.SystemField_ID, 1)
@@ -133,12 +131,10 @@ func Test_BasicUsage(t *testing.T) {
 	cudFunc := func() istructs.ICUD { return reb.CUDBuilder() }
 	cmdPrepareArgsFunc := func() istructs.CommandPrepareArgs {
 		return istructs.CommandPrepareArgs{
-			PrepareArgs: istructs.PrepareArgs{
-				Workpiece:      nil,
-				ArgumentObject: event.ArgumentObject(),
-				WSID:           ws,
-				Workspace:      nil,
-			},
+			Workpiece:              nil,
+			ArgumentObject:         event.ArgumentObject(),
+			WSID:                   ws,
+			Workspace:              nil,
 			ArgumentUnloggedObject: nil,
 		}
 	}
@@ -934,13 +930,11 @@ func appStructsFromSQL(packagePath string, appdefSQL string, prepareAppCfg appCf
 
 	// Create workspace
 	rebWs := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         ws,
-			HandlingPartition: partition,
-			PLogOffset:        plogOffset,
-			QName:             newWorkspaceCmd,
-			WLogOffset:        wlogOffset,
-		},
+		Workspace:         ws,
+		HandlingPartition: partition,
+		PLogOffset:        plogOffset,
+		QName:             newWorkspaceCmd,
+		WLogOffset:        wlogOffset,
 	})
 	cud := rebWs.CUDBuilder().Create(appdef.QNameCDocWorkspaceDescriptor)
 	cud.PutRecordID(appdef.SystemField_ID, 1)

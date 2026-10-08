@@ -107,6 +107,7 @@ var (
 	qNameQryShowOrderOnDisplay                  = appdef.NewQName(airPackage, "ShowOrderOnDisplay")
 	qNameQryShowStandbyOnDisplay                = appdef.NewQName(airPackage, "ShowStandbyOnDisplay")
 	qNameCmdRegisterTempBLOB1d                  = appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB1d")
+	qNameCmdRegisterTempBLOB90d                 = appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB90d")
 	qNameQryDownloadBLOBAuthnz                  = appdef.NewQName(appdef.SysPackage, "DownloadBLOBAuthnz")
 	qNameCDocDocDeactivateDenied                = appdef.NewQName("app1pkg", "DocDeactivateDenied") // used in tests only
 	qNameCDocDocWithBLOB                        = appdef.NewQName("app1pkg", "DocWithBLOB")         // used in tests only

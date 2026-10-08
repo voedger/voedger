@@ -348,12 +348,10 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, cmd *cmdWorkpiece
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	cmd.eca.CommandPrepareArgs = istructs.CommandPrepareArgs{
-		PrepareArgs: istructs.PrepareArgs{
-			ArgumentObject: cmd.argsObject,
-			WSID:           cmd.cmdMes.WSID(),
-			Workpiece:      cmd,
-			Workspace:      cmd.iWorkspace,
-		},
+		ArgumentObject:         cmd.argsObject,
+		WSID:                   cmd.cmdMes.WSID(),
+		Workpiece:              cmd,
+		Workspace:              cmd.iWorkspace,
 		ArgumentUnloggedObject: cmd.unloggedArgsObject,
 	}
 	return nil
@@ -864,9 +862,6 @@ func parseCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
 	cuds, _, err := cmd.requestData.AsObjects("cuds")
 	if err != nil {
 		return err
-	}
-	if len(cuds) > builtin.MaxCUDs {
-		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "too many cuds: ", len(cuds), " is in the request, max is ", builtin.MaxCUDs)
 	}
 	for cudNumber, cudIntf := range cuds {
 		cudXPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")

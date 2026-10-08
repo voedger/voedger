@@ -118,5 +118,7 @@ func ubhExec(args istructs.ExecCommandArgs) (err error) {
 }
 
 func provideRegisterTempBLOB(sr istructsmem.IStatelessResources) {
-	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(appdef.NewQName(appdef.SysPackage, "RegisterTempBLOB1d"), istructsmem.NullCommandExec))
+	for _, name := range []string{"RegisterTempBLOB1d", "RegisterTempBLOB90d"} {
+		sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(appdef.NewQName(appdef.SysPackage, name), istructsmem.NullCommandExec))
+	}
 }

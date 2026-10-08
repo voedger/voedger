@@ -65,9 +65,9 @@ Shared engine
   - Path to file: [arch-vvm-orch.md](./arch-vvm-orch.md)
 
 - `[[Sequences]]`
-  - Generates per-partition PLog offsets, per-workspace WLog offsets, and record IDs consumed by the command pipeline.
-  - Path to file: [arch-sequences.md](./arch-sequences.md)
-  - Proposed (not implemented) redesign for scalable sequences: [arch2-sequences.md](./arch2-sequences.md)
+  - Covers command processing, record-ID and WSID allocation, log-offset bookkeeping, and partition recovery.
+  - Canonical architecture: [arch-sequences.md](./arch-sequences.md)
+  - Historical redesign proposal: [arch2-sequences.md](./arch2-sequences.md)
 
 ### Shared engine
 

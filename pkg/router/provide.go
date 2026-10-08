@@ -30,11 +30,9 @@ func Provide(rp RouterParams, broker in10n.IN10nBroker, blobRequestHandler blobp
 		requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
 	adminEndpoint := fmt.Sprintf("%s:%d", httpu.LocalhostIP, rp.AdminPort)
 	adminSrv = getRouterService("sys._AdminHTTPServer", adminEndpoint, RouterParams{
-		HTTPServerParams: HTTPServerParams{
-			WriteTimeout:     rp.WriteTimeout,
-			ReadTimeout:      rp.ReadTimeout,
-			ConnectionsLimit: rp.ConnectionsLimit,
-		},
+		WriteTimeout:     rp.WriteTimeout,
+		ReadTimeout:      rp.ReadTimeout,
+		ConnectionsLimit: rp.ConnectionsLimit,
 	}, broker, nil, requestSender, numsAppsWorkspaces, iTokens, federation, appTokensFactory)
 
 	if rp.Port != HTTPSPort {
