@@ -278,6 +278,19 @@ func TestBlobberErrors(t *testing.T) {
 }
 
 func TestBasicUsage_Temporary(t *testing.T) {
+	expectedTTLs := []iblobstorage.DurationType{
+		iblobstorage.DurationType_1Day,
+		iblobstorage.DurationType_90Days,
+	}
+	for _, expectedTTL := range expectedTTLs {
+		t.Run(fmt.Sprintf("%dd", expectedTTL), func(t *testing.T) {
+			testBasicUsageTemporary(t, expectedTTL)
+		})
+	}
+}
+
+func testBasicUsageTemporary(t *testing.T, expectedTTL iblobstorage.DurationType) {
+	t.Helper()
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -288,7 +301,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 
 	// write
 	// [~server.apiv2.tblobs/it.TestTBlobsCreate~impl]
-	blobSUUID := vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", httpu.ContentType_ApplicationXBinary, expBLOB, iblobstorage.DurationType_1Day,
+	blobSUUID := vit.UploadTempBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", httpu.ContentType_ApplicationXBinary, expBLOB, expectedTTL,
 		httpu.WithAuthorizeBy(ws.Owner.Token))
 	log.Println(blobSUUID)
 
@@ -305,7 +318,7 @@ func TestBasicUsage_Temporary(t *testing.T) {
 	t.Run("expiration", func(t *testing.T) {
 
 		// make the temp blob almost expired
-		vit.TimeAdd(time.Duration(iblobstorage.DurationType_1Day.Seconds()-1) * time.Second)
+		vit.TimeAdd(time.Duration(expectedTTL.Seconds()-1) * time.Second)
 
 		// re-take the token because it is expired
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")

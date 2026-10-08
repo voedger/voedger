@@ -13,10 +13,12 @@ import (
 
 var (
 	TemporaryBLOB_URLTTLToDurationLs = map[string]iblobstorage.DurationType{
-		"1d": iblobstorage.DurationType_1Day,
+		"1d":  iblobstorage.DurationType_1Day,
+		"90d": iblobstorage.DurationType_90Days,
 	}
 	TemporaryBLOBDurationToURLTTL = map[iblobstorage.DurationType]string{
-		iblobstorage.DurationType_1Day: "1d",
+		iblobstorage.DurationType_1Day:   "1d",
+		iblobstorage.DurationType_90Days: "90d",
 	}
 	blobCreatePersistentRespRE = regexp.MustCompile(`"blobID":\s*(\d+)`)
 	blobCreateTempRespRE       = regexp.MustCompile(`"blobSUUID":\s*"(.+)"`)
