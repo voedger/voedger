@@ -313,13 +313,13 @@ func ParseFullQName(val string) (FullQName, error) {
 }
 
 // Parse a qualified name from string. Result is package path and local name or error
-func ParseFullQualifiedName(val string) (p, n string, err error) {
-	i := strings.LastIndex(val, QNameQualifierChar)
-	if i < 0 {
+func ParseFullQualifiedName(val string) (before, after string, err error) {
+	before, after, found := strings.CutLast(val, QNameQualifierChar)
+	if !found {
 		return NullName, NullName, ErrConvert("string «%s» to QName", val)
 	}
 
-	return val[:i], val[i+1:], nil
+	return before, after, nil
 }
 
 // Returns has FullQName valid package path and entity identifier and error if not

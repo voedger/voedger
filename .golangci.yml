@@ -118,6 +118,7 @@ linters:
         - { name: get-return, disabled: true } # denies e.g. Get*() void
         - { name: enforce-switch-style, disabled: true } # demands default clause in switch
         - { name: confusing-naming, disabled: true } # denies e.g. ValidateDocument and validateDocument
+        - { name: multiline-if-init, disabled: true }
         - name: indent-error-flow
           severity: warning
         - name: unused-parameter
