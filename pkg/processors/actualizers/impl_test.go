@@ -179,8 +179,8 @@ func TestVSQLProjectorsSync(t *testing.T) {
 		err = appPart.DoSyncActualizer(context.Background(), &cmdWorkpieceMock{
 			appPart: appPart,
 			event: &vsqlProjectorEvent{
-				plogEventMock: plogEventMock{wsid: 1001},
-				qName:         vsqlLocalCommand,
+				wsid:  1001,
+				qName: vsqlLocalCommand,
 			},
 		})
 		require.NoError(t, err)
