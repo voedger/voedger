@@ -92,7 +92,7 @@ func NewEventStorage(eventFunc state.PLogEventFunc) state.IStateStorage {
 
 func (s *eventStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &eventKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Event},
+		storage: sys.Storage_Event,
 	}
 }
 func (s *eventStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {

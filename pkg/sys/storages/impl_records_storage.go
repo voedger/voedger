@@ -125,11 +125,11 @@ func NewRecordsStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDF
 
 func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &recordsKeyBuilder{
-		id:             istructs.NullRecordID,
-		singleton:      appdef.NullQName, // Deprecated, use isSingleton instead
-		isSingleton:    false,
-		wsid:           s.wsidFunc(),
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Record, entity: entity},
+		id:          istructs.NullRecordID,
+		singleton:   appdef.NullQName, // Deprecated, use isSingleton instead
+		isSingleton: false,
+		wsid:        s.wsidFunc(),
+		storage:     sys.Storage_Record, entity: entity,
 	}
 }
 

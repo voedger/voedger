@@ -210,14 +210,10 @@ type mockedKeyBuilder struct {
 
 func newMockedKeyBuilder(mockedStorage *MockedStorage, entity appdef.QName) *mockedKeyBuilder {
 	return &mockedKeyBuilder{
-		TestObject: coreutils.TestObject{
-			Name: entity,
-			Data: make(map[string]any),
-		},
-		baseKeyBuilder: baseKeyBuilder{
-			storage: mockedStorage.storageQName,
-			entity:  entity,
-		},
+		Name:          entity,
+		Data:          make(map[string]any),
+		storage:       mockedStorage.storageQName,
+		entity:        entity,
 		mockedStorage: mockedStorage,
 	}
 }

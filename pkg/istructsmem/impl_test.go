@@ -104,16 +104,14 @@ func TestBasicUsage(t *testing.T) {
 	// 1. gets event builder
 	bld := app.Events().GetSyncRawEventBuilder(
 		istructs.SyncRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				HandlingPartition: 55,
-				PLogOffset:        10000,
-				Workspace:         1234,
-				WLogOffset:        1000,
-				QName:             appdef.NewQName("test", "Sale"),
-				RegisteredAt:      100500,
-			},
-			Device:   762,
-			SyncedAt: 1005001,
+			HandlingPartition: 55,
+			PLogOffset:        10000,
+			Workspace:         1234,
+			WLogOffset:        1000,
+			QName:             appdef.NewQName("test", "Sale"),
+			RegisteredAt:      100500,
+			Device:            762,
+			SyncedAt:          1005001,
 		})
 
 	// 2. make command params object

@@ -218,13 +218,11 @@ func ProvideApp2WithJobSendMail(_ builtinapps.APIs, cfg *istructsmem.AppConfigTy
 		},
 	})
 	return builtinapps.Def{
-		AppQName: istructs.AppQName_test1_app2,
-		Packages: []parser.PackageFS{sysPackageFS, app2PackageFS},
-		AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
-			NumParts:         1,
-			EnginePoolSize:   appparts.PoolSize(1, 1, 1, 1),
-			NumAppWorkspaces: 1,
-		},
+		AppQName:         istructs.AppQName_test1_app2,
+		Packages:         []parser.PackageFS{sysPackageFS, app2PackageFS},
+		NumParts:         1,
+		EnginePoolSize:   appparts.PoolSize(1, 1, 1, 1),
+		NumAppWorkspaces: 1,
 	}
 }
 

@@ -189,10 +189,8 @@ func NewIQueryMessage(requestCtx context.Context, appQName appdef.AppQName, wsid
 
 func (qw *queryWork) getArraySender() (arraySenderOp pipeline.IAsyncOperator, responseWriter func() bus.IResponseWriter) {
 	res := &arraySender{
-		sender: sender{
-			responder:          qw.msg.Responder(),
-			rowsProcessorErrCh: qw.rowsProcessorErrCh,
-		},
+		responder:          qw.msg.Responder(),
+		rowsProcessorErrCh: qw.rowsProcessorErrCh,
 	}
 	return res, func() bus.IResponseWriter {
 		return res.respWriter
@@ -201,11 +199,9 @@ func (qw *queryWork) getArraySender() (arraySenderOp pipeline.IAsyncOperator, re
 
 func (qw *queryWork) getObjectSender() pipeline.IAsyncOperator {
 	return &objectSender{
-		sender: sender{
-			responder:          qw.msg.Responder(),
-			rowsProcessorErrCh: qw.rowsProcessorErrCh,
-		},
-		contentType: httpu.ContentType_ApplicationJSON,
+		responder:          qw.msg.Responder(),
+		rowsProcessorErrCh: qw.rowsProcessorErrCh,
+		contentType:        httpu.ContentType_ApplicationJSON,
 	}
 }
 

@@ -40,15 +40,13 @@ func TestBLOBReadLogging(t *testing.T) {
 		defer p.Close()
 
 		msg := &implIBLOBMessage_Read{
-			implIBLOBMessage_base: implIBLOBMessage_base{
-				appQName:         istructs.AppQName_test1_app1,
-				wsid:             1,
-				requestCtx:       context.Background(),
-				header:           map[string]string{},
-				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
-				errorResponder:   func(_ coreutils.SysError) {},
-				done:             make(chan interface{}),
-			},
+			appQName:              istructs.AppQName_test1_app1,
+			wsid:                  1,
+			requestCtx:            context.Background(),
+			header:                map[string]string{},
+			okResponseIniter:      func(_ ...string) io.Writer { return io.Discard },
+			errorResponder:        func(_ coreutils.SysError) {},
+			done:                  make(chan interface{}),
 			existingBLOBIDOrSUUID: "42",
 		}
 		bw := &blobWorkpiece{blobMessage: msg}
@@ -92,17 +90,15 @@ func TestBLOBReadLogging(t *testing.T) {
 		defer p.Close()
 
 		msg := &implIBLOBMessage_Read{
-			implIBLOBMessage_base: implIBLOBMessage_base{
-				appQName:         istructs.AppQName_test1_app1,
-				wsid:             1,
-				requestCtx:       context.Background(),
-				header:           map[string]string{},
-				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
-				errorResponder:   func(_ coreutils.SysError) {},
-				done:             make(chan interface{}),
-				requestSender:    sender,
-				isAPIv2:          true,
-			},
+			appQName:         istructs.AppQName_test1_app1,
+			wsid:             1,
+			requestCtx:       context.Background(),
+			header:           map[string]string{},
+			okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
+			errorResponder:   func(_ coreutils.SysError) {},
+			done:             make(chan interface{}),
+			requestSender:    sender,
+			isAPIv2:          true,
 			ownerRecord:      ownerRecord,
 			ownerRecordField: ownerRecordField,
 			ownerID:          ownerID,
@@ -133,15 +129,13 @@ func TestBLOBReadLogging(t *testing.T) {
 		defer p.Close()
 
 		msg := &implIBLOBMessage_Read{
-			implIBLOBMessage_base: implIBLOBMessage_base{
-				appQName:         istructs.AppQName_test1_app1,
-				wsid:             1,
-				requestCtx:       context.Background(),
-				header:           map[string]string{},
-				okResponseIniter: func(_ ...string) io.Writer { return io.Discard },
-				errorResponder:   func(se coreutils.SysError) { capturedErr = se },
-				done:             make(chan interface{}),
-			},
+			appQName:              istructs.AppQName_test1_app1,
+			wsid:                  1,
+			requestCtx:            context.Background(),
+			header:                map[string]string{},
+			okResponseIniter:      func(_ ...string) io.Writer { return io.Discard },
+			errorResponder:        func(se coreutils.SysError) { capturedErr = se },
+			done:                  make(chan interface{}),
 			existingBLOBIDOrSUUID: "42",
 		}
 		bw := &blobWorkpiece{blobMessage: msg}

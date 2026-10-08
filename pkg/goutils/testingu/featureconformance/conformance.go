@@ -193,15 +193,15 @@ func parseFeature(path string) (featureSpec, error) {
 		case strings.HasPrefix(trimmed, "Scenario Outline:"):
 			name := strings.TrimSpace(strings.TrimPrefix(trimmed, "Scenario Outline:"))
 			spec.scenarios = append(spec.scenarios, featureScenario{
-				scenarioIdentity: scenarioIdentity{rule: currentRule, name: name, line: lineNumber},
-				outline:          true,
+				rule: currentRule, name: name, line: lineNumber,
+				outline: true,
 			})
 			currentScenario = len(spec.scenarios) - 1
 			currentExamples = -1
 		case strings.HasPrefix(trimmed, "Scenario:"):
 			name := strings.TrimSpace(strings.TrimPrefix(trimmed, "Scenario:"))
 			spec.scenarios = append(spec.scenarios, featureScenario{
-				scenarioIdentity: scenarioIdentity{rule: currentRule, name: name, line: lineNumber},
+				rule: currentRule, name: name, line: lineNumber,
 			})
 			currentScenario = len(spec.scenarios) - 1
 			currentExamples = -1

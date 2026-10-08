@@ -212,20 +212,16 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		}
 
 		return &AppWorkspace{
-			WorkspaceDescriptor: WorkspaceDescriptor{
-				WSParams: WSParams{
-					Name:           resp.SectionRow()[0].(string),
-					Kind:           wsKind,
-					InitDataJSON:   resp.SectionRow()[2].(string),
-					TemplateName:   resp.SectionRow()[tmplNameIdx].(string),
-					TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
-					ClusterID:      istructs.CurrentClusterID(),
-					ownerLoginName: owner.Name,
-				},
-				WSID:    wsid,
-				WSError: wsError,
-			},
-			Owner: owner,
+			Name:           resp.SectionRow()[0].(string),
+			Kind:           wsKind,
+			InitDataJSON:   resp.SectionRow()[2].(string),
+			TemplateName:   resp.SectionRow()[tmplNameIdx].(string),
+			TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
+			ClusterID:      istructs.CurrentClusterID(),
+			ownerLoginName: owner.Name,
+			WSID:           wsid,
+			WSError:        wsError,
+			Owner:          owner,
 		}
 	}
 	vit.T.Fatalf("workspace %s is not initialized in an acceptable time", wsName)

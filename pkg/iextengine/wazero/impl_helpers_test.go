@@ -6,10 +6,10 @@
 package iextenginewazero
 
 import (
-	"maps"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"path/filepath"
 
@@ -79,7 +79,7 @@ func (s *mockIo) KeyBuilder(storage, entity appdef.QName) (builder istructs.ISta
 
 func mockedValue(name string, value interface{}) istructs.IStateValue {
 	mv := mockValue{
-		TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
+		Data: map[string]interface{}{},
 	}
 	mv.Data[name] = value
 	return &mv
@@ -88,7 +88,7 @@ func mockedValue(name string, value interface{}) istructs.IStateValue {
 func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	k := key.(*mockKeyBuilder)
 	mv := mockValue{
-		TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
+		Data: map[string]interface{}{},
 	}
 	if k.storage == storageIoError {
 		return nil, false, errTestIOError
@@ -231,7 +231,7 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 			mk.Data["bool"] = true
 
 			mv := mockValue{
-				TestObject: coreutils.TestObject{Data: map[string]interface{}{}},
+				Data: map[string]interface{}{},
 			}
 			mv.Data["i32"] = 100 + int32(i)
 			mv.Data["i64"] = 1000 + int64(i)
@@ -288,7 +288,7 @@ func (kb *mockKeyBuilder) PutChars(name string, value string) {}
 func (kb *mockKeyBuilder) PutFromJSON(map[string]any) {}
 
 func newJSONValue(jsonString string) istructs.IStateValue {
-	v := mockValue{TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
+	v := mockValue{Data: map[string]interface{}{}}
 	err := json.Unmarshal([]byte(jsonString), &v.Data)
 	if err != nil {
 		panic(err)
@@ -337,7 +337,7 @@ func (v *mockValue) AsValue(name string) istructs.IStateValue {
 	mv, ok := v.Data[name].(map[string]interface{})
 	if ok {
 		return &mockValue{
-			TestObject: coreutils.TestObject{Data: mv},
+			Data: mv,
 		}
 	}
 	panic("unsupported value stored under key: " + name)

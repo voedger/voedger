@@ -26,13 +26,11 @@ func Provide() builtinapps.Builder {
 			apis.ITokens, apis.SidecarApps)
 		sysPackageFS := sysprovide.Provide(cfg)
 		return builtinapps.Def{
-			AppQName: istructs.AppQName_sys_cluster,
-			Packages: []parser.PackageFS{clusterAppPackageFS, clusterPackageFS, sysPackageFS},
-			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
-				NumParts:         ClusterAppNumPartitions,
-				EnginePoolSize:   appparts.PoolSize(uint(ClusterAppNumPartitions), 1, uint(ClusterAppNumPartitions), 1),
-				NumAppWorkspaces: ClusterAppNumAppWS,
-			},
+			AppQName:         istructs.AppQName_sys_cluster,
+			Packages:         []parser.PackageFS{clusterAppPackageFS, clusterPackageFS, sysPackageFS},
+			NumParts:         ClusterAppNumPartitions,
+			EnginePoolSize:   appparts.PoolSize(uint(ClusterAppNumPartitions), 1, uint(ClusterAppNumPartitions), 1),
+			NumAppWorkspaces: ClusterAppNumAppWS,
 		}
 	}
 }

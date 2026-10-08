@@ -24,14 +24,12 @@ func NewVerificationToken(entity string, field, value string, kind appdef.Verifi
 		return "", "", err
 	}
 	vp := payloads.VerificationPayload{
-		VerifiedValuePayload: payloads.VerifiedValuePayload{
-			VerificationKind: kind,
-			Entity:           entityQName,
-			Field:            field,
-			Value:            value,
-			WSID:             targetWSID,
-		},
-		Hash256: verificationCodeHash,
+		VerificationKind: kind,
+		Entity:           entityQName,
+		Field:            field,
+		Value:            value,
+		WSID:             targetWSID,
+		Hash256:          verificationCodeHash,
 	}
 
 	token, err = appTokens.IssueToken(VerificationTokenDuration, &vp)

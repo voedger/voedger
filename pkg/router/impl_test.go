@@ -680,12 +680,10 @@ func setUp(t *testing.T, requestHandler bus.RequestHandler) *testRouter {
 func setUpWithBlobHandler(t *testing.T, requestHandler bus.RequestHandler, blobRequestHandler blobprocessor.IRequestHandler) *testRouter {
 	t.Helper()
 	rp := RouterParams{
-		HTTPServerParams: HTTPServerParams{
-			Port:             0,
-			WriteTimeout:     DefaultRouterWriteTimeout,
-			ReadTimeout:      DefaultRouterReadTimeout,
-			ConnectionsLimit: DefaultConnectionsLimit,
-		},
+		Port:             0,
+		WriteTimeout:     DefaultRouterWriteTimeout,
+		ReadTimeout:      DefaultRouterReadTimeout,
+		ConnectionsLimit: DefaultConnectionsLimit,
 	}
 	router := &testRouter{
 		wg:                   &sync.WaitGroup{},
@@ -766,7 +764,7 @@ func (t testRouter) adminPort() int {
 	return t.adminService.(interface{ GetPort() int }).GetPort()
 }
 
-//nolint thelper
+// nolint thelper
 func (t testRouter) expectClientDisconnection(tst *testing.T) {
 	tst.Helper()
 	select {

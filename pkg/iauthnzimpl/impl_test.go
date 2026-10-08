@@ -554,7 +554,7 @@ func (r *implIRecords) Get(wsid istructs.WSID, _ bool, id istructs.RecordID) (is
 		for qName, qNameRecs := range wsData {
 			for recID, recData := range qNameRecs {
 				if recID == id {
-					return &implIRecord{TestObject: coreutils.TestObject{Data: recData}, qName: qName}, nil
+					return &implIRecord{Data: recData, qName: qName}, nil
 				}
 			}
 		}
@@ -569,7 +569,7 @@ func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName appdef.QName) (rec
 				panic(">1 records for a singleton")
 			}
 			for _, data := range qNameRecs {
-				return &implIRecord{qName: qName, TestObject: coreutils.TestObject{Data: data}}, nil
+				return &implIRecord{qName: qName, Data: data}, nil
 			}
 		}
 	}
@@ -586,7 +586,7 @@ func (r *implIRecords) GetSingletonID(qName appdef.QName) (istructs.RecordID, er
 				panic(">1 records for a singleton")
 			}
 			for _, data := range qNameRecs {
-				iRecord := &implIRecord{qName: qName, TestObject: coreutils.TestObject{Data: data}}
+				iRecord := &implIRecord{qName: qName, Data: data}
 				return iRecord.ID(), nil
 			}
 		}
@@ -612,7 +612,7 @@ type implIViewRecords struct {
 }
 
 func (*implIViewRecords) KeyBuilder(view appdef.QName) istructs.IKeyBuilder {
-	return &implIKeyBuilder{qName: view, TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
+	return &implIKeyBuilder{qName: view, Data: map[string]interface{}{}}
 }
 func (*implIViewRecords) NewValueBuilder(appdef.QName) istructs.IValueBuilder { panic("") }
 func (*implIViewRecords) UpdateValueBuilder(appdef.QName, istructs.IValue) istructs.IValueBuilder {
@@ -640,7 +640,7 @@ func (vr *implIViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.View
 					}
 					if len(kb.Data) == matchedFields {
 						kv[biIdx].Ok = true
-						kv[biIdx].Value = &implIValue{TestObject: coreutils.TestObject{Data: qNameRec}}
+						kv[biIdx].Value = &implIValue{Data: qNameRec}
 						break
 					}
 				}

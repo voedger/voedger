@@ -132,8 +132,8 @@ func (b *httpStorageKeyBuilder) PutBytes(name string, value []byte) {
 
 func (s *httpStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &httpStorageKeyBuilder{
-		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_HTTP},
-		headers:        make(map[string]string),
+		storage: sys.Storage_HTTP,
+		headers: make(map[string]string),
 	}
 }
 func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {

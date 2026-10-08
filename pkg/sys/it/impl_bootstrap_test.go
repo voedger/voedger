@@ -135,13 +135,11 @@ func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWork
 		it.WithApp(istructs.AppQName_test1_app1, func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
 			sysPkg := sysprovide.Provide(cfg)
 			return builtinapps.Def{
-				AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
-					NumParts:         numParts,
-					EnginePoolSize:   it.DefaultTestAppEnginesPool,
-					NumAppWorkspaces: numAppWS,
-				},
-				AppQName: istructs.AppQName_test1_app1,
-				Packages: []parser.PackageFS{sysPkg, app1PackageFS},
+				NumParts:         numParts,
+				EnginePoolSize:   it.DefaultTestAppEnginesPool,
+				NumAppWorkspaces: numAppWS,
+				AppQName:         istructs.AppQName_test1_app1,
+				Packages:         []parser.PackageFS{sysPkg, app1PackageFS},
 			}
 		}),
 		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {

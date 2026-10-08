@@ -278,12 +278,10 @@ func (ts *testState) buildState(processorKind int) {
 	cudFunc := func() istructs.ICUD { return ts.cud }
 	commandPrepareArgs := func() istructs.CommandPrepareArgs {
 		return istructs.CommandPrepareArgs{
-			PrepareArgs: istructs.PrepareArgs{
-				Workpiece:      nil,
-				ArgumentObject: ts.Arg(),
-				WSID:           ts.WSID(),
-				Workspace:      nil,
-			},
+			Workpiece:              nil,
+			ArgumentObject:         ts.Arg(),
+			WSID:                   ts.WSID(),
+			Workspace:              nil,
 			ArgumentUnloggedObject: nil,
 		}
 	}
@@ -518,13 +516,11 @@ func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 
 	wLogOffs = ts.nextWSOffs(wsid)
 	reb := ts.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         wsid,
-			HandlingPartition: TestPartition,
-			QName:             appdef.NewQName(localPkgName, name.Entity()),
-			WLogOffset:        wLogOffs,
-			PLogOffset:        ts.nextPLogOffs(),
-		},
+		Workspace:         wsid,
+		HandlingPartition: TestPartition,
+		QName:             appdef.NewQName(localPkgName, name.Entity()),
+		WLogOffset:        wLogOffs,
+		PLogOffset:        ts.nextPLogOffs(),
 	})
 
 	if cb != nil {

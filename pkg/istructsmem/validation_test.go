@@ -68,14 +68,12 @@ func Test_ValidEventArgs(t *testing.T) {
 	t.Run("error if event name is not a command or odoc", func(t *testing.T) {
 		b := app.Events().GetNewRawEventBuilder(
 			istructs.NewRawEventBuilderParams{
-				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-					HandlingPartition: 25,
-					PLogOffset:        100500,
-					Workspace:         1,
-					WLogOffset:        1050,
-					QName:             objName, // <- error here
-					RegisteredAt:      123456789,
-				}})
+				HandlingPartition: 25,
+				PLogOffset:        100500,
+				Workspace:         1,
+				WLogOffset:        1050,
+				QName:             objName, // <- error here
+				RegisteredAt:      123456789})
 
 		_, err := b.BuildRawEvent()
 		require.Error(err, require.Is(ErrNameNotFoundError), require.Has(objName))
@@ -86,28 +84,24 @@ func Test_ValidEventArgs(t *testing.T) {
 		if sync {
 			b = app.Events().GetSyncRawEventBuilder(
 				istructs.SyncRawEventBuilderParams{
-					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-						HandlingPartition: 25,
-						PLogOffset:        100500,
-						Workspace:         1,
-						WLogOffset:        1050,
-						QName:             docName,
-						RegisteredAt:      123456789,
-					},
-					Device:   1,
-					SyncedAt: 123456789,
+					HandlingPartition: 25,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        1050,
+					QName:             docName,
+					RegisteredAt:      123456789,
+					Device:            1,
+					SyncedAt:          123456789,
 				})
 		} else {
 			b = app.Events().GetNewRawEventBuilder(
 				istructs.NewRawEventBuilderParams{
-					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-						HandlingPartition: 25,
-						PLogOffset:        100500,
-						Workspace:         1,
-						WLogOffset:        1050,
-						QName:             docName,
-						RegisteredAt:      123456789,
-					},
+					HandlingPartition: 25,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        1050,
+					QName:             docName,
+					RegisteredAt:      123456789,
 				})
 		}
 		return b
@@ -369,28 +363,24 @@ func Test_ValidSysCudEvent(t *testing.T) {
 		if sync {
 			b = app.Events().GetSyncRawEventBuilder(
 				istructs.SyncRawEventBuilderParams{
-					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-						HandlingPartition: 25,
-						PLogOffset:        100500,
-						Workspace:         1,
-						WLogOffset:        1050,
-						QName:             istructs.QNameCommandCUD,
-						RegisteredAt:      123456789,
-					},
-					Device:   1,
-					SyncedAt: 123456789,
+					HandlingPartition: 25,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        1050,
+					QName:             istructs.QNameCommandCUD,
+					RegisteredAt:      123456789,
+					Device:            1,
+					SyncedAt:          123456789,
 				})
 		} else {
 			b = app.Events().GetNewRawEventBuilder(
 				istructs.NewRawEventBuilderParams{
-					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-						HandlingPartition: 25,
-						PLogOffset:        100500,
-						Workspace:         1,
-						WLogOffset:        1050,
-						QName:             istructs.QNameCommandCUD,
-						RegisteredAt:      123456789,
-					},
+					HandlingPartition: 25,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        1050,
+					QName:             istructs.QNameCommandCUD,
+					RegisteredAt:      123456789,
 				})
 		}
 		return b
@@ -598,28 +588,24 @@ func Test_ValidCommandEvent(t *testing.T) {
 		if sync {
 			b = app.Events().GetSyncRawEventBuilder(
 				istructs.SyncRawEventBuilderParams{
-					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-						HandlingPartition: 25,
-						PLogOffset:        100500,
-						Workspace:         1,
-						WLogOffset:        1050,
-						QName:             cmdName,
-						RegisteredAt:      123456789,
-					},
-					Device:   1,
-					SyncedAt: 123456789,
+					HandlingPartition: 25,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        1050,
+					QName:             cmdName,
+					RegisteredAt:      123456789,
+					Device:            1,
+					SyncedAt:          123456789,
 				})
 		} else {
 			b = app.Events().GetNewRawEventBuilder(
 				istructs.NewRawEventBuilderParams{
-					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-						HandlingPartition: 25,
-						PLogOffset:        100500,
-						Workspace:         1,
-						WLogOffset:        1050,
-						QName:             cmdName,
-						RegisteredAt:      123456789,
-					},
+					HandlingPartition: 25,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        1050,
+					QName:             cmdName,
+					RegisteredAt:      123456789,
 				})
 		}
 		return b
@@ -719,16 +705,14 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	eventBuilder := func() istructs.IRawEventBuilder {
 		return app.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
-				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-					HandlingPartition: 25,
-					PLogOffset:        100500,
-					Workspace:         1,
-					WLogOffset:        1050,
-					QName:             docName,
-					RegisteredAt:      123456789,
-				},
-				Device:   1,
-				SyncedAt: 123456789,
+				HandlingPartition: 25,
+				PLogOffset:        100500,
+				Workspace:         1,
+				WLogOffset:        1050,
+				QName:             docName,
+				RegisteredAt:      123456789,
+				Device:            1,
+				SyncedAt:          123456789,
 			})
 	}
 

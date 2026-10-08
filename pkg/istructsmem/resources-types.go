@@ -150,10 +150,8 @@ func NewQueryFunction(name appdef.QName, exec ExecQueryClosure) istructs.IQueryF
 
 func NewQueryFunctionCustomResult(name appdef.QName, resultFunc func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
 	return &queryFunction{
-		abstractFunction: abstractFunction{
-			name: name,
-			res:  resultFunc,
-		},
+		name: name,
+		res:  resultFunc,
 		exec: exec,
 	}
 }
@@ -197,9 +195,7 @@ type (
 // NewCommandFunction creates and returns new command function
 func NewCommandFunction(name appdef.QName, exec ExecCommandClosure) istructs.ICommandFunction {
 	return &commandFunction{
-		abstractFunction: abstractFunction{
-			name: name,
-		},
+		name: name,
 		exec: exec,
 	}
 }

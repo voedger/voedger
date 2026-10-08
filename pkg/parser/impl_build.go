@@ -24,10 +24,8 @@ type buildContext struct {
 
 func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
 	return &buildContext{
-		basicContext: basicContext{
-			app:  appSchema,
-			errs: make([]error, 0),
-		},
+		app:  appSchema,
+		errs: make([]error, 0),
 		adb:  builder,
 		defs: make([]defBuildContext, 0),
 	}
