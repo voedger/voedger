@@ -28,7 +28,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/wneessen/go-mail"
@@ -94,7 +93,7 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *
 	cfg.MetricsServicePort = 0
 	cfg.AdminPort = 0
 
-	cfg.SequencesTrustLevel = isequencer.SequencesTrustLevel_0
+	cfg.SequencesTrustLevel = istructs.SequencesTrustLevel_0
 
 	cfg.Time = testingu.MockTime
 	cfg.SchemasCache = nonTestAppsSchemasCache

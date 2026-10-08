@@ -12,7 +12,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -48,7 +47,7 @@ func Example() {
 	appStructsProvider := istructsmem.Provide(
 		appConfigs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
+		provider.Provide(mem.Provide(testingu.MockTime), ""), istructs.SequencesTrustLevel_0, nil)
 
 	appParts, cleanupParts := appparts.NewTestAppParts(appStructsProvider)
 	defer cleanupParts()

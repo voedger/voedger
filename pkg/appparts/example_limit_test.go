@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/isequencer"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -68,7 +67,7 @@ func ExampleIAppPartition_IsLimitExceeded() {
 	appStructsProvider := istructsmem.Provide(
 		appConfigs,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		provider.Provide(mem.Provide(testingu.MockTime), ""), isequencer.SequencesTrustLevel_0, nil)
+		provider.Provide(mem.Provide(testingu.MockTime), ""), istructs.SequencesTrustLevel_0, nil)
 
 	vvmCtx, cancel := context.WithCancel(context.Background())
 	appParts, cleanup, err := appparts.New2(
