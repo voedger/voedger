@@ -139,6 +139,177 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	require.Equal(int32(-1), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
 }
 
+func TestVSQLProjectorsAsync(t *testing.T) {
+	t.Run("vsql-projectors: scn: Projector runs after each successful command: sales.CreateOrder", func(t *testing.T) {
+		// | command                |
+		// | sales.CreateOrder      |
+		// Given the application provides local command "sales.CreateOrder"
+		// And the application imports command "inventory.ReserveStock"
+		// And the deployed VSQL schema declares
+		// When command "<command>" executes successfully
+		// command = sales.CreateOrder
+		all, _ := runAsyncProjectorsFeature(t, vsqlLocalCommand, "RecordCommand")
+		// Then projector "RecordCommand" executes for command "<command>"
+		// command = sales.CreateOrder
+		require.Equal(t, int32(1), all)
+	})
+
+	t.Run("vsql-projectors: scn: Projector runs after each successful command: inventory.ReserveStock", func(t *testing.T) {
+		// | command                |
+		// | inventory.ReserveStock |
+		// Given the application provides local command "sales.CreateOrder"
+		// And the application imports command "inventory.ReserveStock"
+		// And the deployed VSQL schema declares
+		// When command "<command>" executes successfully
+		// command = inventory.ReserveStock
+		all, _ := runAsyncProjectorsFeature(t, vsqlImportedCommand, "RecordCommand")
+		// Then projector "RecordCommand" executes for command "<command>"
+		// command = inventory.ReserveStock
+		require.Equal(t, int32(1), all)
+	})
+
+	t.Run("vsql-projectors: scn: Projector runs after each successful command: sys.CUD", func(t *testing.T) {
+		// | command                |
+		// | sys.CUD                |
+		// Given the application provides local command "sales.CreateOrder"
+		// And the application imports command "inventory.ReserveStock"
+		// And the deployed VSQL schema declares
+		// When command "<command>" executes successfully
+		// command = sys.CUD
+		all, _ := runAsyncProjectorsFeature(t, istructs.QNameCommandCUD, "RecordCommand")
+		// Then projector "RecordCommand" executes for command "<command>"
+		// command = sys.CUD
+		require.Equal(t, int32(1), all)
+	})
+
+	t.Run("vsql-projectors: scn: Command-specific projector runs for its declared command", func(t *testing.T) {
+		// Given the application provides commands "sales.CreateOrder" and "sales.CancelOrder"
+		// And the deployed VSQL schema declares
+		// When command "sales.CreateOrder" executes successfully
+		all, specific := runAsyncProjectorsFeature(t, vsqlLocalCommand, "RecordEveryCommand")
+		// Then projector "RecordEveryCommand" executes for command "sales.CreateOrder"
+		require.Equal(t, int32(1), all)
+		// And projector "RecordCreatedOrder" executes for command "sales.CreateOrder"
+		require.Equal(t, int32(1), specific)
+	})
+
+	t.Run("vsql-projectors: scn: Command-specific projector ignores another command", func(t *testing.T) {
+		// Given the application provides commands "sales.CreateOrder" and "sales.CancelOrder"
+		// And the deployed VSQL schema declares
+		// When command "sales.CancelOrder" executes successfully
+		all, specific := runAsyncProjectorsFeature(t, vsqlCancelCommand, "RecordEveryCommand")
+		// Then projector "RecordEveryCommand" executes for command "sales.CancelOrder"
+		require.Equal(t, int32(1), all)
+		// And projector "RecordCreatedOrder" does not execute
+		require.Zero(t, specific)
+	})
+}
+
+func runAsyncProjectorsFeature(t *testing.T, command appdef.QName, allProjectorEntity string) (all, specific int32) {
+	t.Helper()
+
+	var countsMu sync.Mutex
+	allCounts := map[appdef.QName]int32{}
+	specificCounts := map[appdef.QName]int32{}
+	featureDoc := appdef.NewQName("test", "FeatureDoc")
+	allProjectorName := appdef.NewQName("test", allProjectorEntity)
+	specificProjectorName := appdef.NewQName("test", "RecordCreatedOrder")
+	allProjector := istructs.Projector{
+		Name: allProjectorName,
+		Func: func(event istructs.IPLogEvent, _ istructs.IState, _ istructs.IIntents) error {
+			countsMu.Lock()
+			allCounts[event.QName()]++
+			countsMu.Unlock()
+			return nil
+		},
+	}
+	specificProjector := istructs.Projector{
+		Name: specificProjectorName,
+		Func: func(event istructs.IPLogEvent, _ istructs.IState, _ istructs.IIntents) error {
+			countsMu.Lock()
+			specificCounts[event.QName()]++
+			countsMu.Unlock()
+			return nil
+		},
+	}
+
+	broker, cleanupBroker := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, timeu.NewITime())
+	defer cleanupBroker()
+	actCfg := &BasicAsyncActualizerConfig{
+		Broker: broker,
+		// Must be > 0 and < FlushInterval (100ms by default),
+		// so the first flush persists a skipped event's offset; 0 selects the 1m default.
+		FlushPositionInterval: time.Nanosecond,
+	}
+	appParts, appStructs, stop := deployTestApp(
+		istructs.AppQName_test1_app1, 1, false,
+		testWorkspace, testWorkspaceDescriptor,
+		func(wsb appdef.IWorkspaceBuilder) {
+			wsb.AddCDoc(featureDoc)
+			wsb.AddCommand(vsqlLocalCommand)
+			wsb.AddCommand(vsqlImportedCommand)
+			wsb.AddCommand(vsqlCancelCommand)
+			wsb.AddCommand(istructs.QNameCommandCUD)
+			wsb.AddProjector(allProjectorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.Types(appdef.TypeKind_Command))
+			wsb.AddProjector(specificProjectorName).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute},
+				filter.QNames(vsqlLocalCommand))
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			for _, name := range []appdef.QName{vsqlLocalCommand, vsqlImportedCommand, vsqlCancelCommand, istructs.QNameCommandCUD} {
+				cfg.Resources.Add(istructsmem.NewCommandFunction(name, istructsmem.NullCommandExec))
+			}
+			cfg.AddAsyncProjectors(allProjector, specificProjector)
+		},
+		actCfg)
+	stopped := false
+	defer func() {
+		if !stopped {
+			stop()
+		}
+	}()
+
+	partition := istructs.PartitionID(1)
+	idGen := istructsmem.NewIDGenerator()
+	createWS(appStructs, istructs.WSID(1001), testWorkspace, testWorkspaceDescriptor, partition, istructs.Offset(1), idGen)
+	filler := pLogFiller{app: appStructs, partition: partition, offset: 2, cmdQName: command}
+	if command == istructs.QNameCommandCUD {
+		filler.fillEvent = func(reb istructs.IRawEventBuilder) {
+			reb.CUDBuilder().Create(featureDoc).PutRecordID(appdef.SystemField_ID, 1)
+		}
+	}
+	topOffset := filler.fill(1001, idGen)
+	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{partition})
+
+	require.Eventually(t, func() bool {
+		assertions := require.New(t)
+		if getActualizerOffset(assertions, appStructs, partition, allProjectorName) < topOffset {
+			return false
+		}
+		if getActualizerOffset(assertions, appStructs, partition, specificProjectorName) < topOffset {
+			return false
+		}
+		if command != vsqlLocalCommand {
+			return true
+		}
+		countsMu.Lock()
+		defer countsMu.Unlock()
+		return specificCounts[command] > 0
+	}, 5*time.Second, time.Millisecond)
+	stop()
+	stopped = true
+	countsMu.Lock()
+	defer countsMu.Unlock()
+	return allCounts[command], specificCounts[command]
+}
+
 // Tests that istructs.Projector offset is updated (flushed) each time after `OffsetFlushRange` items processed
 func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require := require.New(t)

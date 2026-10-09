@@ -1039,6 +1039,10 @@ func analyzeProjector(prj *ProjectorStmt, c *iterateCtx) {
 	for i := range prj.Triggers {
 		trigger := &prj.Triggers[i]
 
+		if trigger.AllCommands && (trigger.ExecuteAction == nil || trigger.ExecuteAction.WithParam) {
+			c.stmtErr(&prj.Pos, ErrAllCommandsRequiresExecute)
+		}
+
 		if trigger.CronSchedule != nil {
 			c.stmtErr(&prj.Pos, ErrScheduledProjectorDeprecated)
 		}
