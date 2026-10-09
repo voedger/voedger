@@ -240,7 +240,12 @@ func runAsyncProjectorsFeature(t *testing.T, command appdef.QName, allProjectorE
 		SubscriptionsPerSubject: 2,
 	}, timeu.NewITime())
 	defer cleanupBroker()
-	actCfg := &BasicAsyncActualizerConfig{Broker: broker}
+	actCfg := &BasicAsyncActualizerConfig{
+		Broker: broker,
+		// Must be > 0 and < FlushInterval (100ms by default),
+		// so the first flush persists a skipped event's offset; 0 selects the 1m default.
+		FlushPositionInterval: time.Nanosecond,
+	}
 	appParts, appStructs, stop := deployTestApp(
 		istructs.AppQName_test1_app1, 1, false,
 		testWorkspace, testWorkspaceDescriptor,
@@ -286,6 +291,9 @@ func runAsyncProjectorsFeature(t *testing.T, command appdef.QName, allProjectorE
 	require.Eventually(t, func() bool {
 		assertions := require.New(t)
 		if getActualizerOffset(assertions, appStructs, partition, allProjectorName) < topOffset {
+			return false
+		}
+		if getActualizerOffset(assertions, appStructs, partition, specificProjectorName) < topOffset {
 			return false
 		}
 		if command != vsqlLocalCommand {
