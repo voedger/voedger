@@ -63,10 +63,12 @@ References:
   - add: parser and application-definition tests for the new declaration syntax
   - verify: all-command declarations build an execute event with a command-type filter for asynchronous and synchronous projectors
   - verify: existing command-specific declarations continue to build QName filters
+  - verify: reject table-action and parameter-based all-command declarations, while scheduled projectors continue to reject an all-command target syntactically
 
 - [x] update: [actualizers/async_test.go](../../../../../pkg/processors/actualizers/async_test.go)
   - add: feature-traceable asynchronous execution coverage for local, imported, and built-in commands and command-specific compatibility
   - preserve exact Gherkin step comments, Scenario Outline example-table rows, placeholder mappings, and scenario identities
+  - verify: wait for both independent projector offsets before asserting command-specific exclusion, using a position interval below the pipeline flush interval so filtered-out progress is persisted
 
 - [x] update: [actualizers/impl_test.go](../../../../../pkg/processors/actualizers/impl_test.go)
   - add: feature-traceable synchronous execution coverage for the all-command trigger
@@ -74,6 +76,12 @@ References:
 
 - [x] update: [parser/types.go](../../../../../pkg/parser/types.go)
   - extend the projector trigger syntax model to distinguish `ON ALL COMMANDS` from explicit command names
+
+- [x] update: [parser/errors.go](../../../../../pkg/parser/errors.go)
+  - add: semantic validation error for all-command targets used outside plain `AFTER EXECUTE`
+
+- [x] update: [parser/impl_analyse.go](../../../../../pkg/parser/impl_analyse.go)
+  - reject: table-action and `EXECUTE WITH PARAM` triggers targeting all commands
 
 - [x] update: [parser/impl_build.go](../../../../../pkg/parser/impl_build.go)
   - build `AFTER EXECUTE ON ALL COMMANDS` as an execute projector event filtered by command type
