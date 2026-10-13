@@ -9,6 +9,7 @@ package actualizers
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -108,6 +109,84 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require.EqualValues(3, getProjectionValue(require, appStructs, incProjectionView, 1002))
 	require.EqualValues(-5, getProjectionValue(require, appStructs, decProjectionView, 1001))
 	require.EqualValues(-3, getProjectionValue(require, appStructs, decProjectionView, 1002))
+}
+
+type vsqlProjectorEvent struct {
+	plogEventMock
+	qName appdef.QName
+}
+
+func (e *vsqlProjectorEvent) QName() appdef.QName { return e.qName }
+
+var (
+	vsqlLocalCommand    = appdef.NewQName("sales", "CreateOrder")
+	vsqlImportedCommand = appdef.NewQName("inventory", "ReserveStock")
+	vsqlCancelCommand   = appdef.NewQName("sales", "CancelOrder")
+)
+
+func TestVSQLProjectorsSync(t *testing.T) {
+	t.Run("vsql-projectors: scn: Synchronous projector runs after every command", func(t *testing.T) {
+		var executions atomic.Int32
+		allProjectorName := appdef.NewQName("test", "RecordCommand")
+		syncProjectorName := appdef.NewQName("test", "UpdateImmediately")
+		allProjector := istructs.Projector{
+			Name: allProjectorName,
+			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error { return nil },
+		}
+		syncProjector := istructs.Projector{
+			Name: syncProjectorName,
+			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
+				executions.Add(1)
+				return nil
+			},
+		}
+
+		// Given the application provides local command "sales.CreateOrder"
+		// And the application imports command "inventory.ReserveStock"
+		// And the deployed VSQL schema declares
+		// Given the deployed VSQL schema declares
+		appParts, appStructs, stop := deployTestApp(
+			istructs.AppQName_test1_app1, 1, false,
+			testWorkspace, testWorkspaceDescriptor,
+			func(wsb appdef.IWorkspaceBuilder) {
+				wsb.AddCommand(vsqlLocalCommand)
+				wsb.AddCommand(vsqlImportedCommand)
+				wsb.AddProjector(allProjectorName).Events().Add(
+					[]appdef.OperationKind{appdef.OperationKind_Execute},
+					filter.Types(appdef.TypeKind_Command))
+				wsb.AddProjector(syncProjectorName).SetSync(true).Events().Add(
+					[]appdef.OperationKind{appdef.OperationKind_Execute},
+					filter.Types(appdef.TypeKind_Command))
+			},
+			func(cfg *istructsmem.AppConfigType) {
+				cfg.Resources.Add(istructsmem.NewCommandFunction(vsqlLocalCommand, istructsmem.NullCommandExec))
+				cfg.Resources.Add(istructsmem.NewCommandFunction(vsqlImportedCommand, istructsmem.NullCommandExec))
+				cfg.AddAsyncProjectors(allProjector)
+				cfg.AddSyncProjectors(syncProjector)
+			},
+			&BasicAsyncActualizerConfig{})
+		defer stop()
+
+		partition := istructs.PartitionID(1)
+		idGen := istructsmem.NewIDGenerator()
+		createWS(appStructs, istructs.WSID(1001), testWorkspace, testWorkspaceDescriptor, partition, istructs.Offset(1), idGen)
+		appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{partition})
+		appPart, err := appParts.Borrow(istructs.AppQName_test1_app1, partition, appparts.ProcessorKind_Command)
+		require.NoError(t, err)
+		defer appPart.Release()
+
+		// When command "sales.CreateOrder" executes successfully
+		err = appPart.DoSyncActualizer(context.Background(), &cmdWorkpieceMock{
+			appPart: appPart,
+			event: &vsqlProjectorEvent{
+				wsid:  1001,
+				qName: vsqlLocalCommand,
+			},
+		})
+		require.NoError(t, err)
+		// Then projector "UpdateImmediately" executes for command "sales.CreateOrder"
+		require.Equal(t, int32(1), executions.Load())
+	})
 }
 
 var (
@@ -230,6 +309,8 @@ func deployTestAppEx(
 ) {
 	adb := builder.New()
 	adb.AddPackage("test", "test.com/test")
+	adb.AddPackage("sales", "test.com/sales")
+	adb.AddPackage("inventory", "test.com/inventory")
 
 	wsb := adb.AddWorkspace(wsKind)
 	descr := wsb.AddCDoc(wsDescriptorKind)

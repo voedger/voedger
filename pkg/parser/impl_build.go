@@ -422,6 +422,9 @@ func (c *buildContext) projectors() error {
 				}
 
 				flt := []appdef.IFilter{}
+				if trigger.AllCommands {
+					flt = append(flt, filter.Types(appdef.TypeKind_Command))
+				}
 				qNames := appdef.QNames{}
 				types := []appdef.TypeKind{}
 				for _, n := range trigger.QNames {

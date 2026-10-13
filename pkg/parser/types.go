@@ -454,7 +454,8 @@ type ProjectorTrigger struct {
 	CronSchedule  *string                 `parser:"('CRON' @String) | ("`
 	ExecuteAction *ProjectorCommandAction `parser:"'AFTER' (@@"`
 	TableActions  []ProjectionTableAction `parser:"| (@@ ('OR' @@)* ))"`
-	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!)"`
+	AllCommands   bool                    `parser:"(@ONALLCOMMANDS"`
+	QNames        []DefQName              `parser:"| 'ON' (('(' @@ (',' @@)* ')') | @@)!))"`
 }
 
 type ProjectorStmt struct {

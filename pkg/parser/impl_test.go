@@ -1418,6 +1418,70 @@ func Test_Undefined(t *testing.T) {
 }
 
 func Test_Projectors(t *testing.T) {
+	t.Run("AFTER EXECUTE ON ALL COMMANDS", func(t *testing.T) {
+		require := assertions(t)
+		app := require.Build(`APPLICATION test();
+		WORKSPACE Ws (
+			EXTENSION ENGINE WASM (
+				COMMAND CreateOrder();
+				PROJECTOR RecordCommand AFTER EXECUTE ON ALL COMMANDS;
+				SYNC PROJECTOR UpdateImmediately AFTER EXECUTE ON ALL COMMANDS;
+				PROJECTOR RecordCreatedOrder AFTER EXECUTE ON CreateOrder;
+			);
+		);`)
+
+		for _, tc := range []struct {
+			name string
+			sync bool
+		}{
+			{name: "RecordCommand"},
+			{name: "UpdateImmediately", sync: true},
+		} {
+			prj := appdef.Projector(app.Type, appdef.NewQName("pkg", tc.name))
+			require.NotNil(prj)
+			require.Equal(tc.sync, prj.Sync())
+			require.Len(prj.Events(), 1)
+			event := prj.Events()[0]
+			require.Equal([]appdef.OperationKind{appdef.OperationKind_Execute}, event.Ops())
+			require.Equal(appdef.FilterKind_Types, event.Filter().Kind())
+			require.Equal([]appdef.TypeKind{appdef.TypeKind_Command}, event.Filter().Types())
+		}
+
+		prj := appdef.Projector(app.Type, appdef.NewQName("pkg", "RecordCreatedOrder"))
+		require.NotNil(prj)
+		require.Len(prj.Events(), 1)
+		require.Equal(appdef.FilterKind_QNames, prj.Events()[0].Filter().Kind())
+		require.Equal([]appdef.QName{appdef.NewQName("pkg", "CreateOrder")}, prj.Events()[0].Filter().QNames())
+	})
+
+	t.Run("ON ALL COMMANDS requires non-parameterized execute", func(t *testing.T) {
+		for _, trigger := range []string{
+			"AFTER INSERT ON ALL COMMANDS",
+			"AFTER EXECUTE WITH PARAM ON ALL COMMANDS",
+		} {
+			t.Run(trigger, func(t *testing.T) {
+				require := assertions(t)
+				_, err := require.AppSchema(fmt.Sprintf(`APPLICATION test();
+					WORKSPACE Ws (
+						EXTENSION ENGINE WASM (
+							PROJECTOR Invalid %s;
+						);
+					);`, trigger))
+				require.ErrorContains(err, ErrAllCommandsRequiresExecute.Error())
+			})
+		}
+	})
+
+	t.Run("scheduled projector cannot target all commands", func(t *testing.T) {
+		require := require.New(t)
+		_, err := ParseFile("file.vsql", `APPLICATION test();
+			WORKSPACE Ws (
+				EXTENSION ENGINE WASM (
+					PROJECTOR Invalid CRON '1 0 * * *' ON ALL COMMANDS;
+				);
+			);`)
+		require.ErrorContains(err, "unexpected token \"ON ALL COMMANDS\"")
+	})
 
 	t.Run("Errors", func(t *testing.T) {
 		require := require.New(t)
