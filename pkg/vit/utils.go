@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -461,14 +462,24 @@ func getWorkspaceInitAwaitTimeout() time.Duration {
 	return defaultWorkspaceAwaitTimeout
 }
 
-// calls testBeforeRestart() then stops then VIT, then launches new VIT on the same config but with storage from previous VIT
-// then calls testAfterRestart() with the new VIT
-// cfg must be owned
-func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
-	require.False(t, cfg.isShared, "storage restart could be done on Own VIT Config only")
+// TestRestartPreservingStorage stops the first VIT before launching the second,
+// sharing its storage factory and keyspace isolation suffix between both runs.
+// An optional second-run configuration replaces cfg for the second launch only.
+// Both configurations must be owned; caller configuration options are not modified.
+func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT), secondRun ...*VITConfig) {
+	t.Helper()
+	require.LessOrEqual(t, len(secondRun), 1, "at most one second-run configuration is allowed")
+	require.NotNil(t, cfg)
+	require.False(t, cfg.isShared, "restart preserving storage could be done on Own VIT Config only")
+	afterCfg := cfg
+	if len(secondRun) == 1 {
+		afterCfg = secondRun[0]
+	}
+	require.NotNil(t, afterCfg)
+	require.False(t, afterCfg.isShared, "storage restart could be done on Own VIT Config only")
 	var sharedStorageFactory istorage.IAppStorageFactory
 	suffix := provider.NewTestKeyspaceIsolationSuffix()
-	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
+	preserveStorage := WithVVMConfig(func(cfg *vvm.VVMConfig) {
 		if sharedStorageFactory == nil {
 			var err error
 			sharedStorageFactory, err = cfg.StorageFactory(cfg.Time)
@@ -478,13 +489,16 @@ func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestar
 		cfg.StorageFactory = func(timeu.ITime) (istorage.IAppStorageFactory, error) {
 			return sharedStorageFactory, nil
 		}
-	}))
+	})
+	before, after := *cfg, *afterCfg
+	before.opts = append(slices.Clone(cfg.opts), preserveStorage)
+	after.opts = append(slices.Clone(afterCfg.opts), preserveStorage)
 	func() {
-		vit := NewVIT(t, cfg)
+		vit := NewVIT(t, &before)
 		defer vit.TearDown()
 		testBeforeRestart(t, vit)
 	}()
-	vit := NewVIT(t, cfg)
+	vit := NewVIT(t, &after)
 	defer vit.TearDown()
 	testAfterRestart(t, vit)
 }
