@@ -34,6 +34,51 @@ var newSysSchemaFS embed.FS
 //go:embed testdata/pkg1.new.vsql
 var newPkg1SchemaFS embed.FS
 
+func TestWorkspaceInheritanceAddition(t *testing.T) {
+	build := func(inherits, removeDoc bool, kind appdef.DataKind) appdef.IAppDef {
+		t.Helper()
+		adb := builder.New()
+		adb.AddPackage("test", "test.com/test")
+		base := appdef.NewQName("test", "Base")
+		if inherits {
+			adb.AddWorkspace(base).SetAbstract()
+		}
+		for _, name := range []string{"Work", "Other"} {
+			ws := adb.AddWorkspace(appdef.NewQName("test", name))
+			desc := appdef.NewQName("test", name+"Descriptor")
+			ws.AddCDoc(desc)
+			ws.SetDescriptor(desc)
+			if inherits {
+				ws.SetAncestors(base)
+			}
+			if !removeDoc {
+				doc := ws.AddCDoc(appdef.NewQName("test", name+"Doc"))
+				doc.AddField("IntFld", kind, false)
+				doc.AddField("StrFld", appdef.DataKind_string, false)
+			}
+		}
+		def, err := adb.Build()
+		require.NoError(t, err)
+		return def
+	}
+	old := build(false, false, appdef.DataKind_int32)
+	t.Run("empty abstract ancestor is compatible", func(t *testing.T) {
+		require.Empty(t, CheckBackwardCompatibility(old, build(true, false, appdef.DataKind_int32)).Errors)
+	})
+	for _, inherits := range []bool{false, true} {
+		t.Run(fmt.Sprintf("type removal with ancestry addition=%t", inherits), func(t *testing.T) {
+			errs := CheckBackwardCompatibility(old, build(inherits, true, appdef.DataKind_int32))
+			require.Contains(t, errs.Error(), "WorkDoc")
+			require.Contains(t, errs.Error(), string(ErrorTypeNodeRemoved))
+		})
+		t.Run(fmt.Sprintf("field mutation with ancestry addition=%t", inherits), func(t *testing.T) {
+			errs := CheckBackwardCompatibility(old, build(inherits, false, appdef.DataKind_int64))
+			require.Contains(t, errs.Error(), "IntFld")
+			require.Contains(t, errs.Error(), string(ErrorTypeValueChanged))
+		})
+	}
+}
+
 func Test_Basic(t *testing.T) {
 	oldSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, oldSysSchemaFS, "testdata")
 	require.NoError(t, err)

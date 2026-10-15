@@ -7,25 +7,32 @@ package sys_it
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/collection"
+	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	it "github.com/voedger/voedger/pkg/vit"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 )
 
 func TestAuthorization(t *testing.T) {
@@ -377,19 +384,162 @@ func TestVITResetPreservingStorage(t *testing.T) {
 			it.WithUserLogin("login", "1"),
 			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) { cfg.NumQueryProcessors = 3 }),
 	)
 	categoryID := istructs.NullRecordID
+	var wsID istructs.WSID
 	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		wsID = ws.WSID
+		require.EqualValues(t, 3, vit.NumQueryProcessors)
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 		categoryID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
 	}, func(t *testing.T, vit *it.VIT) {
-		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		require.EqualValues(t, 3, vit.NumQueryProcessors)
+		require.Equal(t, wsID, vit.WS(istructs.AppQName_test1_app1, "test_ws").WSID)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp := vit.PostApp(istructs.AppQName_test1_app1, wsID, "q.sys.SqlQuery", body,
+			httpu.WithAuthorizeBy(vit.GetSystemPrincipal(istructs.AppQName_test1_app1).Token))
 		require.Contains(t, resp.SectionRow()[0].(string), `"name":"Awesome food"`)
 		resp.Println()
 	})
+}
+
+func TestVITResetPreservingStorageWithAnotherConfig(t *testing.T) {
+	before := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "1"),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) { cfg.NumQueryProcessors = 3 }),
+	)
+	after := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) { cfg.NumQueryProcessors = 2 }),
+	)
+	var categoryID istructs.RecordID
+	var wsID istructs.WSID
+	it.TestRestartPreservingStorage(t, &before, func(t *testing.T, vit *it.VIT) {
+		require.EqualValues(t, 3, vit.NumQueryProcessors)
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		wsID = ws.WSID
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+		categoryID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
+	}, func(t *testing.T, vit *it.VIT) {
+		require.EqualValues(t, 2, vit.NumQueryProcessors)
+		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
+		resp := vit.PostApp(istructs.AppQName_test1_app1, wsID, "q.sys.SqlQuery", body,
+			httpu.WithAuthorizeBy(vit.GetSystemPrincipal(istructs.AppQName_test1_app1).Token))
+		require.Contains(t, resp.SectionRow()[0].(string), `"name":"Awesome food"`)
+		resp.Println()
+	}, &after)
+}
+
+func TestWorkspaceInheritanceUpgrade(t *testing.T) {
+	const original = `APPLICATION app1();
+		WORKSPACE Work (
+			TABLE Doc1 INHERITS sys.CDoc (IntFld int32, StrFld varchar);
+		);
+		WORKSPACE Other (
+			TABLE Doc2 INHERITS sys.CDoc (IntFld int32, StrFld varchar);
+		);`
+	const upgraded = `APPLICATION app1();
+		ABSTRACT WORKSPACE Base ();
+		WORKSPACE Work INHERITS Base (
+			TABLE Doc1 INHERITS sys.CDoc (IntFld int32, StrFld varchar);
+		);
+		WORKSPACE Other INHERITS Base (
+			TABLE Doc2 INHERITS sys.CDoc (IntFld int32, StrFld varchar);
+		);`
+	config := func(schema string) it.VITConfig {
+		return it.NewOwnVITConfig(it.WithApp(istructs.AppQName_test1_app1,
+			func(_ builtinapps.APIs, cfg *istructsmem.AppConfigType, _ extensionpoints.IExtensionPoint) builtinapps.Def {
+				return builtinapps.Def{
+					AppQName:                istructs.AppQName_test1_app1,
+					AppDeploymentDescriptor: it.TestAppDeploymentDescriptor,
+					Packages: []parser.PackageFS{sysprovide.Provide(cfg), {
+						Path: it.App1PkgPath,
+						FS:   fstest.MapFS{"app.vsql": &fstest.MapFile{Data: []byte(schema)}},
+					}},
+				}
+			}))
+	}
+	before, after := config(original), config(upgraded)
+	type savedWorkspace struct {
+		ws         *it.AppWorkspace
+		definition appdef.IWorkspace
+		doc        string
+		ids        []istructs.RecordID
+	}
+	var saved []savedWorkspace
+	it.TestRestartPreservingStorage(t, &before, func(t *testing.T, vit *it.VIT) {
+		login := vit.SignUp("inheritance-owner", "pwd", istructs.AppQName_test1_app1)
+		owner := vit.SignIn(login)
+		def, err := vit.AppDef(istructs.AppQName_test1_app1)
+		require.NoError(t, err)
+		require.Nil(t, def.Workspace(appdef.NewQName("app1pkg", "Base")))
+		for i, name := range []string{"Work", "Other"} {
+			wsDef := def.Workspace(appdef.NewQName("app1pkg", name))
+			ws := vit.CreateWorkspace(it.WSParams{Name: name, Kind: wsDef.Descriptor(), ClusterID: istructs.CurrentClusterID(), InitDataJSON: "{}"}, owner)
+			entry := savedWorkspace{ws: ws, definition: wsDef, doc: fmt.Sprintf("app1pkg.Doc%d", i+1)}
+			for n := 1; n <= 2; n++ {
+				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":%q,"IntFld":%d,"StrFld":%q}}]}`, entry.doc, n, fmt.Sprintf("%s-%d", name, n))
+				id := vit.PostWS(ws, "c.sys.CUD", body, httpu.WithAuthorizeBy(vit.GetSystemPrincipal(istructs.AppQName_test1_app1).Token)).NewID()
+				entry.ids = append(entry.ids, id)
+			}
+			saved = append(saved, entry)
+		}
+	}, func(t *testing.T, vit *it.VIT) {
+		def, err := vit.AppDef(istructs.AppQName_test1_app1)
+		require.NoError(t, err)
+		base := def.Workspace(appdef.NewQName("app1pkg", "Base"))
+		require.NotNil(t, base)
+		require.True(t, base.Abstract())
+		token := httpu.WithAuthorizeBy(vit.GetSystemPrincipal(istructs.AppQName_test1_app1).Token)
+		for _, entry := range saved {
+			wsDef := def.Workspace(entry.definition.QName())
+			require.NotNil(t, wsDef)
+			require.True(t, wsDef.Inherits(appdef.NewQName("app1pkg", "Base")))
+			require.Equal(t, entry.definition.Descriptor(), wsDef.Descriptor())
+			for _, oldType := range entry.definition.Types() {
+				newType := wsDef.Type(oldType.QName())
+				require.Equal(t, oldType.Kind(), newType.Kind(), oldType.QName())
+				if oldFields, ok := oldType.(appdef.IWithFields); ok {
+					newFields, ok := newType.(appdef.IWithFields)
+					require.True(t, ok)
+					require.Equal(t, oldFields.FieldCount(), newFields.FieldCount())
+					for i, field := range oldFields.Fields() {
+						actual := newFields.Fields()[i]
+						require.Equal(t, field.Name(), actual.Name())
+						require.Equal(t, field.DataKind(), actual.DataKind())
+						require.Equal(t, field.Required(), actual.Required())
+					}
+				}
+				if oldContainers, ok := oldType.(appdef.IWithContainers); ok {
+					newContainers, ok := newType.(appdef.IWithContainers)
+					require.True(t, ok)
+					require.Equal(t, oldContainers.ContainerCount(), newContainers.ContainerCount())
+					for _, container := range oldContainers.Containers() {
+						actual := newContainers.Container(container.Name())
+						require.NotNil(t, actual)
+						require.Equal(t, container.QName(), actual.QName())
+						require.Equal(t, container.MinOccurs(), actual.MinOccurs())
+						require.Equal(t, container.MaxOccurs(), actual.MaxOccurs())
+					}
+				}
+			}
+			for i, id := range entry.ids {
+				body := fmt.Sprintf(`{"args":{"Query":"select * from %s where id = %d"},"elements":[{"fields":["Result"]}]}`, entry.doc, id)
+				resp := vit.PostApp(istructs.AppQName_test1_app1, entry.ws.WSID, "q.sys.SqlQuery", body, token)
+				var record map[string]any
+				require.NoError(t, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &record))
+				require.EqualValues(t, id, record[appdef.SystemField_ID])
+				require.Equal(t, entry.doc, record[appdef.SystemField_QName])
+				require.EqualValues(t, i+1, record["IntFld"])
+				require.Equal(t, fmt.Sprintf("%s-%d", entry.ws.Name, i+1), record["StrFld"])
+			}
+		}
+	}, &after)
 }
 
 func TestAdminEndpoint(t *testing.T) {
