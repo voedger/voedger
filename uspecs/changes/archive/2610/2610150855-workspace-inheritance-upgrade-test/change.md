@@ -53,12 +53,12 @@ References:
 ## Construction
 
 - [x] update: [sys/it/impl_test.go](../../../../../pkg/sys/it/impl_test.go)
-  - extend: restart-helper coverage to prove that the original call form still uses the same configuration for both launches.
-  - add: coverage with a distinct second-run configuration, asserting that its VVM settings take effect while the original records remain readable in the same workspace.
+  - extend: `TestVITResetPreservingStorage` to prove that the original call form keeps three query processors and the same workspace ID across both launches.
+  - add: separate `TestVITResetPreservingStorageWithAnotherConfig` coverage, changing the query-processor count from three to two and reading the original record by its retained workspace and record IDs.
 
-- [x] create: [sys/it/impl_workspace_inheritance_test.go](../../../../../pkg/sys/it/impl_workspace_inheritance_test.go)
-  - Provide focused VIT coverage for adding a common abstract ancestor to two existing concrete Workspace kinds across a server restart.
-  - Include test-local application builders and original/upgraded VSQL fixtures under an existing test application identity so both launches build their respective schemas without reusing a cached test schema.
+- [x] update: [sys/it/impl_test.go](../../../../../pkg/sys/it/impl_test.go)
+  - Add `TestWorkspaceInheritanceUpgrade` alongside the restart-helper tests, covering a common abstract ancestor added to two existing concrete Workspace kinds across a server restart.
+  - Include a test-local application builder and two explicit, independent VSQL schema constants under an existing test application identity so both launches build their respective schemas without reusing a cached test schema.
   - Keep the ticket's `Work`/`Doc1` shape with `IntFld int32` and `StrFld varchar`, and include a second concrete Workspace kind that gains the same empty abstract `Base` ancestor; keep existing type and field identities unchanged.
   - Before restart, create workspace instances of both kinds, persist multiple documents with distinct integer/string values, and retain their workspace IDs, record IDs, and effective type definitions for comparison.
   - After restart with the upgraded application definition and preserved storage, assert that both workspace IDs and document IDs still address the original data and compare every existing document's field values through normal query APIs.
@@ -82,8 +82,9 @@ References:
   - preserve: checks on existing effective types, descriptors, abstractness, fields, containers, and packages; do not bypass validation or introduce general ancestor compatibility rules beyond this case.
 
 - [x] verify: targeted restart, inheritance-upgrade, and compatibility coverage
-  - run: the existing restart test and the new inheritance-upgrade tests in `./pkg/sys/it`, selecting their test names with `go test -run`.
+  - run: both restart tests and the inheritance-upgrade test in `./pkg/sys/it`, selecting `TestVITResetPreservingStorage`, `TestVITResetPreservingStorageWithAnotherConfig`, and `TestWorkspaceInheritanceUpgrade` with `go test -run`.
   - run: `go test ./pkg/appdefcompat` and format changed Go files with `gofmt`.
   - confirm: existing restart callers compile with the additive helper API and the original same-configuration restart test still passes.
   - passed: `go test ./pkg/sys/it -run '^(TestVITResetPreservingStorage|TestWorkspaceInheritanceUpgrade)$' -count=1 -timeout=60s` and `go test ./pkg/appdefcompat`; changed Go files formatted with `gofmt`.
+  - passed after test reorganization: `go test ./pkg/sys/it -run '^TestVITResetPreservingStorage' -count=1 -timeout=60s` and `go test ./pkg/sys/it -run '^TestWorkspaceInheritanceUpgrade$' -count=1 -timeout=60s`.
   - reviewed: construction stages A and B; made the processor-count change explicit (three to two) and asserted that the new ancestor is absent before upgrade and abstract afterward. No outstanding review findings.
