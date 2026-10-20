@@ -1,5 +1,4 @@
 # voedger
-
 ## Resources
 
 - [Internals](https://internals.voedger.io), (internals' [sources](https://github.com/voedger/voedger-internals))
