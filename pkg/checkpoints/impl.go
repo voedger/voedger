@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func applyRecoveryCheckpoint(storage IRecoveryCheckpointStorage) func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
+func ApplyRecoveryCheckpoint(storage IRecoveryCheckpointStorage) func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
 	return func(event istructs.IPLogEvent, state istructs.IState, _ istructs.IIntents) error {
 		clusterAppID := state.AppStructs().ClusterAppID()
 		if event.PLogOffset()%partitionCheckpointUpdateInterval == 0 {

@@ -101,21 +101,28 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time timeu.ITime, sid
 	}
 }
 
-// validateAppDeployment checks a persisted deployment descriptor without writing
-// records or provisioning workspaces. A missing descriptor returns false, nil.
+// validateAppDeployment protects against the case:
+// previously deployed with one amounts of partitions and app workspaces
+// now trying to deply with different amounts in the app descriptor
 func validateAppDeployment(clusterAppStructs istructs.IAppStructs, wsid istructs.WSID, appQName appdef.AppQName,
-	numPartitions istructs.NumAppPartitions, numAppWorkspaces istructs.NumAppWorkspaces) (bool, error) {
-	id, err := uniques.GetRecordIDByUniqueCombination(wsid, qNameWDocApp, clusterAppStructs, map[string]interface{}{
+	numPartitions istructs.NumAppPartitions, numAppWorkspaces istructs.NumAppWorkspaces) (exists bool, err error) {
+	wdocAppID, err := uniques.GetRecordIDByUniqueCombination(wsid, qNameWDocApp, clusterAppStructs, map[string]interface{}{
 		Field_AppQName: appQName.String(),
 	})
-	if err != nil || id == istructs.NullRecordID {
+	if err != nil {
+		// notest
 		return false, err
 	}
-	record, err := clusterAppStructs.Records().Get(wsid, true, id)
+	if wdocAppID == istructs.NullRecordID {
+		return false, nil
+	}
+	record, err := clusterAppStructs.Records().Get(wsid, true, wdocAppID)
 	if err != nil {
+		// notest
 		return false, err
 	}
 	if record.QName() == appdef.NullQName {
+		// notest
 		return false, istructs.ErrRecordNotFound
 	}
 	numPartitionsDeployed := istructs.NumAppPartitions(record.AsInt32(Field_NumPartitions))       // nolint G115 persisted deployment count

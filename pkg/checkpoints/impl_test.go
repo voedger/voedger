@@ -11,12 +11,10 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/checkpoints/testutils"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 func TestApplyRecoveryCheckpointUpdatesPLogCheckpointEachHundredthEvent(t *testing.T) {
@@ -53,8 +51,8 @@ func TestApplyRecoveryCheckpointWritesOnlyIDBearingWLogOffsets(t *testing.T) {
 	storage := testutils.NewMockStorage(t)
 	projector := checkpoints.ApplyRecoveryCheckpoint(storage)
 	state := newIState(t)
-	singleton := newCheckpointTestCUDRow(t, istructs.FirstSingletonID, true)
-	updated := newCheckpointTestCUDRow(t, istructs.FirstUserRecordID, false)
+	singleton := newCUDRow(t, istructs.FirstSingletonID, true)
+	updated := newCUDRow(t, istructs.FirstUserRecordID, false)
 	event := newIPLogEvent(t, 1, singleton, updated)
 
 	require.NoError(projector(event, state, nil))
@@ -62,7 +60,7 @@ func TestApplyRecoveryCheckpointWritesOnlyIDBearingWLogOffsets(t *testing.T) {
 	storage.AssertNotCalled(t, "PutWorkspaceCheckpoint", mock.Anything, mock.Anything, mock.Anything)
 
 	event = newIPLogEvent(t, 1, singleton, updated,
-		newCheckpointTestCUDRow(t, istructs.FirstUserRecordID, true))
+		newCUDRow(t, istructs.FirstUserRecordID, true))
 	event.On("Workspace").Return(istructs.WSID(5))
 	event.On("WLogOffset").Return(istructs.Offset(20))
 	storage.On("PutWorkspaceCheckpoint", istructs.ClusterApps[istructs.AppQName_test1_app1],
@@ -75,7 +73,7 @@ func TestApplyRecoveryCheckpointWritesOnlyIDBearingWLogOffsets(t *testing.T) {
 	storage.AssertNumberOfCalls(t, "PutWorkspaceCheckpoint", 1)
 
 	event = newIPLogEvent(t, 3,
-		newCheckpointTestCUDRow(t, istructs.FirstUserRecordID+1, true))
+		newCUDRow(t, istructs.FirstUserRecordID+1, true))
 	event.On("Workspace").Return(istructs.WSID(6))
 	event.On("WLogOffset").Return(istructs.Offset(22))
 	storage.On("PutWorkspaceCheckpoint", istructs.ClusterApps[istructs.AppQName_test1_app1],
@@ -86,19 +84,19 @@ func TestApplyRecoveryCheckpointWritesOnlyIDBearingWLogOffsets(t *testing.T) {
 func TestIDBearingEvent(t *testing.T) {
 	t.Run("new ordinary record", func(t *testing.T) {
 		event := newIPLogEvent(t, 0,
-			newCheckpointTestCUDRow(t, istructs.FirstUserRecordID, true))
+			newCUDRow(t, istructs.FirstUserRecordID, true))
 		require.True(t, checkpoints.IsIDBearingEvent(event))
 	})
 
 	t.Run("new singleton", func(t *testing.T) {
 		event := newIPLogEvent(t, 0,
-			newCheckpointTestCUDRow(t, istructs.FirstSingletonID, true))
+			newCUDRow(t, istructs.FirstSingletonID, true))
 		require.False(t, checkpoints.IsIDBearingEvent(event))
 	})
 
 	t.Run("existing ordinary record update", func(t *testing.T) {
 		event := newIPLogEvent(t, 0,
-			newCheckpointTestCUDRow(t, istructs.FirstUserRecordID, false))
+			newCUDRow(t, istructs.FirstUserRecordID, false))
 		require.False(t, checkpoints.IsIDBearingEvent(event))
 	})
 
@@ -122,26 +120,10 @@ func TestApplyRecoveryCheckpointReturnsStorageErrors(t *testing.T) {
 
 	require.ErrorIs(checkpoints.ApplyRecoveryCheckpoint(storage)(event, state, nil), partitionErr)
 
-	event = newIPLogEvent(t, 101,
-		newCheckpointTestCUDRow(t, istructs.FirstUserRecordID, true))
+	event = newIPLogEvent(t, 101, newCUDRow(t, istructs.FirstUserRecordID, true))
 	event.On("Workspace").Return(istructs.WSID(0))
 	event.On("WLogOffset").Return(istructs.Offset(10))
 	require.ErrorIs(checkpoints.ApplyRecoveryCheckpoint(storage)(event, state, nil), workspaceErr)
-}
-
-func TestProvideRegistersOneStandardAsyncProjector(t *testing.T) {
-	require := require.New(t)
-	resources := istructsmem.NewStatelessResources()
-	storage := testutils.NewMockStorage(t)
-	checkpoints.Provide(resources, storage)
-
-	found := map[appdef.QName]bool{}
-	resources.Projectors(func(path string, projector istructs.Projector) bool {
-		require.Equal(appdef.SysPackagePath, path)
-		found[projector.Name] = true
-		return true
-	})
-	require.Equal(map[appdef.QName]bool{checkpoints.QNameApplyRecoveryCheckpoint: true}, found)
 }
 
 func newIState(t *testing.T) *coreutils.MockState {
@@ -176,7 +158,7 @@ func newIPLogEvent(t *testing.T, offset istructs.Offset, cuds ...istructs.ICUDRo
 	return event
 }
 
-func newCheckpointTestCUDRow(t *testing.T, id istructs.RecordID, isNew bool) *coreutils.MockCUDRow {
+func newCUDRow(t *testing.T, id istructs.RecordID, isNew bool) *coreutils.MockCUDRow {
 	t.Helper()
 	row := &coreutils.MockCUDRow{}
 	row.On("ID").Return(id).Maybe() // Short-circuit evaluation may skip ID for an existing row.

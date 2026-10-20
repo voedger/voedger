@@ -6,9 +6,6 @@
 package checkpoints
 
 import (
-	"context"
-
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -28,17 +25,18 @@ type WorkspaceCheckpoint struct {
 	WLogIDBearingOffset istructs.Offset `json:"wlogIDBearingOffset"`
 }
 
-// IInitialRecovery initializes persistent recovery checkpoints before deployment.
-type IInitialRecovery interface {
-	// InitializeCheckpoints returns deployable partition IDs, errors keyed by failed
-	// partition ID, and a fatal application setup or context error. When the fatal
-	// error is nil, the IDs and error-map keys are disjoint and cover 0..numPartitions-1.
-	// An empty deployable slice is valid when every partition fails. A non-nil fatal
-	// error prohibits deployment from any partial results. A present partition
-	// checkpoint, including zero, marks completion and requires no reconstruction.
-	InitializeCheckpoints(ctx context.Context, appQName appdef.AppQName, numPartitions istructs.NumAppPartitions) (
-		partitionIDsWithInitedCheckpoints []istructs.PartitionID,
-		partitionIDsWithFailedCheckpoints map[istructs.PartitionID]error, // error could be about both partition and workspace checkpoints
-		err error,
-	)
+type initialRecovery struct {
+	appStructs istructs.IAppStructsProvider
+	storage    IRecoveryCheckpointStorage
+}
+
+// WorkspaceCheckpointError identifies the workspace whose checkpoint write failed.
+type WorkspaceCheckpointError struct {
+	WSID istructs.WSID
+	Err  error
+}
+
+type partitionResult struct {
+	alreadyInited bool
+	err           error
 }

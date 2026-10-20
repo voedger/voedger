@@ -1,5 +1,15 @@
 # Decisions: Improved partition and workspace recovery
 
+## Invariant: the partition checkpoint marks completion of initial recovery
+
+Decision: During initial recovery, check only whether the partition checkpoint exists. If it exists, including a zero-valued checkpoint, skip initial recovery for the entire partition without checking its workspace checkpoints. If it is absent, scan the entire PLog to discover all workspaces and compute any missing checkpoints; existing workspace checkpoints do not establish that the entire partition has completed initial recovery.
+
+Persist the partition checkpoint only after the checkpoints of all workspaces encountered in the PLog have been successfully stored. Consequently, a stored partition checkpoint with missing checkpoints for any encountered workspace is an impossible state under this write ordering. Checking workspace checkpoints when the partition checkpoint exists would require scanning the entire PLog to discover every workspace and would provide no additional completion guarantee.
+
+- Pros: makes the partition checkpoint a sufficient completion marker; avoids a full PLog scan for an already initialized partition.
+- Cons: relies on preserving the workspace-before-partition checkpoint write ordering.
+- Confidence: user-provided
+
 ## Inconsistency: zero workspace checkpoint could not satisfy checkpoint validation
 
 Decision: Treat an absent or zero-valued workspace checkpoint as a direct instruction to scan once from `FirstOffset`, without checkpoint validation, fallback, or invalid-checkpoint logging.

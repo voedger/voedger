@@ -11,12 +11,17 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-// Provide registers one asynchronous projector for both recovery checkpoints.
-func Provide(resources istructsmem.IStatelessResources, storage IRecoveryCheckpointStorage) {
+// NewApplyRecoveryCheckpointProjector registers one asynchronous projector for both recovery checkpoints.
+func NewApplyRecoveryCheckpointProjector(resources istructsmem.IStatelessResources, storage IRecoveryCheckpointStorage) {
 	resources.AddProjectors(appdef.SysPackagePath,
 		istructs.Projector{
 			Name: QNameApplyRecoveryCheckpoint,
-			Func: applyRecoveryCheckpoint(storage),
+			Func: ApplyRecoveryCheckpoint(storage),
 		},
 	)
+}
+
+// NewInitialRecovery constructs the bootstrap checkpoint initializer.
+func NewInitialRecovery(appStructs istructs.IAppStructsProvider, storage IRecoveryCheckpointStorage) IInitialRecovery {
+	return &initialRecovery{appStructs: appStructs, storage: storage}
 }

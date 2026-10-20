@@ -6,9 +6,7 @@ package checkpoints
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"runtime"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -17,40 +15,11 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-type initialRecovery struct {
-	appStructs istructs.IAppStructsProvider
-	storage    IRecoveryCheckpointStorage
-}
-
-// WorkspaceCheckpointError identifies the workspace whose checkpoint write failed.
-type WorkspaceCheckpointError struct {
-	WSID istructs.WSID
-	Err  error
-}
-
-func (e *WorkspaceCheckpointError) Error() string {
-	return fmt.Sprintf("put workspace checkpoint: %s", e.Err)
-}
-
-func (e *WorkspaceCheckpointError) Unwrap() error { return e.Err }
-
-// NewInitialRecovery constructs the bootstrap checkpoint initializer.
-func NewInitialRecovery(appStructs istructs.IAppStructsProvider, storage IRecoveryCheckpointStorage) IInitialRecovery {
-	return &initialRecovery{appStructs: appStructs, storage: storage}
-}
-
 func (r *initialRecovery) InitializeCheckpoints(ctx context.Context, appQName appdef.AppQName,
-	numPartitions istructs.NumAppPartitions) ([]istructs.PartitionID, map[istructs.PartitionID]error, error) {
-	workerLimit := runtime.GOMAXPROCS(0)
-	if err := ctx.Err(); err != nil {
-		return nil, nil, err
-	}
+	numPartitions istructs.NumAppPartitions) (deployablePartitions []istructs.PartitionID, failedPartitions map[istructs.PartitionID]error, err error) {
 	app, err := r.appStructs.BuiltIn(appQName)
-	if contextErr := ctx.Err(); contextErr != nil {
-		return nil, nil, contextErr
-	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("get application structures: %w", err)
+		return nil, nil, err
 	}
 	logCtx := logger.WithContextAttrs(ctx, map[string]any{
 		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
@@ -59,11 +28,6 @@ func (r *initialRecovery) InitializeCheckpoints(ctx context.Context, appQName ap
 	})
 	logger.InfoCtx(logCtx, "bootstrap.initial_recovery.start", fmt.Sprintf("partitions %d, workers %d", numPartitions, workerLimit))
 
-	type partitionResult struct {
-		completed bool
-		skipped   bool
-		err       error
-	}
 	results := make([]partitionResult, numPartitions)
 	jobs := make(chan istructs.PartitionID)
 	var workers sync.WaitGroup
@@ -74,17 +38,14 @@ func (r *initialRecovery) InitializeCheckpoints(ctx context.Context, appQName ap
 					return
 				}
 				partCtx := logger.WithContextAttrs(logCtx, map[string]any{"partid": partitionID})
-				skipped, err := r.initializePartition(partCtx, app, partitionID)
+				alreadyInited, err := r.initializeCheckpoints(partCtx, app, partitionID)
 				// Each job owns one result slot; readers wait until every worker joins.
-				results[partitionID] = partitionResult{completed: true, skipped: skipped, err: err}
+				results[partitionID] = partitionResult{alreadyInited: alreadyInited, err: err}
 			}
 		})
 	}
 schedule:
 	for id := range numPartitions {
-		if ctx.Err() != nil {
-			break
-		}
 		select {
 		case jobs <- istructs.PartitionID(id):
 		case <-ctx.Done():
@@ -93,66 +54,60 @@ schedule:
 	}
 	close(jobs)
 	workers.Wait()
-
-	deployable := make([]istructs.PartitionID, 0, numPartitions)
-	failed := make(map[istructs.PartitionID]error)
-	fatalErr := ctx.Err()
-	initialized, skipped := 0, 0
-	for id, result := range results {
-		if !result.completed {
-			continue
-		}
-		partitionID := istructs.PartitionID(id) // nolint G115 bounded by numPartitions
-		if result.err != nil {
-			// Context cancellation is fatal; retain other partition failures for logging.
-			if fatalErr == nil || !errors.Is(result.err, fatalErr) {
-				failed[partitionID] = result.err
-			}
-			continue
-		}
-		deployable = append(deployable, partitionID)
-		if result.skipped {
-			skipped++
-		} else {
-			initialized++
-		}
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err
 	}
-	if fatalErr != nil {
-		return deployable, failed, fatalErr
+
+	deployablePartitions = make([]istructs.PartitionID, 0, numPartitions)
+	failedPartitions = make(map[istructs.PartitionID]error)
+	newlyInited, alreadyInited := 0, 0
+	for partitionID, partitionInitResult := range results {
+		partitionID := istructs.PartitionID(partitionID) // nolint G115 bounded by numPartitions
+		if partitionInitResult.err != nil {
+			failedPartitions[partitionID] = partitionInitResult.err
+			continue
+		}
+		deployablePartitions = append(deployablePartitions, partitionID)
+		if partitionInitResult.alreadyInited {
+			alreadyInited++
+		} else {
+			newlyInited++
+		}
 	}
 	logger.InfoCtx(logCtx, "bootstrap.initial_recovery.complete",
-		fmt.Sprintf("initialized %d, skipped %d, failed %d", initialized, skipped, len(failed)))
-	return deployable, failed, nil
+		fmt.Sprintf("newly initialized %d, already initialized %d, failed %d", newlyInited, alreadyInited, len(failedPartitions)))
+	return deployablePartitions, failedPartitions, nil
 }
 
-func (r *initialRecovery) initializePartition(ctx context.Context, app istructs.IAppStructs, partitionID istructs.PartitionID) (skipped bool, err error) {
+func (r *initialRecovery) initializeCheckpoints(ctx context.Context, app istructs.IAppStructs, partitionID istructs.PartitionID) (skipped bool, err error) {
 	appID := app.ClusterAppID()
 	if _, exists, err := r.storage.GetPartitionCheckpoint(appID, partitionID); err != nil {
 		return false, fmt.Errorf("get partition checkpoint: %w", err)
 	} else if exists {
+		// safe to not to look on workspace checkpoint because partition checkpoint is stored after workspace checkpoints
 		return true, nil
 	}
-	partition := PartitionCheckpoint{}
-	workspaces := make(map[istructs.WSID]WorkspaceCheckpoint)
+	partitionCheckpoint := PartitionCheckpoint{}
+	workspaceCheckpoints := make(map[istructs.WSID]WorkspaceCheckpoint)
 	err = app.Events().ReadPLog(ctx, partitionID, istructs.FirstOffset, istructs.ReadToTheEnd,
 		func(offset istructs.Offset, event istructs.IPLogEvent) error {
 			defer event.Release()
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			partition.LastPLogOffset = offset
+			partitionCheckpoint.LastPLogOffset = offset
 			wsid := event.Workspace()
-			checkpoint := workspaces[wsid]
+			workspaceCheckpoint := workspaceCheckpoints[wsid]
 			if canAdvanceWorkspaceCheckpoint(event) {
-				checkpoint.WLogIDBearingOffset = event.WLogOffset()
+				workspaceCheckpoint.WLogIDBearingOffset = event.WLogOffset()
 			}
-			workspaces[wsid] = checkpoint
+			workspaceCheckpoints[wsid] = workspaceCheckpoint
 			return nil
 		})
 	if err != nil {
 		return false, fmt.Errorf("read PLog: %w", err)
 	}
-	for wsid, checkpoint := range workspaces {
+	for wsid, checkpoint := range workspaceCheckpoints {
 		if err := ctx.Err(); err != nil {
 			return false, err
 		}
@@ -165,10 +120,16 @@ func (r *initialRecovery) initializePartition(ctx context.Context, app istructs.
 	}
 	// The partition marker must be the final write so retries cannot skip an
 	// incomplete set of workspace checkpoints.
-	if err := r.storage.PutPartitionCheckpoint(appID, partitionID, partition); err != nil {
+	if err := r.storage.PutPartitionCheckpoint(appID, partitionID, partitionCheckpoint); err != nil {
 		return false, fmt.Errorf("put partition checkpoint: %w", err)
 	}
 	logger.InfoCtx(ctx, "bootstrap.initial_recovery.partition.complete",
-		fmt.Sprintf("lastPLogOffset %d, workspaceCheckpoints %d", partition.LastPLogOffset, len(workspaces)))
+		fmt.Sprintf("lastPLogOffset %d, workspaceCheckpoints stored %d", partitionCheckpoint.LastPLogOffset, len(workspaceCheckpoints)))
 	return false, nil
 }
+
+func (e *WorkspaceCheckpointError) Error() string {
+	return fmt.Sprintf("put workspace checkpoint: %s", e.Err)
+}
+
+func (e *WorkspaceCheckpointError) Unwrap() error { return e.Err }

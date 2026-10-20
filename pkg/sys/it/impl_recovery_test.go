@@ -951,7 +951,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 				// And the server becomes ready
 				require.NotNil(t, vit.VoedgerVM)
 				// When VAOperator submits a command to partition 1 until runtime recovery completes
-				response := vit.PostApp(appQName, appWSID, "c.sys.CUD", `{"cuds":[]}`,
+				response := vit.PostApp(appQName, appWSID, nonIDBearingCommand, "{}",
 					httpu.WithAuthorizeBy(vit.GetSystemPrincipal(appQName).Token))
 				// Then the command succeeds
 				require.Equal(t, http.StatusOK, response.HTTPResp.StatusCode)

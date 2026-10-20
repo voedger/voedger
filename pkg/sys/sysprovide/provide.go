@@ -40,7 +40,7 @@ func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps 
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory,
 	blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr,
 	checkpointStorage checkpoints.IRecoveryCheckpointStorage) {
-	checkpoints.Provide(sr, checkpointStorage)
+	checkpoints.NewApplyRecoveryCheckpointProjector(sr, checkpointStorage)
 	blobber.ProvideBlobberCmds(sr)
 	collection.Provide(sr)
 	journal.Provide(sr, eps)

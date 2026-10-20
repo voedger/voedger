@@ -844,8 +844,7 @@ func TestRecoveryCheckpoints_RecordIDsRecovery(t *testing.T) {
 		control.wLogReads.reset(key)
 		logCap.Reset()
 
-		recovered, err := cmdProc.recoverWorkspace(t.Context(), t.Context(), key,
-			&appPartition{clusterAppID: app.appStructs.ClusterAppID(), appStructs: appStructs})
+		recovered, err := cmdProc.recoverWorkspace(t.Context(), t.Context(), key, appStructs)
 		require.NoError(err)
 		require.Equal(istructs.Offset(last["CurrentWLogOffset"].(float64))+1, recovered.NextWLogOffset)
 		nextRecordID, err := recovered.idGenerator.NextID(1)
@@ -1029,7 +1028,7 @@ func runEmptyPartitionFeatureScenario(t *testing.T, zeroCheckpoint, invalidCheck
 	require.Equal(istructs.FirstOffset, recoveredPartition.nextPLogOffset)
 
 	recoverWorkspace := func(ctx context.Context, key workspaceKey) (*workspace, error) {
-		return cmdProc.recoverWorkspace(ctx, t.Context(), key, recoveredPartition)
+		return cmdProc.recoverWorkspace(ctx, t.Context(), key, recoveredPartition.appStructs)
 	}
 	recoveredWorkspace, err := recoveredPartition.workspaces.getOrStart(
 		t.Context(), emptyWorkspaceKey, recoverWorkspace)
@@ -1081,7 +1080,7 @@ func runEmptyWorkspaceFeatureScenario(t *testing.T, zeroCheckpoint, invalidCheck
 			checkpoints.WorkspaceCheckpoint{})
 	}
 	recoverWorkspace := func(ctx context.Context, key workspaceKey) (*workspace, error) {
-		return cmdProc.recoverWorkspace(ctx, t.Context(), key, recoveredPartition)
+		return cmdProc.recoverWorkspace(ctx, t.Context(), key, recoveredPartition.appStructs)
 	}
 	logCap.Reset()
 
