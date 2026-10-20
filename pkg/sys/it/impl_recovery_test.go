@@ -240,6 +240,97 @@ func TestODocArgumentRecordIDsAreRespectedAfterRestart(t *testing.T) {
 	}
 }
 
+// 1st event: sync 200002
+// 2nd: generate 200003
+// 3rd: sync 200001
+// expected next: 200004
+func TestDescendingSyncedRecordIDsDoNotBreakSequences(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	for _, checkpointMode := range []string{"projector checkpoint", "rebuilt checkpoint", "full WLog scan", "legacy synced checkpoint"} {
+		t.Run(checkpointMode, func(t *testing.T) {
+			appQName := istructs.AppQName_test1_app1
+			cfg := it.NewOwnVITConfig(it.WithApp(appQName, provideTestApp,
+				it.WithUserLogin(recoveryTestLoginName, recoveryTestLoginPassword),
+			))
+			var workspace *it.AppWorkspace
+			var partitionID istructs.PartitionID
+			var lastWLogOffset istructs.Offset
+
+			it.TestRestartPreservingStorageWithHooks(t, &cfg, it.RestartPreservingStorageHooks{
+				FirstRun: func(t *testing.T, vit *it.VIT) {
+					owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
+					workspace = vit.CreateWorkspace(it.SimpleWSParams("descending synced IDs"), owner)
+					var err error
+					partitionID, err = vit.IAppPartitions.AppWorkspacePartitionID(appQName, workspace.WSID)
+					require.NoError(t, err)
+
+					vit.PostWSSys(workspace, "c.sys.Init", `{"cuds":[
+						{"fields":{"sys.ID":200002,"sys.QName":"app1pkg.Root","FldRoot":20}}
+					]}`)
+					generated := vit.PostWS(workspace, "c.sys.CUD", singleDoc)
+					require.Equal(t, istructs.RecordID(200003), generated.NewID())
+					synced := vit.PostWSSys(workspace, "c.sys.Init", `{"cuds":[
+						{"fields":{"sys.ID":200001,"sys.QName":"app1pkg.Root","FldRoot":10}}
+					]}`)
+					lastWLogOffset = synced.CurrentWLogOffset
+					require.Equal(t, generated.CurrentWLogOffset+1, lastWLogOffset)
+
+					appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+					require.NoError(t, err)
+					var ordinaryIDs []istructs.RecordID
+					err = appStructs.Events().ReadWLog(t.Context(), workspace.WSID, istructs.FirstOffset, istructs.ReadToTheEnd,
+						func(_ istructs.Offset, event istructs.IWLogEvent) error {
+							defer event.Release()
+							for row := range event.CUDs {
+								if row.IsNew() && row.ID() >= istructs.FirstUserRecordID {
+									ordinaryIDs = append(ordinaryIDs, row.ID())
+								}
+							}
+							return nil
+						})
+					require.NoError(t, err)
+
+					// 1st event -> 200002 synced from the client
+					// 2nd -> 200003 is assingled to new doc
+					// 3rd -> 200001 is synced from the client
+					require.Equal(t, []istructs.RecordID{200002, 200003, 200001}, ordinaryIDs)
+				},
+				AfterFirstStop: func(t *testing.T, storage it.RestartStorage) {
+					// force full plog read out on the next run
+					appID := istructs.ClusterApps[appQName]
+					checkpointAppStorage := storage.AppStorage(t, istructs.AppQName_sys_vvm)
+					checkpointStorage := vvmstorage.NewRecoveryCheckpointStorage(checkpointAppStorage)
+					switch checkpointMode {
+					case "rebuilt checkpoint":
+						deletePartitionCheckpoint(t, checkpointStorage, checkpointAppStorage, appID, partitionID)
+						deleteWorkspaceCheckpoint(t, checkpointStorage, checkpointAppStorage, appID, workspace.WSID)
+					case "full WLog scan":
+						deleteWorkspaceCheckpoint(t, checkpointStorage, checkpointAppStorage, appID, workspace.WSID)
+					case "legacy synced checkpoint":
+						// Older producers could checkpoint a lower synchronized ID.
+						require.NoError(t, checkpointStorage.PutWorkspaceCheckpoint(appID, workspace.WSID,
+							checkpoints.WorkspaceCheckpoint{WLogIDBearingOffset: lastWLogOffset}))
+					}
+				},
+				SecondRun: func(t *testing.T, vit *it.VIT) {
+					response := vit.PostWS(workspace, "c.sys.CUD", singleDoc)
+					require.Equal(t, lastWLogOffset+1, response.CurrentWLogOffset)
+					assert.Equal(t, istructs.RecordID(200004), response.NewID(),
+						"a later synchronized insert with a lower ID must not lower the recovered allocator")
+					appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+					require.NoError(t, err)
+					original, err := appStructs.Records().Get(workspace.WSID, true, 200002)
+					require.NoError(t, err)
+					assert.Equal(t, int32(20), original.AsInt32("FldRoot"),
+						"allocating a record after restart must not overwrite an earlier synchronized record")
+				},
+			})
+		})
+	}
+}
+
 func TestRecoveryFromCheckpoints(t *testing.T) {
 	if testing.Short() {
 		t.Skip()

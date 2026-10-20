@@ -20,13 +20,20 @@ func applyRecoveryCheckpoint(storage IRecoveryCheckpointStorage) func(istructs.I
 			}
 		}
 
-		if !IsIDBearingEvent(event) {
+		if !canAdvanceWorkspaceCheckpoint(event) {
 			return nil
 		}
 		return storage.PutWorkspaceCheckpoint(clusterAppID, event.Workspace(), WorkspaceCheckpoint{
 			WLogIDBearingOffset: event.WLogOffset(),
 		})
 	}
+}
+
+// Locally generated IDs exceed all previously allocated IDs. Synchronized
+// inserts can carry lower IDs, so advancing past earlier events would lose
+// coverage of the allocator's maximum. Keep scanning from the previous checkpoint.
+func canAdvanceWorkspaceCheckpoint(event istructs.IAbstractEvent) bool {
+	return IsIDBearingEvent(event) && !event.Synced()
 }
 
 func IsIDBearingEvent(event istructs.IAbstractEvent) bool {

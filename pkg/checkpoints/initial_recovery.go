@@ -143,7 +143,7 @@ func (r *initialRecovery) initializePartition(ctx context.Context, app istructs.
 			partition.LastPLogOffset = offset
 			wsid := event.Workspace()
 			checkpoint := workspaces[wsid]
-			if IsIDBearingEvent(event) {
+			if canAdvanceWorkspaceCheckpoint(event) {
 				checkpoint.WLogIDBearingOffset = event.WLogOffset()
 			}
 			workspaces[wsid] = checkpoint

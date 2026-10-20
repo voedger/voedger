@@ -360,15 +360,13 @@ func (cmdProc *cmdProc) scanWLog(vvmCtx context.Context, wsKey workspaceKey, ap 
 			defer event.Release()
 			eventRecordID := checkpoints.HighestNewRecordID(event)
 			if !checkpointValid {
-				if wlogOffset != startOffset || eventRecordID == istructs.NullRecordID {
+				if wlogOffset != startOffset || eventRecordID == istructs.NullRecordID || event.Synced() {
 					return errInvalidRecoveryCheckpoint
 				}
 				checkpointValid = true
 			}
 			lastWLogOffset = wlogOffset
-			if eventRecordID != istructs.NullRecordID {
-				lastRecordID = eventRecordID
-			}
+			lastRecordID = max(lastRecordID, eventRecordID)
 			return nil
 		})
 	return lastWLogOffset, lastRecordID, checkpointValid, err

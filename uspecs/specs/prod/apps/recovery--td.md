@@ -10,15 +10,19 @@ Normal offset and identifier issuance is specified separately in
   scan start. It accelerates recovery but is not authoritative sequence state.
 - **Partition checkpoint**: `lastPLogOffset`, the latest handled PLog offset
   selected by initial recovery or the asynchronous checkpoint projector.
-- **Workspace checkpoint**: `wlogIDBearingOffset`, the latest ID-bearing WLog
-  offset found by its producer. It need not be the latest ID-bearing event in
-  the WLog and is never treated as the WLog end.
+- **Workspace checkpoint**: `wlogIDBearingOffset`, an ID-bearing WLog offset
+  from a locally generated event. Such an event allocates beyond all earlier
+  IDs, so scanning from it preserves coverage of the maximum allocated ID.
+  Synchronized inserts (`c.sys.Init`)may contain lower IDs and do not advance the checkpoint.
+  The offset is never treated as the WLog end.
 - **Zero-value initialization sentinel**: a present zero partition checkpoint
   marks an initialized empty PLog; a present zero workspace checkpoint marks an
-  encountered workspace with no ID-bearing event. Either zero selects one scan
+  encountered workspace with no locally generated ID-bearing event, including
+  sync-only history. Either zero selects one scan
   from `FirstOffset` without validation or invalid-checkpoint logging.
 - **ID-bearing event**: an event that allocates at least one new non-singleton
-  record ID at or above `FirstUserRecordID`.
+  record ID at or above `FirstUserRecordID`, including logged argument roots
+  and descendants as well as newly created CUD rows.
 - **Initial recovery**: bootstrap-time computation and persistence of missing
   checkpoints for every declared application partition. It does not publish
   runtime partition or workspace state.
@@ -121,10 +125,10 @@ Application operations
     partition deployable without scanning or rewriting it. Each missing partition
     is scheduled concurrently under the sampled CPU bound and reads its PLog
     sequentially from `FirstOffset` through the actual log end. The attempt
-    retains the final PLog offset and latest ID-bearing WLog offset for every
+    retains the final PLog offset and latest locally generated ID-bearing WLog offset for every
     WSID encountered.
   - It stores a workspace checkpoint for every encountered WSID, using zero when
-    no ID-bearing event was found, and stores the partition checkpoint last,
+    no locally generated ID-bearing event was found, and stores the partition checkpoint last,
     using zero for an empty PLog. The partition is added to the deployable IDs
     only after all these writes succeed. A failed reconstruction writes no
     completion marker and is repeated on a later bootstrap.
@@ -206,8 +210,11 @@ Application operations
   - impl: [pkg/processors/command/types.go](../../../../pkg/processors/command/types.go)
 
 - `[Record ID generator]`
-  - Starts at `FirstUserRecordID`; workspace recovery advances it from the latest
+  - Starts at `FirstUserRecordID`; workspace recovery advances it from the maximum
     newly allocated non-singleton ID encountered in the complete WLog tail scan.
+    A later synchronized insert with a lower ID must not lower this maximum.
+    A stored checkpoint pointing at a synchronized event is unsafe and triggers
+    the existing full-scan fallback, covering checkpoints written by older producers.
   - impl: [pkg/istructsmem/idgenerator.go](../../../../pkg/istructsmem/idgenerator.go)
 
 ### Checkpointing
@@ -215,8 +222,11 @@ Application operations
 - `[Recovery checkpoint projector]`
   - The single built-in asynchronous `sys.ApplyRecoveryCheckpoint` stores a
     partition checkpoint every 100 PLog events and replaces the workspace
-    checkpoint whenever it sees an ID-bearing event. Both initial recovery and
-    this projector use the same ID-bearing-event predicate.
+    checkpoint whenever it sees a locally generated ID-bearing event. Both initial
+    recovery and this projector use the same checkpoint eligibility predicate.
+    Synchronized events leave the earlier checkpoint in place; a workspace with
+    only synchronized events is recovered with a full scan. No allocated IDs or
+    in-memory maximum-ID cache are added to checkpoint storage.
   - impl: [pkg/checkpoints/impl.go](../../../../pkg/checkpoints/impl.go)
   - impl: [pkg/checkpoints/provide.go](../../../../pkg/checkpoints/provide.go)
 
@@ -458,7 +468,7 @@ must equal the first returned event offset.
           -> [(Recovery checkpoint storage)]: absent, zero, or valid wlogIDBearingOffset
           -> [Application events]: ReadWLog(checkpoint or FirstOffset, through log end)
           -> [Offsets bookkeeping]: NextWLogOffset = actual log end + 1
-          -> [Record ID generator]: advance from latest ID-bearing event found by the log tail scan
+          -> [Record ID generator]: advance from maximum allocated ID found by the log tail scan
   -> [Command processor]: later retry succeeds with following offset and record ID
 ```
 

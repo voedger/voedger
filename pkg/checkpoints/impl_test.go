@@ -163,6 +163,7 @@ func newIPLogEvent(t *testing.T, offset istructs.Offset, cuds ...istructs.ICUDRo
 	// A failed partition write skips event classification entirely.
 	event.On("PLogOffset").Return(offset).Maybe()
 	event.On("ArgumentObject").Return(istructs.NewNullObject()).Maybe()
+	event.On("Synced").Return(false).Maybe()
 	event.On("CUDs", mock.Anything).Run(func(args mock.Arguments) {
 		callback := args.Get(0).(func(istructs.ICUDRow) bool)
 		for _, cud := range cuds {

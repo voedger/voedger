@@ -20,9 +20,10 @@ type PartitionCheckpoint struct {
 }
 
 type WorkspaceCheckpoint struct {
-	// WLogIDBearingOffset identifies an ID-bearing WLog event from which recovery can scan.
+	// WLogIDBearingOffset identifies a locally generated ID-bearing WLog event
+	// from which recovery can scan without skipping the maximum allocated ID.
 	// It need not identify the latest ID-bearing event.
-	// Initial recovery stores zero when the workspace has no ID-bearing history;
+	// Initial recovery stores zero when no such event exists, including sync-only history;
 	// zero is a non-validating full-scan sentinel for runtime recovery.
 	WLogIDBearingOffset istructs.Offset `json:"wlogIDBearingOffset"`
 }
