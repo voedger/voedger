@@ -783,8 +783,9 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 
 func (cmdProc *cmdProc) getWorkspace(vvmCtx context.Context, cmd *cmdWorkpiece) (err error) {
 	wsKey := workspaceKey{
-		partitionKey: partitionKey{appQName: cmd.cmdMes.AppQName(), partitionID: cmd.cmdMes.PartitionID()},
-		wsid:         cmd.cmdMes.WSID(),
+		appQName:    cmd.cmdMes.AppQName(),
+		partitionID: cmd.cmdMes.PartitionID(),
+		wsid:        cmd.cmdMes.WSID(),
 	}
 	ap := cmd.appPartition
 	cmd.workspace, err = ap.workspaces.getOrStart(vvmCtx, wsKey,

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1214,16 +1215,20 @@ func TestWorkspaceRecovery(t *testing.T) {
 		firstInitialStarts := app.recoveryTestControl.workspaces.startCount(firstKey)
 		secondInitialStarts := app.recoveryTestControl.workspaces.startCount(secondKey)
 		firstGate := app.recoveryTestControl.workspaces.blockNext(firstKey)
+		backgroundGates := make(map[workspaceKey]chan struct{})
+		defer func() {
+			for key, gate := range backgroundGates {
+				close(gate)
+				waitCtx, cancel := context.WithTimeout(app.ctx, 5*time.Second)
+				err := app.recoveryTestControl.workspaces.wait(waitCtx, key)
+				cancel()
+				require.NoError(err)
+			}
+		}()
 		// And workspace recoveries for workspaces 44 through 46 are running
 		for _, wsid := range []istructs.WSID{44, 45, 46} {
 			key := recoveryWorkspaceKeyForTestApp(app, wsid)
-			gate := app.recoveryTestControl.workspaces.blockNext(key)
-			defer func() {
-				close(gate)
-				waitCtx, cancel := context.WithTimeout(app.ctx, 5*time.Second)
-				defer cancel()
-				require.NoError(app.recoveryTestControl.workspaces.wait(waitCtx, key))
-			}()
+			backgroundGates[key] = app.recoveryTestControl.workspaces.blockNext(key)
 			status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(wsid, app))
 			require.NoError(err)
 			require.Equal(http.StatusServiceUnavailable, status)
@@ -1476,7 +1481,7 @@ func prepareRecoveryAdmissionWLog(t *testing.T, app testApp, wsid istructs.WSID)
 	require.Equal(10, int(lastIDBearing["CurrentWLogOffset"].(float64)))
 	for rawID := 1; rawID <= 4; rawID++ {
 		require.Equal(istructs.RecordID(200001+rawID),
-			istructs.RecordID(lastIDBearing["NewIDs"].(map[string]interface{})[fmt.Sprint(rawID)].(float64)))
+			istructs.RecordID(lastIDBearing["NewIDs"].(map[string]interface{})[strconv.Itoa(rawID)].(float64)))
 	}
 
 	for expectedOffset := istructs.Offset(11); expectedOffset <= 14; expectedOffset++ {
@@ -2259,7 +2264,7 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	require.NoError(err)
 	recoveryControl := newRecoveryTestControl()
 	partitionRecoveryHooks, workspaceRecoveryHooks := recoveryControl.testHooks()
-	processorParts := appparts.IAppPartitions(appParts)
+	processorParts := appParts
 	if options.appPartsForProcessor != nil {
 		processorParts = options.appPartsForProcessor(appParts)
 	}

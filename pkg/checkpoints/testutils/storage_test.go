@@ -138,9 +138,7 @@ func TestStorageConcurrentAccess(t *testing.T) {
 	var workers sync.WaitGroup
 	results := make(chan error, 64)
 	for i := range 64 {
-		workers.Add(1)
-		go func() {
-			defer workers.Done()
+		workers.Go(func() {
 			appID, partitionID := istructs.ClusterAppID(i/16), istructs.PartitionID(i%16)
 			op := Operation{Kind: GetPartition, AppID: appID, PartitionID: partitionID}
 			storage.SetError(op, nil)
@@ -152,7 +150,7 @@ func TestStorageConcurrentAccess(t *testing.T) {
 			}
 			_, _, err := storage.GetPartitionCheckpoint(appID, partitionID)
 			results <- err
-		}()
+		})
 	}
 	workers.Wait()
 	for range 64 {

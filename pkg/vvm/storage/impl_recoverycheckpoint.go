@@ -70,10 +70,9 @@ func (s *implCheckpointStorage) PutWorkspaceCheckpoint(appID istructs.ClusterApp
 	return nil
 }
 
-func (s *implCheckpointStorage) get(pKey, cCols []byte) ([]byte, bool, error) {
-	var data []byte
-	ok, err := s.sysVVMStorage.Get(pKey, cCols, &data)
-	return data, ok, err
+func (s *implCheckpointStorage) get(pKey, cCols []byte) (data []byte, found bool, err error) {
+	found, err = s.sysVVMStorage.Get(pKey, cCols, &data)
+	return data, found, err
 }
 
 func partitionCheckpointPKey(appID istructs.ClusterAppID, partitionID istructs.PartitionID) []byte {

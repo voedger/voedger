@@ -80,7 +80,7 @@ func TestSequenceAllocation(t *testing.T) {
 		orders := vit.CreateWorkspace(it.SimpleWSParams("Orders"), owner)
 
 		// Given the next ordinary record ID in workspace "Orders" is 200001
-		require.Equal(t, istructs.RecordID(200001), istructs.FirstUserRecordID)
+		require.Equal(t, istructs.FirstUserRecordID, istructs.RecordID(200001))
 
 		// When VAOperator successfully creates three ordinary records in one command
 		response := vit.PostWS(orders, "c.sys.CUD", docWithNested)
@@ -126,7 +126,7 @@ func TestSequenceAllocation(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, istructs.RecordID(65536), configurationID)
 		// And the next ordinary record ID in workspace "Orders" is 200001
-		require.Equal(t, istructs.RecordID(200001), istructs.FirstUserRecordID)
+		require.Equal(t, istructs.FirstUserRecordID, istructs.RecordID(200001))
 
 		// When VAOperator successfully creates the "Configuration" singleton
 		response := vit.PostWS(orders, "c.sys.CUD", singletonCUD)
@@ -185,5 +185,6 @@ func newSequenceVIT(t *testing.T, numPartitions istructs.NumAppPartitions) (*it.
 		it.WithUserLogin(recoveryTestLoginName, recoveryTestLoginPassword),
 	))
 	vit := it.NewVIT(t, &cfg)
-	return vit, vit.GetPrincipal(appQName, recoveryTestLoginName)
+	owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
+	return vit, owner
 }

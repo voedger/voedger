@@ -352,7 +352,7 @@ func TestDeployAppPartitionsStartsOnlySelectedPartitions(t *testing.T) {
 			count, err := parts.AppPartsCount(appName)
 			require.NoError(err)
 			require.Equal(istructs.NumAppPartitions(3), count)
-			for id := istructs.PartitionID(0); id < 3; id++ {
+			for id := range istructs.PartitionID(3) {
 				selected := false
 				for _, deployedID := range test.ids {
 					selected = selected || deployedID == id

@@ -120,8 +120,7 @@ func initializeAppCheckpoints(ctx context.Context, initialRecovery checkpoints.I
 			"app":                    app.Name,
 			"partid":                 id,
 		})
-		var workspaceErr *checkpoints.WorkspaceCheckpointError
-		if errors.As(partitionErr, &workspaceErr) {
+		if workspaceErr, ok := errors.AsType[*checkpoints.WorkspaceCheckpointError](partitionErr); ok {
 			errorCtx = logger.WithContextAttrs(errorCtx, map[string]any{logger.LogAttr_WSID: workspaceErr.WSID})
 		}
 		logger.ErrorCtx(errorCtx, "bootstrap.initial_recovery.error", partitionErr)

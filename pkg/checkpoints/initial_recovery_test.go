@@ -322,7 +322,7 @@ func TestInitialRecoveryAcceptsPresentZeroCheckpoints(t *testing.T) {
 	// Presence, not a nonzero offset, marks completion; no log plog or writes are needed.
 	plog := newMockPLog(t)
 	checkpointStorage := testutils.NewCheckpointStorageMem()
-	for partitionID := istructs.PartitionID(0); partitionID < 3; partitionID++ {
+	for partitionID := range istructs.PartitionID(3) {
 		checkpointStorage.ForcePutPartitionCheckpoint(t, testClusterAppID, partitionID, checkpoints.PartitionCheckpoint{})
 	}
 	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, plog.events), checkpointStorage)
@@ -356,7 +356,7 @@ func TestInitialRecoveryReturnsEveryPartitionFailure(t *testing.T) {
 	plog := newMockPLog(t)
 	storage := testutils.NewCheckpointStorageMem()
 	injectedErr := errors.New("PLog unavailable")
-	for partitionID := istructs.PartitionID(0); partitionID < 3; partitionID++ {
+	for partitionID := range istructs.PartitionID(3) {
 		plog.setEvents(partitionID, injectedErr)
 	}
 	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, plog.events), storage)
@@ -364,7 +364,7 @@ func TestInitialRecoveryReturnsEveryPartitionFailure(t *testing.T) {
 	require.NoError(t, err)
 	checkInitialRecoveryResult(t, 3, deployable, failed)
 	require.Empty(t, deployable)
-	for partitionID := istructs.PartitionID(0); partitionID < 3; partitionID++ {
+	for partitionID := range istructs.PartitionID(3) {
 		require.ErrorIs(t, failed[partitionID], injectedErr)
 		require.ErrorContains(t, failed[partitionID], "read PLog")
 		require.Equal(t, 1, plog.readPLogCallsCount(partitionID))
@@ -480,8 +480,7 @@ func newMockPLog(t *testing.T) *mockPLog {
 
 func (r *mockPLog) setEvents(partitionID istructs.PartitionID, errOnReadPLog error,
 	events ...*coreutils.MockPLogEvent) {
-	var expectation *mock.Call
-	expectation = r.events.On("ReadPLog", mock.Anything, partitionID, istructs.FirstOffset,
+	expectation := r.events.On("ReadPLog", mock.Anything, partitionID, istructs.FirstOffset,
 		istructs.ReadToTheEnd, mock.Anything).Return(errOnReadPLog).Once()
 	expectation.Run(func(args mock.Arguments) {
 		ctx := args.Get(0).(context.Context)

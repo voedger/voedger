@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -654,7 +655,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 		it.TestRestartPreservingStorageWithHooks(t, &cfg, it.RestartPreservingStorageHooks{
 			FirstRun: func(t *testing.T, vit *it.VIT) {
 				owner := vit.GetPrincipal(istructs.AppQName_test1_app1, recoveryTestLoginName)
-				for id := istructs.PartitionID(0); id < 3; id++ {
+				for id := range istructs.PartitionID(3) {
 					workspaces[id] = createWorkspacesInPartition(t, vit, owner, id, 1)[0]
 				}
 				// And asynchronous projectors and scheduled jobs are configured for every partition
@@ -724,7 +725,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 					require.True(t, present)
 					preserved[id] = checkpoint
 				}
-				for index := istructs.WSID(0); index < 3; index++ {
+				for index := range istructs.WSID(3) {
 					wsid := istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+index)
 					if coreutils.AppPartitionID(wsid, 3) == 1 {
 						appWSID = wsid
@@ -1644,7 +1645,7 @@ func requirePartitionCheckpointPresence(t *testing.T, vit *it.VIT, failed []istr
 	store, err := vit.IAppStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
 	require.NoError(t, err)
 	checkpointStorage := vvmstorage.NewRecoveryCheckpointStorage(store)
-	for id := istructs.PartitionID(0); id < 3; id++ {
+	for id := range istructs.PartitionID(3) {
 		_, present, err := checkpointStorage.GetPartitionCheckpoint(istructs.ClusterApps[istructs.AppQName_test1_app1], id)
 		require.NoError(t, err)
 		require.Equal(t, !containsPartition(failed, id), present)
@@ -1671,7 +1672,7 @@ func removeAppPartitionCheckpoints(t *testing.T, storage it.RestartStorage, numP
 func deployedPartitionIDs(t *testing.T, vit *it.VIT) []istructs.PartitionID {
 	t.Helper()
 	var deployed []istructs.PartitionID
-	for id := istructs.PartitionID(0); id < 3; id++ {
+	for id := range istructs.PartitionID(3) {
 		partition, err := vit.IAppPartitions.Borrow(istructs.AppQName_test1_app1, id, appparts.ProcessorKind_Command)
 		if errors.Is(err, appparts.ErrNotFound) {
 			continue
@@ -1705,7 +1706,7 @@ func requireProjectorsAndJobsConfigured(t *testing.T, vit *it.VIT) {
 	for id, names := range vit.IAppPartitions.WorkedSchedulers(istructs.AppQName_test1_app1) {
 		_, jobs[id] = names[appdef.NewQName("app1pkg", "InitialRecoveryJob")]
 	}
-	for id := istructs.PartitionID(0); id < 3; id++ {
+	for id := range istructs.PartitionID(3) {
 		require.Contains(t, actualizers[id], checkpoints.QNameApplyRecoveryCheckpoint)
 		require.True(t, jobs[id], "partition %d must have a configured scheduler", id)
 	}
@@ -1741,12 +1742,7 @@ func requireNoRuntimeRecoveryStarts(t *testing.T, logs logger.ILogCaptor, id ist
 }
 
 func containsPartition(partitions []istructs.PartitionID, target istructs.PartitionID) bool {
-	for _, partitionID := range partitions {
-		if partitionID == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(partitions, target)
 }
 
 type readErrorInjectingAndWriteRecordingStorageFactory struct {

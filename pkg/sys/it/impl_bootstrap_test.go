@@ -304,7 +304,6 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 	})
 }
 
-
 func TestBootstrapCheckpointFailuresPreserveDeclaredPartitionCount(t *testing.T) {
 	for _, test := range []struct {
 		name       string
@@ -445,7 +444,7 @@ func deploymentDescriptorFields(t *testing.T, asp istructs.IAppStructsProvider, 
 
 func countBootstrapLogLines(logs string, fragments ...string) int {
 	count := 0
-	for _, line := range strings.Split(logs, "\n") {
+	for line := range strings.SplitSeq(logs, "\n") {
 		matches := true
 		for _, fragment := range fragments {
 			matches = matches && strings.Contains(line, fragment)

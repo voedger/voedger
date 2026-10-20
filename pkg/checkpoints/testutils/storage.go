@@ -132,7 +132,7 @@ func (s *CheckpointStorage) GetPartitionCheckpoint(appID istructs.ClusterAppID, 
 		value, found, readErr = s.base.GetPartitionCheckpoint(appID, partitionID)
 		return readErr
 	})
-	return
+	return value, found, err
 }
 
 func (s *CheckpointStorage) PutPartitionCheckpoint(appID istructs.ClusterAppID, partitionID istructs.PartitionID, value checkpoints.PartitionCheckpoint) error {
@@ -147,7 +147,7 @@ func (s *CheckpointStorage) GetWorkspaceCheckpoint(appID istructs.ClusterAppID, 
 		value, found, readErr = s.base.GetWorkspaceCheckpoint(appID, wsid)
 		return readErr
 	})
-	return
+	return value, found, err
 }
 
 func (s *CheckpointStorage) PutWorkspaceCheckpoint(appID istructs.ClusterAppID, wsid istructs.WSID, value checkpoints.WorkspaceCheckpoint) error {
