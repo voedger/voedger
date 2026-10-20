@@ -7,11 +7,16 @@ package commandprocessor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
+	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -181,9 +186,13 @@ func (c *recoveryTestAttempts[K, T]) wait(ctx context.Context, key K) error {
 	if !ok {
 		return fmt.Errorf("recovery for %v was not started", key)
 	}
+	return attempt.wait(ctx)
+}
+
+func (a *recoveryAttempt) wait(ctx context.Context) error {
 	select {
-	case <-attempt.done:
-		return attempt.err
+	case <-a.done:
+		return a.err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -245,20 +254,20 @@ type recoveryRetrySender struct {
 	keyForRequest func(bus.Request) (partitionKey, bool)
 }
 
-// SendRequest hides mandatory lazy partition recovery from unrelated tests:
+// SendRequest hides lazy partition and workspace recovery from unrelated tests:
 //
 //	request --> raw.SendRequest
 //	              |
 //	              +--> non-503/error/untracked request ----------> return response
 //	              |
-//	              +--> 503 + known partition attempt
+//	              +--> 503 + matching recovery message and attempt
 //	                         |
 //	                         +--> drain response --> wait(done) --> retry request
 //	                                                  |
 //	                                                  +--> failure/cancel --> return error
 //
-// Draining before waiting preserves the bus response lifecycle. Checking for a
-// recorded attempt prevents unrelated 503 responses from becoming retry loops.
+// Draining before waiting preserves the bus response lifecycle. Responses that
+// do not identify a tracked recovery attempt are replayed unchanged to the caller.
 func (s *recoveryRetrySender) SendRequest(ctx context.Context, req bus.Request) (<-chan any, bus.ResponseMeta, *error, error) {
 	for {
 		responseCh, responseMeta, responseErr, err := s.raw.SendRequest(ctx, req)
@@ -266,16 +275,101 @@ func (s *recoveryRetrySender) SendRequest(ctx context.Context, req bus.Request) 
 		if err != nil || responseMeta.StatusCode != http.StatusServiceUnavailable || !retryRecovery {
 			return responseCh, responseMeta, responseErr, err
 		}
-		if _, ok := s.control.partitions.latest(key); !ok {
-			return responseCh, responseMeta, responseErr, err
+		var response []any
+		var attempt *recoveryAttempt
+		for elem := range responseCh {
+			response = append(response, elem)
+			if responseError, ok := elem.(coreutils.SysError); ok {
+				switch responseError.Message {
+				case fmt.Sprintf("partition %d: %s", key.partitionID, errRecoveryInProgress):
+					attempt, _ = s.control.partitions.latest(key)
+				case fmt.Sprintf("workspace %d: %s", req.WSID, errRecoveryInProgress):
+					attempt, _ = s.control.workspaces.latest(workspaceKey{partitionKey: key, wsid: req.WSID})
+				}
+			}
 		}
-		for range responseCh {
+		if attempt == nil {
+			replay := make(chan any, len(response))
+			for _, elem := range response {
+				replay <- elem
+			}
+			close(replay)
+			return replay, responseMeta, responseErr, nil
 		}
 		if *responseErr != nil {
 			return nil, bus.ResponseMeta{}, nil, *responseErr
 		}
-		if err := s.control.partitions.wait(ctx, key); err != nil {
+		if err := attempt.wait(ctx); err != nil {
 			return nil, bus.ResponseMeta{}, nil, err
 		}
+	}
+}
+
+func TestRecoveryRetrySender(t *testing.T) {
+	key := partitionKey{appQName: testAppName, partitionID: 2}
+	req := bus.Request{AppQName: testAppName, WSID: 7}
+	workspaceErr := errors.New("workspace scan failed")
+	for _, test := range []struct {
+		name       string
+		message    string
+		wantErr    error
+		wantStatus int
+		wantCalls  int
+	}{
+		{name: "retries after partition recovery", message: "partition 2: recovery is in progress", wantStatus: http.StatusOK, wantCalls: 2},
+		{name: "waits for matching workspace recovery", message: "workspace 7: recovery is in progress", wantErr: workspaceErr, wantCalls: 1},
+		{name: "preserves unrelated 503", message: "no available engines", wantStatus: http.StatusServiceUnavailable, wantCalls: 1},
+		{name: "preserves recovery limit response", message: "workspace 7: recovery concurrency limit is reached", wantStatus: http.StatusServiceUnavailable, wantCalls: 1},
+		{name: "ignores another workspace", message: "workspace 8: recovery is in progress", wantStatus: http.StatusServiceUnavailable, wantCalls: 1},
+		{name: "ignores another partition", message: "partition 3: recovery is in progress", wantStatus: http.StatusServiceUnavailable, wantCalls: 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			control := newRecoveryTestControl()
+			control.partitions.scheduled(key)
+			control.partitions.attemptCompleted(key, nil)
+			wsKey := workspaceKey{partitionKey: key, wsid: req.WSID}
+			control.workspaces.scheduled(wsKey)
+			control.workspaces.attemptCompleted(wsKey, workspaceErr)
+			otherWSKey := workspaceKey{partitionKey: partitionKey{appQName: testAppName, partitionID: 3}, wsid: req.WSID}
+			control.workspaces.scheduled(otherWSKey)
+			control.workspaces.attemptCompleted(otherWSKey, errors.New("another partition's workspace scan failed"))
+
+			responseError := coreutils.SysError{HTTPStatus: http.StatusServiceUnavailable, Message: test.message}
+			calls := 0
+			sender := &recoveryRetrySender{
+				raw: bus.NewIRequestSender(testingu.MockTime, func(_ context.Context, _ bus.Request, responder bus.IResponder) {
+					calls++
+					if calls == 1 {
+						bus.ReplyErr(responder, responseError)
+					} else {
+						bus.ReplyJSON(responder, http.StatusOK, "ok")
+					}
+				}),
+				control: control,
+				keyForRequest: func(bus.Request) (partitionKey, bool) {
+					return key, true
+				},
+			}
+
+			responseCh, meta, responseErr, err := sender.SendRequest(t.Context(), req)
+
+			require.Equal(t, test.wantCalls, calls)
+			if test.wantErr != nil {
+				require.ErrorIs(t, err, test.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, test.wantStatus, meta.StatusCode)
+			var response []any
+			for elem := range responseCh {
+				response = append(response, elem)
+			}
+			require.NoError(t, *responseErr)
+			if test.wantStatus == http.StatusServiceUnavailable {
+				require.Equal(t, []any{responseError}, response)
+			} else {
+				require.Equal(t, []any{"ok"}, response)
+			}
+		})
 	}
 }

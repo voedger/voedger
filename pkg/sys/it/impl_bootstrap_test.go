@@ -18,13 +18,13 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/bus"
 	"github.com/voedger/voedger/pkg/checkpoints"
-	"github.com/voedger/voedger/pkg/checkpoints/testutils"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -67,7 +67,10 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		postWiredInterfacePtrs := newPostWiredInterfacePtrs()
 		testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 		testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
-		err := btstrp.Bootstrap(t.Context(), vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, newMockInitialRecovery(vit, nil), clusterApp, otherApps,
+		iInitialRecovery := newMockInitialRecovery(t, nil)
+		expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
+		expectSuccessfulInitialRecovery(iInitialRecovery, otherApps...)
+		err := btstrp.Bootstrap(t.Context(), vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, iInitialRecovery, clusterApp, otherApps,
 			nil, vit.ITokens, vit.IAppStorageProvider, postWiredInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		require.NoError(err)
 		require.NotNil(*postWiredInterfacePtrs.BlobberAppStorage)
@@ -87,10 +90,12 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		postWiredInterfacePtrs := newPostWiredInterfacePtrs()
 		testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 		testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
+		iInitialRecovery := newMockInitialRecovery(t, nil)
+		expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
 		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num partitions changed: app %[1]s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumParts, otherApps[0].AppDeploymentDescriptor.NumParts-1), func() {
-			btstrp.Bootstrap(t.Context(), vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, newMockInitialRecovery(vit, nil), clusterApp, otherApps,
+			btstrp.Bootstrap(t.Context(), vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, iInitialRecovery, clusterApp, otherApps,
 				nil, vit.ITokens, vit.IAppStorageProvider, postWiredInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		})
 	})
@@ -102,6 +107,8 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces--
 		}()
+		iInitialRecovery := newMockInitialRecovery(t, nil)
+		expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
 
 		//nolint errcheck
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409, expected [200 201]: num application workspaces changed: app %[1]s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorkspaces=%d",
@@ -109,7 +116,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 			postWiredInterfacePtrs := newPostWiredInterfacePtrs()
 			testBlobRequestHandler := blobprocessor.NewIRequestHandler(nil, 0, nil)
 			testRequestSender := bus.NewIRequestSender(testingu.MockTime, nil)
-			btstrp.Bootstrap(t.Context(), vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, newMockInitialRecovery(vit, nil), clusterApp, otherApps,
+			btstrp.Bootstrap(t.Context(), vit.IFederation.WithRetry(), vit.IAppStructsProvider, vit.Time, appParts, iInitialRecovery, clusterApp, otherApps,
 				nil, vit.ITokens, vit.IAppStorageProvider, postWiredInterfacePtrs, testBlobRequestHandler, testRequestSender)
 		})
 	})
@@ -139,7 +146,10 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 		defer cleanup()
 		bootstrapRecorder := &bootstrapOperationsRecorder{}
 		appPartsRecorder := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: bootstrapRecorder}
-		iInitialRecovery := newMockInitialRecovery(vit, bootstrapRecorder)
+		iInitialRecovery := newMockInitialRecovery(t, bootstrapRecorder)
+		expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
+		expectSuccessfulInitialRecovery(iInitialRecovery, otherApps...)
+		expectSuccessfulInitialRecovery(iInitialRecovery, sidecarApps[0].BuiltInApp)
 
 		err := runBootstrap(t.Context(), vit, appPartsRecorder, iInitialRecovery, clusterApp, otherApps, sidecarApps)
 
@@ -156,7 +166,9 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 			require.Less(t, order_DeployApp, order_InitializeCheckpoints, app.Name.String())
 			require.Less(t, order_InitializeCheckpoints, order_DeployAppPartitions, app.Name.String())
 			require.Len(t, bootstrapRecorder.deployedPartitionIDs(app.Name), int(app.NumParts))
-			require.ElementsMatch(t, iInitialRecovery.deployable[app.Name], bootstrapRecorder.deployedPartitionIDs(app.Name))
+			for id := range app.NumParts {
+				require.Contains(t, bootstrapRecorder.deployedPartitionIDs(app.Name), istructs.PartitionID(id))
+			}
 		}
 	})
 
@@ -173,13 +185,15 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 			defer cleanup()
 			bootstrapRecorder := &bootstrapOperationsRecorder{}
 			appPartsRecorder := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: bootstrapRecorder}
-			iInitialRecovery := newMockInitialRecovery(vit, bootstrapRecorder)
-			iInitialRecovery.doFailPartitionCheckpointRead = map[appdef.AppQName]map[istructs.PartitionID]error{
-				targetApp: {},
-			}
+			iInitialRecovery := newMockInitialRecovery(t, bootstrapRecorder)
+			expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
+			expectSuccessfulInitialRecovery(iInitialRecovery, otherApps...)
+			failed := make(map[istructs.PartitionID]error)
 			for _, id := range test.failed {
-				iInitialRecovery.doFailPartitionCheckpointRead[targetApp][id] = errors.New("checkpoint read failed")
+				failed[id] = errors.New("get partition checkpoint: checkpoint read failed")
 			}
+			iInitialRecovery.On("InitializeCheckpoints", mock.Anything, targetApp, numParts).
+				Return(test.deployable, failed, nil).Once()
 			logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 			appPartsRecorder.beforeDeploy = func(app appdef.AppQName) {
 				if app != targetApp {
@@ -214,11 +228,10 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 		defer cleanup()
 		bootstrapRecorder := &bootstrapOperationsRecorder{}
 		appPartsRecorder := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: bootstrapRecorder}
-		iInitialRecovery := newMockInitialRecovery(vit, bootstrapRecorder)
+		iInitialRecovery := newMockInitialRecovery(t, bootstrapRecorder)
 		// Given initial recovery fails for the cluster application's sole partition
-		iInitialRecovery.doFailPartitionCheckpointRead = map[appdef.AppQName]map[istructs.PartitionID]error{
-			istructs.AppQName_sys_cluster: {0: errors.New("cluster app checkpoint unavailable")},
-		}
+		iInitialRecovery.On("InitializeCheckpoints", mock.Anything, clusterApp.Name, clusterApp.NumParts).
+			Return(nil, map[istructs.PartitionID]error{0: errors.New("cluster app checkpoint unavailable")}, nil).Once()
 
 		federationRecorder := &federationRecorder{IFederationWithRetry: vit.IFederation.WithRetry()}
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
@@ -249,12 +262,12 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 		bootstrapRecorder := &bootstrapOperationsRecorder{}
 		appPartsRecorder := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: bootstrapRecorder}
 		getIAppStructsErr := errors.New("IAppStructs unavailable")
-		initializer := newMockInitialRecovery(vit, bootstrapRecorder)
-		initializer.doFailAppStructsGet = map[appdef.AppQName]error{
-			otherApps[0].Name: getIAppStructsErr,
-		}
+		iInitialRecovery := newMockInitialRecovery(t, bootstrapRecorder)
+		expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
+		iInitialRecovery.On("InitializeCheckpoints", mock.Anything, otherApps[0].Name, otherApps[0].NumParts).
+			Return(nil, nil, getIAppStructsErr).Once()
 
-		err := runBootstrap(t.Context(), vit, appPartsRecorder, initializer, clusterApp, otherApps, sidecarApps)
+		err := runBootstrap(t.Context(), vit, appPartsRecorder, iInitialRecovery, clusterApp, otherApps, sidecarApps)
 
 		require.ErrorIs(t, err, getIAppStructsErr)
 		for id := istructs.PartitionID(0); id < istructs.PartitionID(otherApps[0].NumParts); id++ {
@@ -269,11 +282,15 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 		defer cleanup()
 		bootstrapRecorder := &bootstrapOperationsRecorder{}
 		recordingParts := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: bootstrapRecorder}
-		initializer := newMockInitialRecovery(vit, bootstrapRecorder)
+		iInitialRecovery := newMockInitialRecovery(t, bootstrapRecorder)
 		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
+		iInitialRecovery.On("InitializeCheckpoints", mock.Anything, clusterApp.Name, clusterApp.NumParts).
+			Return(nil, nil, context.Canceled).Once().Run(func(args mock.Arguments) {
+			require.ErrorIs(t, args.Get(0).(context.Context).Err(), context.Canceled)
+		})
 
-		err := runBootstrap(ctx, vit, recordingParts, initializer, clusterApp, otherApps, sidecarApps)
+		err := runBootstrap(ctx, vit, recordingParts, iInitialRecovery, clusterApp, otherApps, sidecarApps)
 
 		require.ErrorIs(t, err, context.Canceled)
 		partition, err := appParts.Borrow(istructs.AppQName_sys_cluster, 0, appparts.ProcessorKind_Command)
@@ -286,14 +303,14 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 		defer cleanup()
 		bootstrapRecorder := &bootstrapOperationsRecorder{}
 		parts := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: bootstrapRecorder}
-		iInitialRecovery := newMockInitialRecovery(vit, bootstrapRecorder)
+		iInitialRecovery := newMockInitialRecovery(t, bootstrapRecorder)
+		expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
+		expectSuccessfulInitialRecovery(iInitialRecovery, otherApps...)
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
-		iInitialRecovery.checkpointReadHook = func(app appdef.AppQName, id istructs.PartitionID) {
-			if app == targetApp && id == 0 {
-				cancel()
-			}
-		}
+		// Bootstrap must reject partial results accompanying a fatal error.
+		iInitialRecovery.On("InitializeCheckpoints", mock.Anything, targetApp, numParts).
+			Return([]istructs.PartitionID{0}, nil, context.Canceled).Once().Run(func(mock.Arguments) { cancel() })
 		err := runBootstrap(ctx, vit, parts, iInitialRecovery, clusterApp, otherApps, sidecarApps)
 		require.ErrorIs(t, err, context.Canceled)
 		for id := istructs.PartitionID(0); id < istructs.PartitionID(numParts); id++ {
@@ -340,14 +357,17 @@ func TestBootstrapCheckpointFailuresPreserveDeclaredPartitionCount(t *testing.T)
 					defer cleanup()
 					recorder := &bootstrapOperationsRecorder{}
 					parts := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: recorder}
-					initializer := newMockInitialRecovery(vit, recorder)
-					initializer.doFailPartitionCheckpointRead = map[appdef.AppQName]map[istructs.PartitionID]error{app.Name: {}}
+					iInitialRecovery := newMockInitialRecovery(t, recorder)
+					expectSuccessfulInitialRecovery(iInitialRecovery, appparts.BuiltInApp(clusterApp))
+					failed := make(map[istructs.PartitionID]error)
 					for _, id := range test.failed {
-						initializer.doFailPartitionCheckpointRead[app.Name][id] = errors.New("checkpoint unavailable")
+						failed[id] = errors.New("checkpoint unavailable")
 					}
+					iInitialRecovery.On("InitializeCheckpoints", mock.Anything, app.Name, app.NumParts).
+						Return(test.deployable, failed, nil).Once()
 					federationRecorder := &federationRecorder{IFederationWithRetry: vit.IFederation.WithRetry()}
 
-					require.NoError(t, runBootstrap(t.Context(), vit, parts, initializer, clusterApp, []appparts.BuiltInApp{app}, nil, federationRecorder))
+					require.NoError(t, runBootstrap(t.Context(), vit, parts, iInitialRecovery, clusterApp, []appparts.BuiltInApp{app}, nil, federationRecorder))
 
 					federationRecorder.requireDeploymentPartitionCount(t, app.Name, 3)
 					recorder.requireRegisteredPartitionCount(t, app.Name, 3)
@@ -588,81 +608,47 @@ func (p *appPartsRecorder) DeployAppPartitions(name appdef.AppQName, partitionID
 }
 
 type mockInitialRecovery struct {
-	checkpoints.IInitialRecovery
-	mu                            sync.Mutex
-	bootstrapRecorder             *bootstrapOperationsRecorder
-	doFailAppStructsGet           map[appdef.AppQName]error
-	doFailPartitionCheckpointRead map[appdef.AppQName]map[istructs.PartitionID]error
-	appQNamesByID                 map[istructs.ClusterAppID]appdef.AppQName
-	deployable                    map[appdef.AppQName][]istructs.PartitionID
-	checkpointReadHook            func(appdef.AppQName, istructs.PartitionID)
+	mock.Mock
+	bootstrapRecorder *bootstrapOperationsRecorder
 }
 
 var _ checkpoints.IInitialRecovery = (*mockInitialRecovery)(nil)
 
-func newMockInitialRecovery(vit *it.VIT, bootstrapRecorder *bootstrapOperationsRecorder) *mockInitialRecovery {
-	sysVVMStorage, err := vit.IAppStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
-	require.NoError(vit.T, err)
-	recovery := &mockInitialRecovery{
-		bootstrapRecorder: bootstrapRecorder,
-		appQNamesByID:     map[istructs.ClusterAppID]appdef.AppQName{},
-		deployable:        map[appdef.AppQName][]istructs.PartitionID{},
-	}
-	appStructsProvider := &mockInitialRecoveryAppStructsProvider{
-		IAppStructsProvider: vit.IAppStructsProvider,
-		recovery:            recovery,
-	}
-	checkpointStorage := testutils.WrapStorage(vvmstorage.NewRecoveryCheckpointStorage(sysVVMStorage))
-	checkpointStorage.SetBefore(testutils.GetPartition, func(op testutils.Operation) error {
-		recovery.mu.Lock()
-		defer recovery.mu.Unlock()
-		appQName := recovery.appQNamesByID[op.AppID]
-		return recovery.doFailPartitionCheckpointRead[appQName][op.PartitionID]
-	})
-	checkpointStorage.SetAfter(testutils.GetPartition, func(op testutils.Operation) {
-		recovery.mu.Lock()
-		appQName := recovery.appQNamesByID[op.AppID]
-		hook := recovery.checkpointReadHook
-		recovery.mu.Unlock()
-		if hook != nil {
-			hook(appQName, op.PartitionID)
-		}
-	})
-	recovery.IInitialRecovery = checkpoints.NewInitialRecovery(appStructsProvider, checkpointStorage)
+func newMockInitialRecovery(t *testing.T, bootstrapRecorder *bootstrapOperationsRecorder) *mockInitialRecovery {
+	t.Helper()
+	recovery := &mockInitialRecovery{bootstrapRecorder: bootstrapRecorder}
+	recovery.Test(t)
+	t.Cleanup(func() { recovery.AssertExpectations(t) })
 	return recovery
+}
+
+func expectSuccessfulInitialRecovery(recovery *mockInitialRecovery, apps ...appparts.BuiltInApp) {
+	for _, app := range apps {
+		partitionIDs := make([]istructs.PartitionID, app.NumParts)
+		for id := range app.NumParts {
+			partitionIDs[id] = istructs.PartitionID(id)
+		}
+		recovery.On("InitializeCheckpoints", mock.Anything, app.Name, app.NumParts).
+			Return(partitionIDs, nil, nil).Once()
+	}
 }
 
 func (r *mockInitialRecovery) InitializeCheckpoints(ctx context.Context, appQName appdef.AppQName,
 	numPartitions istructs.NumAppPartitions) ([]istructs.PartitionID, map[istructs.PartitionID]error, error) {
-	deployable, failed, err := r.IInitialRecovery.InitializeCheckpoints(ctx, appQName, numPartitions)
-	r.mu.Lock()
-	r.deployable[appQName] = append([]istructs.PartitionID(nil), deployable...)
-	r.mu.Unlock()
+	args := r.Called(ctx, appQName, numPartitions)
+	var deployable []istructs.PartitionID
+	if args.Get(0) != nil {
+		deployable = args.Get(0).([]istructs.PartitionID)
+	}
+	var failed map[istructs.PartitionID]error
+	if args.Get(1) != nil {
+		failed = args.Get(1).(map[istructs.PartitionID]error)
+	}
+	err := args.Error(2)
 	if err == nil && r.bootstrapRecorder != nil {
 		r.bootstrapRecorder.append(operationInitializeCheckpoints, appQName)
 	}
 	return deployable, failed, err
-}
-
-type mockInitialRecoveryAppStructsProvider struct {
-	istructs.IAppStructsProvider
-	recovery *mockInitialRecovery
-}
-
-func (p *mockInitialRecoveryAppStructsProvider) BuiltIn(appQName appdef.AppQName) (istructs.IAppStructs, error) {
-	p.recovery.mu.Lock()
-	appStructsGetErr := p.recovery.doFailAppStructsGet[appQName]
-	p.recovery.mu.Unlock()
-	if appStructsGetErr != nil {
-		return nil, appStructsGetErr
-	}
-	appStructs, err := p.IAppStructsProvider.BuiltIn(appQName)
-	if err == nil {
-		p.recovery.mu.Lock()
-		p.recovery.appQNamesByID[appStructs.ClusterAppID()] = appQName
-		p.recovery.mu.Unlock()
-	}
-	return appStructs, err
 }
 
 func newPostWiredInterfacePtrs() btstrp.PostWireInterfacePtrs {
