@@ -18,6 +18,7 @@ import (
 	"sync"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,6 +38,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/sys/collection"
+	"github.com/voedger/voedger/pkg/sys/workspace"
 	it "github.com/voedger/voedger/pkg/vit"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -71,7 +73,7 @@ const (
 	]}`
 )
 
-type expectedWorkspaceSequence struct {
+type expectedWorkspaceNumbers struct {
 	wsid                istructs.WSID
 	wlogIDBearingOffset istructs.Offset
 	nextWLogOffset      istructs.Offset
@@ -89,7 +91,7 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 		),
 	)
 
-	var expectedWS1Numbers, expectedWS2Numbers expectedWorkspaceSequence
+	var expectedWS1Numbers, expectedWS2Numbers expectedWorkspaceNumbers
 	appID := istructs.ClusterApps[appQName]
 
 	it.TestRestartPreservingStorageWithHooks(t, &cfg, it.RestartPreservingStorageHooks{
@@ -97,6 +99,8 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 			require := require.New(t)
 			workspace1 := vit.WS(appQName, "test_ws_1")
 			workspace2 := vit.WS(appQName, "test_ws_2")
+			appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+			require.NoError(err)
 
 			partition1, err := vit.IAppPartitions.AppWorkspacePartitionID(appQName, workspace1.WSID)
 			require.NoError(err)
@@ -106,7 +110,7 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 
 			ws1Response := vit.PostWS(workspace1, "c.sys.CUD", docWithNested)
 			require.Len(ws1Response.NewIDs, 3)
-			expectedWS1Numbers = expectedWorkspaceSequence{
+			expectedWS1Numbers = expectedWorkspaceNumbers{
 				wsid:                workspace1.WSID,
 				wlogIDBearingOffset: ws1Response.CurrentWLogOffset,
 				nextRecordID:        ws1Response.NewIDs["3"] + 1,
@@ -125,12 +129,35 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 			require.Len(ws2Response.NewIDs, 3)
 			require.Greater(ws2Response.CurrentWLogOffset+1, expectedWS1Numbers.nextWLogOffset)
 			require.Greater(ws2Response.NewIDs["3"]+1, expectedWS1Numbers.nextRecordID)
-			expectedWS2Numbers = expectedWorkspaceSequence{
+			expectedWS2Numbers = expectedWorkspaceNumbers{
 				wsid:                workspace2.WSID,
 				wlogIDBearingOffset: ws2Response.CurrentWLogOffset,
 				nextWLogOffset:      ws2Response.CurrentWLogOffset + 1,
 				nextRecordID:        ws2Response.NewIDs["3"] + 1,
 			}
+
+			// Workspace creation is performed by an asynchronous projector. Wait until
+			// its position is durable before stopping the VVM; otherwise the projector
+			// can replay CreateWorkspace after restart and consume argument IDs before
+			// this test submits its first command.
+			invokeCreateWorkspace := appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
+			var targetPLogOffset istructs.Offset
+			err = appStructs.Events().ReadPLog(t.Context(), partition1, istructs.FirstOffset, istructs.ReadToTheEnd,
+				func(offset istructs.Offset, event istructs.IPLogEvent) error {
+					defer event.Release()
+					for cud := range event.CUDs {
+						if cud.IsNew() && cud.QName() == workspace.QNameCDocWorkspaceID {
+							targetPLogOffset = offset
+						}
+					}
+					return nil
+				})
+			require.NoError(err)
+			require.NotZero(targetPLogOffset)
+			require.Eventually(func() bool {
+				offset, err := actualizers.ActualizerOffset(appStructs, partition1, invokeCreateWorkspace)
+				return err == nil && offset >= targetPLogOffset
+			}, 10*time.Second, 10*time.Millisecond)
 		},
 		AfterFirstStop: func(t *testing.T, storage it.RestartStorage) {
 			checkpointStorage := vvmstorage.NewRecoveryCheckpointStorage(
@@ -1489,7 +1516,7 @@ func runRecoveryCheckpointScenario(t *testing.T, scope checkpointType, kind chec
 
 	var (
 		partitionID istructs.PartitionID
-		expected    expectedWorkspaceSequence
+		expected    expectedWorkspaceNumbers
 		currentWS   *it.AppWorkspace
 		appStructs  istructs.IAppStructs
 	)
@@ -1572,7 +1599,7 @@ func runRecoveryCheckpointScenario(t *testing.T, scope checkpointType, kind chec
 			vit.WaitForOffset(plogOffsets, testOffsetPLogTail)
 			vit.WaitForOffset(collectionOffsets, collectionOffset)
 
-			expected = expectedWorkspaceSequence{
+			expected = expectedWorkspaceNumbers{
 				wsid:                currentWS.WSID,
 				wlogIDBearingOffset: expectedIDBearingOffset,
 				nextWLogOffset:      expectedWLogTail + 1,
@@ -2345,7 +2372,7 @@ func provideTestAppWithPartitions(numPartitions istructs.NumAppPartitions) built
 }
 
 func checkNextWorkspaceSequence(vit *it.VIT, workspace *it.AppWorkspace,
-	expected expectedWorkspaceSequence) istructs.Offset {
+	expected expectedWorkspaceNumbers) istructs.Offset {
 	require := require.New(vit.T)
 
 	// insert a test doc and check its counters
@@ -2396,7 +2423,7 @@ func checkLastPLogEvent(t *testing.T, vit *it.VIT, appQName appdef.AppQName,
 }
 
 func checkWorkspaceCheckpoint(t *testing.T, checkpointStorage checkpoints.IRecoveryCheckpointStorage,
-	appID istructs.ClusterAppID, expected expectedWorkspaceSequence) {
+	appID istructs.ClusterAppID, expected expectedWorkspaceNumbers) {
 	t.Helper()
 	checkpoint, ok, err := checkpointStorage.GetWorkspaceCheckpoint(appID, expected.wsid)
 	require.NoError(t, err)
