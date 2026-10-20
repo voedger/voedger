@@ -160,8 +160,9 @@ func newIState(t *testing.T) *coreutils.MockState {
 func newIPLogEvent(t *testing.T, offset istructs.Offset, cuds ...istructs.ICUDRow) *coreutils.MockPLogEvent {
 	t.Helper()
 	event := &coreutils.MockPLogEvent{}
-	// The predicate reads only CUDs; a failed partition write skips CUDs entirely.
+	// A failed partition write skips event classification entirely.
 	event.On("PLogOffset").Return(offset).Maybe()
+	event.On("ArgumentObject").Return(istructs.NewNullObject()).Maybe()
 	event.On("CUDs", mock.Anything).Run(func(args mock.Arguments) {
 		callback := args.Get(0).(func(istructs.ICUDRow) bool)
 		for _, cud := range cuds {

@@ -443,6 +443,7 @@ func newMockPLogEvent(plogOffset istructs.Offset, wsid istructs.WSID, wLogOffset
 	event.On("PLogOffset").Return(plogOffset)
 	event.On("Workspace").Return(wsid)
 	event.On("WLogOffset").Return(wLogOffset)
+	event.On("ArgumentObject").Return(istructs.NewNullObject())
 	event.On("CUDs", mock.Anything).Run(func(args mock.Arguments) {
 		callback := args.Get(0).(func(istructs.ICUDRow) bool)
 		for _, cud := range cuds {

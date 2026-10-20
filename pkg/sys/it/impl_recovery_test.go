@@ -19,6 +19,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	appdefsys "github.com/voedger/voedger/pkg/appdef/sys"
@@ -148,6 +149,95 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 			checkNextWorkspaceSequence(vit, workspace2, expectedWS2Numbers)
 		},
 	})
+}
+
+func TestODocArgumentRecordIDsAreRespectedAfterRestart(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	for _, test := range []struct {
+		name             string
+		removeCheckpoint bool
+	}{
+		{name: "with workspace checkpoint"},
+		{name: "without workspace checkpoint", removeCheckpoint: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			appQName := istructs.AppQName_test1_app1
+			cfg := it.NewOwnVITConfig(it.WithApp(appQName, provideTestApp,
+				it.WithUserLogin(recoveryTestLoginName, recoveryTestLoginPassword),
+			))
+			const body = `{"args":{"sys.ID":1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]},"unloggedArgs":{"sys.ID":4}}`
+			var workspace *it.AppWorkspace
+			var lastWLogOffset istructs.Offset
+
+			it.TestRestartPreservingStorageWithHooks(t, &cfg, it.RestartPreservingStorageHooks{
+				FirstRun: func(t *testing.T, vit *it.VIT) {
+					owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
+					workspace = vit.CreateWorkspace(it.SimpleWSParams("ODoc-only history"), owner)
+
+					// insert ODocs, issue IDs
+					response := vit.PostWS(workspace, "c.app1pkg.CmdODocOne", body)
+					require.Equal(t, map[string]istructs.RecordID{
+						"1": 200001, "2": 200002, "3": 200003,
+					}, response.NewIDs)
+					lastWLogOffset = response.CurrentWLogOffset
+
+					appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+					require.NoError(t, err)
+					foundODocEvent := false
+					err = appStructs.Events().ReadWLog(t.Context(), workspace.WSID, istructs.FirstOffset, istructs.ReadToTheEnd,
+						func(offset istructs.Offset, event istructs.IWLogEvent) error {
+							defer event.Release()
+							// The history must contain no ordinary IDs allocated by CUDs.
+							for row := range event.CUDs {
+								require.False(t, row.IsNew() && row.ID() >= istructs.FirstUserRecordID)
+							}
+							if offset == lastWLogOffset {
+								foundODocEvent = true
+								require.Empty(t, slices.Collect(event.CUDs))
+								argument := event.ArgumentObject()
+								require.Equal(t, response.NewIDs["1"], argument.AsRecord().ID())
+								children := slices.Collect(argument.Children("orecord1"))
+								require.Len(t, children, 1)
+								require.Equal(t, response.NewIDs["2"], children[0].AsRecord().ID())
+								grandchildren := slices.Collect(children[0].Children("orecord2"))
+								require.Len(t, grandchildren, 1)
+								require.Equal(t, response.NewIDs["3"], grandchildren[0].AsRecord().ID())
+							}
+							return nil
+						})
+					require.NoError(t, err)
+					require.True(t, foundODocEvent)
+				},
+				AfterFirstStop: func(t *testing.T, storage it.RestartStorage) {
+					appID := istructs.ClusterApps[appQName]
+					checkpointAppStorage := storage.AppStorage(t, istructs.AppQName_sys_vvm)
+					checkpointStorage := vvmstorage.NewRecoveryCheckpointStorage(checkpointAppStorage)
+					checkpoint, found, err := checkpointStorage.GetWorkspaceCheckpoint(appID, workspace.WSID)
+					require.NoError(t, err)
+					if assert.True(t, found, "ODoc argument IDs must create a workspace checkpoint") {
+						assert.Equal(t, lastWLogOffset, checkpoint.WLogIDBearingOffset,
+							"ODoc argument IDs must advance the workspace checkpoint")
+					}
+					if test.removeCheckpoint {
+						// Force a full WLog scan to show that fixing classification alone is insufficient.
+						deleteWorkspaceCheckpoint(t, checkpointStorage, checkpointAppStorage, appID, workspace.WSID)
+					}
+				},
+				SecondRun: func(t *testing.T, vit *it.VIT) {
+
+					// 3 IDs for ODocs were already issued on the first run
+					// so here next 3 IDs must be issued
+					response := vit.PostWS(workspace, "c.app1pkg.CmdODocOne", body)
+					require.Equal(t, lastWLogOffset+1, response.CurrentWLogOffset)
+					assert.Equal(t, map[string]istructs.RecordID{
+						"1": 200004, "2": 200005, "3": 200006,
+					}, response.NewIDs, "recovery must preserve IDs consumed by ODoc arguments and their descendants")
+				},
+			})
+		})
+	}
 }
 
 func TestRecoveryFromCheckpoints(t *testing.T) {

@@ -30,10 +30,28 @@ func applyRecoveryCheckpoint(storage IRecoveryCheckpointStorage) func(istructs.I
 }
 
 func IsIDBearingEvent(event istructs.IAbstractEvent) bool {
-	containsNewRecordIDs := false
-	event.CUDs(func(row istructs.ICUDRow) bool {
-		containsNewRecordIDs = row.IsNew() && row.ID() >= istructs.FirstUserRecordID
-		return !containsNewRecordIDs
-	})
-	return containsNewRecordIDs
+	return HighestNewRecordID(event) != istructs.NullRecordID
+}
+
+// HighestNewRecordID returns the greatest ordinary ID allocated by the event,
+// including its logged argument tree. Singleton IDs and CUD updates are excluded.
+func HighestNewRecordID(event istructs.IAbstractEvent) istructs.RecordID {
+	highest := highestArgumentRecordID(event.ArgumentObject())
+	for row := range event.CUDs {
+		if row.IsNew() && row.ID() >= istructs.FirstUserRecordID {
+			highest = max(highest, row.ID())
+		}
+	}
+	return highest
+}
+
+func highestArgumentRecordID(object istructs.IObject) istructs.RecordID {
+	highest := istructs.NullRecordID
+	if id := object.AsRecord().ID(); id >= istructs.FirstUserRecordID {
+		highest = id
+	}
+	for child := range object.Children() {
+		highest = max(highest, highestArgumentRecordID(child))
+	}
+	return highest
 }

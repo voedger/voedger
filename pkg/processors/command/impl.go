@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
@@ -357,7 +358,7 @@ func (cmdProc *cmdProc) scanWLog(vvmCtx context.Context, wsKey workspaceKey, ap 
 	err = ap.appStructs.Events().ReadWLog(vvmCtx, wsKey.wsid, startOffset, istructs.ReadToTheEnd,
 		func(wlogOffset istructs.Offset, event istructs.IWLogEvent) error {
 			defer event.Release()
-			eventRecordID := highestNewNonSingletonRecordID(event)
+			eventRecordID := checkpoints.HighestNewRecordID(event)
 			if !checkpointValid {
 				if wlogOffset != startOffset || eventRecordID == istructs.NullRecordID {
 					return errInvalidRecoveryCheckpoint
@@ -438,15 +439,6 @@ func (cmdProc *cmdProc) getHostState(_ context.Context, cmd *cmdWorkpiece) (err 
 	cmd.eca.State = cmd.hostState.state
 	cmd.eca.Intents = cmd.hostState.state
 	return nil
-}
-
-func highestNewNonSingletonRecordID(event istructs.IAbstractEvent) (highest istructs.RecordID) {
-	for rec := range event.CUDs {
-		if rec.IsNew() && rec.ID() >= istructs.FirstUserRecordID && rec.ID() > highest {
-			highest = rec.ID()
-		}
-	}
-	return highest
 }
 
 func newWSRecoveryCtx(ctx context.Context, wsKey workspaceKey) context.Context {
