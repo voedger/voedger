@@ -89,6 +89,9 @@ func (m *MockPLogEvent) Release()                     { m.Called() }
 func (m *MockPLogEvent) PLogOffset() istructs.Offset {
 	return m.Called().Get(0).(istructs.Offset)
 }
+func (m *MockPLogEvent) HandlingPartition() istructs.PartitionID {
+	return m.Called().Get(0).(istructs.PartitionID)
+}
 
 type MockObject struct {
 	mock.Mock

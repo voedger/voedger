@@ -75,35 +75,34 @@ func (m *recoveryManager[K, T]) getOrStart(vvmCtx context.Context, key K,
 	newAttempt newRecoveryAttemptFunc[T]) (*T, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	value := m.values[key]
-	if value == nil {
-		// recover was not started -> just start if max simultaneous recoveries limit is not reached
-		if !m.reserveSlot() {
-			return nil, errRecoveryLimit
+	state := m.values[key]
+	if state != nil {
+		// recovery was started
+		if state.value != nil {
+			// successfully recovered
+			return state.value, nil
 		}
-		value = &recoverableValue[T]{}
-		m.values[key] = value
-		// The slot is ours, so caller-owned resources can now be transferred to the attempt.
-		m.startRecover(vvmCtx, key, value, newAttempt())
-		return nil, errRecoveryInProgress
+		if state.recoveryErr == nil {
+			// no error and no result -> recovery in progress
+			return nil, errRecoveryInProgress
+		}
 	}
-	if value.value != nil {
-		// recover is successfully finished
-		return value.value, nil
-	}
-	if value.recoveryErr == nil {
-		// no value and no error -> recovery is in progress
-		return nil, errRecoveryInProgress
-	}
-	// no value and has error -> will restart recovery if max simultaneous recoveries limit is not reached
+	// New attempts and retries both require capacity before creating request-owned resources.
 	if !m.reserveSlot() {
 		return nil, errRecoveryLimit
 	}
-	previousErr := value.recoveryErr
-	value.recoveryErr = nil
-	// Create a fresh attempt for the retry only after its slot has been reserved.
-	m.startRecover(vvmCtx, key, value, newAttempt())
-	return nil, previousErr
+	responseErr := errRecoveryInProgress
+	if state == nil {
+		// recovery was not started
+		state = &recoverableValue[T]{}
+		m.values[key] = state
+	} else {
+		// recovery was finished with an error
+		responseErr = state.recoveryErr
+		state.recoveryErr = nil
+	}
+	m.startRecover(vvmCtx, key, state, newAttempt())
+	return nil, responseErr
 }
 
 func (m *recoveryManager[K, T]) reserveSlot() bool {
@@ -169,16 +168,4 @@ func (m *recoveryManager[K, T]) clear() {
 func (m *recoveryManager[K, T]) shutdown() {
 	m.workers.Wait()
 	m.clear()
-}
-
-func (m *recoveryManager[K, T]) recoveredValues() map[K]*T {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	values := map[K]*T{}
-	for key, value := range m.values {
-		if value.value != nil {
-			values[key] = value.value
-		}
-	}
-	return values
 }

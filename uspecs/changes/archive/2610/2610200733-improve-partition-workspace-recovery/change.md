@@ -459,7 +459,7 @@ Gherkin scenario test placement:
   - verify that an invalid checkpoint over an empty log logs an error, performs at most one fallback scan, and retains the empty-log defaults
 
 - [x] create: [command/recovery_manager_test.go](../../../../../pkg/processors/command/recovery_manager_test.go)
-  - directly verify generic recovery-manager startup, ready lookup, duplicate suppression, retained failures, retries, admission limits, hooks, cancellation, reset, stale-completion rejection, recovered-value projection, and shutdown clearing
+  - directly verify generic recovery-manager startup, ready lookup, duplicate suppression, retained failures, retries, admission limits, hooks, cancellation, reset, stale-completion rejection, and shutdown clearing
   - relocate stale-completion coverage from the partition-manager integration-style test
 
 - [x] create: [testutils/storage_test.go](../../../../../pkg/checkpoints/testutils/storage_test.go)
@@ -537,11 +537,11 @@ Gherkin scenario test placement:
   - preserve application order, exclude sidecars from the remaining built-ins, and reject a missing cluster application
 
 - [x] update: [coreutils/mock.go](../../../../../pkg/coreutils/mock.go)
-  - extend `MockPLogEvent` with its PLog offset and provide strict application-structures/provider mocks reused by checkpoint tests
+  - extend `MockPLogEvent` with its PLog offset and handling partition, and provide strict application-structures/provider mocks reused by checkpoint tests
 
-- [x] create: [coreutils/mock_plogevent.go](../../../../../pkg/coreutils/mock_plogevent.go)
-  - adapt the existing shared `MockPLogEvent` to the extended persisted-event interface
-  - implement the shared PLog-event mock's handling-partition accessor through configured expectations
+- [x] consolidate: [coreutils/mock_plogevent.go](../../../../../pkg/coreutils/mock_plogevent.go) into [coreutils/mock.go](../../../../../pkg/coreutils/mock.go)
+  - keep the handling-partition accessor beside the existing PLog-event mock methods
+  - remove the separate file without changing configured expectations or interface coverage
 
 - [x] create: [checkpoints/interface.go](../../../../../pkg/checkpoints/interface.go)
   - declare `IRecoveryCheckpointStorage` with partition/workspace reads returning value, presence, and error
@@ -622,6 +622,7 @@ Gherkin scenario test placement:
   - append partition ID or WSID to the corresponding application partition key and use `[]byte{1}` as the clustering column
   - encode only `lastPLogOffset` for PLog checkpoints and only `wlogIDBearingOffset` for WLog checkpoints
   - report missing values as absent, reject malformed values, and overwrite unconditionally
+  - decode both checkpoint kinds through one required-offset decoder without unused map results or a generic scalar helper
 
 - [x] update: [storage/provide.go](../../../../../pkg/vvm/storage/provide.go)
   - construct the recovery-checkpoint adapter over shared system-VVM storage
@@ -664,6 +665,7 @@ Gherkin scenario test placement:
 - [x] create: [command/recovery_manager.go](../../../../../pkg/processors/command/recovery_manager.go)
   - implement the generic keyed recovery lifecycle shared by partitions and workspaces
   - reserve optional concurrency slots before creating attempts, retain failures for one reporting request, and publish successful recovered values
+  - share the admission and startup path between new attempts and retries while preserving the distinct returned errors
   - reject stale completions after reset and join each manager's own workers before clearing its state during shutdown
   - define the generic recoverable value, attempt factory, hooks, and worker/slot bookkeeping; create request-owned resources only after admission
 

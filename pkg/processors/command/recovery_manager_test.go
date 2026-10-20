@@ -63,7 +63,6 @@ func TestRecoveryManager_BasicUsage(t *testing.T) {
 	require.NoError(err)
 	require.Same(expectedReoveredValue, actualRecoveredValue)
 	require.Equal(1, factoryCalls)
-	require.Equal(map[int]*valueToRecover{10: expectedReoveredValue}, manager.recoveredValues())
 	manager.shutdown()
 }
 

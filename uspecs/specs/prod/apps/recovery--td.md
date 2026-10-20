@@ -177,7 +177,8 @@ Application operations
     failure. Production partition recovery has no concurrency bound.
   - Uses the service context. Reset detaches old state so stale completion cannot
     publish into a replacement. The caller cancels the context; the generic
-    manager's shutdown waits for its own workers and then clears its state.
+    manager's shutdown waits for its registered workers and then clears its state.
+    New attempts and retries share one capacity check and startup path.
   - Constructs an attempt only after admission reserves a slot. For partition
     recovery this is when the request's borrowed partition is transferred to
     the recovery workpiece, which releases it when the attempt finishes.
@@ -192,9 +193,9 @@ Application operations
   - Reuses the generic manager's retained-failure, retry, stale-completion, and
     service-context behavior. The generic constructor also supports zero
     capacity for technical tests, where no attempt is admitted.
-  - Its workers have a separate wait group. Command-service shutdown currently
-    invokes only the partition manager's shutdown, so joining workspace workers,
-    including those in partitions detached by reset, remains unfinished.
+  - Before a recovered partition is published, its workspace manager shares the
+    partition manager's worker wait group. The existing shutdown call therefore
+    joins workspace workers even when reset has detached their partition.
   - impl: [pkg/processors/command/recovery_manager.go](../../../../pkg/processors/command/recovery_manager.go)
   - impl: [pkg/processors/command/impl.go](../../../../pkg/processors/command/impl.go)
 
@@ -604,10 +605,9 @@ sequenceDiagram
 - Every bootstrap-context cancellation stops scheduling, cancels in-flight
   initialization, waits for started work, and is returned to `[Bootstrap operator]`.
 - Every request-recovery attempt uses the VVM service context rather than request
-  cancellation. Command-service shutdown must join partition and workspace
-  workers before clearing their state. The current partition-only shutdown call
-  does not yet join workspace workers; this integration gap is tracked in the
-  [implementation plan](../../../changes/2609291131-improve-partition-workspace-recovery/change.md#command-recovery).
+  cancellation. Command-service shutdown joins the shared partition/workspace
+  worker wait group before clearing partition state, including workers belonging
+  to partitions detached by reset.
 - Every recovery-manager key has at most one current attempt; reset may detach
   an attempt, whose later stale completion cannot overwrite replacement state.
 
@@ -680,10 +680,11 @@ sequenceDiagram
   mismatch test verifies `409 Conflict` and an unchanged persisted descriptor.
 - Four-slot saturation and later retry are exercised through the command
   service. Zero-capacity behavior remains generic-manager technical coverage;
-  it is not exposed as a production configuration. The admission test's scenario
-  identity and setup comments still need alignment with the four-slot feature.
+  it is not exposed as a production configuration. The admission test follows
+  the four-slot feature's scenario identity and setup steps.
 - Generic deduplication, limits, retry, reset, stale completion, context, and
   own-worker shutdown behavior is exercised by
   [recovery-manager tests](../../../../pkg/processors/command/recovery_manager_test.go).
-  Existing workspace-cancellation coverage waits for an attempt separately
-  after the service exits; it does not prove that service shutdown joins it.
+  `TestServiceShutdownWaitsForWorkspaceRecovery` holds a canceled worker before
+  exit and verifies the service waits, both for a current partition and for one
+  detached by reset.

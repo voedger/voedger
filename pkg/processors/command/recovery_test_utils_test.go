@@ -15,26 +15,13 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// logReadFromTo turns one production log-reader call into a comparable test value:
-//
-//	ReadPLog/ReadWLog(offset, count) --> logReadFromTo{offset, count}
-//
-// Tests use the resulting sequence to prove that recovery starts at its
-// checkpoint and performs one inclusive scan to the end.
+// logReadFromTo records a recovery log read start offset and count.
 type logReadFromTo struct {
 	offset istructs.Offset
 	count  int
 }
 
-// logReadsRecorder solves concurrent observation of recovery log reads:
-//
-//	recovery goroutine --record(key, read)--\
-//	                                          +--> mutex --> byKey[key] history
-//	test goroutine --------values(key)--------/                  |
-//	                                                             +--> copied snapshot
-//
-// The lock keeps test inspection race-free without adding synchronization to
-// production PLog or WLog readers.
+// logReadsRecorder keeps synchronized snapshots of reads per recovery key.
 type logReadsRecorder[K comparable] struct {
 	mu    sync.Mutex
 	byKey map[K][]logReadFromTo
@@ -44,8 +31,6 @@ func newLogReadsRecorder[K comparable]() *logReadsRecorder[K] {
 	return &logReadsRecorder[K]{byKey: map[K][]logReadFromTo{}}
 }
 
-// record is the production hook at the write side of the observation flow:
-// Append order preserves the exact log-read order for that key.
 func (r *logReadsRecorder[K]) record(key K, offset istructs.Offset, count int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -58,7 +43,7 @@ func (r *logReadsRecorder[K]) reset(key K) {
 	delete(r.byKey, key)
 }
 
-// values returns recorded log records snapshot
+// values returns a copy so callers cannot mutate the recorded reads.
 func (r *logReadsRecorder[K]) values(key K) []logReadFromTo {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -162,9 +147,6 @@ func (c *recoveryTestAttempts[K, T]) wrapAttempt(key K, next recoveryAttemptFunc
 	}
 }
 
-// attemptCompleted publishes the manager's final result to waiting tests:
-//
-//	final wrapped error --> attempt.err --> close(done) --> wait(key)
 func (c *recoveryTestAttempts[K, T]) attemptCompleted(key K, err error) {
 	c.mu.Lock()
 	attempt := c.attempts[key]
@@ -173,12 +155,6 @@ func (c *recoveryTestAttempts[K, T]) attemptCompleted(key K, err error) {
 	c.mu.Unlock()
 }
 
-// blockNext prepares a one-shot scheduling barrier:
-//
-//	blockNext(key) --> gate --> next scheduled attempt --> waits for close(gate)
-//
-// Holding the gate open makes in-progress and concurrency-limit assertions
-// independent of goroutine timing.
 func (c *recoveryTestAttempts[K, T]) blockNext(key K) chan struct{} {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -187,21 +163,12 @@ func (c *recoveryTestAttempts[K, T]) blockNext(key K) chan struct{} {
 	return gate
 }
 
-// failNext prepares a one-shot failure before production recovery runs:
-//
-//	failNext(key, err) --> next scheduled attempt --> err --> retained failure
-//
-// This isolates retry tests from storage or log-reader failures.
 func (c *recoveryTestAttempts[K, T]) failNext(key K, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.nextFailures[key] = err
 }
 
-// latest distinguishes a recoverable test 503 from an unrelated 503:
-//
-//	attempts[key] present --> caller may wait and retry
-//	attempts[key] absent  --> caller preserves the response
 func (c *recoveryTestAttempts[K, T]) latest(key K) (*recoveryAttempt, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -209,11 +176,6 @@ func (c *recoveryTestAttempts[K, T]) latest(key K) (*recoveryAttempt, bool) {
 	return attempt, ok
 }
 
-// wait joins the latest known attempt without sleeps or polling:
-//
-//	attempt.done closed --> return attempt.err
-//	ctx canceled ---------> return ctx.Err()
-//	no attempt -----------> return "not started"
 func (c *recoveryTestAttempts[K, T]) wait(ctx context.Context, key K) error {
 	attempt, ok := c.latest(key)
 	if !ok {
@@ -227,11 +189,6 @@ func (c *recoveryTestAttempts[K, T]) wait(ctx context.Context, key K) error {
 	}
 }
 
-// startCount exposes admission as a stable assertion:
-//
-//	requests for key --> recoveryManager --> scheduled calls --> starts[key]
-//
-// Deduplicated and concurrency-rejected requests do not increase the count.
 func (c *recoveryTestAttempts[K, T]) startCount(key K) int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -253,9 +210,6 @@ type recoveryTestControl struct {
 	wLogReads  *logReadsRecorder[workspaceKey]
 }
 
-// newRecoveryTestControl creates four empty, independently locked channels:
-//
-//	{partition attempts, workspace attempts, PLog reads, WLog reads}
 func newRecoveryTestControl() *recoveryTestControl {
 	return &recoveryTestControl{
 		partitions: newRecoveryTestAttempts[partitionKey, appPartition](),
@@ -283,11 +237,8 @@ func (c *recoveryTestControl) testHooks() (
 	return partitionHooks, workspaceHooks
 }
 
-// recoveryRetrySender hides mandatory lazy recovery from command tests whose
-// subject is unrelated to recovery. For requests selected by keyForRequest, the
-// fixture treats a 503 as recoverable only when that partition has a recorded
-// attempt; rawRequestSender remains available to tests that need to assert 503s
-// directly instead of applying this test-only assumption.
+// recoveryRetrySender waits for known recovery attempts in tests unrelated to recovery.
+// Tests asserting admission responses use rawRequestSender instead.
 type recoveryRetrySender struct {
 	raw           bus.IRequestSender
 	control       *recoveryTestControl

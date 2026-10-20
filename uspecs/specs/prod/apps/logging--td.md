@@ -295,7 +295,7 @@ for the request lifecycle and status policy.
 - Invalid partition checkpoint: level `Error`, stage `cp.partition_recovery.checkpoint.invalid`, msg `stored PLog offset <checkpointOffset> does not identify an existing event; retrying from FirstOffset`
   - emitted when an inclusive read from a present nonzero checkpoint returns no event or its first event offset differs from the stored offset; absent and zero checkpoints start at `FirstOffset` without validation
   - uses the partition recovery context attributes and precedes the fallback read from `FirstOffset`
-- Partition recovery complete: level `Info`, stage `cp.partition_recovery.complete`, msg contains `nextPLogOffset <offset>, workspaces <JSON>`
+- Partition recovery complete: level `Info`, stage `cp.partition_recovery.complete`, msg contains `nextPLogOffset <offset>, workspaces {}`; workspace recovery starts only after the partition is published
 - ReadPLog failure during either the checkpoint scan or the `FirstOffset` fallback scan: level `Error`, stage `cp.partition_recovery.readplog.error`, msg `<error message>`
 - Last event re-apply: `processors.LogEventAndCUDs()` called with stage `cp.partition_recovery.reapply` to log which event is being re-applied (with `woffset`, `poffset`, `evqname` attribs); the enriched context is stored in `cmdWorkpiece.logCtx` and used by sync projectors during re-apply
 - `LogEventAndCUDs` failure during re-apply: level `Error`, stage `cp.partition_recovery.logeventandcuds.error`, msg `<error message>`

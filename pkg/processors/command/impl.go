@@ -185,22 +185,13 @@ func newAppPartition(workspaceRecoveryHooks recoveryHooks[workspaceKey, workspac
 }
 
 func newPartitionManager(hooks recoveryHooks[partitionKey, appPartition], recoverFunc recoverPartitionFunc) *partitionManager {
-	manager := &partitionManager{
+	return &partitionManager{
 		partitions: newRecoveryManager(
 			nil,
 			hooks,
 		),
+		recoverFunc: recoverFunc,
 	}
-	manager.recoverFunc = func(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
-		partition, err := recoverFunc(ctx, cmd)
-		if err == nil {
-			// Share the service's worker lifetime before publishing the partition.
-			// Reset may detach its state, but shutdown must still join its workspace workers.
-			partition.workspaces.workspaces.workers = manager.partitions.workers
-		}
-		return partition, err
-	}
-	return manager
 }
 
 func newWorkspaceManager(numRecoverers uint, hooks recoveryHooks[workspaceKey, workspace]) *workspaceManager {
@@ -279,7 +270,12 @@ func (m *partitionManager) getOrStart(vvmCtx context.Context, partKey partitionK
 			recoveryCmd := toRecoveryWorkpiece(cmd, partKey)
 			return func(ctx context.Context) (*appPartition, error) {
 				defer recoveryCmd.Release()
-				return m.recoverFunc(ctx, recoveryCmd)
+				partition, err := m.recoverFunc(ctx, recoveryCmd)
+				if err == nil {
+					// Join workspace workers even after reset detaches this partition.
+					partition.workspaces.workspaces.workers = m.partitions.workers
+				}
+				return partition, err
 			}
 		})
 }
@@ -307,14 +303,6 @@ func getOrStart[K comparable, T any](vvmCtx context.Context, manager *recoveryMa
 	default:
 		return nil, coreutils.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("%s: %w", errorSubject, err))
 	}
-}
-
-func (m *workspaceManager) marshalJSON() ([]byte, error) {
-	workspaces := map[istructs.WSID]*workspace{}
-	for key, workspace := range m.workspaces.recoveredValues() {
-		workspaces[key.wsid] = workspace
-	}
-	return json.Marshal(workspaces)
 }
 
 // run in a goroutine by recoveryManager
@@ -521,12 +509,8 @@ func (cmdProc *cmdProc) recoverPartition(vvmCtx context.Context, cmd *cmdWorkpie
 		}
 	}
 
-	workspaceStatesJSON, err := ap.workspaces.marshalJSON()
-	if err != nil {
-		// notest
-		return nil, err
-	}
-	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "nextPLogOffset ", ap.nextPLogOffset, ", workspaces ", string(workspaceStatesJSON))
+	// Workspace recovery starts on a later command, after this partition is published.
+	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "nextPLogOffset ", ap.nextPLogOffset, ", workspaces {}")
 	return ap, nil
 }
 

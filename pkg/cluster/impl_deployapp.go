@@ -51,7 +51,7 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time timeu.ITime, sid
 		}
 		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(numAppWSInt)      // nolint G115 checked above
 		numAppPartitionsToDeploy := istructs.NumAppPartitions(numPartitionsInt) // nolint G115 checked above
-		exists, err := ValidateAppDeployment(clusterAppStructs, args.WSID, appQName, numAppPartitionsToDeploy, numAppWorkspacesToDeploy)
+		exists, err := validateAppDeployment(clusterAppStructs, args.WSID, appQName, numAppPartitionsToDeploy, numAppWorkspacesToDeploy)
 		if err != nil {
 			return err
 		}
@@ -101,9 +101,9 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time timeu.ITime, sid
 	}
 }
 
-// ValidateAppDeployment checks a persisted deployment descriptor without writing
+// validateAppDeployment checks a persisted deployment descriptor without writing
 // records or provisioning workspaces. A missing descriptor returns false, nil.
-func ValidateAppDeployment(clusterAppStructs istructs.IAppStructs, wsid istructs.WSID, appQName appdef.AppQName,
+func validateAppDeployment(clusterAppStructs istructs.IAppStructs, wsid istructs.WSID, appQName appdef.AppQName,
 	numPartitions istructs.NumAppPartitions, numAppWorkspaces istructs.NumAppWorkspaces) (bool, error) {
 	id, err := uniques.GetRecordIDByUniqueCombination(wsid, qNameWDocApp, clusterAppStructs, map[string]interface{}{
 		Field_AppQName: appQName.String(),

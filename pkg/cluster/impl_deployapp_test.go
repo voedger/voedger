@@ -56,7 +56,7 @@ func TestValidateAppDeploymentIsReadOnly(t *testing.T) {
 			// view write, or workspace provisioning would panic through the nil interfaces.
 			structs := &deploymentDescriptorStructs{def: adb.MustBuild(), views: views, records: records}
 
-			exists, err := ValidateAppDeployment(structs, 1, istructs.AppQName_test1_app1, 3, 4)
+			exists, err := validateAppDeployment(structs, 1, istructs.AppQName_test1_app1, 3, 4)
 
 			if test.wantErr != nil {
 				require.Error(t, err)
