@@ -8,6 +8,7 @@ package appparts_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"maps"
 	"net/url"
 	"testing"
@@ -280,6 +281,112 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 }
 
 type errorExtensionEngineFactory struct{ err error }
+
+func TestDeployAppPartitionsStartsOnlySelectedPartitions(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		ids  []istructs.PartitionID
+	}{
+		{name: "healthy partitions only", ids: []istructs.PartitionID{0, 2}},
+		{name: "all partitions excluded"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require := require.New(t)
+			appName := istructs.AppQName_test1_app1
+			projectorName := appdef.NewQName("test", "projector")
+			jobName := appdef.NewQName("test", "job")
+			adb := builder.New()
+			adb.AddPackage("test", "test.com/test")
+			wsName := appdef.NewQName("test", "workspace")
+			wsb := adb.AddWorkspace(wsName)
+			wsb.AddCDoc(appdef.NewQName("test", "descriptor"))
+			wsb.SetDescriptor(appdef.NewQName("test", "descriptor"))
+			wsb.AddCommand(appdef.NewQName("test", "command"))
+			projector := wsb.AddProjector(projectorName)
+			projector.Events().Add([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.WSTypes(wsName, appdef.TypeKind_Command))
+			projector.SetSync(false)
+			wsb.AddJob(jobName).SetCronSchedule("@every 1s")
+			appDef := adb.MustBuild()
+			configs := istructsmem.AppConfigsType{}
+			configs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(3)
+			structs := istructsmem.Provide(configs, payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
+				provider.Provide(mem.Provide(testingu.MockTime), ""), istructs.SequencesTrustLevel_0, nil)
+			ctx, cancel := context.WithCancel(t.Context())
+			actualizers := &mockActualizerRunner{}
+			actualizers.On("SetAppPartitions", mock.Anything).Once()
+			jobs := &mockSchedulerRunner{}
+			jobs.On("SetAppPartitions", mock.Anything).Once()
+			parts, cleanup, err := appparts.New2(ctx, structs, appparts.NullSyncActualizerFactory,
+				actualizers, jobs, appparts.NullExtensionEngineFactories, iratesce.TestBucketsFactory)
+			require.NoError(err)
+			t.Cleanup(func() {
+				cancel()
+				cleanup()
+				actualizers.AssertExpectations(t)
+				jobs.AssertExpectations(t)
+			})
+
+			// Registering the app must not create runtime partitions or start background work.
+			parts.DeployApp(appName, nil, appDef, 3, appparts.PoolSize(1, 1, 1, 1), 3)
+			actualizers.AssertNumberOfCalls(t, "NewAndRun", 0)
+			jobs.AssertNumberOfCalls(t, "NewAndRun", 0)
+			started := make(chan struct{}, len(test.ids)*2)
+			for _, id := range test.ids {
+				actualizers.On("NewAndRun", mock.Anything, appName, id, projectorName).
+					Run(func(mock.Arguments) { started <- struct{}{} }).Once()
+				for wsid, index := range schedulers.AppWorkspacesHandledByPartition(3, 3, id) {
+					jobs.On("NewAndRun", mock.Anything, appName, id, index, wsid, jobName).
+						Run(func(mock.Arguments) { started <- struct{}{} }).Once()
+				}
+			}
+			parts.DeployAppPartitions(appName, test.ids)
+			for range len(test.ids) * 2 {
+				select {
+				case <-started:
+				case <-time.After(5 * time.Second):
+					t.Fatal("selected partition workers did not start")
+				}
+			}
+
+			// Excluding IDs must not shrink the configured partition range or change routing.
+			count, err := parts.AppPartsCount(appName)
+			require.NoError(err)
+			require.Equal(istructs.NumAppPartitions(3), count)
+			for id := istructs.PartitionID(0); id < 3; id++ {
+				selected := false
+				for _, deployedID := range test.ids {
+					selected = selected || deployedID == id
+				}
+				for wsid := range schedulers.AppWorkspacesHandledByPartition(3, 3, id) {
+					routedID, err := parts.AppWorkspacePartitionID(appName, wsid)
+					require.NoError(err)
+					require.Equal(id, routedID)
+				}
+				partition, err := parts.Borrow(appName, id, appparts.ProcessorKind_Command)
+				if selected {
+					require.NoError(err)
+					partition.Release()
+					continue
+				}
+				require.Nil(partition)
+				require.ErrorIs(err, appparts.ErrNotFound)
+				require.EqualError(err, fmt.Sprintf("application %s partition %d not found: not found", appName, id))
+				actualizers.AssertNotCalled(t, "NewAndRun", mock.Anything, appName, id, mock.Anything)
+				jobs.AssertNotCalled(t, "NewAndRun", mock.Anything, appName, id, mock.Anything, mock.Anything, mock.Anything)
+			}
+			workedActualizers := 0
+			for range parts.WorkedActualizers(appName) {
+				workedActualizers++
+			}
+			require.Equal(len(test.ids), workedActualizers)
+			workedSchedulers := 0
+			for range parts.WorkedSchedulers(appName) {
+				workedSchedulers++
+			}
+			require.Equal(len(test.ids), workedSchedulers)
+		})
+	}
+}
 
 func (f errorExtensionEngineFactory) New(context.Context, appdef.AppQName, []iextengine.ExtensionModule, *iextengine.ExtEngineConfig, uint) ([]iextengine.IExtensionEngine, error) {
 	return nil, f.err

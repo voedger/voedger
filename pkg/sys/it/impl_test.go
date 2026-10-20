@@ -387,6 +387,13 @@ func TestVITResetPreservingStorage(t *testing.T) {
 		it.WithVVMConfig(func(cfg *vvm.VVMConfig) { cfg.NumQueryProcessors = 3 }),
 	)
 	categoryID := istructs.NullRecordID
+	profileWLogTail := istructs.NullOffset
+	profileWorkspace := func(ws *it.AppWorkspace) *it.AppWorkspace {
+		return &it.AppWorkspace{
+			WSID:  ws.Owner.ProfileWSID,
+			Owner: ws.Owner,
+		}
+	}
 	var wsID istructs.WSID
 	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -394,9 +401,14 @@ func TestVITResetPreservingStorage(t *testing.T) {
 		require.EqualValues(t, 3, vit.NumQueryProcessors)
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 		categoryID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		profileWLogTail = getLastWLogOffset(t, vit, profileWorkspace(ws))
 	}, func(t *testing.T, vit *it.VIT) {
 		require.EqualValues(t, 3, vit.NumQueryProcessors)
-		require.Equal(t, wsID, vit.WS(istructs.AppQName_test1_app1, "test_ws").WSID)
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		require.Equal(t, wsID, ws.WSID)
+		// Restart must not append another child-workspace initialization event
+		// by provisioning the entities declared in cfg again.
+		require.Equal(t, profileWLogTail, getLastWLogOffset(t, vit, profileWorkspace(ws)))
 		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
 		resp := vit.PostApp(istructs.AppQName_test1_app1, wsID, "q.sys.SqlQuery", body,
 			httpu.WithAuthorizeBy(vit.GetSystemPrincipal(istructs.AppQName_test1_app1).Token))

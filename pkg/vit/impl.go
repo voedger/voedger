@@ -54,7 +54,7 @@ func NewVIT(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	tb.Helper()
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
-		vit = newVit(tb, vitCfg, useCas, false)
+		vit = newVit(tb, vitCfg, useCas, true)
 	} else {
 		ok := false
 		if vit, ok = vits[vitCfg]; ok {
@@ -63,11 +63,16 @@ func NewVIT(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 			}
 			vit.isFinalized = false
 		} else {
-			vit = newVit(tb, vitCfg, useCas, false)
+			vit = newVit(tb, vitCfg, useCas, true)
 			vits[vitCfg] = vit
 		}
 	}
 
+	return initializeVIT(tb, vit, opts...)
+}
+
+func initializeVIT(tb testing.TB, vit *VIT, opts ...IVITOpt) *VIT {
+	tb.Helper()
 	for _, opt := range opts {
 		opt.applyVITOpt(vit)
 	}
@@ -84,7 +89,17 @@ func NewVIT(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	return vit
 }
 
-func newVit(tb testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *VIT {
+func restartVIT(tb testing.TB, vitCfg *VITConfig,
+	appWorkspaces map[appdef.AppQName]map[string]*AppWorkspace,
+	principals map[appdef.AppQName]map[string]*Principal) *VIT {
+	tb.Helper()
+	vit := newVit(tb, vitCfg, coreutils.IsCassandraStorage(), false)
+	vit.appWorkspaces = appWorkspaces
+	vit.principals = principals
+	return initializeVIT(tb, vit)
+}
+
+func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT {
 	tb.Helper()
 	cfg := vvmpkg.NewVVMDefaultConfig()
 
@@ -176,7 +191,7 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas bool, vvmLaunchOnly bool) *
 	vit.vvmProblemCtx = vit.Launch(10*365*24*60*60, vvmpkg.DefaultLeadershipAcquisitionDuration)
 	vit.checkVVMProblemCtx()
 
-	if vvmLaunchOnly {
+	if !createEntities {
 		return vit
 	}
 
@@ -301,7 +316,7 @@ func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.
 
 func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	tb.Helper()
-	vit = newVit(tb, vitCfg, true, false)
+	vit = newVit(tb, vitCfg, true, true)
 	for _, opt := range opts {
 		opt.applyVITOpt(vit)
 	}

@@ -462,11 +462,38 @@ func getWorkspaceInitAwaitTimeout() time.Duration {
 	return defaultWorkspaceAwaitTimeout
 }
 
-// TestRestartPreservingStorage stops the first VIT before launching the second,
-// sharing its storage factory and keyspace isolation suffix between both runs.
-// An optional second-run configuration replaces cfg for the second launch only.
-// Both configurations must be owned; caller configuration options are not modified.
-func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT), secondRun ...*VITConfig) {
+// RestartStorage provides test-friendly access to the storage shared by both
+// VVM runs.
+type RestartStorage interface {
+	AppStorage(t testing.TB, appQName appdef.AppQName) istorage.IAppStorage
+}
+
+// RestartPreservingStorageHooks defines actions at the running and stopped
+// phases of two VVM instances that share storage.
+type RestartPreservingStorageHooks struct {
+	FirstRun        func(t *testing.T, vit *VIT)
+	AfterFirstStop  func(t *testing.T, storage RestartStorage)
+	SecondRun       func(t *testing.T, vit *VIT)
+	AfterSecondStop func(t *testing.T, storage RestartStorage)
+}
+
+type restartStorage struct {
+	provider istorage.IAppStorageProvider
+}
+
+func (s restartStorage) AppStorage(t testing.TB, appQName appdef.AppQName) istorage.IAppStorage {
+	t.Helper()
+	storage, err := s.provider.AppStorage(appQName)
+	require.NoError(t, err)
+	return storage
+}
+
+// TestRestartPreservingStorageWithHooks runs two VVM instances over the same
+// storage. Both runs use cfg unless an optional second-run config is supplied.
+// Config-declared logins, workspaces, subjects, and documents are created only
+// during the first run. Stop hooks run after the respective VVM has fully stopped.
+// Configurations must be owned; caller configuration options are not modified.
+func TestRestartPreservingStorageWithHooks(t *testing.T, cfg *VITConfig, hooks RestartPreservingStorageHooks, secondRun ...*VITConfig) {
 	t.Helper()
 	require.LessOrEqual(t, len(secondRun), 1, "at most one second-run configuration is allowed")
 	require.NotNil(t, cfg)
@@ -493,14 +520,50 @@ func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestar
 	before, after := *cfg, *afterCfg
 	before.opts = append(slices.Clone(cfg.opts), preserveStorage)
 	after.opts = append(slices.Clone(afterCfg.opts), preserveStorage)
+	var appWorkspaces map[appdef.AppQName]map[string]*AppWorkspace
+	var principals map[appdef.AppQName]map[string]*Principal
 	func() {
 		vit := NewVIT(t, &before)
 		defer vit.TearDown()
-		testBeforeRestart(t, vit)
+		if hooks.FirstRun != nil {
+			hooks.FirstRun(t, vit)
+		}
+		// Retain references to workspaces and principals without recreating them after restart.
+		appWorkspaces = vit.appWorkspaces
+		principals = vit.principals
 	}()
-	vit := NewVIT(t, &after)
-	defer vit.TearDown()
-	testAfterRestart(t, vit)
+
+	storage := restartStorage{
+		provider: provider.Provide(sharedStorageFactory, suffix),
+	}
+	if hooks.AfterFirstStop != nil {
+		hooks.AfterFirstStop(t, storage)
+	}
+
+	func() {
+		vit := restartVIT(t, &after, appWorkspaces, principals)
+		defer vit.TearDown()
+		if hooks.SecondRun != nil {
+			hooks.SecondRun(t, vit)
+		}
+	}()
+
+	if hooks.AfterSecondStop != nil {
+		hooks.AfterSecondStop(t, storage)
+	}
+}
+
+// TestRestartPreservingStorage calls testBeforeRestart, stops the VVM, then
+// calls testAfterRestart with a new VVM backed by the preserved storage.
+// Config-declared logins, workspaces, subjects, and documents are not recreated.
+// An optional second-run config supports upgrades; both configs must be owned.
+// Caller configuration options are not modified.
+func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT), secondRun ...*VITConfig) {
+	t.Helper()
+	TestRestartPreservingStorageWithHooks(t, cfg, RestartPreservingStorageHooks{
+		FirstRun:  testBeforeRestart,
+		SecondRun: testAfterRestart,
+	}, secondRun...)
 }
 
 func (c *implISchemasCache_nonTestApps) Get(appQName appdef.AppQName) *parser.AppSchemaAST {

@@ -77,8 +77,8 @@ func recordKey(ws istructs.WSID, id istructs.RecordID) (pkey, ccols []byte) {
 	return pkey, uint16bytes(lo)
 }
 
-// Returns partition key and clustering columns bytes for specified plog partition and offset
-func plogKey(partition istructs.PartitionID, offset istructs.Offset) (pkey, ccols []byte) {
+// PLogEventKey returns storage partition key and clustering columns for a PLog event.
+func PLogEventKey(partition istructs.PartitionID, offset istructs.Offset) (pkey, ccols []byte) {
 	hi, lo := crackLogOffset(offset)
 
 	pkey = make([]byte, uint16len+uint16len+uint64len)
@@ -89,8 +89,8 @@ func plogKey(partition istructs.PartitionID, offset istructs.Offset) (pkey, ccol
 	return pkey, uint16bytes(lo)
 }
 
-// Returns partition key and clustering columns bytes for specified wlog workspace and offset
-func wlogKey(ws istructs.WSID, offset istructs.Offset) (pkey, ccols []byte) {
+// WLogEventKey returns storage partition key and clustering columns for a WLog event.
+func WLogEventKey(ws istructs.WSID, offset istructs.Offset) (pkey, ccols []byte) {
 	hi, lo := crackLogOffset(offset)
 
 	pkey = make([]byte, uint16len+uint64len+uint64len)

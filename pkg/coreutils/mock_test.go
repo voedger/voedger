@@ -25,3 +25,13 @@ func TestMockInterfacesCompliance(t *testing.T) {
 		_ istructs.IIntents           = &MockIntents{}
 	)
 }
+
+func TestMockPLogEventHandlingPartition(t *testing.T) {
+	event := &MockPLogEvent{}
+	partitionID := istructs.PartitionID(4)
+	event.On("HandlingPartition").Return(partitionID).Once()
+	if actual := event.HandlingPartition(); actual != partitionID {
+		t.Errorf("HandlingPartition() = %d, want %d", actual, partitionID)
+	}
+	event.AssertExpectations(t)
+}

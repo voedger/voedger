@@ -365,6 +365,10 @@ ABSTRACT WORKSPACE Workspace (
 		QUERY GRCount RETURNS GRCountResult WITH Tags=(AllowedToEveryoneTag);
 		QUERY Modules RETURNS ModulesResult WITH Tags=(AllowedToEveryoneTag);
 		COMMAND RenameQName(RenameQNameParams) WITH Tags=(WorkspaceOwnerFuncTag);
+		PROJECTOR ApplyRecoveryCheckpoint
+			AFTER EXECUTE ON ALL COMMANDS OR
+			AFTER INSERT OR UPDATE OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord) OR
+			AFTER EXECUTE WITH PARAM ON ODoc;
 		SYNC PROJECTOR RecordsRegistryProjector
 			AFTER INSERT ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc

@@ -7,14 +7,18 @@ package btstrp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/jsonu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -26,11 +30,12 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 )
 
-func Bootstrap(federationRetry federation.IFederationWithRetry, asp istructs.IAppStructsProvider, time timeu.ITime, appparts appparts.IAppPartitions,
+func Bootstrap(ctx context.Context, federationRetry federation.IFederationWithRetry, asp istructs.IAppStructsProvider, time timeu.ITime, appPartitions appparts.IAppPartitions,
+	initialRecovery checkpoints.IInitialRecovery,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	postWiredInterfacePtrs PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler,
 	requestSender bus.IRequestSender) (err error) {
-	logCtx := logger.WithContextAttrs(context.Background(), map[string]any{
+	logCtx := logger.WithContextAttrs(ctx, map[string]any{
 		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
 		logger.LogAttr_Extension: "sys._Bootstrap",
 	})
@@ -38,7 +43,7 @@ func Bootstrap(federationRetry federation.IFederationWithRetry, asp istructs.IAp
 
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, time); err != nil {
-		return err
+		return fmt.Errorf("initialize cluster app workspace: %w", err)
 	}
 	logger.InfoCtx(logCtx, "bootstrap", "cluster app workspace initialized")
 
@@ -57,50 +62,92 @@ func Bootstrap(federationRetry federation.IFederationWithRetry, asp istructs.IAp
 	*postWiredInterfacePtrs.BlobHandler = blobHandler
 
 	// appparts: deploy single clusterApp partition
-	appparts.DeployApp(istructs.AppQName_sys_cluster, nil, clusterApp.Def, clusterapp.ClusterAppNumPartitions,
-		clusterapp.ClusterAppNumEngines, clusterapp.ClusterAppNumAppWS)
-	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterapp.ClusterAppWSIDPartitionID})
+	appPartitions.DeployApp(istructs.AppQName_sys_cluster, nil, clusterApp.Def, clusterApp.AppDeploymentDescriptor.NumParts, clusterapp.ClusterAppNumEngines, clusterapp.ClusterAppNumAppWS)
+	clusterPartitionIDs, err := initializeAppCheckpoints(logCtx, initialRecovery, appparts.BuiltInApp(clusterApp))
+	if err != nil {
+		return fmt.Errorf("initialize cluster app partition: %w", err)
+	}
+	if len(clusterPartitionIDs) == 0 {
+		return errors.New("failed to initialize or deploy cluster app partition")
+	}
+	if err := deployAppPartitions(logCtx, "bootstrap.apppartdeploy.builtin", appPartitions, clusterApp.Name, clusterPartitionIDs); err != nil {
+		return fmt.Errorf("deploy cluster app partition: %w", err)
+	}
 
 	sysToken, err := payloads.GetSystemPrincipalToken(itokens, istructs.AppQName_sys_cluster)
 	if err != nil {
 		return err
 	}
 
-	// For each app in otherApps: check apps compatibility by calling c.cluster.DeployApp
-	for _, app := range otherApps {
-		logger.InfoCtx(logCtx, "bootstrap.appdeploy.builtin", app.Name)
+	deployApp := func(appStage, partitionStage string, app appparts.BuiltInApp, extModuleURLs map[string]*url.URL) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		logger.InfoCtx(logCtx, appStage, app.Name)
 		callDeployApp(federationRetry, sysToken, app)
+		// Routing uses the full descriptor count even when some partitions cannot deploy.
+		appPartitions.DeployApp(app.Name, extModuleURLs, app.Def, app.AppDeploymentDescriptor.NumParts, app.EnginePoolSize, app.NumAppWorkspaces)
+		partitionIDs, err := initializeAppCheckpoints(logCtx, initialRecovery, app)
+		if err != nil {
+			return err
+		}
+		return deployAppPartitions(logCtx, partitionStage, appPartitions, app.Name, partitionIDs)
+	}
+
+	for _, app := range otherApps {
+		if err := deployApp("bootstrap.appdeploy.builtin", "bootstrap.apppartdeploy.builtin", app, nil); err != nil {
+			return err
+		}
 	}
 	for _, sidecarApp := range sidecarApps {
-		logger.InfoCtx(logCtx, "bootstrap.appdeploy.sidecar", sidecarApp.BuiltInApp.Name)
-		callDeployApp(federationRetry, sysToken, sidecarApp.BuiltInApp)
+		if err := deployApp("bootstrap.appdeploy.sidecar", "bootstrap.apppartdeploy.sidecar", sidecarApp.BuiltInApp, sidecarApp.ExtModuleURLs); err != nil {
+			return err
+		}
 	}
 
-	// For each app builtInApps: deploy a builtin app
-	for _, app := range otherApps {
-		deployAppPartitions(logCtx, "bootstrap.apppartdeploy.builtin", appparts, app, nil)
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	for _, app := range sidecarApps {
-		deployAppPartitions(logCtx, "bootstrap.apppartdeploy.sidecar", appparts, app.BuiltInApp, app.ExtModuleURLs)
-	}
-
 	logger.InfoCtx(logCtx, "bootstrap", "completed")
 	return nil
 }
 
-func deployAppPartitions(ctx context.Context, stage string, appparts appparts.IAppPartitions, app appparts.BuiltInApp, extModuleURLs map[string]*url.URL) {
-	appparts.DeployApp(app.Name, extModuleURLs, app.Def, app.NumParts, app.EnginePoolSize, app.NumAppWorkspaces)
-	partitionIDs := make([]istructs.PartitionID, app.NumParts)
-	for id := istructs.NumAppPartitions(0); id < app.NumParts; id++ {
-		partitionIDs[id] = istructs.PartitionID(id)
-		logger.InfoCtx(ctx, stage, fmt.Sprintf("%s/%d", app.Name, id))
+func initializeAppCheckpoints(ctx context.Context, initialRecovery checkpoints.IInitialRecovery, app appparts.BuiltInApp) ([]istructs.PartitionID, error) {
+	partitionIDsWithInitedCheckpoints, partitionIDsWithFailedCheckpoints, err := initialRecovery.InitializeCheckpoints(ctx, app.Name, app.AppDeploymentDescriptor.NumParts)
+	for id, partitionErr := range partitionIDsWithFailedCheckpoints {
+		errorCtx := logger.WithContextAttrs(ctx, map[string]any{
+			logger.LogAttr_Extension: "sys._Recovery",
+			"app":                    app.Name,
+			"partid":                 id,
+		})
+		var workspaceErr *checkpoints.WorkspaceCheckpointError
+		if errors.As(partitionErr, &workspaceErr) {
+			errorCtx = logger.WithContextAttrs(errorCtx, map[string]any{logger.LogAttr_WSID: workspaceErr.WSID})
+		}
+		logger.ErrorCtx(errorCtx, "bootstrap.initial_recovery.error", partitionErr)
 	}
-	appparts.DeployAppPartitions(app.Name, partitionIDs)
+	if err != nil {
+		return nil, err
+	}
+	return partitionIDsWithInitedCheckpoints, nil
+}
+
+func deployAppPartitions(ctx context.Context, stage string, appPartitions appparts.IAppPartitions, appQName appdef.AppQName, partitionIDs []istructs.PartitionID) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	for _, id := range partitionIDs {
+		logger.InfoCtx(ctx, stage, fmt.Sprintf("%s/%d", appQName, id))
+	}
+	if len(partitionIDs) > 0 {
+		appPartitions.DeployAppPartitions(appQName, partitionIDs)
+	}
+	return nil
 }
 
 func callDeployApp(federationRetry federation.IFederationWithRetry, sysToken string, app appparts.BuiltInApp) {
 	// Use Admin Endpoint to send requests
-	body := fmt.Sprintf(`{"args":{"AppQName":%q,"NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
+	body := jsonu.Jprintf(`{"args":{"AppQName":%q,"NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.AppDeploymentDescriptor.NumParts, app.NumAppWorkspaces)
 	_, err := federationRetry.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 		httpu.WithDiscardResponse(),
 		httpu.WithAuthorizeBy(sysToken),

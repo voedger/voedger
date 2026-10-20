@@ -132,7 +132,16 @@ func (c *cmdWorkpiece) GetUserPrincipalName() string {
 // borrows app partition for command
 func (c *cmdWorkpiece) borrow() (err error) {
 	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), appparts.ProcessorKind_Command); err != nil {
-		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) { // partition is not deployed yet -> ErrNotFound
+		if errors.Is(err, appparts.ErrNotFound) {
+			if _, registrationErr := c.appParts.AppPartsCount(c.cmdMes.AppQName()); registrationErr != nil {
+				if errors.Is(registrationErr, appparts.ErrNotFound) {
+					return coreutils.NewHTTPErrorf(http.StatusBadRequest, "application not found")
+				}
+				return registrationErr
+			}
+			return coreutils.NewHTTPErrorf(http.StatusInternalServerError, "partition not found")
+		}
+		if errors.Is(err, appparts.ErrNotAvailableEngines) {
 			return coreutils.NewHTTPError(http.StatusServiceUnavailable, err)
 		}
 		// notest
@@ -168,16 +177,46 @@ func borrowAppPart(_ context.Context, cmd *cmdWorkpiece) error {
 	return cmd.borrow()
 }
 
-func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
-	ws, ok := ap.workspaces[wsid]
-	if !ok {
-		ws = &workspace{
-			NextWLogOffset: istructs.FirstOffset,
-			idGenerator:    istructsmem.NewIDGenerator(),
-		}
-		ap.workspaces[wsid] = ws
+func newAppPartition(workspaceRecoveryHooks recoveryHooks[workspaceKey, workspace]) *appPartition {
+	return &appPartition{
+		workspaces:     newWorkspaceManager(numWSRecoverers, workspaceRecoveryHooks),
+		nextPLogOffset: istructs.FirstOffset,
 	}
-	return ws
+}
+
+func newPartitionManager(hooks recoveryHooks[partitionKey, appPartition], recoverFunc recoverPartitionFunc) *partitionManager {
+	manager := &partitionManager{
+		partitions: newRecoveryManager(
+			nil,
+			hooks,
+		),
+	}
+	manager.recoverFunc = func(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
+		partition, err := recoverFunc(ctx, cmd)
+		if err == nil {
+			// Share the service's worker lifetime before publishing the partition.
+			// Reset may detach its state, but shutdown must still join its workspace workers.
+			partition.workspaces.workspaces.workers = manager.partitions.workers
+		}
+		return partition, err
+	}
+	return manager
+}
+
+func newWorkspaceManager(numRecoverers uint, hooks recoveryHooks[workspaceKey, workspace]) *workspaceManager {
+	return &workspaceManager{
+		workspaces: newRecoveryManager(
+			make(chan struct{}, numRecoverers),
+			hooks,
+		),
+	}
+}
+
+func newRecoveredWorkspace() *workspace {
+	return &workspace{
+		NextWLogOffset: istructs.FirstOffset,
+		idGenerator:    istructsmem.NewIDGenerator(),
+	}
 }
 
 func (cmdProc *cmdProc) getAppPartition(vvmCtx context.Context, cmd *cmdWorkpiece) (err error) {
@@ -185,20 +224,12 @@ func (cmdProc *cmdProc) getAppPartition(vvmCtx context.Context, cmd *cmdWorkpiec
 		appQName:    cmd.cmdMes.AppQName(),
 		partitionID: cmd.cmdMes.PartitionID(),
 	}
-	appPartition, err := cmdProc.partitionManager.getOrStart(vvmCtx, key, cmd, cmdProc.recovery)
+	appPartition, err := cmdProc.partitionManager.getOrStart(vvmCtx, key, cmd)
 	if err != nil {
 		return err
 	}
 	cmd.appPartition = appPartition
 	return nil
-}
-
-func partitionRecoveringError(partitionID istructs.PartitionID) error {
-	return coreutils.NewHTTPError(http.StatusServiceUnavailable, fmt.Errorf("partition %d is recovering", partitionID))
-}
-
-func partitionRecoveryFailedError(partitionID istructs.PartitionID, err error) error {
-	return coreutils.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("partition %d recovery failed: %w", partitionID, err))
 }
 
 func toRecoveryWorkpiece(cmd *cmdWorkpiece, key partitionKey) *cmdWorkpiece {
@@ -209,6 +240,7 @@ func toRecoveryWorkpiece(cmd *cmdWorkpiece, key partitionKey) *cmdWorkpiece {
 		cmdMes: &implICommandMessage{
 			appQName:    key.appQName,
 			partitionID: key.partitionID,
+			wsid:        cmd.cmdMes.WSID(),
 			requestCtx:  cmd.cmdMes.RequestCtx(),
 		},
 		metrics: cmd.metrics,
@@ -217,85 +249,140 @@ func toRecoveryWorkpiece(cmd *cmdWorkpiece, key partitionKey) *cmdWorkpiece {
 	return recoveryCmd
 }
 
-func (m *partitionManager) getOrStart(vvmCtx context.Context, key partitionKey, cmd *cmdWorkpiece, recoverPartitionFunc recoverPartitionFunc) (*appPartition, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	state := m.partitions[key]
-
-	if state == nil {
-		// no state -> 503 + start recover
-		state = &partitionState{}
-		m.partitions[key] = state
-		m.startRecover(vvmCtx, key, cmd, state, recoverPartitionFunc)
-		return nil, partitionRecoveringError(key.partitionID)
-	}
-
-	if state.appPartition != nil {
-		// partition exists -> recovered successfully already
-		return state.appPartition, nil
-	}
-
-	if state.recoveryErr == nil {
-		// no partition and no error -> still recovering
-		return nil, partitionRecoveringError(key.partitionID)
-	}
-
-	// no partition and has error -> the last recovery failed
-	// handle the last recovery error
-	lastErr := state.recoveryErr
-
-	// should be here instead of recover(), otherwise the next request to the partition
-	// will return 500 instead of 503 and will start duplicating recover
-	state.recoveryErr = nil
-
-	m.startRecover(vvmCtx, key, cmd, state, recoverPartitionFunc)
-	return nil, partitionRecoveryFailedError(key.partitionID, lastErr)
-}
-
-func (m *partitionManager) startRecover(vvmCtx context.Context, key partitionKey, cmd *cmdWorkpiece, state *partitionState, recoverPartitionFunc recoverPartitionFunc) {
-	recoveryCmdWorkpiece := toRecoveryWorkpiece(cmd, key)
-	m.workers.Add(1)
-	m.recoveryHooks.scheduled(key)
-	go m.recover(vvmCtx, key, state, recoveryCmdWorkpiece, recoverPartitionFunc)
-}
-
-func (m *partitionManager) recover(vvmCtx context.Context, key partitionKey, state *partitionState, cmd *cmdWorkpiece, recoverPartition recoverPartitionFunc) {
-	defer m.workers.Done()
-	var (
-		recoveredPartition *appPartition
-		err                error
-	)
-	err = m.recoveryHooks.beforeAttempt(vvmCtx, key)
-	if err == nil {
-		recoveredPartition, err = recoverPartition(vvmCtx, cmd)
-	}
-	cmd.Release()
-
-	if err == nil {
-		err = vvmCtx.Err()
-	}
-	defer m.recoveryHooks.attemptCompleted(key, err)
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if err != nil {
-		state.recoveryErr = err
-		return
-	}
-	state.appPartition = recoveredPartition
-}
-
-// resetPartitionState removes the current state so the next request starts a fresh recovery.
-func (m *partitionManager) resetPartitionState(key partitionKey) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.partitions, key)
+// scheduleRecovery removes the current state so the next request starts a fresh recovery.
+func (m *partitionManager) scheduleRecovery(key partitionKey) {
+	m.partitions.reset(key)
 }
 
 func (m *partitionManager) shutdown() {
-	m.workers.Wait()
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.partitions = map[partitionKey]*partitionState{}
+	m.partitions.shutdown()
+}
+
+func (m *partitionManager) getOrStart(vvmCtx context.Context, partKey partitionKey, cmd *cmdWorkpiece) (*appPartition, error) {
+	return getOrStart(vvmCtx, m.partitions, partKey, fmt.Sprintf("partition %d", partKey.partitionID),
+		// Why `func return func` here?
+		// Because recoveryCmd should be detached only if the attempt is actually going to be made
+		//
+		//	recover in getOrStart()
+		//	    |
+		//	    +--> rejected due of in progress / limit --> factory is not called
+		//	    |                                            cmd keeps appPart ownership
+		//	    |
+		//	    +--> admitted --> factory() --> recoveryCmd detached and takes appPart ownership
+		//	                                      |
+		//	                                      +--> attempt(ctx) --> recoveryCmd.Release()
+		//
+		// Passing recoveryAttemptFunc directly would require creating recoveryCmd and
+		// detaching cmd.appPart before admission. A rejected request would then need to
+		// undo that ownership transfer or risk releasing or orphaning appPart.
+		func() recoveryAttemptFunc[appPartition] {
+			recoveryCmd := toRecoveryWorkpiece(cmd, partKey)
+			return func(ctx context.Context) (*appPartition, error) {
+				defer recoveryCmd.Release()
+				return m.recoverFunc(ctx, recoveryCmd)
+			}
+		})
+}
+
+func (m *workspaceManager) getOrStart(vvmCtx context.Context, wsKey workspaceKey,
+	recoverWorkspace recoverWorkspaceFunc) (*workspace, error) {
+	// Supply a factory so the generic manager creates an attempt only after a workspace recovery
+	// slot is available; rejected and duplicate requests must not prepare unused attempts.
+	return getOrStart(vvmCtx, m.workspaces, wsKey, fmt.Sprintf("workspace %d", wsKey.wsid),
+		func() recoveryAttemptFunc[workspace] {
+			return func(ctx context.Context) (*workspace, error) {
+				return recoverWorkspace(ctx, wsKey)
+			}
+		})
+}
+
+func getOrStart[K comparable, T any](vvmCtx context.Context, manager *recoveryManager[K, T], key K,
+	errorSubject string, newAttempt newRecoveryAttemptFunc[T]) (*T, error) {
+	recovered, err := manager.getOrStart(vvmCtx, key, newAttempt)
+	switch {
+	case err == nil:
+		return recovered, nil
+	case errors.Is(err, errRecoveryInProgress), errors.Is(err, errRecoveryLimit):
+		return nil, coreutils.NewHTTPError(http.StatusServiceUnavailable, fmt.Errorf("%s: %w", errorSubject, err))
+	default:
+		return nil, coreutils.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("%s: %w", errorSubject, err))
+	}
+}
+
+func (m *workspaceManager) marshalJSON() ([]byte, error) {
+	workspaces := map[istructs.WSID]*workspace{}
+	for key, workspace := range m.workspaces.recoveredValues() {
+		workspaces[key.wsid] = workspace
+	}
+	return json.Marshal(workspaces)
+}
+
+// run in a goroutine by recoveryManager
+func (cmdProc *cmdProc) recoverWorkspace(vvmCtx context.Context, requestCtx context.Context, wsKey workspaceKey, ap *appPartition) (*workspace, error) {
+	recoveryCtx := newWSRecoveryCtx(requestCtx, wsKey)
+	logger.InfoCtx(recoveryCtx, "cp.workspace_recovery.start", "")
+	checkpoint, ok, err := cmdProc.checkpointStorage.GetWorkspaceCheckpoint(ap.clusterAppID, wsKey.wsid)
+	if err != nil {
+		return nil, err
+	}
+	startOffset := istructs.FirstOffset
+	validateCheckpoint := ok && checkpoint.WLogIDBearingOffset >= istructs.FirstOffset
+	if validateCheckpoint {
+		startOffset = checkpoint.WLogIDBearingOffset
+	}
+
+	lastWLogOffset, lastRecordID, checkpointValid, err := cmdProc.scanWLog(
+		vvmCtx, wsKey, ap, startOffset, validateCheckpoint)
+	if errors.Is(err, errInvalidRecoveryCheckpoint) {
+		err = nil
+		checkpointValid = false
+	}
+	if err != nil {
+		logger.ErrorCtx(recoveryCtx, "cp.workspace_recovery.readwlog.error", err)
+		return nil, err
+	}
+	if validateCheckpoint && !checkpointValid {
+		logger.ErrorCtx(recoveryCtx, "cp.workspace_recovery.checkpoint.invalid", fmt.Sprintf(
+			"stored WLog offset %d does not identify an ID-bearing event; retrying from FirstOffset", startOffset))
+		lastWLogOffset, lastRecordID, _, err = cmdProc.scanWLog(
+			vvmCtx, wsKey, ap, istructs.FirstOffset, false)
+		if err != nil {
+			logger.ErrorCtx(recoveryCtx, "cp.workspace_recovery.readwlog.error", err)
+			return nil, err
+		}
+	}
+
+	workspace := newRecoveredWorkspace()
+	workspace.NextWLogOffset = lastWLogOffset + 1
+	if lastRecordID > istructs.NullRecordID {
+		workspace.idGenerator.UpdateOnSync(lastRecordID)
+	}
+	logger.InfoCtx(recoveryCtx, "cp.workspace_recovery.complete", "nextWLogOffset ", workspace.NextWLogOffset, ", lastRecordID ", lastRecordID)
+	return workspace, nil
+}
+
+func (cmdProc *cmdProc) scanWLog(vvmCtx context.Context, wsKey workspaceKey, ap *appPartition,
+	startOffset istructs.Offset, validateCheckpoint bool) (lastWLogOffset istructs.Offset,
+	lastRecordID istructs.RecordID, checkpointValid bool, err error) {
+	checkpointValid = !validateCheckpoint
+	cmdProc.workspaceRecoveryHooks.onLogRead(wsKey, startOffset, istructs.ReadToTheEnd)
+	err = ap.appStructs.Events().ReadWLog(vvmCtx, wsKey.wsid, startOffset, istructs.ReadToTheEnd,
+		func(wlogOffset istructs.Offset, event istructs.IWLogEvent) error {
+			defer event.Release()
+			eventRecordID := highestNewNonSingletonRecordID(event)
+			if !checkpointValid {
+				if wlogOffset != startOffset || eventRecordID == istructs.NullRecordID {
+					return errInvalidRecoveryCheckpoint
+				}
+				checkpointValid = true
+			}
+			lastWLogOffset = wlogOffset
+			if eventRecordID != istructs.NullRecordID {
+				lastRecordID = eventRecordID
+			}
+			return nil
+		})
+	return lastWLogOffset, lastRecordID, checkpointValid, err
 }
 
 func getIWorkspace(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -365,20 +452,22 @@ func (cmdProc *cmdProc) getHostState(_ context.Context, cmd *cmdWorkpiece) (err 
 	return nil
 }
 
-func updateIDGeneratorFromO(root istructs.IObject, findType appdef.FindType, idGen istructs.IIDGenerator) {
-	// new IDs only here because update is not allowed for ODocs in Args
-	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID))
-	for container := range root.Containers {
-		// order of containers here is the order in the schema
-		// but order in the request could be different
-		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
-		for c := range root.Children(container) {
-			updateIDGeneratorFromO(c, findType, idGen)
+func highestNewNonSingletonRecordID(event istructs.IAbstractEvent) (highest istructs.RecordID) {
+	for rec := range event.CUDs {
+		if rec.IsNew() && rec.ID() >= istructs.FirstUserRecordID && rec.ID() > highest {
+			highest = rec.ID()
 		}
 	}
+	return highest
 }
 
-func newRecoveryCtx(ctx context.Context, partID istructs.PartitionID) context.Context {
+func newWSRecoveryCtx(ctx context.Context, wsKey workspaceKey) context.Context {
+	return logger.WithContextAttrs(newPartRecoveryCtx(ctx, wsKey.partitionID), map[string]any{
+		logger.LogAttr_WSID: wsKey.wsid,
+	})
+}
+
+func newPartRecoveryCtx(ctx context.Context, partID istructs.PartitionID) context.Context {
 	return logger.WithContextAttrs(ctx, map[string]any{
 		logger.LogAttr_VApp:      sys.VApp_SysVoedger,
 		logger.LogAttr_Extension: "sys._Recovery",
@@ -386,36 +475,88 @@ func newRecoveryCtx(ctx context.Context, partID istructs.PartitionID) context.Co
 	})
 }
 
-func (cmdProc *cmdProc) recovery(vvmCtx context.Context, cmd *cmdWorkpiece) (ap *appPartition, err error) {
-	recoveryCtx := newRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID())
-	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.start", "")
-	ap = &appPartition{
-		workspaces:     map[istructs.WSID]*workspace{},
-		nextPLogOffset: istructs.FirstOffset,
-	}
-	var lastPLogEvent istructs.IPLogEvent
-	var lastPLogOffset istructs.Offset
-	releaseLastPLogEvent := true
-	defer func() {
-		if releaseLastPLogEvent && lastPLogEvent != nil {
-			lastPLogEvent.Release()
-		}
-	}()
-	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-		ws := ap.getWorkspace(event.Workspace())
+var errInvalidRecoveryCheckpoint = errors.New("invalid recovery checkpoint")
 
-		for rec := range event.CUDs {
-			// note: not needed to check for Singleton here
-			// because within `idGenerator.UpdateOnSync()`: `syncID < nextRecordID` -> skip
-			if rec.IsNew() {
-				ws.idGenerator.UpdateOnSync(rec.ID())
+// runs in goroutine by recoveryManager
+func (cmdProc *cmdProc) recoverPartition(vvmCtx context.Context, cmd *cmdWorkpiece) (ap *appPartition, err error) {
+	recoveryCtx := newPartRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID())
+	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.start", "")
+	key := partitionKey{appQName: cmd.cmdMes.AppQName(), partitionID: cmd.cmdMes.PartitionID()}
+	appID := cmd.appStructs.ClusterAppID()
+	ap = newAppPartition(cmdProc.workspaceRecoveryHooks)
+	ap.clusterAppID = appID
+	ap.appStructs = cmd.appStructs
+
+	// get the offset to start from
+	startOffset, validateCheckpoint, err := cmdProc.readPartitionCheckpoint(appID, key.partitionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// read the last plog event
+	lastPLogEvent, lastPLogOffset, checkpointValid, err := cmdProc.getLastPLogEvent(
+		vvmCtx, recoveryCtx, key, cmd, ap, startOffset, validateCheckpoint)
+	if errors.Is(err, errInvalidRecoveryCheckpoint) {
+		err = nil
+		checkpointValid = false
+	}
+	if err != nil {
+		return nil, err
+	}
+	if validateCheckpoint && !checkpointValid {
+		logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.checkpoint.invalid", fmt.Sprintf(
+			"stored PLog offset %d does not identify an existing event; retrying from FirstOffset", startOffset))
+		ap.nextPLogOffset = istructs.FirstOffset
+		lastPLogEvent, lastPLogOffset, _, err = cmdProc.getLastPLogEvent(
+			vvmCtx, recoveryCtx, key, cmd, ap, istructs.FirstOffset, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// re-apply the last event
+	if lastPLogEvent != nil {
+		if err := cmdProc.reapplyLastPLogEvent(vvmCtx, recoveryCtx, cmd, lastPLogEvent, lastPLogOffset); err != nil {
+			return nil, err
+		}
+	}
+
+	workspaceStatesJSON, err := ap.workspaces.marshalJSON()
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "nextPLogOffset ", ap.nextPLogOffset, ", workspaces ", string(workspaceStatesJSON))
+	return ap, nil
+}
+
+func (cmdProc *cmdProc) readPartitionCheckpoint(appID istructs.ClusterAppID,
+	partitionID istructs.PartitionID) (startOffset istructs.Offset, validateCheckpoint bool, err error) {
+	partitionCheckpoint, checkpointExists, err := cmdProc.checkpointStorage.GetPartitionCheckpoint(appID, partitionID)
+	if err != nil {
+		return istructs.NullOffset, false, err
+	}
+	startOffset = istructs.FirstOffset
+	validateCheckpoint = checkpointExists && partitionCheckpoint.LastPLogOffset >= istructs.FirstOffset
+	if validateCheckpoint {
+		startOffset = partitionCheckpoint.LastPLogOffset
+	}
+	return startOffset, validateCheckpoint, nil
+}
+
+func (cmdProc *cmdProc) getLastPLogEvent(vvmCtx context.Context, recoveryCtx context.Context, key partitionKey,
+	cmd *cmdWorkpiece, ap *appPartition, startOffset istructs.Offset,
+	validateCheckpoint bool) (lastPLogEvent istructs.IPLogEvent,
+	lastPLogOffset istructs.Offset, checkpointValid bool, err error) {
+	checkpointValid = !validateCheckpoint
+	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) error {
+		if !checkpointValid {
+			if plogOffset != startOffset {
+				event.Release()
+				return errInvalidRecoveryCheckpoint
 			}
+			checkpointValid = true
 		}
-		ao := event.ArgumentObject()
-		if cmd.appStructs.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef().Type, ws.idGenerator)
-		}
-		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
 		if lastPLogEvent != nil {
 			lastPLogEvent.Release()
@@ -425,45 +566,45 @@ func (cmdProc *cmdProc) recovery(vvmCtx context.Context, cmd *cmdWorkpiece) (ap 
 		return nil
 	}
 
-	if err := cmd.appStructs.Events().ReadPLog(vvmCtx, cmd.cmdMes.PartitionID(), istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
-		logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.readplog.error", err)
-		return nil, err
-	}
-
-	if lastPLogEvent != nil {
-		// re-apply the last event
-		cmd.logCtx, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
-			"cp.partition_recovery.reapply", nil, "")
-		if err != nil {
-			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.logeventandcuds.error", err)
-			return nil, err
-		}
-		cmd.pLogEvent = lastPLogEvent
-		releaseLastPLogEvent = false
-		cmd.workspace = ap.getWorkspace(lastPLogEvent.Workspace())
-		cmd.workspace.NextWLogOffset-- // cmdProc.storeOp will bump it
-		cmd.reapplier = cmd.appStructs.GetEventReapplier(cmd.pLogEvent)
-		cmd.pLogOffset = lastPLogOffset // need to get PLogOffset in sync projectors on logging
-		if err := cmdProc.storeOp.DoSync(vvmCtx, cmd); err != nil {
-			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.storeop.error", err)
-			return nil, err
-		}
-		cmd.pLogOffset = istructs.NullOffset
-		cmd.reapplier = nil
-		cmd.workspace = nil
-		cmd.pLogEvent = nil
-		cmd.logCtx = nil
-		lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
-		lastPLogEvent = nil
-	}
-
-	worskapcesJSON, err := json.Marshal(ap.workspaces)
+	cmdProc.partitionRecoveryHooks.onLogRead(key, startOffset, istructs.ReadToTheEnd)
+	err = cmd.appStructs.Events().ReadPLog(vvmCtx, key.partitionID, startOffset, istructs.ReadToTheEnd, cb)
 	if err != nil {
-		// notest
-		return nil, err
+		if lastPLogEvent != nil {
+			lastPLogEvent.Release()
+		}
+		if !errors.Is(err, errInvalidRecoveryCheckpoint) {
+			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.readplog.error", err)
+		}
+		return nil, istructs.NullOffset, checkpointValid, err
 	}
-	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "completed, nextPLogOffset ", ap.nextPLogOffset, ", workspaces ", string(worskapcesJSON))
-	return ap, nil
+	return lastPLogEvent, lastPLogOffset, checkpointValid, nil
+}
+
+func (cmdProc *cmdProc) reapplyLastPLogEvent(vvmCtx context.Context, recoveryCtx context.Context,
+	cmd *cmdWorkpiece, lastPLogEvent istructs.IPLogEvent, lastPLogOffset istructs.Offset) (err error) {
+	cmd.logCtx, err = processors.LogEventAndCUDs(recoveryCtx, lastPLogEvent, lastPLogOffset, cmd.appStructs.AppDef(), 0,
+		"cp.partition_recovery.reapply", nil, "")
+	if err != nil {
+		lastPLogEvent.Release()
+		logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.logeventandcuds.error", err)
+		return err
+	}
+	cmd.pLogEvent = lastPLogEvent
+	cmd.workspace = newRecoveredWorkspace()
+	cmd.workspace.NextWLogOffset = lastPLogEvent.WLogOffset()
+	cmd.reapplier = cmd.appStructs.GetEventReapplier(cmd.pLogEvent)
+	cmd.pLogOffset = lastPLogOffset // need to get PLogOffset in sync projectors on logging
+	if err := cmdProc.storeOp.DoSync(vvmCtx, cmd); err != nil {
+		logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.storeop.error", err)
+		return err
+	}
+	cmd.pLogOffset = istructs.NullOffset
+	cmd.reapplier = nil
+	cmd.workspace = nil
+	cmd.pLogEvent = nil
+	cmd.logCtx = nil
+	lastPLogEvent.Release() // TODO: eliminate if there will be a better solution, see https://github.com/voedger/voedger/issues/1348
+	return nil
 }
 
 func getIDGenerator(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -480,7 +621,7 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, cmd *cmdWorkpiece) (err error
 	} else {
 		cmd.appPartition.nextPLogOffset++
 	}
-	return nil
+	return err
 }
 
 func logEventAndCUDs(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -656,9 +797,17 @@ func checkUnexpectedRequestBodyFields(_ context.Context, cmd *cmdWorkpiece) erro
 	return nil
 }
 
-func (cmdProc *cmdProc) getWorkspace(_ context.Context, cmd *cmdWorkpiece) (err error) {
-	cmd.workspace = cmd.appPartition.getWorkspace(cmd.cmdMes.WSID())
-	return nil
+func (cmdProc *cmdProc) getWorkspace(vvmCtx context.Context, cmd *cmdWorkpiece) (err error) {
+	wsKey := workspaceKey{
+		partitionKey: partitionKey{appQName: cmd.cmdMes.AppQName(), partitionID: cmd.cmdMes.PartitionID()},
+		wsid:         cmd.cmdMes.WSID(),
+	}
+	ap := cmd.appPartition
+	cmd.workspace, err = ap.workspaces.getOrStart(vvmCtx, wsKey,
+		func(ctx context.Context, recoveryKey workspaceKey) (*workspace, error) {
+			return cmdProc.recoverWorkspace(ctx, cmd.cmdMes.RequestCtx(), recoveryKey, ap)
+		})
+	return err
 }
 
 func setPLogOffset(_ context.Context, cmd *cmdWorkpiece) (err error) {
@@ -1105,10 +1254,24 @@ func (idGen *implIDGeneratorReporter) NextID(rawID istructs.RecordID) (storageID
 	return storageID, err
 }
 
-func nopHooks() *partitionRecoveryHooks {
-	return &partitionRecoveryHooks{
-		scheduled:        func(partitionKey) {},
-		beforeAttempt:    func(context.Context, partitionKey) error { return nil },
-		attemptCompleted: func(partitionKey, error) {},
+func nopRecoveryHooks[K comparable, T any]() recoveryHooks[K, T] {
+	return hooksOrNOP(recoveryHooks[K, T]{})
+}
+
+func hooksOrNOP[K comparable, T any](hooks recoveryHooks[K, T]) recoveryHooks[K, T] {
+	if hooks.scheduled == nil {
+		hooks.scheduled = func(K) {}
 	}
+	if hooks.attempt == nil {
+		hooks.attempt = func(_ K, attempt recoveryAttemptFunc[T]) recoveryAttemptFunc[T] {
+			return attempt
+		}
+	}
+	if hooks.attemptCompleted == nil {
+		hooks.attemptCompleted = func(K, error) {}
+	}
+	if hooks.onLogRead == nil {
+		hooks.onLogRead = func(K, istructs.Offset, int) {}
+	}
+	return hooks
 }
