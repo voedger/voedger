@@ -72,7 +72,7 @@ In the production application-processing context:
 - An absent or zero checkpoint starts one scan at `FirstOffset` without validation or invalid-checkpoint logging. A nonzero checkpoint must identify the first returned event, and a workspace checkpoint must identify an ID-bearing event; otherwise recovery logs the error and performs one fallback scan from `FirstOffset`.
 - Partition recovery restores the next PLog offset from the actual PLog end and reapplies the final event. A later request starts workspace recovery, which restores the next WLog offset and next non-singleton record ID from the actual WLog end.
 - On a deployed partition, runtime recovery admission remains `503` while work runs. A retained runtime failure is returned as `500` while one retry starts; an in-progress runtime retry returns `503`. An undeployed partition instead returns `500` on every command without entering that lifecycle.
-- Workspace recovery is bounded by the fixed `numWSRecoverers = 4` limit, deduplicated by WSID, and tied to the service context. Before a recovered partition is published, its workspace manager shares the partition manager's worker wait group, so shutdown also joins workers belonging to partitions detached by reset.
+- Workspace recovery is bounded by the fixed `numWSRecoverers = 4` limit per partition key, deduplicated by WSID, and tied to the service context. Before a recovered partition is published, its workspace manager shares both the partition key's stable recovery-slot pool and the partition manager's worker wait group, so reset cannot create fresh capacity while detached workers run and shutdown joins those workers.
 - Recovery logs identify the application, partition, workspace when applicable, failed operation, and underlying error.
 - `sequences.feature` covers successful user-visible issuance; `sequences--td.md` keeps issuance internals and failure-induced gaps. All checkpoint and recovery behavior belongs in `recovery.feature` and `recovery--td.md`.
 
@@ -222,6 +222,7 @@ References (external):
   - retain `409 Conflict` for a genuinely changed configured descriptor after partial deployment
   - specify that failure of the cluster application's sole partition stops bootstrap before other application registration or provisioning
   - align admission examples with the implemented four-worker limit; keep zero-capacity behavior as a generic-manager technical test rather than a selectable VVM configuration
+  - specify that partition reset preserves the four-worker limit across detached and replacement workspace managers
 
 - [x] create: [apps/sequences.feature](../../../../specs/prod/apps/sequences.feature)
   - Feature specification for successful, externally observable allocation of PLog offsets, WLog offsets, ordinary record IDs, singleton IDs, and workspace IDs; exclude failed-command behavior, implementation-level persistence policy, restart, checkpoint, and recovery behavior
@@ -257,6 +258,7 @@ References (external):
   - use the implemented `sys.ApplyRecoveryCheckpoint` projector name and locate the storage interface in `checkpoints/interface.go`
   - document the fixed four-worker production limit, admission-before-attempt construction, and retained failures waiting for an available retry slot
   - distinguish the generic manager's own worker join from the missing command-service join of workspace workers; track that integration gap as pending construction
+  - make the workspace-recovery slot pool stable by partition key so reset does not multiply admission capacity
   - identify existing test coverage and explain the real WSID used to represent the feature's logical workspace 10 through API v1
 
 - [x] update: [apps/logging--td.md](../../../../specs/prod/apps/logging--td.md)
@@ -323,6 +325,7 @@ Gherkin scenario test placement:
   - align the existing four-workspace admission test's scenario name and Given comments with the synchronized feature; retain zero-capacity coverage in generic recovery-manager tests
   - verify command-service shutdown cannot finish while a canceled workspace recovery is still exiting, including workers belonging to a partition detached by reset; reuse the existing recovery gates
   - both shutdown regression cases pass after the `command/impl.go` worker-lifecycle fix, including the early-service-exit assertion
+  - verify that four workspace recoveries detached by partition reset still occupy all capacity seen by the replacement partition until one finishes
 
 - [x] update: [sys/it/impl_test.go](../../../../../pkg/sys/it/impl_test.go)
   - resolve the preserved profile workspace from the second-run VIT instead of referencing the first callback's out-of-scope `ws`; retain the no-reprovisioning assertion
@@ -696,6 +699,7 @@ Gherkin scenario test placement:
   - log malformed checkpoints through the dedicated partition or workspace error stage with existing recovery context attributes
   - leave checkpoint repair to the asynchronous projector rather than writing checkpoint storage during recovery
   - propagate PLog write errors so the command pipeline can schedule partition recovery
+  - keep the four-slot workspace recovery pool in the partition manager by partition key and attach it before publishing recovered partition state, preserving capacity across resets
 
 - [x] update: [command/provide.go](../../../../../pkg/processors/command/provide.go)
   - inject checkpoint storage and partition/workspace recovery hooks into command-service construction; production uses the fixed four-worker limit

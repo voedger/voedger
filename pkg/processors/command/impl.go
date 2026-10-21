@@ -191,7 +191,8 @@ func newPartitionManager(hooks recoveryHooks[partitionKey, appPartition], recove
 			nil,
 			hooks,
 		),
-		recoverFunc: recoverFunc,
+		recoverFunc:    recoverFunc,
+		workspaceSlots: map[partitionKey]chan struct{}{},
 	}
 }
 
@@ -248,6 +249,20 @@ func (m *partitionManager) scheduleRecovery(key partitionKey) {
 
 func (m *partitionManager) shutdown() {
 	m.partitions.shutdown()
+	m.workspaceSlotsMu.Lock()
+	defer m.workspaceSlotsMu.Unlock()
+	clear(m.workspaceSlots)
+}
+
+func (m *partitionManager) getWorkspaceSlots(partKey partitionKey) chan struct{} {
+	m.workspaceSlotsMu.Lock()
+	defer m.workspaceSlotsMu.Unlock()
+	if slots := m.workspaceSlots[partKey]; slots != nil {
+		return slots
+	}
+	slots := make(chan struct{}, numWSRecoverers)
+	m.workspaceSlots[partKey] = slots
+	return slots
 }
 
 func (m *partitionManager) getOrStart(vvmCtx context.Context, partKey partitionKey, cmd *cmdWorkpiece) (*appPartition, error) {
@@ -273,7 +288,9 @@ func (m *partitionManager) getOrStart(vvmCtx context.Context, partKey partitionK
 				defer recoveryCmd.Release()
 				partition, err := m.recoverFunc(ctx, recoveryCmd)
 				if err == nil {
-					// Join workspace workers even after reset detaches this partition.
+					// Preserve both the recovery limit and worker lifetime across resets that
+					// detach this partition before its workspace workers have finished.
+					partition.workspaces.workspaces.slots = m.getWorkspaceSlots(partKey)
 					partition.workspaces.workspaces.workers = m.partitions.workers
 				}
 				return partition, err

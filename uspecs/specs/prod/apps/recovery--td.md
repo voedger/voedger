@@ -191,8 +191,11 @@ Application operations
 
 - `[Workspace recovery manager]`
   - Lives within a recovered partition, owns states keyed by application,
-    partition, and WSID, and shares four slots, set by the command processor's
-    `numWSRecoverers` constant. No VVM configuration field changes this limit.
+    partition, and WSID. It uses a four-slot pool owned by the partition manager,
+    keyed by application and partition, and set by the command processor's
+    `numWSRecoverers` constant. Replacement partition state reuses the same pool,
+    so workers detached by reset continue to consume capacity until they finish.
+    No VVM configuration field changes this limit.
     Saturation returns `503` without creating state or queueing work.
   - Reuses the generic manager's retained-failure, retry, stale-completion, and
     service-context behavior. The generic constructor also supports zero
@@ -559,6 +562,20 @@ must equal the first returned event offset.
                                    a new request starts workspace 43 -> 503
 ```
 
+#### Partition reset preserves workspace recovery capacity
+
+```text
+*Client
+  -> [Workspace recovery manager]: workspaces 3, 5, 7, and 9 reserve all four slots
+  -> [Command processor]: command failure resets partition state
+  -> [Partition recovery manager]: recover replacement partition
+      - reuse the partition key's existing workspace-recovery slot pool
+  -> [Workspace recovery manager]: workspace 11; old-generation workers still occupy all slots -> 503
+      - create no state and queue no worker for workspace 11
+  -> [Workspace recovery manager]: one detached worker finishes and releases its shared slot
+  -> [Workspace recovery manager]: workspace 11; reserve returned slot and start -> 503
+```
+
 #### Failed workspace recovery is reported and retried once
 
 ```text
@@ -645,8 +662,9 @@ sequenceDiagram
 - Every application's initial recovery has at most the `runtime.GOMAXPROCS(0)`
   value sampled for that `InitializeCheckpoints` call in flight; applications are initialized
   in bootstrap order.
-- Every production workspace recovery manager admits at most four concurrent
-  attempts for its partition and never queues rejected work.
+- Every partition admits at most four concurrent workspace recovery attempts
+  across both its current state and any state detached by reset, and never queues
+  rejected work.
 - Every nonzero recovery checkpoint is an inclusive scan start; correctness
   requires a log tail scan through the actual log end. Many non-ID-bearing WLog
   events after the checkpoint therefore increase workspace recovery time without
@@ -692,6 +710,10 @@ sequenceDiagram
   service. Zero-capacity behavior remains generic-manager technical coverage;
   it is not exposed as a production configuration. The admission test follows
   the four-slot feature's scenario identity and setup steps.
+- Partition-reset coverage holds four old-generation workspace attempts open,
+  recovers replacement partition state, verifies that a fifth attempt is still
+  rejected, and then verifies that completion of a detached attempt returns one
+  shared slot to the replacement generation.
 - Generic deduplication, limits, retry, reset, stale completion, context, and
   own-worker shutdown behavior is exercised by
   [recovery-manager tests](../../../../pkg/processors/command/recovery_manager_test.go).

@@ -399,6 +399,18 @@ Feature: Partition and workspace recovery
       Then the insert succeeds with a WLog event at offset 15
       And the inserted record has ID 200006
 
+    Scenario: Partition reset preserves workspace recovery capacity
+      Given the workspace recovery limit is 4
+      And workspace 1 is recovered
+      And workspace recoveries for workspaces 3, 5, 7, and 9 are running in the same partition
+      When a command failure resets and recovers the partition
+      And VAOperator submits an insert into unrecovered workspace 11
+      Then response status is "503 Service Unavailable" because the recovery limit is reached
+      And no workspace recovery starts for workspace 11
+      When one detached workspace recovery completes
+      And VAOperator submits another insert into workspace 11
+      Then response status is "503 Service Unavailable" while workspace 11 recovery runs
+
     Scenario: Failed workspace recovery is reported and retried once
       Given workspace 42 is unrecovered after partition recovery
       And its WLog ends at offset 14 with last user record ID 200005

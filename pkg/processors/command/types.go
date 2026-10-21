@@ -6,6 +6,7 @@ package commandprocessor
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -219,10 +220,13 @@ type workspaceManager struct {
 //	      |                                                           +--> workspaceManager (later)
 //	      +--> (app B, partition 1) -----------> separate recovery --> appPartition B/1
 //
-// partitionKey[appQName,partID]
+// Reset replaces partition state but preserves its slot pool. Detached workspace
+// workers retain their slots until completion, so all generations share the limit.
 type partitionManager struct {
-	partitions  *recoveryManager[partitionKey, appPartition]
-	recoverFunc recoverPartitionFunc
+	partitions       *recoveryManager[partitionKey, appPartition]
+	recoverFunc      recoverPartitionFunc
+	workspaceSlots   map[partitionKey]chan struct{}
+	workspaceSlotsMu sync.Mutex
 }
 
 type appPartition struct {

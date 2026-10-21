@@ -229,3 +229,22 @@ Alternatives:
    - Pros: no recovery scan starts for a rejected request.
    - Cons: rate limiting and authorization depend on recovered partition state, and the single PLog scan is bounded and shared rather than repeated per WSID.
    - Confidence: rejected because the checks require the recovered partition
+
+## Safety: workspace recovery capacity survives partition reset
+
+Decision: Own workspace-recovery capacity in the partition manager as one four-slot pool per partition key. Attach that stable pool to every recovered generation of the partition. Reset detaches recoverable partition state but does not replace its slot pool; workspace scans belonging to detached state continue to consume capacity until they finish. The existing shared worker wait group continues to provide shutdown joining independently of slot ownership.
+
+- Pros: enforces the configured per-partition limit across current and detached generations; prevents repeated resets from accumulating WLog scans; does not block command processing while old scans exit.
+- Cons: replacement partition state may temporarily have no workspace-recovery capacity because detached scans still occupy the shared pool; slot pools remain allocated until command-processor shutdown.
+- Confidence: high
+
+Alternatives:
+
+1. Cancel and join all workspace scans when resetting a partition
+   - Pros: replacement state begins with an empty slot pool and no detached scans.
+   - Cons: reset blocks on storage operations and changes the service-context lifetime promised to recovery attempts.
+   - Confidence: rejected for availability and lifecycle consistency
+2. Keep a new slot pool in every recovered partition generation
+   - Pros: replacement state can immediately start four scans.
+   - Cons: every reset can add four more concurrent WLog scans for the same partition, defeating the configured bound.
+   - Confidence: rejected for resource safety

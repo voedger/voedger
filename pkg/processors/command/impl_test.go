@@ -1273,6 +1273,81 @@ func TestWorkspaceRecovery(t *testing.T) {
 		requireIssuedNumbers(t, response, 15, 200006)
 	})
 
+	t.Run("recovery: scn: Partition reset preserves workspace recovery capacity", func(t *testing.T) {
+		require := require.New(t)
+		var failNextProjector atomic.Bool
+		projectorErr := errors.New("reset partition while workspace recoveries are running")
+		app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+			addTestCUDRecords(wsb)
+			addTestCUDCommand(wsb, cfg)
+			addStandardTestRoles(wsb)
+			projectorName := appdef.NewQName("test", "FailNextProjector")
+			cfg.AddSyncProjectors(istructs.Projector{
+				Name: projectorName,
+				Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
+					if failNextProjector.Swap(false) {
+						return projectorErr
+					}
+					return nil
+				},
+			})
+			wsb.AddProjector(projectorName).SetSync(true).Events().Add(
+				[]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(istructs.QNameCommandCUD))
+		}, withTestWorkspaces(1, 3, 5, 7, 9, 11))
+		defer tearDown(app)
+
+		// Given the workspace recovery limit is 4
+		require.Equal(uint(4), numWSRecoverers)
+		// And workspace 1 is recovered
+		sendCUD_3Inserts(t, 1, app)
+
+		// And workspace recoveries for workspaces 3, 5, 7, and 9 are running in the same partition
+		oldKeys := make([]workspaceKey, 0, numWSRecoverers)
+		oldReleases := make([]func(), 0, numWSRecoverers)
+		for _, wsid := range []istructs.WSID{3, 5, 7, 9} {
+			key := recoveryWorkspaceKeyForTestApp(app, wsid)
+			gate := app.recoveryTestControl.workspaces.blockNext(key)
+			release := sync.OnceFunc(func() { close(gate) })
+			t.Cleanup(release)
+			oldKeys = append(oldKeys, key)
+			oldReleases = append(oldReleases, release)
+			status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(wsid, app))
+			require.NoError(err)
+			require.Equal(http.StatusServiceUnavailable, status)
+			require.Equal(1, app.recoveryTestControl.workspaces.startCount(key))
+		}
+
+		// When a command failure resets and recovers the partition
+		failNextProjector.Store(true)
+		response := sendCUD_3Inserts(t, 1, app, http.StatusInternalServerError)
+		require.Equal(projectorErr.Error(), response["sys.Error"].(map[string]interface{})["Message"])
+		require.NoError(triggerAndWaitForRecovery(t, app, 1))
+
+		targetKey := recoveryWorkspaceKeyForTestApp(app, 11)
+		targetGate := app.recoveryTestControl.workspaces.blockNext(targetKey)
+		releaseTarget := sync.OnceFunc(func() { close(targetGate) })
+		t.Cleanup(releaseTarget)
+		// And VAOperator submits an insert into unrecovered workspace 11
+		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(11, app))
+		require.NoError(err)
+		// Then response status is "503 Service Unavailable" because the recovery limit is reached
+		require.Equal(http.StatusServiceUnavailable, status)
+		// And no workspace recovery starts for workspace 11
+		require.Zero(app.recoveryTestControl.workspaces.startCount(targetKey))
+
+		// When one detached workspace recovery completes
+		oldReleases[0]()
+		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, oldKeys[0]))
+		// And VAOperator submits another insert into workspace 11
+		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(11, app))
+		require.NoError(err)
+		// Then response status is "503 Service Unavailable" while workspace 11 recovery runs
+		require.Equal(http.StatusServiceUnavailable, status)
+		require.Equal(1, app.recoveryTestControl.workspaces.startCount(targetKey))
+		releaseTarget()
+		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, targetKey))
+	})
+
 	t.Run("service cancellation stops active workspace attempts", func(t *testing.T) {
 		require := require.New(t)
 		app, _ := setWorkspaceRecoveryApp(t, 1, 3, 5, 7, 9, 11)
