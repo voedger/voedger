@@ -2061,6 +2061,8 @@ func TestRateLimit(t *testing.T) {
 
 	app := setUp(t,
 		func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+			addTestCUDRecords(wsb)
+			addTestCUDCommand(wsb, cfg)
 			wsb.AddObject(parsQName)
 			wsb.AddCommand(qName).SetParam(parsQName)
 			addStandardTestRoles(wsb)
@@ -2073,6 +2075,7 @@ func TestRateLimit(t *testing.T) {
 				filter.QNames(qName), rateName)
 		})
 	defer tearDown(app)
+	require.NoError(triggerAndWaitForWorkspaceRecovery(t, app, 1))
 
 	request := bus.Request{
 		Body:     []byte(`{"args":{}}`),

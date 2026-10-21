@@ -208,3 +208,24 @@ Alternatives:
    - Pros: accepts a changed configured count automatically.
    - Cons: permits destructive routing changes even without checkpoint failures.
    - Confidence: rejected for data safety
+
+## Safety: workspace recovery follows rate limiting and request validation
+
+Decision: Keep partition recovery before rate limiting and the other command validations, but defer workspace recovery until after rate limiting, command lookup, execute authorization, request-body unmarshalling, and unexpected-field validation. An authenticated principal without execute permission therefore receives `403 Forbidden`, and a rate-limited request receives `429 Too Many Requests`, without starting or occupying a workspace-recovery slot. This ordering does not bypass execute authorization: command execution and workspace recovery are reached only after the request passes that authorization check.
+
+The PLog scan is safe before these gates because it is performed once per recovered partition instance and publishes state shared by every workspace in that partition. A partition contains many WSIDs, each of which can independently require a WLog scan. Allowing rejected requests to start those per-workspace scans would let requests distributed across unrecovered WSIDs occupy all four workspace-recovery slots, repeatedly force WLog I/O, and delay authorized users. That multiplicative, WSID-addressable work is a basis for denial-of-service-like recovery-slot exhaustion, whereas the single partition-level PLog scan is bounded and shared.
+
+- Pros: rejects over-limit, unauthorized, and malformed requests before WLog I/O; prevents rejected requests across many WSIDs from exhausting workspace-recovery capacity; preserves the existing partition recovery prerequisite for partition-backed rate limiting and authorization.
+- Cons: a request that is eventually rejected may still trigger the partition's one shared PLog recovery; clients can receive `429`, `403`, or request-validation errors before learning that the workspace itself still needs recovery.
+- Confidence: user-provided
+
+Alternatives:
+
+1. Run workspace recovery immediately after partition recovery
+   - Pros: exposes workspace recovery state before the remaining command checks.
+   - Cons: lets rejected requests trigger WLog scans and consume all workspace-recovery slots across different WSIDs.
+   - Confidence: rejected for denial-of-service resistance
+2. Move partition recovery behind rate limiting and authorization as well
+   - Pros: no recovery scan starts for a rejected request.
+   - Cons: rate limiting and authorization depend on recovered partition state, and the single PLog scan is bounded and shared rather than repeated per WSID.
+   - Confidence: rejected because the checks require the recovered partition

@@ -699,7 +699,8 @@ Gherkin scenario test placement:
 
 - [x] update: [command/provide.go](../../../../../pkg/processors/command/provide.go)
   - inject checkpoint storage and partition/workspace recovery hooks into command-service construction; production uses the fixed four-worker limit
-  - run workspace admission immediately after partition admission and log command errors with application and partition identity
+  - run rate limiting, command lookup, execute authorization, and request-body validation after partition admission but before workspace admission; only requests that pass these gates may start a WLog scan
+  - log command errors with application and partition identity
   - preserve service-context cancellation and the partition-manager shutdown call, which joins the shared partition/workspace worker wait group
 
 ### VVM wiring
