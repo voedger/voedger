@@ -330,7 +330,7 @@ func TestRecoveryRetrySender(t *testing.T) {
 			wsKey := workspaceKey{partitionKey: key, wsid: req.WSID}
 			control.workspaces.scheduled(wsKey)
 			control.workspaces.attemptCompleted(wsKey, workspaceErr)
-			otherWSKey := workspaceKey{partitionKey: partitionKey{appQName: testAppName, partitionID: 3}, wsid: req.WSID}
+			otherWSKey := workspaceKey{appQName: testAppName, partitionID: 3, wsid: req.WSID}
 			control.workspaces.scheduled(otherWSKey)
 			control.workspaces.attemptCompleted(otherWSKey, errors.New("another partition's workspace scan failed"))
 
