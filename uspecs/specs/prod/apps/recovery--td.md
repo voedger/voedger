@@ -592,6 +592,11 @@ must equal the first returned event offset.
 
 ### Request-driven partition then workspace recovery
 
+Successful recovery for a deployed partition, with workspace recovery capacity
+available. Each retry repeats authentication and workspace checks; workspace
+recovery admission also follows rate limiting, command lookup, authorization,
+and request-body validation.
+
 ```mermaid
 sequenceDiagram
     participant Client as *Client
@@ -601,15 +606,28 @@ sequenceDiagram
 
     Client->>CP: Command for deployed but unrecovered partition/workspace
     CP->>Part: getOrStart(partition)
-    Part-->>CP: 503; recover partition asynchronously
-    CP-->>Client: 503
+    par Request response
+        Part-->>CP: 503 (partition recovery started)
+        CP-->>Client: 503 Service Unavailable
+    and Asynchronous partition recovery
+        Part->>Part: Recover and publish partition state
+    end
     Client->>CP: Retry after partition recovery
-    CP->>Part: recovered partition
+    CP->>Part: getOrStart(partition)
+    Part-->>CP: Recovered partition
     CP->>WS: getOrStart(workspace)
-    WS-->>CP: 503; recover workspace asynchronously
-    CP-->>Client: 503
+    par Request response
+        WS-->>CP: 503 (workspace recovery started)
+        CP-->>Client: 503 Service Unavailable
+    and Asynchronous workspace recovery
+        WS->>WS: Recover and publish workspace state
+    end
     Client->>CP: Retry after workspace recovery
-    WS-->>CP: recovered workspace
+    CP->>Part: getOrStart(partition)
+    Part-->>CP: Recovered partition
+    CP->>WS: getOrStart(workspace)
+    WS-->>CP: Recovered workspace
+    CP->>CP: Execute command
     CP-->>Client: Command result
 ```
 
