@@ -186,12 +186,36 @@ func newAppPartition(workspaceRecoveryHooks recoveryHooks[workspaceKey, workspac
 }
 
 func newPartitionManager(hooks recoveryHooks[partitionKey, appPartition], recoverFunc recoverPartitionFunc) *partitionManager {
+	// Apply the attempt hook inside recoverFunc, below the deferred Release.
+	// The generic manager keeps the lifecycle hooks but must not wrap the attempt again.
+	//
+	// Register cleanup before calling the hook so every return releases the engine:
+	//
+	// defer Release --> hook --> injected error / canceled gate --+
+	//                     |                                      |
+	//                     +--> recoverFunc ----------------------+--> Release
+	//
+	// Otherwise, the hook can return before cleanup is registered:
+	//
+	// hook --> injected error / canceled gate --> return (borrowed engine leaks)
+	//   |
+	//   +--> defer Release --> recoverFunc
+	managerHooks := hooks
+	managerHooks.attempt = func(_ partitionKey, next recoveryAttemptFunc[appPartition]) recoveryAttemptFunc[appPartition] {
+		return next
+	}
 	return &partitionManager{
 		partitions: newRecoveryManager(
 			nil,
-			hooks,
+			managerHooks,
 		),
-		recoverFunc:    recoverFunc,
+		recoverFunc: func(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
+			key := partitionKey{appQName: cmd.cmdMes.AppQName(), partitionID: cmd.cmdMes.PartitionID()}
+			attempt := hooks.attempt(key, func(ctx context.Context) (*appPartition, error) {
+				return recoverFunc(ctx, cmd)
+			})
+			return attempt(ctx)
+		},
 		workspaceSlots: map[partitionKey]chan struct{}{},
 	}
 }

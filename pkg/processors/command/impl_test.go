@@ -644,6 +644,82 @@ func restartCmdProc(app *testApp) {
 	}()
 }
 
+//	hook --> injected error -------+--> skip next --> skip cleanup --> engine leaks
+//	     \-> blocked gate + cancel -+
+//
+// Hold all other engines so borrowing again succeeds only if recovery releases
+// its engine despite the hook's early return.
+func TestPartitionRecoveryHookCleanup(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		cancelGate bool
+	}{
+		{name: "injected failure"},
+		{name: "canceled gate", cancelGate: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require := require.New(t)
+			var parts appparts.IAppPartitions
+			app := setUpRecoveryTestApp(t, func(options *testAppOptions) {
+				options.appPartsForProcessor = func(actual appparts.IAppPartitions) appparts.IAppPartitions {
+					parts = actual
+					return actual
+				}
+			})
+			defer tearDown(app)
+			key := partitionManagerKeyForWSID(1)
+
+			// Hold every engine so only recovery cleanup can make one available.
+			for range testAppEngines[appparts.ProcessorKind_Command] - 1 {
+				borrowed, err := parts.Borrow(key.appQName, key.partitionID, appparts.ProcessorKind_Command)
+				require.NoError(err)
+				defer borrowed.Release()
+			}
+			borrowed, err := parts.Borrow(key.appQName, key.partitionID, appparts.ProcessorKind_Command)
+			require.NoError(err)
+			_, err = parts.Borrow(key.appQName, key.partitionID, appparts.ProcessorKind_Command)
+			require.ErrorIs(err, appparts.ErrNotAvailableEngines)
+
+			control := newRecoveryTestAttempts[partitionKey, appPartition]()
+			expectedErr := errors.New("injected recovery failure")
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			if test.cancelGate {
+				control.blockNext(key)
+				expectedErr = context.Canceled
+			} else {
+				control.failNext(key, expectedErr)
+			}
+			manager := newPartitionManager(control.hooks(), func(context.Context, *cmdWorkpiece) (*appPartition, error) {
+				return nil, errors.New("production recovery must be skipped")
+			})
+			defer func() {
+				cancel()
+				manager.shutdown()
+			}()
+			cmd := &cmdWorkpiece{
+				appPart: borrowed,
+				cmdMes: &implICommandMessage{
+					appQName: key.appQName, partitionID: key.partitionID, requestCtx: t.Context(),
+				},
+			}
+			defer cmd.Release()
+			_, err = manager.getOrStart(ctx, key, cmd)
+			require.ErrorContains(err, errRecoveryInProgress.Error())
+			require.Nil(cmd.appPart, "the admitted recovery owns the borrowed partition")
+			cmd.Release()
+			if test.cancelGate {
+				cancel()
+			}
+			require.ErrorIs(control.wait(t.Context(), key), expectedErr)
+
+			returned, err := parts.Borrow(key.appQName, key.partitionID, appparts.ProcessorKind_Command)
+			require.NoError(err, "recovery must return its borrowed engine even when the hook skips recovery")
+			returned.Release()
+		})
+	}
+}
+
 func TestRecoveryCheckpoints_RecordIDsRecovery(t *testing.T) {
 
 	t.Run("read out from checkpoint: checkpoints are on final events", func(t *testing.T) {
