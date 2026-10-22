@@ -1,6 +1,6 @@
 module github.com/voedger/voedger/cmd/edger
 
-go 1.27.2
+go 1.27.3
 
 replace github.com/voedger/voedger => ../..
 
@@ -11,7 +11,7 @@ require (
 )
 
 require (
-	github.com/aptible/supercronic v0.2.49 // indirect
+	github.com/aptible/supercronic v0.2.51 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
