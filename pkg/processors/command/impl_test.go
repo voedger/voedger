@@ -670,10 +670,16 @@ func TestPartitionRecoveryHookCleanup(t *testing.T) {
 			key := partitionManagerKeyForWSID(1)
 
 			// Hold every engine so only recovery cleanup can make one available.
+			var heldPartitions []appparts.IAppPartition
+			defer func() {
+				for _, held := range heldPartitions {
+					held.Release()
+				}
+			}()
 			for range testAppEngines[appparts.ProcessorKind_Command] - 1 {
 				borrowed, err := parts.Borrow(key.appQName, key.partitionID, appparts.ProcessorKind_Command)
 				require.NoError(err)
-				defer borrowed.Release()
+				heldPartitions = append(heldPartitions, borrowed)
 			}
 			borrowed, err := parts.Borrow(key.appQName, key.partitionID, appparts.ProcessorKind_Command)
 			require.NoError(err)
