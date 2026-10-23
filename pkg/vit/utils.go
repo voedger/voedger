@@ -12,7 +12,6 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +22,6 @@ import (
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -33,7 +31,6 @@ import (
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/vit/internal"
-	"github.com/voedger/voedger/pkg/vvm"
 )
 
 func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID, token string) *BLOB {
@@ -386,14 +383,12 @@ func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, projectionQName appdef.QName)
 	})
 }
 
-// will be unsubscribed automatically on vit.TearDown()
+// will be unsubscribed automatically on vit.RestartVVM() or vit.TearDown()
 func (vit *VIT) SubscribeForN10nProjectionKey(pk in10n.ProjectionKey) federation.OffsetsChan {
 	vit.T.Helper()
 	offsetsChan, unsubscribe := vit.SubscribeForN10nUnsubscribe(pk)
 	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
-	vit.cleanups = append(vit.cleanups, func(*VIT) {
-		unsubscribe()
-	})
+	vit.currentTestCleanups = append(vit.currentTestCleanups, unsubscribe)
 	vit.lock.Unlock()
 	return offsetsChan
 }
@@ -488,75 +483,58 @@ func (s restartStorage) AppStorage(t testing.TB, appQName appdef.AppQName) istor
 	return storage
 }
 
-// TestRestartPreservingStorageWithHooks runs two VVM instances over the same
-// storage. Both runs use cfg unless an optional second-run config is supplied.
-// Config-declared logins, workspaces, subjects, and documents are created only
-// during the first run. Stop hooks run after the respective VVM has fully stopped.
-// Configurations must be owned; caller configuration options are not modified.
+// TestRestartPreservingStorageWithHooks runs two phases on the same VIT and
+// storage, using either an owned or shared configuration. An optional second-run
+// config changes the effective server configuration without changing ownership.
+// Declared entities are provisioned only on initial creation of the VIT.
+// Stop hooks run after the respective VVM has fully stopped. A shared VVM is
+// resumed after AfterSecondStop so later acquisitions can reuse it.
 func TestRestartPreservingStorageWithHooks(t *testing.T, cfg *VITConfig, hooks RestartPreservingStorageHooks, secondRun ...*VITConfig) {
 	t.Helper()
 	require.LessOrEqual(t, len(secondRun), 1, "at most one second-run configuration is allowed")
 	require.NotNil(t, cfg)
-	require.False(t, cfg.isShared, "restart preserving storage could be done on Own VIT Config only")
-	afterCfg := cfg
+	var options []RestartOptFunc
 	if len(secondRun) == 1 {
-		afterCfg = secondRun[0]
-	}
-	require.NotNil(t, afterCfg)
-	require.False(t, afterCfg.isShared, "storage restart could be done on Own VIT Config only")
-	var sharedStorageFactory istorage.IAppStorageFactory
-	suffix := provider.NewTestKeyspaceIsolationSuffix()
-	preserveStorage := WithVVMConfig(func(cfg *vvm.VVMConfig) {
-		if sharedStorageFactory == nil {
-			var err error
-			sharedStorageFactory, err = cfg.StorageFactory(cfg.Time)
-			require.NoError(t, err)
-		}
-		cfg.KeyspaceIsolationSuffix = suffix
-		cfg.StorageFactory = func(timeu.ITime) (istorage.IAppStorageFactory, error) {
-			return sharedStorageFactory, nil
-		}
-	})
-	before, after := *cfg, *afterCfg
-	before.opts = append(slices.Clone(cfg.opts), preserveStorage)
-	after.opts = append(slices.Clone(afterCfg.opts), preserveStorage)
-	var appWorkspaces map[appdef.AppQName]map[string]*AppWorkspace
-	var principals map[appdef.AppQName]map[string]*Principal
-	func() {
-		vit := NewVIT(t, &before)
-		defer vit.TearDown()
-		if hooks.FirstRun != nil {
-			hooks.FirstRun(t, vit)
-		}
-		// Retain references to workspaces and principals without recreating them after restart.
-		appWorkspaces = vit.appWorkspaces
-		principals = vit.principals
-	}()
-
-	storage := restartStorage{
-		provider: provider.Provide(sharedStorageFactory, suffix),
+		require.NotNil(t, secondRun[0])
+		options = append(options, WithNewConfig(secondRun[0]))
 	}
 	if hooks.AfterFirstStop != nil {
-		hooks.AfterFirstStop(t, storage)
+		options = append(options, WithAfterStop(func(storage RestartStorage) { hooks.AfterFirstStop(t, storage) }))
 	}
 
-	func() {
-		vit := restartVIT(t, &after, appWorkspaces, principals)
-		defer vit.TearDown()
-		if hooks.SecondRun != nil {
-			hooks.SecondRun(t, vit)
-		}
-	}()
-
-	if hooks.AfterSecondStop != nil {
-		hooks.AfterSecondStop(t, storage)
+	vit := NewVIT(t, cfg)
+	defer vit.TearDown()
+	if hooks.FirstRun != nil {
+		hooks.FirstRun(t, vit)
 	}
+
+	// End the first phase's config callbacks without releasing the acquisition.
+	// RestartVVM performs the shutdown for either configuration ownership mode.
+	vit.runConfigCleanups()
+	require.NoError(t, vit.RestartVVM(options...))
+	initializeVIT(t, vit)
+	if hooks.SecondRun != nil {
+		hooks.SecondRun(t, vit)
+	}
+	if hooks.AfterSecondStop == nil {
+		return
+	}
+
+	vit.runConfigCleanups()
+	if vit.isOnSharedConfig {
+		require.NoError(t, vit.RestartVVM(WithAfterStop(func(storage RestartStorage) {
+			hooks.AfterSecondStop(t, storage)
+		})))
+		return
+	}
+	require.NoError(t, vit.cleanupOnRestart())
+	hooks.AfterSecondStop(t, restartStorage{provider: provider.Provide(vit.storageFactory, vit.storageSuffix)})
 }
 
 // TestRestartPreservingStorage calls testBeforeRestart, stops the VVM, then
 // calls testAfterRestart with a new VVM backed by the preserved storage.
 // Config-declared logins, workspaces, subjects, and documents are not recreated.
-// An optional second-run config supports upgrades; both configs must be owned.
+// An optional second-run config supports upgrades with owned or shared configs.
 // Caller configuration options are not modified.
 func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT), secondRun ...*VITConfig) {
 	t.Helper()

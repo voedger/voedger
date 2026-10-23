@@ -136,28 +136,7 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 				nextRecordID:        ws2Response.NewIDs["3"] + 1,
 			}
 
-			// Workspace creation is performed by an asynchronous projector. Wait until
-			// its position is durable before stopping the VVM; otherwise the projector
-			// can replay CreateWorkspace after restart and consume argument IDs before
-			// this test submits its first command.
-			invokeCreateWorkspace := appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace")
-			var targetPLogOffset istructs.Offset
-			err = appStructs.Events().ReadPLog(t.Context(), partition1, istructs.FirstOffset, istructs.ReadToTheEnd,
-				func(offset istructs.Offset, event istructs.IPLogEvent) error {
-					defer event.Release()
-					for cud := range event.CUDs {
-						if cud.IsNew() && cud.QName() == workspace.QNameCDocWorkspaceID {
-							targetPLogOffset = offset
-						}
-					}
-					return nil
-				})
-			require.NoError(err)
-			require.NotZero(targetPLogOffset)
-			require.Eventually(func() bool {
-				offset, err := actualizers.ActualizerOffset(appStructs, partition1, invokeCreateWorkspace)
-				return err == nil && offset >= targetPLogOffset
-			}, 10*time.Second, 10*time.Millisecond)
+			waitForActualizerFlush(t, appStructs, partition1)
 		},
 		AfterFirstStop: func(t *testing.T, storage it.RestartStorage) {
 			checkpointStorage := vvmstorage.NewRecoveryCheckpointStorage(
@@ -182,6 +161,16 @@ func TestODocArgumentRecordIDsAreRespectedAfterRestart(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	appQName := istructs.AppQName_test1_app1
+	cfg := it.NewSharedVITConfig(it.WithApp(appQName, provideTestApp,
+		it.WithUserLogin(recoveryTestLoginName, recoveryTestLoginPassword),
+	))
+	var currentVIT *it.VIT
+	t.Cleanup(func() {
+		if currentVIT != nil {
+			require.NoError(t, currentVIT.Shutdown())
+		}
+	})
 	for _, test := range []struct {
 		name             string
 		removeCheckpoint bool
@@ -190,18 +179,15 @@ func TestODocArgumentRecordIDsAreRespectedAfterRestart(t *testing.T) {
 		{name: "without workspace checkpoint", removeCheckpoint: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			appQName := istructs.AppQName_test1_app1
-			cfg := it.NewOwnVITConfig(it.WithApp(appQName, provideTestApp,
-				it.WithUserLogin(recoveryTestLoginName, recoveryTestLoginPassword),
-			))
 			const body = `{"args":{"sys.ID":1,"orecord1":[{"sys.ID":2,"sys.ParentID":1,"orecord2":[{"sys.ID":3,"sys.ParentID":2}]}]},"unloggedArgs":{"sys.ID":4}}`
 			var workspace *it.AppWorkspace
 			var lastWLogOffset istructs.Offset
 
 			it.TestRestartPreservingStorageWithHooks(t, &cfg, it.RestartPreservingStorageHooks{
 				FirstRun: func(t *testing.T, vit *it.VIT) {
+					currentVIT = vit
 					owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
-					workspace = vit.CreateWorkspace(it.SimpleWSParams("ODoc-only history"), owner)
+					workspace = vit.CreateWorkspace(it.SimpleWSParams("ODoc-only-history-"+vit.NextName()), owner)
 
 					// insert ODocs, issue IDs
 					response := vit.PostWS(workspace, "c.app1pkg.CmdODocOne", body)
@@ -236,6 +222,9 @@ func TestODocArgumentRecordIDsAreRespectedAfterRestart(t *testing.T) {
 						})
 					require.NoError(t, err)
 					require.True(t, foundODocEvent)
+					partitionID, err := vit.IAppPartitions.AppWorkspacePartitionID(appQName, workspace.WSID)
+					require.NoError(t, err)
+					waitForActualizerFlush(t, appStructs, partitionID)
 				},
 				AfterFirstStop: func(t *testing.T, storage it.RestartStorage) {
 					appID := istructs.ClusterApps[appQName]
@@ -253,7 +242,8 @@ func TestODocArgumentRecordIDsAreRespectedAfterRestart(t *testing.T) {
 					}
 				},
 				SecondRun: func(t *testing.T, vit *it.VIT) {
-
+					require.Same(t, currentVIT, vit, "restart keeps the shared VIT identity")
+					currentVIT = vit
 					// 3 IDs for ODocs were already issued on the first run
 					// so here next 3 IDs must be issued
 					response := vit.PostWS(workspace, "c.app1pkg.CmdODocOne", body)
@@ -362,6 +352,83 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+
+	t.Run("recovery: scn: Clients can use every declared partition when checkpoints are missing", func(t *testing.T) {
+		// Given an application declares partition IDs 0 through 2
+		cfg := recoveryVITConfig()
+		appQName := istructs.AppQName_test1_app1
+		appID := istructs.ClusterApps[appQName]
+		var partition0LastPLogOffset istructs.Offset
+		// And each partition is populated with a workspace having this history:
+		// | partition ID | workspace | last WLog offset | last allocated ordinary record ID |
+		// | 0            | Orders    | 7                | 200003                            |
+		// | 1            | Billing   | 14               | 200005                            |
+		// | 2            | Inventory | 20               | 200009                            |
+		histories := []struct {
+			partitionID    istructs.PartitionID
+			name           string
+			lastWLogOffset istructs.Offset
+			lastRecordID   istructs.RecordID
+			nextWLogOffset istructs.Offset
+			nextRecordID   istructs.RecordID
+			workspace      *it.AppWorkspace
+		}{
+			{partitionID: 0, name: "Orders", lastWLogOffset: 7, lastRecordID: 200003, nextWLogOffset: 8, nextRecordID: 200004},
+			{partitionID: 1, name: "Billing", lastWLogOffset: 14, lastRecordID: 200005, nextWLogOffset: 15, nextRecordID: 200006},
+			{partitionID: 2, name: "Inventory", lastWLogOffset: 20, lastRecordID: 200009, nextWLogOffset: 21, nextRecordID: 200010},
+		}
+
+		it.TestRestartPreservingStorageWithHooks(t, &cfg, it.RestartPreservingStorageHooks{
+			FirstRun: func(t *testing.T, vit *it.VIT) {
+				owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
+				for index := range histories {
+					history := &histories[index]
+					history.workspace = createWorkspacesInPartition(t, vit, owner, history.partitionID, 1)[0]
+					for id := istructs.FirstUserRecordID; id <= history.lastRecordID; id++ {
+						response := vit.PostWS(history.workspace, "c.sys.CUD", singleDoc)
+						require.Equal(t, id, response.NewID(), history.name)
+					}
+					fillWLogWithNonIDBearingEvents(t, vit, history.workspace, history.lastWLogOffset)
+				}
+				appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+				require.NoError(t, err)
+				for _, history := range histories {
+					waitForActualizerFlush(t, appStructs, history.partitionID)
+					require.Equal(t, history.lastWLogOffset, getLastWLogOffset(t, vit, history.workspace), history.name)
+				}
+				partition0LastPLogOffset = getLastPLogOffset(t, vit, appQName, 0)
+			},
+			AfterFirstStop: func(t *testing.T, storage it.RestartStorage) {
+				checkpointAppStorage := storage.AppStorage(t, istructs.AppQName_sys_vvm)
+				checkpointStorage := vvmstorage.NewRecoveryCheckpointStorage(checkpointAppStorage)
+				// And partition 0 has a stored partition checkpoint
+				require.NoError(t, checkpointStorage.PutPartitionCheckpoint(appID, 0,
+					checkpoints.PartitionCheckpoint{LastPLogOffset: partition0LastPLogOffset}))
+				// And partitions 1 and 2 have no stored partition checkpoints
+				for _, history := range histories[1:] {
+					deletePartitionCheckpoint(t, checkpointStorage, checkpointAppStorage, appID, history.partitionID)
+					deleteWorkspaceCheckpoint(t, checkpointStorage, checkpointAppStorage, appID, history.workspace.WSID)
+				}
+			},
+			SecondRun: func(t *testing.T, vit *it.VIT) {
+				// And VAOperator has started the VVM
+				require.NotNil(t, vit.VoedgerVM)
+				for _, history := range histories {
+					// When a client inserts one ordinary record into each workspace, retrying "503 Service Unavailable" responses
+					response := vit.PostWS(history.workspace, "c.sys.CUD", singleDoc)
+					// Then each command eventually returns "200 OK"
+					require.Equal(t, http.StatusOK, response.HTTPResp.StatusCode, history.name)
+					// And the successful command responses contain:
+					// | workspace | CurrentWLogOffset | new ordinary record ID |
+					// | Orders    | 8                 | 200004                 |
+					// | Billing   | 15                | 200006                 |
+					// | Inventory | 21                | 200010                 |
+					require.Equal(t, history.nextWLogOffset, response.CurrentWLogOffset, history.name)
+					require.Equal(t, map[string]istructs.RecordID{"1": history.nextRecordID}, response.NewIDs, history.name)
+				}
+			},
+		})
+	})
 
 	t.Run("recovery: scn: Initial recovery initializes checkpoints but not runtime sequence state", func(t *testing.T) {
 		cfg := recoveryVITConfig()
@@ -1634,6 +1701,49 @@ func runRecoveryCheckpointScenario(t *testing.T, scope checkpointType, kind chec
 			checkRecoveryCheckpointLogs(t, logCap, scope, kind)
 		},
 	})
+}
+
+// case: ws-creation projectors are done but the actualizer offset is not flushed yet
+// on restart these projectors could be fired again
+func waitForActualizerFlush(t *testing.T, appStructs istructs.IAppStructs, partitionID istructs.PartitionID) {
+	t.Helper()
+	projectors := []struct {
+		name            appdef.QName
+		recordQName     appdef.QName
+		lastEventOffset istructs.Offset
+	}{
+		{name: appdef.NewQName(appdef.SysPackage, "InvokeCreateWorkspace"), recordQName: workspace.QNameCDocWorkspaceID},
+		{name: appdef.NewQName(appdef.SysPackage, "InitializeWorkspace"), recordQName: appdef.QNameCDocWorkspaceDescriptor},
+	}
+	err := appStructs.Events().ReadPLog(t.Context(), partitionID, istructs.FirstOffset, istructs.ReadToTheEnd,
+		func(offset istructs.Offset, event istructs.IPLogEvent) error {
+			defer event.Release()
+			for cud := range event.CUDs {
+				if !cud.IsNew() {
+					continue
+				}
+				for index := range projectors {
+					if cud.QName() == projectors[index].recordQName {
+						projectors[index].lastEventOffset = offset
+					}
+				}
+			}
+			return nil
+		})
+	require.NoError(t, err)
+	// Both creation and initialization must have durable progress before restart.
+	// Replaying creation can consume argument IDs; replaying initialization can
+	// append two descriptor updates and advance the workspace's WLog offset.
+	for _, projector := range projectors {
+		if projector.lastEventOffset == istructs.NullOffset {
+			continue
+		}
+		require.Eventually(t, func() bool {
+			offset, err := actualizers.ActualizerOffset(appStructs, partitionID, projector.name)
+			return err == nil && offset >= projector.lastEventOffset
+		}, 10*time.Second, 10*time.Millisecond,
+			"projector %s in partition %d must persist offset %d", projector.name, partitionID, projector.lastEventOffset)
+	}
 }
 
 func moveActualizerToPLogEnd(t *testing.T, appStructs istructs.IAppStructs, partitionID istructs.PartitionID) {

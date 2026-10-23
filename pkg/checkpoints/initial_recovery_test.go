@@ -23,45 +23,38 @@ import (
 const testClusterAppID istructs.ClusterAppID = 7
 
 func TestInitialRecoveryComputesMissingCheckpoints(t *testing.T) {
-	t.Run("recovery: scn: Missing checkpoints are computed for every declared partition", func(t *testing.T) {
-		// VIT provisions workspace events in both PLogs and WLogs. This scenario's
-		// empty partition must use mocks; deleting only its PLog leaves an impossible history.
+	t.Run("missing checkpoints are persisted before marking partitions complete", func(t *testing.T) {
+		// Component coverage for checkpoint values and write order; client-visible
+		// recovery behavior is verified by TestRecoveryFromCheckpoints in pkg/sys/it.
 		appQName := istructs.AppQName_test1_app1
 		appID := testClusterAppID
 		plog := newMockPLog(t)
 
-		// Given an application declares partition IDs 0 through 2
 		const partitionCount = 3
 
-		// And partition 1 has no stored partition checkpoint
-		// And partition 1 PLog ends at offset 50 and contains workspace histories:
-		// | WSID | latest ID-bearing WLog offset |
-		// | 10   | 6                             |
-		// | 11   | none                          |
+		// Partition 1 has no checkpoints and two workspace histories. Only the
+		// event at WLog offset 6 allocates a record ID.
 		plog.setEvents(1, nil,
 			newMockPLogEvent(10, 10, 6, newMockCUDRow(istructs.FirstUserRecordID, true)),
 			newMockPLogEvent(40, 10, 10),
 			newMockPLogEvent(50, 11, 4),
 		)
-		// And partition 2 has no stored partition checkpoint
-		// And partition 2 PLog is empty
-		// No workspace history is provisioned for partition 2, so its WLogs are also empty.
+		// Partition 2 has no checkpoints or history in either PLog or WLogs.
 		plog.setEvents(2, nil)
 
-		// And partition 0 has stored checkpoint lastPLogOffset 20
+		// Partition 0 already has a completion marker.
 		storage := testutils.NewCheckpointStorageMem()
 		storage.ForcePutPartitionCheckpoint(t, appID, 0, checkpoints.PartitionCheckpoint{LastPLogOffset: 20})
 
 		recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(appID, plog.events), storage)
 
-		// When VAOperator starts the VVM
 		deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), appQName, partitionCount)
 		require.NoError(t, err)
 		checkInitialRecoveryResult(t, partitionCount, deployable, failed)
 		require.ElementsMatch(t, []istructs.PartitionID{0, 1, 2}, deployable)
 		require.Empty(t, failed)
 
-		// Then partition 0 retains checkpoint lastPLogOffset 20
+		// Completed partitions retain their checkpoint without being scanned or rewritten.
 		checkpoint, ok, err := storage.GetPartitionCheckpoint(appID, 0)
 		require.NoError(t, err)
 		require.True(t, ok)
@@ -69,17 +62,12 @@ func TestInitialRecoveryComputesMissingCheckpoints(t *testing.T) {
 		require.Equal(t, 0, storage.WriteCount(testutils.Operation{Kind: testutils.PutPartition, AppID: testClusterAppID, PartitionID: 0}), "completed partition must not be rewritten")
 		require.Equal(t, 0, plog.readPLogCallsCount(0), "completed partition must not be scanned")
 
-		// And partition checkpoints are persisted:
-		// | partition ID | lastPLogOffset |
-		// | 1            | 50             |
-		// | 2            | 0              |
+		// Missing partition checkpoints are initialized to the actual PLog ends.
 		require.Equal(t, checkpoints.PartitionCheckpoint{LastPLogOffset: 50}, storage.RequirePartitionCheckpoint(t, appID, 1))
 		require.Equal(t, checkpoints.PartitionCheckpoint{LastPLogOffset: 0}, storage.RequirePartitionCheckpoint(t, appID, 2))
 
-		// And workspace checkpoints for partition 1 are persisted before its partition checkpoint:
-		// | WSID | wlogIDBearingOffset |
-		// | 10   | 6                   |
-		// | 11   | 0                   |
+		// Workspace checkpoints point to their latest ID-bearing events, or zero
+		// when no such event exists, and precede the partition completion marker.
 		expected := checkpoints.WorkspaceCheckpoint{WLogIDBearingOffset: 6}
 		actual := storage.RequireWorkspaceCheckpoint(t, appID, 10)
 		require.Equal(t, expected, actual)

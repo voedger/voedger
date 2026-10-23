@@ -17,7 +17,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -52,22 +51,34 @@ var nonTestAppsSchemasCache = &implISchemasCache_nonTestApps{schemas: map[appdef
 
 func NewVIT(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	tb.Helper()
-	useCas := coreutils.IsCassandraStorage()
+	require.NotNil(tb, vitCfg)
 	if !vitCfg.isShared {
-		vit = newVit(tb, vitCfg, useCas, true)
-	} else {
-		ok := false
-		if vit, ok = vits[vitCfg]; ok {
-			if !vit.isFinalized {
-				panic("Teardown() was not called on a previous VIT which used the provided shared config")
-			}
-			vit.isFinalized = false
-		} else {
-			vit = newVit(tb, vitCfg, useCas, true)
-			vits[vitCfg] = vit
-		}
+		return initializeVIT(tb, newVit(tb, vitCfg, coreutils.IsCassandraStorage()), opts...)
 	}
 
+	// NewVIT calls must be sequential, including for different configurations.
+	// Reserve the identity before construction.
+	vit, exists := vits[vitCfg]
+	if !exists {
+		vit = newVITStruct(tb, vitCfg, coreutils.IsCassandraStorage())
+		vits[vitCfg] = vit
+	}
+	closed := vit.serverClosed
+	busy := exists && !vit.isFinalized
+	if !closed && !busy {
+		vit.isFinalized = false
+		vit.T = tb
+	}
+	if closed {
+		tb.Fatal("cannot acquire VIT: server is closed")
+		return nil
+	}
+	if busy {
+		panic("TearDown() was not called on a previous VIT which used the provided shared config")
+	}
+	if !exists {
+		vit.startVVMAndCreateEntities()
+	}
 	return initializeVIT(tb, vit, opts...)
 }
 
@@ -77,9 +88,9 @@ func initializeVIT(tb testing.TB, vit *VIT, opts ...IVITOpt) *VIT {
 		opt.applyVITOpt(vit)
 	}
 
-	vit.emailCaptor.checkEmpty(tb)
-
 	vit.T = tb
+	vit.emailCaptor.checkEmpty(tb)
+	vit.currentAfterTest = slices.Clone(vit.configAfterTest)
 
 	// run each test in the next day to mostly prevent previous tests impact and\or workspace initialization
 	vit.TimeAdd(day)
@@ -89,18 +100,40 @@ func initializeVIT(tb testing.TB, vit *VIT, opts ...IVITOpt) *VIT {
 	return vit
 }
 
-func restartVIT(tb testing.TB, vitCfg *VITConfig,
-	appWorkspaces map[appdef.AppQName]map[string]*AppWorkspace,
-	principals map[appdef.AppQName]map[string]*Principal) *VIT {
+func newVit(tb testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	tb.Helper()
-	vit := newVit(tb, vitCfg, coreutils.IsCassandraStorage(), false)
-	vit.appWorkspaces = appWorkspaces
-	vit.principals = principals
-	return initializeVIT(tb, vit)
+	vit := newVITStruct(tb, vitCfg, useCas)
+	vit.startVVMAndCreateEntities()
+	return vit
 }
 
-func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT {
-	tb.Helper()
+func newVITStruct(tb testing.TB, cfg *VITConfig, useCas bool) *VIT {
+	return &VIT{
+		T:                tb,
+		effectiveConfig:  cfg,
+		isOnSharedConfig: cfg.isShared,
+		useCassandra:     useCas,
+		mockTime:         testingu.MockTime,
+		appWorkspaces:    map[appdef.AppQName]map[string]*AppWorkspace{},
+		principals:       map[appdef.AppQName]map[string]*Principal{},
+	}
+}
+
+func (vit *VIT) startVVMAndCreateEntities() {
+	vit.T.Helper()
+	defer logger.SetLogLevelWithRestore(logger.LogLevelWarning)()
+	completed := false
+	defer vit.cleanupOnFailure(&completed)
+	preConfig, err := vit.startVVM(vit.effectiveConfig)
+	require.NoError(vit.T, err)
+	vit.currentAfterTest = slices.Clone(vit.configAfterTest)
+	vit.createEntities(preConfig)
+	completed = true
+}
+
+// startVVM constructs and launches the server directly on VIT. Its callers
+// install deferred cleanup before entering, including for panic and Goexit.
+func (vit *VIT) startVVM(vitCfg *VITConfig) (preConfig *vitPreConfig, err error) {
 	cfg := vvmpkg.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
@@ -111,6 +144,10 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT 
 	cfg.SequencesTrustLevel = istructs.SequencesTrustLevel_0
 
 	cfg.Time = testingu.MockTime
+	retainedTime := cfg.Time
+	if vit.VVMConfig != nil {
+		retainedTime = vit.Time
+	}
 	cfg.SchemasCache = nonTestAppsSchemasCache
 	cfg.BusyProcessorLogMode = vvmpkg.BusyProcessorLogMode_Silent
 
@@ -118,16 +155,23 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT 
 		emailCaptorCh: make(chan state.EmailMessage, 1), // must be buffered
 	}
 	cfg.EmailSender = emailCaptor
+	vit.VoedgerVM = nil
+	vit.VVMConfig = &cfg
+	vit.emailCaptor = emailCaptor
+	vit.httpClient, vit.currentTestCleanups = nil, nil
+	vit.configAfterTest = nil
+	vit.vvmProblemCtx = nil
+	vit.serverClosed = false
 
 	cfg.KeyspaceIsolationSuffix = provider.NewTestKeyspaceIsolationSuffix()
 
-	vitPreConfig := &vitPreConfig{
+	preConfig = &vitPreConfig{
 		vvmCfg:  &cfg,
 		vitApps: vitApps{},
 		secrets: map[string][]byte{},
 	}
 
-	if useCas {
+	if vit.useCassandra {
 		cfg.StorageFactory = func(timeu.ITime) (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragecas ", fmt.Sprint(cas.DefaultCasParams))
 			return cas.Provide(cas.DefaultCasParams)
@@ -135,14 +179,30 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT 
 	}
 
 	for _, opt := range vitCfg.opts {
-		opt(vitPreConfig)
+		opt(preConfig)
 	}
 
-	for _, initFunc := range vitPreConfig.initFuncs {
+	for _, initFunc := range preConfig.initFuncs {
 		initFunc()
 	}
+	vit.configAfterTest = slices.Clone(preConfig.afterTest)
 
-	cfg.SecretsReader = &implVITISecretsReader{secrets: vitPreConfig.secrets, underlyingReader: itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)}
+	if vit.storageFactory == nil {
+		factory := cfg.StorageFactory
+		cfg.StorageFactory = func(now timeu.ITime) (istorage.IAppStorageFactory, error) {
+			storage, err := factory(now)
+			if err == nil {
+				vit.storageFactory = storage
+				vit.storageSuffix = cfg.KeyspaceIsolationSuffix
+			}
+			return storage, err
+		}
+	} else {
+		cfg.StorageFactory = func(timeu.ITime) (istorage.IAppStorageFactory, error) { return vit.storageFactory, nil }
+		cfg.KeyspaceIsolationSuffix = vit.storageSuffix
+		cfg.Time = retainedTime
+	}
+	cfg.SecretsReader = &implVITISecretsReader{secrets: preConfig.secrets, underlyingReader: itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)}
 
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
@@ -154,34 +214,20 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT 
 	policyOptsForWithRetry = append(policyOptsForWithRetry, withRetryOnConnRefused)
 	cfg.PolicyOptsForFederationWithRetry = policyOptsForWithRetry
 
-	vvm, err := vvmpkg.Provide(&cfg)
-	require.NoError(tb, err)
+	vit.VoedgerVM, err = vvmpkg.Provide(&cfg)
+	if err != nil {
+		return nil, fmt.Errorf("construct VVM: %w", err)
+	}
 
 	// register workspace templates
-	for _, app := range vitPreConfig.vitApps {
-		ep := vvm.AppsExtensionPoints[app.name]
+	for _, app := range preConfig.vitApps {
+		ep := vit.AppsExtensionPoints[app.name]
 		for _, tf := range app.wsTemplateFuncs {
 			tf(ep)
 		}
 	}
 
-	vit := &VIT{
-		VoedgerVM:            vvm,
-		VVMConfig:            &cfg,
-		T:                    tb,
-		appWorkspaces:        map[appdef.AppQName]map[string]*AppWorkspace{},
-		principals:           map[appdef.AppQName]map[string]*Principal{},
-		lock:                 sync.Mutex{},
-		isOnSharedConfig:     vitCfg.isShared,
-		configCleanupsAmount: len(vitPreConfig.cleanups),
-		emailCaptor:          emailCaptor,
-		mockTime:             testingu.MockTime,
-	}
-	httpClient, httpClientCleanup := httpu.NewIHTTPClient(httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...))
-	vit.httpClient = httpClient
-
-	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
-	vit.cleanups = append(vit.cleanups, func(*VIT) { httpClientCleanup() })
+	vit.httpClient, _ = httpu.NewIHTTPClient(httpu.WithRetryPolicy(vitHTTPClientRetryPolicy...))
 
 	// get rid of huge amount of logs reporting about workspaces init process
 	defer logger.SetLogLevelWithRestore(logger.LogLevelWarning)()
@@ -189,18 +235,27 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT 
 	// launch the server
 	// leadership duration - ten years to avoid leadership expiration when time bumps in tests (including 1 day add on each test)
 	vit.vvmProblemCtx = vit.Launch(10*365*24*60*60, vvmpkg.DefaultLeadershipAcquisitionDuration)
-	vit.checkVVMProblemCtx()
-
-	if !createEntities {
-		return vit
+	select {
+	case <-vit.vvmProblemCtx.Done():
+		err = vit.shutdownVVM()
+		if err == nil {
+			err = errors.New("VVM problem context closed during launch")
+		}
+		return nil, fmt.Errorf("launch VVM: %w", err)
+	default:
 	}
+	return preConfig, nil
+}
 
+func (vit *VIT) createEntities(vitPreConfig *vitPreConfig) {
+	vit.T.Helper()
+	tb := vit.T
 	for _, app := range vitPreConfig.vitApps {
 		// generate verified value tokens if queried
 		//                desiredValue token
 		verifiedValues := map[string]string{}
 		for desiredValue, vvi := range app.verifiedValuesIntents {
-			appTokens := vvm.IAppTokensFactory.New(app.name)
+			appTokens := vit.IAppTokensFactory.New(app.name)
 			verifiedValuePayload := payloads.VerifiedValuePayload{
 				VerificationKind: appdef.VerificationKind_EMail,
 				Entity:           vvi.docQName,
@@ -265,7 +320,6 @@ func newVit(tb testing.TB, vitCfg *VITConfig, useCas, createEntities bool) *VIT 
 		vitPreConfig.postInitFunc(vit)
 	}
 	vit.checkVVMProblemCtx()
-	return vit
 }
 
 func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string, token string) {
@@ -316,7 +370,7 @@ func createSubjects(vit *VIT, token string, subjects []subject, appQName appdef.
 
 func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...IVITOpt) (vit *VIT) {
 	tb.Helper()
-	vit = newVit(tb, vitCfg, true, true)
+	vit = newVit(tb, vitCfg, true)
 	for _, opt := range opts {
 		opt.applyVITOpt(vit)
 	}
@@ -337,23 +391,22 @@ func (vit *VIT) WS(appQName appdef.AppQName, wsName string) *AppWorkspace {
 
 func (vit *VIT) TearDown() {
 	vit.T.Helper()
-	vit.isFinalized = true
-	vit.T.Log("goroutines num before cleanup:", runtime.NumGoroutine())
-	for _, cleanup := range vit.cleanups {
-		cleanup(vit)
-	}
-	vit.cleanups = vit.cleanups[:vit.configCleanupsAmount]
-	grNum := runtime.NumGoroutine()
-	if grNum-vit.initialGoroutinesNum > allowedGoroutinesNumDiff {
-		vit.T.Logf("!!! goroutines leak: was %d on VIT setup, now %d after teardown", vit.initialGoroutinesNum, grNum)
-	}
-	vit.emailCaptor.checkEmpty(vit.T)
-	vit.checkVVMProblemCtx()
-	if vit.isOnSharedConfig {
+	if vit.isFinalized {
 		return
 	}
-	vit.emailCaptor.shutDown()
-	require.NoError(vit.T, vit.Shutdown())
+	defer func() { vit.isFinalized = true }()
+	defer func() {
+		grNum := runtime.NumGoroutine()
+		if grNum-vit.initialGoroutinesNum > allowedGoroutinesNumDiff {
+			vit.T.Logf("!!! goroutines leak: was %d on VIT setup, now %d after teardown", vit.initialGoroutinesNum, grNum)
+		}
+	}()
+	vit.T.Log("goroutines num before cleanup:", runtime.NumGoroutine())
+	if vit.isOnSharedConfig {
+		vit.cleanupSharedVIT()
+	} else {
+		vit.cleanupOwnVIT()
+	}
 }
 
 func (vit *VIT) MetricsServicePort() int {
@@ -362,6 +415,7 @@ func (vit *VIT) MetricsServicePort() int {
 
 func (vit *VIT) GetSystemPrincipal(appQName appdef.AppQName) *Principal {
 	vit.T.Helper()
+	vit.requireRunning()
 	vit.lock.Lock()
 	defer vit.lock.Unlock()
 	appPrincipals, ok := vit.principals[appQName]
@@ -423,6 +477,7 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte,
 	ownerRecord appdef.QName, ownerRecordField appdef.FieldName, opts ...httpu.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
+	vit.requireRunning()
 	blobReader := iblobstorage.BLOBReader{
 		Name:             name,
 		ContentType:      contentType,
@@ -458,6 +513,7 @@ func (vit *VIT) SQLQuery(ws *AppWorkspace, sqlQuery string, fmtArgs ...any) map[
 func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, name string, contentType string, content []byte, duration iblobstorage.DurationType,
 	opts ...httpu.ReqOptFunc) (blobSUUID iblobstorage.SUUID) {
 	vit.T.Helper()
+	vit.requireRunning()
 	blobReader := iblobstorage.BLOBReader{
 		Name:        name,
 		ContentType: contentType,
@@ -472,6 +528,7 @@ func (vit *VIT) UploadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, nam
 
 func (vit *VIT) Func(url string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
+	vit.requireRunning()
 	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
 	o = append(o, opts...)
 	httpResp, err := vit.httpClient.Req(context.Background(), vit.URLStr()+"/"+url, body, o...)
@@ -486,43 +543,35 @@ func (vit *VIT) Func(url string, body string, opts ...httpu.ReqOptFunc) *federat
 func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,
 	optFuncs ...httpu.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
+	vit.requireRunning()
 	o := []httpu.ReqOptFunc{createVITOpts()}
 	o = append(o, optFuncs...)
 	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, ownerRecord, ownerRecordField, ownerID, o...)
 	require.NoError(vit.T, err)
-	vit.registerBLOBReaderCleanup(reader)
+	vit.trackBLOBReader(reader)
 	return reader
 }
 
-func (vit *VIT) registerBLOBReaderCleanup(reader iblobstorage.BLOBReader) {
-	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
-		if reader.ReadCloser != nil {
-			buf := make([]byte, 1)
-			_, err := reader.Read(buf)
-			if errors.Is(err, io.EOF) {
-				return
-			}
-			require.NoError(vit.T, err)
-			_, err = io.Copy(io.Discard, reader)
-			require.NoError(vit.T, err)
-			defer reader.Close()
-			vit.T.Fatal("BLOB reader is not read out")
-		}
-	})
+func (vit *VIT) trackBLOBReader(reader iblobstorage.BLOBReader) {
+	vit.lock.Lock()
+	defer vit.lock.Unlock()
+	vit.currentTestCleanups = append(vit.currentTestCleanups, func() { vit.closeBLOBReader(reader) })
 }
 
 // blob ReadCloser must be read out by the test
 // will be closed by the VIT
 func (vit *VIT) ReadTempBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobSUUID iblobstorage.SUUID, optFuncs ...httpu.ReqOptFunc) iblobstorage.BLOBReader {
 	vit.T.Helper()
+	vit.requireRunning()
 	blobReader, err := vit.IFederation.ReadTempBLOB(appQName, wsid, blobSUUID, optFuncs...)
 	require.NoError(vit.T, err)
-	vit.registerBLOBReaderCleanup(blobReader)
+	vit.trackBLOBReader(blobReader)
 	return blobReader
 }
 
 func (vit *VIT) GET(relativeURL string, opts ...httpu.ReqOptFunc) *httpu.HTTPResponse {
 	vit.T.Helper()
+	vit.requireRunning()
 	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodGet)}
 	o = append(o, opts...)
 	url := vit.URLStr() + "/" + relativeURL
@@ -533,6 +582,7 @@ func (vit *VIT) GET(relativeURL string, opts ...httpu.ReqOptFunc) *httpu.HTTPRes
 
 func (vit *VIT) POST(relativeURL string, body string, opts ...httpu.ReqOptFunc) *httpu.HTTPResponse {
 	vit.T.Helper()
+	vit.requireRunning()
 	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
 	o = append(o, opts...)
 	url := vit.URLStr() + "/" + relativeURL
@@ -573,6 +623,7 @@ func (vit *VIT) satisfySysErrorExpectations(funcResp *federation.FuncResponse, o
 
 func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...httpu.ReqOptFunc) *federation.FuncResponse {
 	vit.T.Helper()
+	vit.requireRunning()
 	url := fmt.Sprintf("%s/api/%s/%d/%s", vit.URLStr(), appQName, wsid, funcName)
 	o := []httpu.ReqOptFunc{createVITOpts(), httpu.WithOptsValidator(httpu.DenyGETAndDiscardResponse), httpu.WithDefaultMethod(http.MethodPost)}
 	o = append(o, opts...)
@@ -600,6 +651,7 @@ func (vit *VIT) WaitFor(consumer func() *federation.FuncResponse) *federation.Fu
 
 func (vit *VIT) RefreshTokens() {
 	vit.T.Helper()
+	vit.requireRunning()
 	for _, appPrns := range vit.principals {
 		for _, prn := range appPrns {
 			// issue principal token
@@ -656,7 +708,9 @@ func (vit *VIT) NextName() string {
 // an email was sent but CaptureEmail is not called -> test will be failed on VIT.TearDown()
 func (vit *VIT) CaptureEmail() (msg state.EmailMessage) {
 	vit.T.Helper()
+	vit.requireRunning()
 	tmr := time.NewTimer(getTestEmailsAwaitingTimeout())
+	defer tmr.Stop()
 	select {
 	case msg = <-vit.emailCaptor.emailCaptorCh:
 		return msg
@@ -667,28 +721,30 @@ func (vit *VIT) CaptureEmail() (msg state.EmailMessage) {
 }
 
 // sets delay on IAppStorage.Get() in mem implementation
-// will be automatically reset to 0 on TearDown
+// will be automatically reset to 0 on RestartVVM or TearDown
 // need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
+	vit.requireRunning()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
 		delaySetter.SetTestDelayGet(delay)
-		vit.cleanups = append(vit.cleanups, func(_ *VIT) {
-			delaySetter.SetTestDelayGet(0)
-		})
+		vit.lock.Lock()
+		vit.currentTestCleanups = append(vit.currentTestCleanups, func() { delaySetter.SetTestDelayGet(0) })
+		vit.lock.Unlock()
 	})
 }
 
 // sets delay on IAppStorage.Put() in mem implementation
-// will be automatically reset to 0 on TearDown
+// will be automatically reset to 0 on RestartVVM or TearDown
 // need to e.g. investigate slow workspace create, see https://github.com/voedger/voedger/issues/1663
 func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 	vit.T.Helper()
+	vit.requireRunning()
 	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
 		delaySetter.SetTestDelayPut(delay)
-		vit.cleanups = append(vit.cleanups, func(*VIT) {
-			delaySetter.SetTestDelayPut(0)
-		})
+		vit.lock.Lock()
+		vit.currentTestCleanups = append(vit.currentTestCleanups, func() { delaySetter.SetTestDelayPut(0) })
+		vit.lock.Unlock()
 	})
 }
 
@@ -724,10 +780,14 @@ func (vit *VIT) EnrichPrincipalToken(prn *Principal, roles []payloads.RoleType) 
 }
 
 func (vit *VIT) checkVVMProblemCtx() {
+	vit.T.Helper()
 	select {
 	case <-vit.vvmProblemCtx.Done():
-		require.NoError(vit.T, vit.Shutdown())
-		vit.T.Fatal("vvmProblemCtx is closed but no error on vvm.Shutdown()")
+		err := vit.shutdownVVM()
+		if err == nil {
+			err = errors.New("VVM problem context is closed without a shutdown error")
+		}
+		require.NoError(vit.T, err)
 	default:
 	}
 }

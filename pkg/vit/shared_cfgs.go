@@ -130,7 +130,7 @@ var (
 			cfg.SMTPConfig = TestSMTPCfg
 		}),
 		WithSecret(testSMTPPwdSecretName, []byte("smtpPassword")),
-		WithCleanup(func(_ *VIT) {
+		WithAfterTest(func(_ *VIT) {
 			MockCmdExec = func(string, istructs.ExecCommandArgs) error { panic("") }
 			MockQryExec = func(string, istructs.ExecQueryArgs, istructs.ExecQueryCallback) error { panic("") }
 		}),

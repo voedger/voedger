@@ -28,28 +28,23 @@ Feature: Partition and workspace recovery
     checkpoint, Empty WLog, and Workspace recovery admission apply to deployed
     partitions. Commands to undeployed partitions do not enter that lifecycle.
 
-    Scenario: Missing checkpoints are computed for every declared partition
+    Scenario: Clients can use every declared partition when checkpoints are missing
       Given an application declares partition IDs 0 through 2
-      And partition 0 has stored checkpoint lastPLogOffset 20
-      And partition 1 has no stored partition checkpoint
-      And partition 1 PLog ends at offset 50 and contains workspace histories:
-        | WSID | latest ID-bearing WLog offset |
-        | 10   | 6                             |
-        | 11   | none                          |
-      And partition 2 has no stored partition checkpoint
-      And partition 2 PLog is empty
-      When VAOperator starts the VVM
-      Then partition 0 retains checkpoint lastPLogOffset 20
-      And workspace checkpoints for partition 1 are persisted before its partition checkpoint:
-        | WSID | wlogIDBearingOffset |
-        | 10   | 6                   |
-        | 11   | 0                   |
-      And partition checkpoints are persisted:
-        | partition ID | lastPLogOffset |
-        | 1            | 50             |
-        | 2            | 0              |
-      And partitions 0 through 2 are deployed
-      And the server becomes ready
+      And partition 0 has a stored partition checkpoint
+      And partitions 1 and 2 have no stored partition checkpoints
+      And each partition is populated with a workspace having this history:
+        | partition ID | workspace | last WLog offset | last allocated ordinary record ID |
+        | 0            | Orders    | 7                | 200003                            |
+        | 1            | Billing   | 14               | 200005                            |
+        | 2            | Inventory | 20               | 200009                            |
+      And VAOperator has started the VVM
+      When a client inserts one ordinary record into each workspace, retrying "503 Service Unavailable" responses
+      Then each command eventually returns "200 OK"
+      And the successful command responses contain:
+        | workspace | CurrentWLogOffset | new ordinary record ID |
+        | Orders    | 8                 | 200004                 |
+        | Billing   | 15                | 200006                 |
+        | Inventory | 21                | 200010                 |
 
     Scenario: Initial recovery initializes checkpoints but not runtime sequence state
       Given initial recovery has created checkpoints for partition 1 and workspace 10
@@ -174,11 +169,11 @@ Feature: Partition and workspace recovery
       And no invalid partition-checkpoint error is logged
 
       Examples:
-        | checkpoint          |
-        | absent              |
-        | lastPLogOffset 0    |
-        | lastPLogOffset 10   |
-        | lastPLogOffset 50   |
+        | checkpoint        |
+        | absent            |
+        | lastPLogOffset 0  |
+        | lastPLogOffset 10 |
+        | lastPLogOffset 50 |
 
     Scenario Outline: Invalid partition checkpoint falls back to the PLog beginning
       Given the PLog contains events through offset 50
@@ -228,7 +223,7 @@ Feature: Partition and workspace recovery
   Rule: Workspace checkpoint
 
     workspace checkpoint ──> recover actual WLog end ──────────────> successful retry uses following WLog offset
-                          └─> recover latest allocated user record ID ──> successful retry uses following record ID
+    └─> recover latest allocated user record ID ──> successful retry uses following record ID
     non-ID-bearing log tail events ─────────────────────────────────> advances the WLog offset only
 
     An absent or zero workspace checkpoint starts one scan at FirstOffset.
@@ -250,11 +245,11 @@ Feature: Partition and workspace recovery
       And no invalid workspace-checkpoint error is logged
 
       Examples:
-        | checkpoint                |
-        | absent                    |
-        | wlogIDBearingOffset 0     |
-        | wlogIDBearingOffset 6     |
-        | wlogIDBearingOffset 10    |
+        | checkpoint             |
+        | absent                 |
+        | wlogIDBearingOffset 0  |
+        | wlogIDBearingOffset 6  |
+        | wlogIDBearingOffset 10 |
 
     Scenario: Workspace recovery starts from an ID-bearing checkpoint at the WLog end
       Given the WLog has allocated record IDs 200001 through 200005
@@ -365,8 +360,8 @@ Feature: Partition and workspace recovery
   Rule: Workspace recovery admission
 
     request ── duplicate ───────────────────> shares the running recovery
-            ├─ recovery limit available ────> starts one recovery
-            └─ recovery limit reached ──────> rejected without queueing
+    ├─ recovery limit available ────> starts one recovery
+    └─ recovery limit reached ──────> rejected without queueing
     retained failure ── next request ───────> reports the failure and starts one retry
 
     Scenario: Duplicate requests share one workspace recovery
