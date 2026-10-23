@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/httpu"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
 	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
@@ -26,18 +27,34 @@ type VIT struct {
 	*vvm.VVMConfig
 	lock                 sync.Mutex
 	T                    testing.TB
-	cleanups             []func(vit *VIT)
 	isFinalized          bool
+	effectiveConfig      *VITConfig
+	storageFactory       istorage.IAppStorageFactory
+	storageSuffix        string
+	useCassandra         bool
+	currentAfterTest     []func(vit *VIT) // copied from configAfterTest before each test
 	nextNumber           int
 	appWorkspaces        map[appdef.AppQName]map[string]*AppWorkspace
 	principals           map[appdef.AppQName]map[string]*Principal // because principals could be updated
 	isOnSharedConfig     bool
 	initialGoroutinesNum int
-	configCleanupsAmount int
-	emailCaptor          *implIEmailSender_captor
-	httpClient           httpu.IHTTPClient
 	mockTime             testingu.IMockTime
-	vvmProblemCtx        context.Context
+
+	// Rebuilt in place after the previous server and its resources are closed.
+	emailCaptor         *implIEmailSender_captor
+	httpClient          httpu.IHTTPClient
+	currentTestCleanups []func()         // e.g. blob reader close
+	configAfterTest     []func(vit *VIT) // WithAfterTest
+	vvmProblemCtx       context.Context
+	serverClosed        bool
+}
+
+// RestartOptFunc configures a storage-preserving VVM restart.
+type RestartOptFunc func(*restartOptions)
+
+type restartOptions struct {
+	afterStop func(RestartStorage)
+	config    *VITConfig
 }
 
 type VITConfig struct {
@@ -50,7 +67,7 @@ type vitApps map[appdef.AppQName]*app // pointer here because options could be a
 type vitPreConfig struct {
 	vvmCfg       *vvm.VVMConfig
 	vitApps      vitApps
-	cleanups     []func(vit *VIT)
+	afterTest    []func(vit *VIT)
 	initFuncs    []func()
 	postInitFunc func(vit *VIT)
 	secrets      map[string][]byte

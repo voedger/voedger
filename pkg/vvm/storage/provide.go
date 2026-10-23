@@ -5,6 +5,7 @@
 package storage
 
 import (
+	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/ielections"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -20,5 +21,11 @@ func NewAppTTLStorage(sysVVMStorage ISysVvmStorage, clusterAppID istructs.Cluste
 	return &implAppTTLStorage{
 		sysVVMStorage: sysVVMStorage,
 		clusterAppID:  clusterAppID,
+	}
+}
+
+func NewRecoveryCheckpointStorage(sysVVMStorage ISysVvmStorage) checkpoints.IRecoveryCheckpointStorage {
+	return &implCheckpointStorage{
+		sysVVMStorage: sysVVMStorage,
 	}
 }

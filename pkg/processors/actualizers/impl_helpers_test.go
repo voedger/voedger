@@ -22,27 +22,31 @@ const (
 )
 
 type plogEventMock struct {
+	partition  istructs.PartitionID
+	plogOffset istructs.Offset
 	wlogOffset istructs.Offset
 	wsid       istructs.WSID
 }
 
 var testQName = appdef.NewQName(appdef.SysPackage, "abc")
 
-func (e *plogEventMock) ArgumentObject() istructs.IObject     { return istructs.NewNullObject() }
-func (e *plogEventMock) Bytes() []byte                        { return nil }
-func (e *plogEventMock) Command() istructs.IObject            { return nil }
-func (e *plogEventMock) Workspace() istructs.WSID             { return e.wsid }
-func (e *plogEventMock) WLogOffset() istructs.Offset          { return e.wlogOffset }
-func (e *plogEventMock) SaveWLog() (err error)                { return nil }
-func (e *plogEventMock) SaveCUDs() (err error)                { return nil }
-func (e *plogEventMock) Release()                             {}
-func (e *plogEventMock) Error() istructs.IEventError          { return nil }
-func (e *plogEventMock) QName() appdef.QName                  { return testQName }
-func (e *plogEventMock) CUDs(func(rec istructs.ICUDRow) bool) {}
-func (e *plogEventMock) RegisteredAt() istructs.UnixMilli     { return 0 }
-func (e *plogEventMock) Synced() bool                         { return false }
-func (e *plogEventMock) DeviceID() istructs.ConnectedDeviceID { return 0 }
-func (e *plogEventMock) SyncedAt() istructs.UnixMilli         { return 0 }
+func (e *plogEventMock) ArgumentObject() istructs.IObject        { return istructs.NewNullObject() }
+func (e *plogEventMock) Bytes() []byte                           { return nil }
+func (e *plogEventMock) Command() istructs.IObject               { return nil }
+func (e *plogEventMock) HandlingPartition() istructs.PartitionID { return e.partition }
+func (e *plogEventMock) PLogOffset() istructs.Offset             { return e.plogOffset }
+func (e *plogEventMock) Workspace() istructs.WSID                { return e.wsid }
+func (e *plogEventMock) WLogOffset() istructs.Offset             { return e.wlogOffset }
+func (e *plogEventMock) SaveWLog() (err error)                   { return nil }
+func (e *plogEventMock) SaveCUDs() (err error)                   { return nil }
+func (e *plogEventMock) Release()                                {}
+func (e *plogEventMock) Error() istructs.IEventError             { return nil }
+func (e *plogEventMock) QName() appdef.QName                     { return testQName }
+func (e *plogEventMock) CUDs(func(rec istructs.ICUDRow) bool)    {}
+func (e *plogEventMock) RegisteredAt() istructs.UnixMilli        { return 0 }
+func (e *plogEventMock) Synced() bool                            { return false }
+func (e *plogEventMock) DeviceID() istructs.ConnectedDeviceID    { return 0 }
+func (e *plogEventMock) SyncedAt() istructs.UnixMilli            { return 0 }
 
 type cmdWorkpieceMock struct {
 	appPart appparts.IAppPartition

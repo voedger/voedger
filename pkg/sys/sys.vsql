@@ -134,7 +134,7 @@ ABSTRACT WORKSPACE Workspace (
 		-- SubjectID: ID of the sys.Subject representing the accepted member in the inviting workspace.
 		-- Set by ApplyInviteEvents on join, using either the newly created Subject or an existing Subject for ActualLogin.
 		-- Used later to update roles or deactivate the Subject during cancellation or leave.
-		-- Sources: 
+		-- Sources:
 		-- - pkg/sys/invite/impl_applyinviteevents.go: writes Invite.SubjectID on join and reads it for role update, cancellation, and leave
 		SubjectID ref,
 
@@ -451,6 +451,7 @@ ABSTRACT WORKSPACE Workspace (
 			AFTER INSERT ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(sys.View(RecordsRegistry));
+		PROJECTOR ApplyRecoveryCheckpoint AFTER EXECUTE ON ALL COMMANDS;
 
 		-- authnz
 

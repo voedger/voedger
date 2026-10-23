@@ -28,9 +28,11 @@ const (
 )
 
 type AppDeploymentDescriptor struct {
-	// Number of partitions. Partitions IDs will be generated from 0 to NumParts-1
-	//
-	// NumParts should contain _total_ number of partitions, not only to deploy.
+	// NumParts is the full declared partition count used for workspace routing.
+	// Partition IDs range from 0 to NumParts-1, regardless of checkpoint
+	// initialization success or runtime partition availability. Do not reduce
+	// this count to exclude unavailable partitions: doing so changes routing.
+	// A declared count change requires c.cluster.DeployApp compatibility validation.
 	NumParts istructs.NumAppPartitions
 
 	// EnginePoolSize pools size for each processor kind

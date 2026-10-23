@@ -1807,7 +1807,7 @@ func Test_IEventsGetORec(t *testing.T) {
 
 		t.Run("if WLog read failed", func(t *testing.T) {
 			testError := errors.New("test wlog read error")
-			pk, cc := wlogKey(test.workspace, test.wlogOfs)
+			pk, cc := WLogEventKey(test.workspace, test.wlogOfs)
 			test.Storage.ScheduleGetError(testError, pk, cc)
 			defer test.Storage.Reset()
 

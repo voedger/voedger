@@ -13,15 +13,18 @@ import (
 
 func TestMockInterfacesCompliance(t *testing.T) {
 	var (
-		_ istructs.ICUDRow            = &MockCUDRow{}
-		_ istructs.IPLogEvent         = &MockPLogEvent{}
-		_ istructs.IObject            = &MockObject{}
-		_ istructs.IState             = &MockState{}
-		_ istructs.IStateKeyBuilder   = &MockStateKeyBuilder{}
-		_ istructs.IStateValue        = &MockStateValue{}
-		_ istructs.IStateValueBuilder = &MockStateValueBuilder{}
-		_ istructs.IRawEvent          = &MockRawEvent{}
-		_ istructs.IKey               = &MockKey{}
-		_ istructs.IIntents           = &MockIntents{}
+		_ istructs.ICUDRow             = &MockCUDRow{}
+		_ istructs.IPLogEvent          = &MockPLogEvent{}
+		_ istructs.IObject             = &MockObject{}
+		_ istructs.IState              = &MockState{}
+		_ istructs.IStateKeyBuilder    = &MockStateKeyBuilder{}
+		_ istructs.IStateValue         = &MockStateValue{}
+		_ istructs.IStateValueBuilder  = &MockStateValueBuilder{}
+		_ istructs.IRawEvent           = &MockRawEvent{}
+		_ istructs.IKey                = &MockKey{}
+		_ istructs.IIntents            = &MockIntents{}
+		_ istructs.IEvents             = &MockEvents{}
+		_ istructs.IAppStructsProvider = &MockAppStructsProvider{}
+		_ istructs.IAppStructs         = &MockAppStructs{}
 	)
 }

@@ -117,6 +117,48 @@ HTTP root context is derived from VVM context:
 - Bootstrap completes: level `Info`, stage `bootstrap`, msg `completed`
 - On app deployment failure: panics with `failed to deploy app <appName>: <error>` (no logging)
 
+**Initial recovery:**
+
+Initial recovery derives its context from bootstrap and replaces `extension`
+with `sys._Recovery`. Every entry uses `vapp=sys/voedger` and the
+component-local `app=<appQName>` attribute. Every per-partition entry also uses
+`partid=<partitionID>`; a failed workspace-checkpoint write additionally uses
+`wsid=<workspaceID>`.
+
+- Application initialization starts after application structures are available
+  and before partition attempts are scheduled: level `Info`, stage
+  `bootstrap.initial_recovery.start`, msg
+  `partitions <numPartitions>, workers <workerLimit>`
+- A missing partition is initialized successfully: level `Info`, stage
+  `bootstrap.initial_recovery.partition.complete`, msg
+  `lastPLogOffset <offset>, workspaceCheckpoints <count>`
+- Bootstrap alone emits one entry per partition-error map entry returned by
+  `IInitialRecovery.InitializeCheckpoints`: level `Error`, stage
+  `bootstrap.initial_recovery.error`, msg `<operation>: <error message>`, where
+  `<operation>` is one of `get partition checkpoint`, `read PLog`,
+  `put workspace checkpoint`, or `put partition checkpoint`
+- Application initialization completes after every scheduled attempt has
+  finished: level `Info`, stage `bootstrap.initial_recovery.complete`, msg
+  `initialized <count>, skipped <count>, failed <count>`
+
+The bootstrap failure entry uses `app=<appQName>` for the current application
+and `partid=<partitionID>` from the map key. The initializer returns
+operation-wrapped errors without logging them; failed attempts emit no
+partition-completion entry. The message preserves both the failed operation and
+its underlying cause, which remain in bootstrap logs rather than being retained
+in app partitions or included in command errors. Such an error is isolated to
+the partition: a failed reconstruction writes no partition completion marker,
+the failed partition is excluded from deployment, and sibling attempts continue.
+The error map is returned for logging rather than as a fatal initialization
+error. For non-cluster applications these entries do not prevent the
+application-completion log or server readiness. Bootstrap separately requires
+the cluster application's sole partition: if it has no eligible ID or fails to
+deploy, bootstrap returns an error and the server does not become ready.
+Bootstrap-context cancellation takes precedence over classifying an
+operation error as partition-scoped; cancellation and application setup failure
+before partition scheduling are returned to bootstrap, and the
+application-completion entry is not emitted.
+
 #### Leadership acquisition
 
 Uses `vapp="sys/voedger"`, `extension="sys._Leadership"`, `key` attribs.
@@ -203,12 +245,35 @@ Log entries (when `BusyProcessorLogMode_Error`):
 
 **Request processing:**
 
-The context with attributes is received from Router
+The context with attributes is received from Router. Command error logging
+preserves that request context and sets `vapp=<appQName>` and
+`partid=<partitionID>` from the command message, including when borrowing the
+application partition fails.
 
 - Logs the event details right after successful write to PLog: calls `processors.LogEventAndCUDs()` (see [LogEventAndCUDs](#logeventandcuds)) with stage `cp.plog_saved`; per-CUD callback always returns `shouldLog=true`; `msgAdds` is `,oldfields={...}` for CUDs that arrived with the HTTP request, empty for CUDs created by the command; `eventMessageAdds` is empty
 - Right before sending the response to the bus:
-  - Command handling error: level `Error`, stage `cp.error`, msg `<error message>`, `body`=`<compacted request body>`
+  - Command handling error: level `Error`, stage `cp.error`, msg `<error message>, body: <compacted request body>`. Error-message variants:
+    - Missing partition of a registered application (`appparts.ErrNotFound`): `partition not found`; response `500 Internal Server Error`
+    - Missing application (`appparts.ErrNotFound`): `application not found`; response `400 Bad Request`
+    - Partition recovery in progress: msg `partition <partitionID>: recovery is in progress`
+    - Partition recovery admission limit reached: msg `partition <partitionID>: recovery concurrency limit is reached`
+    - Partition recovery failed: msg `partition <partitionID>: recovery failed: <error message>`
+    - Workspace recovery in progress: msg `workspace <wsid>: recovery is in progress`
+    - Workspace recovery admission limit reached: msg `workspace <wsid>: recovery concurrency limit is reached`
+    - Workspace recovery failed: msg `workspace <wsid>: recovery failed: <error message>`
   - Command executed successfully: level `Verbose`, stage `cp.success`, msg `<command result>`
+
+The not-found entries use the normal request context received from Router, not
+the `sys._Recovery` context. Their concise error text omits application and
+partition identifiers because `vapp` and `partid` identify the request. It also
+omits the initial-recovery cause. That cause is logged
+only by bootstrap as described in [Application deployment](#application-deployment).
+Repeated commands to an undeployed partition log the same standard not-found
+error and do not emit partition/workspace recovery start, failure, admission, or
+retry messages. The runtime recovery logs below apply only to deployed
+partitions; see [recovery request handling](./recovery--td.md#recovery-on-command-request)
+for the request lifecycle and status policy.
+
 - Additional log on errors:
   - if error happens on any of:
     - sync actualizers run
@@ -227,11 +292,25 @@ The context with attributes is received from Router
 - `extension` attrib: `sys._Recovery`
 - `partid` attrib: partition ID
 - Partition recovery start: level `Info`, stage `cp.partition_recovery.start`, msg (empty)
-- Partition recovery complete: level `Info`, stage `cp.partition_recovery.complete`, msg `completed`, nextPLogOffset and workspaces JSON
-- ReadPLog failure: level `Error`, stage `cp.partition_recovery.readplog.error`, msg `<error message>`
+- Invalid partition checkpoint: level `Error`, stage `cp.partition_recovery.checkpoint.invalid`, msg `stored PLog offset <checkpointOffset> does not identify an existing event; retrying from FirstOffset`
+  - emitted when an inclusive read from a present nonzero checkpoint returns no event or its first event offset differs from the stored offset; absent and zero checkpoints start at `FirstOffset` without validation
+  - uses the partition recovery context attributes and precedes the fallback read from `FirstOffset`
+- Partition recovery complete: level `Info`, stage `cp.partition_recovery.complete`, msg contains `nextPLogOffset <offset>, workspaces {}`; workspace recovery starts only after the partition is published
+- ReadPLog failure during either the checkpoint scan or the `FirstOffset` fallback scan: level `Error`, stage `cp.partition_recovery.readplog.error`, msg `<error message>`
 - Last event re-apply: `processors.LogEventAndCUDs()` called with stage `cp.partition_recovery.reapply` to log which event is being re-applied (with `woffset`, `poffset`, `evqname` attribs); the enriched context is stored in `cmdWorkpiece.logCtx` and used by sync projectors during re-apply
 - `LogEventAndCUDs` failure during re-apply: level `Error`, stage `cp.partition_recovery.logeventandcuds.error`, msg `<error message>`
 - StoreOp failure (re-apply last event): level `Error`, stage `cp.partition_recovery.storeop.error`, msg `<error message>`
+
+**Workspace recovery:**
+
+- Inherits the partition-recovery attributes `vapp=sys/voedger`, `extension=sys._Recovery`, and `partid=<partitionID>`
+- `wsid` attrib: workspace ID
+- Workspace recovery start: level `Info`, stage `cp.workspace_recovery.start`, msg (empty)
+- Invalid workspace checkpoint: level `Error`, stage `cp.workspace_recovery.checkpoint.invalid`, msg `stored WLog offset <checkpointOffset> does not identify an ID-bearing event; retrying from FirstOffset`
+  - emitted when an inclusive read from a present nonzero checkpoint returns no event, its first event offset differs from the stored offset, or the checkpoint event has no newly allocated non-singleton record ID; absent and zero checkpoints start at `FirstOffset` without validation
+  - uses the workspace recovery context attributes and precedes the fallback read from `FirstOffset`
+- ReadWLog failure during either the checkpoint scan or the `FirstOffset` fallback scan: level `Error`, stage `cp.workspace_recovery.readwlog.error`, msg `<error message>`
+- Workspace recovery complete: level `Info`, stage `cp.workspace_recovery.complete`, msg contains `nextWLogOffset <offset>` and `lastRecordID <recordID>`
 
 ---
 
@@ -527,7 +606,7 @@ Automatically append context attributes and stage to log entries using slog.
   ```go
   logger.VerboseCtx(ctx, "routing", "request accepted")
   logger.ErrorCtx(ctx, "cp.error", "command failed:", err)
-  logger.InfoCtx(ctx, "cp.partition_recovery.complete", "completed, nextPLogOffset:", offset)
+  logger.InfoCtx(ctx, "cp.partition_recovery.complete", "nextPLogOffset ", offset)
   ```
 
 **Standard functions ([logger.go](../../../../pkg/goutils/logger/logger.go#L44))**

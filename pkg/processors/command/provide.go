@@ -16,56 +16,50 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-type workspace struct {
-	NextWLogOffset istructs.Offset
-	idGenerator    istructs.IIDGenerator
-}
-
 type cmdProc struct {
-	partitionManager *partitionManager
-	n10nBroker       in10n.IN10nBroker
-	time             timeu.ITime
-	authenticator    iauthnz.IAuthenticator
-	storeOp          pipeline.ISyncOperator
-}
-
-func newPartitionManager(recoveryHooks *partitionRecoveryHooks) *partitionManager {
-	return &partitionManager{
-		partitions:    map[partitionKey]*partitionState{},
-		recoveryHooks: recoveryHooks,
-	}
-}
-
-type appPartition struct {
-	workspaces     map[istructs.WSID]*workspace
-	nextPLogOffset istructs.Offset
+	partitionManager       *partitionManager
+	n10nBroker             in10n.IN10nBroker
+	time                   timeu.ITime
+	authenticator          iauthnz.IAuthenticator
+	storeOp                pipeline.ISyncOperator
+	checkpointStorage      checkpoints.IRecoveryCheckpointStorage
+	partitionRecoveryHooks recoveryHooks[partitionKey, appPartition]
+	workspaceRecoveryHooks recoveryHooks[workspaceKey, workspace]
 }
 
 // syncActualizerFactory is a factory(partitionID) that returns a fork operator with a sync actualizer per each application. Inside of an each actualizer - projectors for each application
 func ProvideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator,
-	secretReader isecrets.ISecretReader) ServiceFactory {
-	return provideServiceFactory(appParts, tm, n10nBroker, metrics, vvm, authenticator, secretReader, nopHooks())
+	secretReader isecrets.ISecretReader, checkpointStorage checkpoints.IRecoveryCheckpointStorage) ServiceFactory {
+	return provideServiceFactory(appParts, tm, n10nBroker, metrics, vvm, authenticator, secretReader,
+		checkpointStorage, nopRecoveryHooks[partitionKey, appPartition](),
+		nopRecoveryHooks[workspaceKey, workspace]())
 }
 
 func provideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator,
-	secretReader isecrets.ISecretReader, recoveryHooks *partitionRecoveryHooks) ServiceFactory {
+	secretReader isecrets.ISecretReader, checkpointStorage checkpoints.IRecoveryCheckpointStorage,
+	partitionRecoveryHooks recoveryHooks[partitionKey, appPartition], workspaceRecoveryHooks recoveryHooks[workspaceKey, workspace]) ServiceFactory {
+	partitionRecoveryHooks = hooksOrNOP(partitionRecoveryHooks)
+	workspaceRecoveryHooks = hooksOrNOP(workspaceRecoveryHooks)
 	return func(commandsChannel CommandChannel) pipeline.IService {
 		cmdProc := &cmdProc{
-			partitionManager: newPartitionManager(recoveryHooks),
-			n10nBroker:       n10nBroker,
-			time:             tm,
-			authenticator:    authenticator,
+			n10nBroker:             n10nBroker,
+			time:                   tm,
+			authenticator:          authenticator,
+			checkpointStorage:      checkpointStorage,
+			partitionRecoveryHooks: partitionRecoveryHooks,
+			workspaceRecoveryHooks: workspaceRecoveryHooks,
 		}
+		cmdProc.partitionManager = newPartitionManager(partitionRecoveryHooks, cmdProc.recoverPartition)
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hs := newReusableHostState(vvmCtx, secretReader)
@@ -185,8 +179,8 @@ func provideServiceFactory(appParts appparts.IAppPartitions, tm timeu.ITime,
 							logSuccess(cmd)
 						}
 						if cmd.appPartitionRestartScheduled {
-							logger.WarningCtx(newRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID()), "cp.partition_recovery", "partition will be restarted due of an error on writing to Log: ", cmdHandlingErr)
-							cmdProc.partitionManager.resetPartitionState(partitionKey{
+							logger.WarningCtx(newPartRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID()), "cp.partition_recovery", "partition will be restarted due of an error on writing to Log: ", cmdHandlingErr)
+							cmdProc.partitionManager.scheduleRecovery(partitionKey{
 								appQName:    cmd.cmdMes.AppQName(),
 								partitionID: cmd.cmdMes.PartitionID(),
 							})
@@ -208,7 +202,11 @@ func logHandlingError(cmd *cmdWorkpiece, err error) {
 		return
 	}
 	body := compactBody(cmd.cmdMes.Body())
-	logger.LogCtx(cmd.cmdMes.RequestCtx(), 1, logger.LogLevelError, "cp.error", err, ", body: ", body)
+	logCtx := logger.WithContextAttrs(cmd.cmdMes.RequestCtx(), map[string]any{
+		logger.LogAttr_VApp: cmd.cmdMes.AppQName(),
+		"partid":            cmd.cmdMes.PartitionID(),
+	})
+	logger.LogCtx(logCtx, 1, logger.LogLevelError, "cp.error", err, ", body: ", body)
 }
 
 func logSuccess(cmd *cmdWorkpiece) {
