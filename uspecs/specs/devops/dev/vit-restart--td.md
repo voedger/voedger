@@ -1,6 +1,6 @@
 # Feature technical design: VIT restarts with reusable configurations
 
-Proposed design for the [VIT restart framework change](../../../changes/archive/2611/2611041515-vit-test-restart-framework/change.md). This is a test-framework change in `pkg/vit`; production recovery and projector replay behavior remain unchanged.
+Design for the [VIT restart framework change](../../../changes/archive/2611/2611041515-vit-test-restart-framework/change.md). This is a test-framework change in `pkg/vit`; production recovery and projector replay behavior remain unchanged.
 
 ## External actors
 
@@ -93,7 +93,7 @@ The owned path does not use the shared cache. Shared reuse retains data and does
   -> [VIT lifecycle]: continue requests using the same *VIT
 ```
 
-Proposed public API:
+Public API:
 
 ```go
 func (vit *VIT) RestartVVM(opts ...RestartOptFunc) error
@@ -144,6 +144,8 @@ If `AfterSecondStop` is present, fully stop the second runtime before invoking i
 ```
 
 Keep the existing acquisition flag and server cleanup status. When construction or restart fails, deferred cleanup closes the current server and the original error or panic propagates to the current test. Do not store the failure on `VIT`. Reject subsequent requests, restarts and shared acquisition when the server is closed. Deferred cleanup also handles `runtime.Goexit`; `TearDown` remains safe and avoids shutting down an already closed server again.
+
+`startVVM` installs a local defer immediately before calling `Launch`. If launch exits before assigning `vvmProblemCtx`, that defer calls `Shutdown` and waits for its worker to finish and release leadership before outer cleanup closes email capture. The defer is installed after construction and template registration, so failures before launch do not call `Shutdown` on an unlaunched VVM.
 
 A shared identity whose server is closed is not silently evicted and recreated: doing so would replace its database. Later acquisition reports that the server is closed; the original failure belongs to the test that attempted restart. Intentional startup-failure scenarios should use their own configuration identity. Recovery of a closed identity is outside this design.
 
@@ -218,7 +220,7 @@ Cover these distinct cases with focused VIT lifecycle tests and existing integra
 | Exclusive acquisition | Acquiring the same shared configuration before `TearDown` fails. |
 | Benchmark rejection | `VIT.T` being a `*testing.B` makes `RestartVVM` return an error before stopping or changing the server. |
 | Synchronous restart | Client requests work immediately after `RestartVVM` returns successfully. |
-| Failed restart | Construction error, launch failure/panic, and a stopped-callback failure leave the server closed and unavailable for reuse. Use an isolated subprocess for `FailNow`/panic paths when needed. |
+| Failed restart | Construction error, launch failure/panic, and a stopped-callback failure leave the server closed and unavailable for reuse; the launch-panic test also verifies leadership release. Use an isolated subprocess for `FailNow`/panic paths when needed |
 | Final stopped hook | Existing owned descriptor-rejection coverage passes; a shared adapter resumes once after inspection and supports later acquisition. |
 | Compatible recovery cases | Reused storage supports captured PLog/WLog/ID baselines, with fresh workspaces where required; each case also runs alone. |
 

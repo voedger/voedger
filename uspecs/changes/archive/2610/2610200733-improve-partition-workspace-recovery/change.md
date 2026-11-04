@@ -29,7 +29,7 @@ In the production application-processing context:
 - Represent a successfully initialized empty PLog with a present partition checkpoint whose `lastPLogOffset` is zero. Represent an encountered workspace with no ID-bearing event with a present workspace checkpoint whose `wlogIDBearingOffset` is zero.
 - Recover a partition by reading the PLog from its saved handled offset through the end, using the final event to set the next PLog offset, and reapplying that final event.
 - After partition recovery, let the requesting command continue to the workspace stage, which starts workspace recovery on demand.
-- Recover a workspace with an inclusive WLog tail scan from the WLog ID-bearing offset through the log end. Use the actual final event to set the next WLog offset and the latest ID-bearing event encountered in the complete scan to restore record-ID allocation.
+- Recover a workspace with an inclusive WLog tail scan from the WLog ID-bearing offset through the log end. Use the actual final event to set the next WLog offset and the maximum ordinary record ID across new CUD rows and the complete logged argument tree to restore record-ID allocation
 - Treat a stored checkpoint as invalid when its inclusive log tail scan invokes no callback, its first callback has a different offset, or a workspace checkpoint event did not allocate a non-singleton record ID. Log an error and recover from `FirstOffset` instead of accepting counters derived from an empty or incomplete scan.
 - If a PLog is empty, all WLogs in that partition are also empty; exclude fixtures that empty only the PLog while retaining WLog events. Start empty-log offsets at `FirstOffset` and an empty WLog's next record ID at `FirstUserRecordID`.
 - Return `503 Service Unavailable` while recovery of the requested partition or workspace is already running or if the partition already has four workspace recoveries running. Log a corresponding message for each case.
@@ -46,7 +46,7 @@ In the production application-processing context:
 - **ID-bearing event**: a WLog event that allocates at least one new non-singleton record ID.
 - **Initial recovery**: bootstrap-time reconstruction of missing recovery checkpoints from complete PLogs before an application's partitions and asynchronous projectors are started. It initializes checkpoint storage only; it does not restore or publish runtime partition or workspace sequence state.
 - **Known partition**: every partition ID in the application deployment descriptor's contiguous declared range `0..NumPartitions-1`, whether or not that partition has a PLog event or allocated storage yet.
-- **Initial-recovery worker limit**: `runtime.GOMAXPROCS(0)`, sampled once when an application's initial recovery starts. It is the Go runtime's effective available-processor limit and bounds the number of that application's missing partitions whose checkpoints may be computed concurrently.
+- **Initial-recovery worker limit**: `checkpoints.workerLimit`, sampled from `runtime.GOMAXPROCS(0)` at package initialization and reused by each application's initial recovery
 - **Initial-recovery completion marker**: the presence of a partition checkpoint. Initial recovery writes all workspace checkpoints derived from that partition before writing its partition checkpoint, so an absent partition checkpoint means that the partition must be scanned again.
 - **Undeployed partition**: a declared application partition for that is not deployed. Initial-recovery failure prevents the partition deployment for the current server run; app registration and the declared partition count remain available for request routing and error reporting.
 - **Inclusive log tail scan**: a log read that starts with the event identified by a nonzero checkpoint and continues through the actual log end. The first returned event validates the checkpoint; the complete scan supplies the recovered values. An absent or zero checkpoint instead selects a direct full scan from `FirstOffset`.
@@ -64,7 +64,7 @@ In the production application-processing context:
 - `sys.ApplyRecoveryCheckpoint` advances the partition checkpoint every 100 PLog events and replaces the workspace checkpoint on each ID-bearing event.
 - Bootstrap orchestrates initial recovery through `checkpoints.IInitialRecovery`; `pkg/checkpoints` owns event scanning and checkpoint calculation.
 - A present partition checkpoint skips initial recovery. For each missing checkpoint in `0..NumPartitions-1`, scan the complete PLog and retain its end plus the latest ID-bearing WLog offset, or zero, for every encountered WSID.
-- Run partition scans concurrently with a per-application limit sampled from `runtime.GOMAXPROCS(0)`. Persist all computed workspace checkpoints before the partition checkpoint.
+- Run partition scans concurrently with the package-initialized `workerLimit`. Persist all computed workspace checkpoints before the partition checkpoint
 - A partition-scoped checkpoint-read, scan, or storage failure is returned in the per-partition error map and excludes that partition from the deployable IDs. Bootstrap logs each returned error once with app QName and partition ID. Such failures do not cancel sibling scans; for non-cluster applications they do not fail bootstrap or degrade readiness. A failed reconstruction writes no completion marker; a checkpoint-read error never authorizes deployment. Setup failure or cancellation is fatal to an initial-recovery invocation; failure to initialize or deploy the cluster application's sole partition is also fatal to bootstrap.
 - Initial recovery returns eligible partition IDs and a map of failed partition IDs to operation-specific errors. Bootstrap passes the IDs directly to `DeployAppPartitions` and logs the map entries; it starts no asynchronous actualizers or schedulers for excluded partitions. `IAppPartitions` uses its existing unknown-partition error without storing initial-recovery failures.
 - Initial recovery initializes checkpoint storage only. Runtime partition and workspace states remain request-recovered.
@@ -86,7 +86,7 @@ Notes:
 
 `IInitialRecovery.InitializeCheckpoints(ctx, appQName, numPartitions)` returns `([]istructs.PartitionID, map[istructs.PartitionID]error, error)`: IDs eligible for deployment, operation-specific errors keyed by failed partition ID, and an optional fatal setup/context error. A present checkpoint, including zero, is eligible without another scan. A missing checkpoint becomes eligible only after the scan and every checkpoint write succeed. Each failed partition is omitted from the ID slice and appears once in the error map with its failed operation and wrapped underlying cause. When the fatal error is nil, the slice and map are disjoint and together cover every declared partition. An empty ID slice with a nonempty error map and a nil fatal error is a valid initialization result. For non-cluster applications it is not a bootstrap error; the cluster application's sole partition is required. A setup or cancellation error prevents deployment from that invocation, even if some attempts already completed; any collected partition errors can still be logged, while context cancellation itself is reported through the fatal error.
 
-Scans of distinct missing partitions run concurrently, with at most the `runtime.GOMAXPROCS(0)` value sampled once for that application's call in flight. Each partition reads its own PLog sequentially through the actual log end. All started attempts are joined before returning; a partition failure does not cancel healthy siblings. Applications remain initialized in bootstrap order.
+Scans of distinct missing partitions run concurrently, with at most `workerLimit` attempts in flight. The limit is sampled from `runtime.GOMAXPROCS(0)` at package initialization. Each partition reads its own PLog sequentially through the actual log end. All started attempts are joined before returning; a partition failure does not cancel healthy siblings. Applications remain initialized in bootstrap order.
 
 Bootstrap registers the app's definition and full declared partition count, invokes `InitializeCheckpoints`, logs each returned map entry once through `bootstrap.initial_recovery.error` with app QName and partition ID, and passes only the returned IDs to `DeployAppPartitions` when the fatal error is nil. It skips that call when the slice is empty. `InitializeCheckpoints` does not also log partition failures. The map is used only for bootstrap logging; there is no deployment-error registry or new `IAppPartitions` method. Excluded IDs have no `appPartitionRT`, actualizer, scheduler, or recovery worker. The existing actualizer and scheduler startup in `DeployAppPartitions` therefore cannot start asynchronous projectors (including the checkpoint projector) or jobs for excluded IDs. Healthy partitions continue to start normally.
 
@@ -257,7 +257,7 @@ References (external):
   - add technical flows for preserved routing, descriptor mismatch after partial deployment, and fatal cluster-partition initialization failure
   - use the implemented `sys.ApplyRecoveryCheckpoint` projector name and locate the storage interface in `checkpoints/interface.go`
   - document the fixed four-worker production limit, admission-before-attempt construction, and retained failures waiting for an available retry slot
-  - distinguish the generic manager's own worker join from the missing command-service join of workspace workers; track that integration gap as pending construction
+  - Document the shared partition/workspace worker wait group and command-service shutdown join, including workspace workers detached by partition reset
   - make the workspace-recovery slot pool stable by partition key so reset does not multiply admission capacity
   - identify existing test coverage and explain the real WSID used to represent the feature's logical workspace 10 through API v1
 
@@ -276,7 +276,7 @@ References (external):
 - [x] update: [apps/recovery--td.md](../../../../specs/prod/apps/recovery--td.md)
   - document the deployable-ID slice, failed-partition error map, fatal setup/context error, and bootstrap-owned per-partition error logging; retain the deployment gate and distinction between undeployed-partition not-found `500` and deployed-partition runtime recovery
   - distinguish missing-application `400` from missing-partition `500` using the existing app-registration lookup; use concise request errors with identity in structured log fields and leave `IAppPartitions` errors unchanged
-  - retain CPU-bounded concurrent PLog scans, per-application `GOMAXPROCS(0)` sampling, waiting for all attempts, and workspace-before-partition persistence
+  - Retain CPU-bounded concurrent PLog scans using the package-initialized worker limit, waiting for all attempts, and workspace-before-partition persistence
   - update the initial-failure flows and invariants to exclude failed partitions from deployment, actualizers, and schedulers; reference the deployment architecture for the unavailable cluster-partition path
 
 - [x] update: [apps/arch.md](../../../../specs/prod/apps/arch.md)
@@ -323,6 +323,7 @@ Gherkin scenario test placement:
 
 - [x] update: [command/impl_test.go](../../../../../pkg/processors/command/impl_test.go)
   - align the existing four-workspace admission test's scenario name and Given comments with the synchronized feature; retain zero-capacity coverage in generic recovery-manager tests
+  - Verify partition recovery releases borrowed engines when an attempt hook injects an error or returns after cancellation
   - verify command-service shutdown cannot finish while a canceled workspace recovery is still exiting, including workers belonging to a partition detached by reset; reuse the existing recovery gates
   - both shutdown regression cases pass after the `command/impl.go` worker-lifecycle fix, including the early-service-exit assertion
   - verify that four workspace recoveries detached by partition reset still occupy all capacity seen by the replacement partition until one finishes
@@ -330,9 +331,8 @@ Gherkin scenario test placement:
 - [x] update: [sys/it/impl_test.go](../../../../../pkg/sys/it/impl_test.go)
   - resolve the preserved profile workspace from the second-run VIT instead of referencing the first callback's out-of-scope `ws`; retain the no-reprovisioning assertion
 
-- [x] create: [checkpoints/export_test.go](../../../../../pkg/checkpoints/export_test.go)
-  - keep projector implementation access confined to test builds for external-package checkpoint tests
-  - expose `applyRecoveryCheckpoint` to external-package tests without exporting the production implementation
+- [x] update: [checkpoints/impl.go](../../../../../pkg/checkpoints/impl.go)
+  - Expose `ApplyRecoveryCheckpoint` for projector registration and external-package tests
 
 - [x] update: [coreutils/mock_test.go](../../../../../pkg/coreutils/mock_test.go)
   - verify the shared PLog-event mock returns its configured handling partition and satisfies the extended event contract
@@ -465,7 +465,7 @@ Gherkin scenario test placement:
   - directly verify generic recovery-manager startup, ready lookup, duplicate suppression, retained failures, retries, admission limits, hooks, cancellation, reset, stale-completion rejection, and shutdown clearing
   - relocate stale-completion coverage from the partition-manager integration-style test
 
-- [x] create: [testutils/storage_test.go](../../../../../pkg/checkpoints/testutils/storage_test.go)
+- [ ] create: [testutils/storage_test.go](../../../../../pkg/checkpoints/testutils/storage_test.go)
   - verify shared checkpoint-test-storage key isolation, missing versus present-zero values, last-write-wins replacement, and concurrent access
   - verify fault injection, reentrant hooks, forced setup bypassing observations, delegated backend behavior, successful-write ordering, and rejection of unexpected strict-mock calls
 
@@ -511,17 +511,16 @@ Gherkin scenario test placement:
   - assert at the beginning of the second run that the log end is unchanged, proving that config-declared child workspaces were not provisioned again
 
 - [x] update: [vit/utils.go](../../../../../pkg/vit/utils.go)
-  - retain the shared-storage two-VVM lifecycle helper and its hooks for inspecting stable storage after each VVM stops
-  - use the same `VITConfig` by default and retain the existing optional second-run configuration for upgrade tests
-  - after the first-run hook, retain `appWorkspaces` and `principals` as two explicit maps
-  - launch the second VIT with config-entity provisioning disabled, assign both retained maps, and then run common VIT initialization so principal tokens are refreshed
-  - keep the existing optional second-run configuration argument without adding a configuration callback or an aggregate type for the retained maps
+  - Delegate the two-phase adapters and stopped-storage hooks to `RestartVVM` on one stable `*VIT`, as implemented by the [VIT restart framework change](../../2611/2611041515-vit-test-restart-framework/change.md)
+  - Retain the current effective configuration by default and support an explicit second-run configuration for upgrades
+  - Preserve `appWorkspaces` and `principals` on the retained VIT and skip entity provisioning when constructing its replacement VVM
+  - Preserve adapter phase cleanup and mock-time boundaries, refresh tokens on restart, and resume shared configurations after final stopped-storage inspection
 
 - [x] update: [vit/impl.go](../../../../../pkg/vit/impl.go)
-  - extract common VIT initialization performed after VVM launch so normal creation and storage-preserving restart apply options, validate the email captor, advance test time, refresh principal tokens, and capture the initial goroutine count consistently
-  - replace the ambiguous launch-only switch with an explicit `createEntities` decision
-  - when `createEntities` is false, still apply the VVM config, register workspace templates, and launch services, but skip sign-up, workspace initialization, configured document and subject creation, and post-initialization fixture actions
-  - keep `appWorkspaces` and `principals` as explicit inputs on the restart path rather than defining a generic or vaguely named holder type
+  - Separate initial entity provisioning from server construction and acquisition initialization, retaining storage and fixture maps on the stable VIT
+  - Construct replacement servers through `startVVM`, register templates, and launch services over retained storage
+  - Refresh tokens after direct restart; retain mock-time advancement and callback initialization at acquisition and adapter phase boundaries
+  - Shut down and join interrupted launches before closing email capture, as specified by the [VIT restart design](../../../../specs/devops/dev/vit-restart--td.md)
 
 ### Descriptor partition count
 
@@ -562,15 +561,15 @@ Gherkin scenario test placement:
 
 - [x] create: [checkpoints/initial_recovery.go](../../../../../pkg/checkpoints/initial_recovery.go)
   - bootstrap-time `IInitialRecovery` implementation backed by the app-structures provider and recovery-checkpoint storage
-  - `NewInitialRecovery` constructor and `InitializeCheckpoints(ctx, appQName, numPartitions) ([]istructs.PartitionID, map[istructs.PartitionID]error, error)` operation that enumerates `0..numPartitions-1`, includes already completed partitions in the deployable IDs, and scans each missing partition from `FirstOffset` through the PLog end
+  - Implement `InitializeCheckpoints(ctx, appQName, numPartitions) ([]istructs.PartitionID, map[istructs.PartitionID]error, error)` to enumerate `0..numPartitions-1`, include already completed partitions in the deployable IDs, and scan each missing partition from `FirstOffset` through the PLog end; register `NewInitialRecovery` in [checkpoints/provide.go](../../../../../pkg/checkpoints/provide.go)
   - per-partition accumulation of the final PLog offset and latest ID-bearing WLog offset for every encountered WSID, including zero-valued checkpoints for empty or non-ID-bearing histories
-  - production worker limit sampled from `runtime.GOMAXPROCS(0)` at the start of each `InitializeCheckpoints` call
+  - Production worker limit read from package-level `workerLimit`, sampled from `runtime.GOMAXPROCS(0)` at package initialization
   - bounded worker scheduling that waits for every partition attempt and does not cancel siblings after a partition-scoped failure
   - ordered persistence of all computed workspace checkpoints before the partition completion marker; collect each checkpoint-read/scan/write failure in the returned error map with its operation and wrapped cause, omit that partition from deployable IDs, and return only application-level setup/context failures through the fatal error result
   - collect concurrent outcomes safely and do not emit partition-failure logs here; bootstrap owns logging the returned errors
 
 - [x] update: [checkpoints/types.go](../../../../../pkg/checkpoints/types.go)
-  - define `IInitialRecovery` with `InitializeCheckpoints(ctx, appQName, numPartitions) ([]istructs.PartitionID, map[istructs.PartitionID]error, error)` for injection into bootstrap
+  - Define initial-recovery dependencies and per-partition results; declare `IInitialRecovery` in [checkpoints/interface.go](../../../../../pkg/checkpoints/interface.go) for injection into bootstrap
   - document the deployable-ID slice, failed-partition error map, their disjoint/exhaustive membership when the fatal error is nil, the valid empty slice when every partition fails, and no deployment from partial results when the fatal error is non-nil
   - document checkpoint presence, rather than a nonzero offset, as the initial-recovery completion marker
   - document zero-valued partition and workspace checkpoints produced for empty and non-ID-bearing histories and identify both zero values as non-validating full-scan sentinels
@@ -578,6 +577,7 @@ Gherkin scenario test placement:
 - [x] update: [checkpoints/impl.go](../../../../../pkg/checkpoints/impl.go)
   - extract one ID-bearing-event predicate shared by initial recovery and `sys.ApplyRecoveryCheckpoint`
   - keep the asynchronous projector as the normal post-bootstrap checkpoint producer
+  - Compute `HighestNewRecordID` across new ordinary CUD rows and the recursive logged argument tree; exclude synchronized events from workspace checkpoint advancement
 
 - [x] update: [btstrp/impl.go](../../../../../pkg/btstrp/impl.go)
   - accept the service context and injected initial-recovery contract
@@ -632,6 +632,7 @@ Gherkin scenario test placement:
 
 - [x] create: [checkpoints/consts.go](../../../../../pkg/checkpoints/consts.go)
   - define the 100-event partition-checkpoint interval and `QNameApplyRecoveryCheckpoint` for `sys.ApplyRecoveryCheckpoint`
+  - Initialize the shared initial-recovery worker limit from `runtime.GOMAXPROCS(0)`
 
 - [x] update: [checkpoints/types.go](../../../../../pkg/checkpoints/types.go)
   - define a PLog checkpoint containing only `lastPLogOffset` and a WLog checkpoint containing only `wlogIDBearingOffset`
@@ -645,6 +646,7 @@ Gherkin scenario test placement:
 
 - [x] create: [checkpoints/provide.go](../../../../../pkg/checkpoints/provide.go)
   - register the single built-in asynchronous recovery-checkpoint projector with stateless resources
+  - Construct `IInitialRecovery` from application structures and recovery checkpoint storage through `NewInitialRecovery`
 
 - [x] update: [sys/sys.vsql](../../../../../pkg/sys/sys.vsql)
   - replace both built-in recovery-checkpoint declarations with one projector using `AFTER EXECUTE ON ALL COMMANDS` together with the CUD and ODoc triggers
@@ -662,8 +664,10 @@ Gherkin scenario test placement:
   - preserve the existing admission, retry, partition-resource ownership, and stale-completion behavior while completing the worker lifecycle
 
 - [x] update: [command/consts.go](../../../../../pkg/processors/command/consts.go)
-  - define shared errors for recovery-in-progress, concurrency-limit, and retained-failure outcomes
   - define the fixed per-partition workspace recovery limit `numWSRecoverers = 4`
+
+- [x] create: [command/errors.go](../../../../../pkg/processors/command/errors.go)
+  - Define shared errors for recovery in progress, concurrency saturation, retained failure, and invalid checkpoints
 
 - [x] create: [command/recovery_manager.go](../../../../../pkg/processors/command/recovery_manager.go)
   - implement the generic keyed recovery lifecycle shared by partitions and workspaces
@@ -678,11 +682,12 @@ Gherkin scenario test placement:
 
 - [x] update: [command/impl.go](../../../../../pkg/processors/command/impl.go)
   - recover the partition with one inclusive PLog tail scan and use only its final event
+  - Release the recovery workpiece around the attempt hook so injected errors and cancellation release the borrowed engine even when the recovery function is skipped
   - publish the recovered partition without starting workspace recovery from the partition-recovery goroutine
   - start workspace recovery on demand from the command pipeline's workspace stage
-  - recover the WLog end offset and latest non-singleton record ID with one inclusive log tail scan from `wlogIDBearingOffset` through the actual log end
+  - Recover the WLog end offset and maximum newly allocated ordinary record ID across CUDs and logged arguments with one inclusive log tail scan from `wlogIDBearingOffset` through the actual log end
   - initialize empty PLog and WLog offsets with `FirstOffset` and an empty WLog record-ID generator with `FirstUserRecordID`
-  - ignore singleton IDs and retain `FirstUserRecordID` when the complete WLog contains no newly allocated non-singleton CUD
+  - Ignore singleton IDs and CUD updates, retain `FirstUserRecordID` when the scan contains no ordinary ID allocation, and reject synchronized events as workspace checkpoint starts
   - let the generic manager deduplicate attempts, enforce admission, run workers and hooks, retain failures, reject stale completions, publish results, and account for worker shutdown
   - expose the lifecycle through one generic `getOrStart` operation returning only the recovered value or an error, without a separate state enum or decision object
   - inject the partition recovery function once into the partition manager instead of forwarding it through each partition lookup

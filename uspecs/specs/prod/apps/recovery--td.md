@@ -118,10 +118,11 @@ Application operations
     declared partition exactly once. An empty slice and a complete error map
     with a nil fatal error are valid. A non-nil fatal error prevents deployment
     from the returned IDs; collected partition errors can still be logged.
-  - Obtains the application's event storage and samples `runtime.GOMAXPROCS(0)`
-    once per call. A present partition checkpoint, including zero, makes that
+  - Obtains the application's event storage and uses `checkpoints.workerLimit`,
+    sampled from `runtime.GOMAXPROCS(0)` at package initialization. A present
+    partition checkpoint, including zero, makes that
     partition deployable without scanning or rewriting it. Each missing partition
-    is scheduled concurrently under the sampled CPU bound and reads its PLog
+    is scheduled concurrently under this shared CPU bound and reads its PLog
     sequentially from `FirstOffset` through the actual log end. The attempt
     retains the final PLog offset and latest ID-bearing WLog offset for every
     WSID encountered.
@@ -183,7 +184,9 @@ Application operations
     New attempts and retries share one capacity check and startup path.
   - Constructs an attempt only after admission reserves a slot. For partition
     recovery this is when the request's borrowed partition is transferred to
-    the recovery workpiece, which releases it when the attempt finishes.
+    the recovery workpiece, which releases it when the attempt finishes. The
+    release is deferred before invoking the attempt hook, including when an
+    injected error or cancellation causes the hook to skip actual recovery
   - impl: [pkg/processors/command/recovery_manager.go](../../../../pkg/processors/command/recovery_manager.go)
   - impl: [pkg/processors/command/impl.go](../../../../pkg/processors/command/impl.go)
 
@@ -344,7 +347,7 @@ relative ordering of different partition attempts is unconstrained.
 
 ```text
 [Checkpoint initial recovery]
-  -> scheduled missing partitions, bounded by runtime.GOMAXPROCS(0)
+  -> scheduled missing partitions, bounded by package-initialized workerLimit
       -> [Application events]: one or every PLog scan fails
       - collect each partition-scoped failure in the error map; write no marker for it
       - let every sibling attempt finish; wait for all scheduled attempts
@@ -847,9 +850,9 @@ sequenceDiagram
 
 ### Performance and persistence
 
-- Every application's initial recovery has at most the `runtime.GOMAXPROCS(0)`
-  value sampled for that `InitializeCheckpoints` call in flight; applications are initialized
-  in bootstrap order.
+- Every application's initial recovery has at most `checkpoints.workerLimit`
+  attempts in flight; the limit is sampled from `runtime.GOMAXPROCS(0)` at package
+  initialization and applications are initialized in bootstrap order
 - Every partition admits at most four concurrent workspace recovery attempts
   across both its current state and any state detached by reset, and never queues
   rejected work.

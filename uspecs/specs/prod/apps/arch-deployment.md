@@ -232,7 +232,7 @@ persisted descriptor.
 ```text
 [Bootstrap operator]
   -> [Checkpoint initial recovery]: InitializeCheckpoints(ctx, appQName, NumPartitions)
-      - sample worker limit = runtime.GOMAXPROCS(0) once for this application's call
+      - Use workerLimit, sampled from runtime.GOMAXPROCS(0) at package initialization
       - enumerate complete declared range 0..NumPartitions-1
       - present completion marker, including zero -> add ID to deployable IDs
       - process missing partitions with at most worker-limit attempts in flight:

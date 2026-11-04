@@ -35,6 +35,7 @@ Implement the synchronous server restart and compatibility contracts in the [tec
   - Cover replacement configuration without mutation or cache-key reassignment; stopped-storage hooks using only their storage argument; rejection of `RestartVVM` when `VIT.T` is a `*testing.B`; immediate client requests after successful synchronous restart; and distinct cleanup lifetimes for clients, subscriptions, readers, storage delays, email capture, and configuration callbacks.
   - Verify that configuration replacement preserves the active after-test callbacks and supplies new callbacks for the next acquisition. Resources created after restart close on teardown; after-test panic and `runtime.Goexit` still run remaining callbacks and release resources once.
   - Cover construction/launch errors and panics, and stopped-callback panic and `FailNow` paths, using subprocess tests where Go test termination requires isolation. Verify safe teardown, cleanup of partial runtimes, preservation of the original failure, and rejection of later acquisition of a failed shared identity.
+  - Verify that a deployment-descriptor panic during replacement launch releases leadership before returning control to the test
   - Cover both existing restart adapters with shared configurations, including second-phase cleanup/time boundaries and exactly one additional launch only when a shared `AfterSecondStop` hook requires final inspection.
 
 - [x] update: [it/impl_test.go](../../../../../pkg/sys/it/impl_test.go)
@@ -63,6 +64,7 @@ Implement the synchronous server restart and compatibility contracts in the [tec
   - Reuse the captured factory and suffix on every replacement, apply the effective configuration without mutating its options, register templates/runtime resources on each generation, and preserve established `WithInit`/`WithPostInit` behavior.
   - Update `NewVIT`, `NewVITLocalCassandra`, request entry points, token refresh, resource registration, and `TearDown` to use the current server, acquisition flag and server cleanup status. Keep direct restart time-neutral while acquisition and adapter phase transitions retain their existing mock-time behavior.
   - Run after-test callbacks only on teardown and preserve the current test's callbacks across configuration-changing restarts. Stop services before closing their email channel, report unexpected mail, and ensure failed or partially constructed runtimes are cleaned without masking the original error. Shared teardown releases the acquisition with the current runtime retained; owned teardown stops it.
+  - Install a local deferred shutdown immediately before `Launch`; if launch exits before assigning `vvmProblemCtx`, shut down and join the interrupted VVM before outer cleanup closes email capture
 
 - [x] update: [vit/impl_vitcfg.go](../../../../../pkg/vit/impl_vitcfg.go)
   - Rename `WithCleanup` to `WithAfterTest`, registering callbacks that run before resource release on teardown, independently of direct server restarts.
@@ -88,7 +90,7 @@ Implement the synchronous server restart and compatibility contracts in the [tec
 
 ## Quick start
 
-Proposed API after construction: acquire a VIT with either an owned or shared configuration using `NewVIT`, and retain the returned pointer through repeated restarts. Shared reuse requires passing the same configuration address to later acquisitions and calling `TearDown` at the end of every acquisition.
+Acquire a VIT with either an owned or shared configuration using `NewVIT`, and retain the returned pointer through repeated restarts. Shared reuse requires passing the same configuration address to later acquisitions and calling `TearDown` at the end of every acquisition.
 
 With `vit` and `ws` already prepared by a fixture that has completed provisioning and awaited its required actualizer flushes:
 
