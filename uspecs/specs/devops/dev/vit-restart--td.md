@@ -1,6 +1,6 @@
 # Feature technical design: VIT restarts with reusable configurations
 
-Proposed design for the [VIT restart framework change](../../../changes/2610221426-vit-test-restart-framework/change.md). This is a test-framework change in `pkg/vit`; production recovery and projector replay behavior remain unchanged.
+Proposed design for the [VIT restart framework change](../../../changes/archive/2611/2611041515-vit-test-restart-framework/change.md). This is a test-framework change in `pkg/vit`; production recovery and projector replay behavior remain unchanged.
 
 ## External actors
 
