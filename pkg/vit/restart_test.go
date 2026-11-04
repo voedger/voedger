@@ -367,6 +367,7 @@ func TestVITRestartFailure(t *testing.T) {
 	})
 
 	t.Run("launch panic", func(t *testing.T) {
+		require := require.New(t)
 		vit, requireFailed := startSharedVITForRestartFailure(t)
 		replacement := NewOwnVITConfig(WithApp(istructs.AppQName_test1_app1,
 			func(apis builtinapps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) builtinapps.Def {
@@ -374,7 +375,10 @@ func TestVITRestartFailure(t *testing.T) {
 				def.NumParts++ // Bootstrap rejects a changed persisted partition count.
 				return def
 			}))
-		require.Panics(t, func() { _ = vit.RestartVVM(WithNewConfig(&replacement)) })
+		require.Panics(func() { _ = vit.RestartVVM(WithNewConfig(&replacement)) })
+		leader, _, err := vit.TTLStorage.Get(1)
+		require.NoError(err)
+		require.False(leader)
 		requireFailed()
 	})
 

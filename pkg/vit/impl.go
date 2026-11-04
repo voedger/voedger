@@ -234,6 +234,11 @@ func (vit *VIT) startVVM(vitCfg *VITConfig) (preConfig *vitPreConfig, err error)
 
 	// launch the server
 	// leadership duration - ten years to avoid leadership expiration when time bumps in tests (including 1 day add on each test)
+	defer func() {
+		if vit.vvmProblemCtx == nil {
+			err = vit.VoedgerVM.Shutdown()
+		}
+	}()
 	vit.vvmProblemCtx = vit.Launch(10*365*24*60*60, vvmpkg.DefaultLeadershipAcquisitionDuration)
 	select {
 	case <-vit.vvmProblemCtx.Done():
