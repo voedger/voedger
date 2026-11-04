@@ -29,9 +29,6 @@ func ApplyRecoveryCheckpoint(storage IRecoveryCheckpointStorage) func(istructs.I
 	}
 }
 
-// Locally generated IDs exceed all previously allocated IDs. Synchronized
-// inserts can carry lower IDs, so advancing past earlier events would lose
-// coverage of the allocator's maximum. Keep scanning from the previous checkpoint.
 func canAdvanceWorkspaceCheckpoint(event istructs.IAbstractEvent) bool {
 	return IsIDBearingEvent(event) && !event.Synced()
 }

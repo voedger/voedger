@@ -120,6 +120,24 @@ Application persistence
 
 ## Scenarios
 
+### Initial values
+
+#### The first insert in a new workspace uses FirstOffset and FirstUserRecordID
+
+```text
+[Offsets bookkeeping]: workspace NextWLogOffset = FirstOffset
+[Record ID generator]: next ordinary record ID = FirstUserRecordID
+*Client
+  -> [Command processor]: insert one ordinary record into a workspace with an empty WLog; retry 503
+      -> [Record ID generator]: allocate FirstUserRecordID
+      -> [Application events]: persist the insert at WLog offset FirstOffset
+      - return 200 OK with CurrentWLogOffset=FirstOffset and new ordinary record ID=FirstUserRecordID
+```
+
+The test uses the internal command processor and seeds only the system workspace
+descriptor directly into records, keeping the logs empty. VIT workspace
+provisioning writes log events before the first user insert.
+
 ### Log offsets
 
 #### PLog offsets advance within an application partition
@@ -261,8 +279,11 @@ Technical evidence is in
 
 ### Testing
 
-- Every scenario under `## Scenarios` is traced to a `sequences: scn:` VIT test
-  in [allocation tests](../../../../pkg/sys/it/impl_sequences_test.go).
+- Scenarios under `## Scenarios` are traced to `sequences: scn:` tests in
+  [VIT allocation tests](../../../../pkg/sys/it/impl_sequences_test.go) and
+  [command-processor tests](../../../../pkg/processors/command/impl_test.go)
+- The Initial values scenario uses an empty-log command fixture; VIT covers
+  allocation in provisioned workspaces and workspace-ID allocation
 - Every failure-induced gap or write-collision edge remains technical coverage,
   not a scenario in `sequences.feature`; evidence is the linked command, event,
   ID-generator, and Sequence Trust Level tests.

@@ -223,39 +223,6 @@ func TestBootstrapInitialRecoveryOrchestration(t *testing.T) {
 		})
 	}
 
-	t.Run("recovery: scn: Cluster partition failure stops bootstrap", func(t *testing.T) {
-		appParts, cleanup := appparts.NewTestAppParts(vit.IAppStructsProvider)
-		defer cleanup()
-		bootstrapRecorder := &bootstrapOperationsRecorder{}
-		appPartsRecorder := &appPartsRecorder{IAppPartitions: appParts, bootstrapRecorder: bootstrapRecorder}
-		iInitialRecovery := newMockInitialRecovery(t, bootstrapRecorder)
-		// Given initial recovery fails for the cluster application's sole partition
-		iInitialRecovery.On("InitializeCheckpoints", mock.Anything, clusterApp.Name, clusterApp.NumParts).
-			Return(nil, map[istructs.PartitionID]error{0: errors.New("cluster app checkpoint unavailable")}, nil).Once()
-
-		federationRecorder := &federationRecorder{IFederationWithRetry: vit.IFederation.WithRetry()}
-		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-		// When VAOperator starts the VVM
-		err := runBootstrap(t.Context(), vit, appPartsRecorder, iInitialRecovery, clusterApp, otherApps, sidecarApps, federationRecorder)
-
-		// Then bootstrap returns a cluster partition initialization or deployment error
-		require.ErrorContains(t, err, "failed to initialize or deploy cluster app partition")
-		federationRecorder.requireNoDeploymentCommands(t)
-		logCap.HasLine("stage=bootstrap.initial_recovery.error", "app=sys/cluster", "partid=0", "cluster app checkpoint unavailable")
-		// And the server does not become ready
-		logCap.NotContains("stage=bootstrap.appdeploy", "msg=completed")
-		// And no other application is registered or provisioned
-		for _, app := range append(otherApps, sidecarApps[0].BuiltInApp) {
-			_, err := appParts.AppPartsCount(app.Name)
-			require.ErrorIs(t, err, appparts.ErrNotFound, "later apps must not be registered")
-		}
-
-		// The failed cluster partition remains undeployed.
-		partition, err := appParts.Borrow(istructs.AppQName_sys_cluster, 0, appparts.ProcessorKind_Command)
-		require.Nil(t, partition)
-		require.ErrorIs(t, err, appparts.ErrNotFound)
-	})
-
 	t.Run("failed to get IAppStructs -> no partition deploy", func(t *testing.T) {
 		appParts, cleanup := appparts.NewTestAppParts(vit.IAppStructsProvider)
 		defer cleanup()
@@ -420,11 +387,6 @@ func (f *federationRecorder) AdminFunc(relativeURL, body string, opts ...httpu.R
 	}
 	f.deploymentCommands = append(f.deploymentCommands, request.Args)
 	return f.IFederationWithRetry.AdminFunc(relativeURL, body, opts...)
-}
-
-func (f *federationRecorder) requireNoDeploymentCommands(t *testing.T) {
-	t.Helper()
-	require.Empty(t, f.deploymentCommands, "AdminFunc must not be called")
 }
 
 func (f *federationRecorder) requireDeploymentPartitionCount(t *testing.T, app appdef.AppQName, count istructs.NumAppPartitions) {

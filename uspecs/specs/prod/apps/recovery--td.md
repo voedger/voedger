@@ -10,22 +10,20 @@ Normal offset and identifier issuance is specified separately in
   scan start. It accelerates recovery but is not authoritative sequence state.
 - **Partition checkpoint**: `lastPLogOffset`, the latest handled PLog offset
   selected by initial recovery or the asynchronous checkpoint projector.
-- **Workspace checkpoint**: `wlogIDBearingOffset`, an ID-bearing WLog offset
-  from a locally generated event. Such an event allocates beyond all earlier
-  IDs, so scanning from it preserves coverage of the maximum allocated ID.
-  Synchronized inserts (`c.sys.Init`)may contain lower IDs and do not advance the checkpoint.
-  The offset is never treated as the WLog end.
+- **Workspace checkpoint**: `wlogIDBearingOffset`, the last seen ID-bearing WLog offset.
+  Such an event allocates beyond all earlier IDs, so scanning from it preserves
+  coverage of the maximum allocated ID. The offset is never treated as the WLog end.
 - **Zero-value initialization sentinel**: a present zero partition checkpoint
   marks an initialized empty PLog; a present zero workspace checkpoint marks an
-  encountered workspace with no locally generated ID-bearing event, including
-  sync-only history. Either zero selects one scan
-  from `FirstOffset` without validation or invalid-checkpoint logging.
+  encountered workspace with no eligible ID-bearing event. Either zero selects
+  one scan from `FirstOffset` without validation or invalid-checkpoint logging.
 - **ID-bearing event**: an event that allocates at least one new non-singleton
   record ID at or above `FirstUserRecordID`, including logged argument roots
   and descendants as well as newly created CUD rows.
 - **Initial recovery**: bootstrap-time computation and persistence of missing
-  checkpoints for every declared application partition. It does not publish
-  runtime partition or workspace state.
+  checkpoints for every declared application partition, including Workspace
+  checkpoints pointing to the latest ID-bearing WLog events,
+  or zero when none exist. It does not publish runtime partition or workspace state.
 - **Initial-recovery completion marker**: presence of a partition checkpoint,
   including a zero-valued one. Workspace checkpoints derived from a partition
   are stored before this marker.
@@ -125,10 +123,10 @@ Application operations
     partition deployable without scanning or rewriting it. Each missing partition
     is scheduled concurrently under the sampled CPU bound and reads its PLog
     sequentially from `FirstOffset` through the actual log end. The attempt
-    retains the final PLog offset and latest locally generated ID-bearing WLog offset for every
+    retains the final PLog offset and latest ID-bearing WLog offset for every
     WSID encountered.
   - It stores a workspace checkpoint for every encountered WSID, using zero when
-    no locally generated ID-bearing event was found, and stores the partition checkpoint last,
+    no eligible ID-bearing event was found, and stores the partition checkpoint last,
     using zero for an empty PLog. The partition is added to the deployable IDs
     only after all these writes succeed. A failed reconstruction writes no
     completion marker and is repeated on a later bootstrap.
@@ -166,8 +164,8 @@ Application operations
     error, even after its storage becomes healthy, and never reach runtime
     recovery, command execution, offset allocation, or event writes. A later
     bootstrap must successfully initialize the partition before it can deploy.
-  - For a deployed partition, runs partition recovery admission after
-    authentication/workspace checks and workspace recovery admission after a
+  - For a deployed partition, runs partition recovery orchestration after
+    authentication/workspace checks and workspace recovery orchestration after a
     recovered partition is available. A command does not execute on the request
     that starts either recovery.
   - impl: [pkg/processors/command/provide.go](../../../../pkg/processors/command/provide.go)
@@ -215,9 +213,9 @@ Application operations
 - `[Record ID generator]`
   - Starts at `FirstUserRecordID`; workspace recovery advances it from the maximum
     newly allocated non-singleton ID encountered in the complete WLog tail scan.
-    A later synchronized insert with a lower ID must not lower this maximum.
-    A stored checkpoint pointing at a synchronized event is unsafe and triggers
-    the existing full-scan fallback, covering checkpoints written by older producers.
+    A legacy `c.sys.Init` insert with a lower caller-supplied ID must not lower
+    this maximum. A stored checkpoint pointing at a `c.sys.Init` event triggers
+    the full-scan fallback.
   - impl: [pkg/istructsmem/idgenerator.go](../../../../pkg/istructsmem/idgenerator.go)
 
 ### Checkpointing
@@ -225,11 +223,12 @@ Application operations
 - `[Recovery checkpoint projector]`
   - The single built-in asynchronous `sys.ApplyRecoveryCheckpoint` stores a
     partition checkpoint every 100 PLog events and replaces the workspace
-    checkpoint whenever it sees a locally generated ID-bearing event. Both initial
+    checkpoint whenever it sees an ID-bearing event. Both initial
     recovery and this projector use the same checkpoint eligibility predicate.
-    Synchronized events leave the earlier checkpoint in place; a workspace with
-    only synchronized events is recovered with a full scan. No allocated IDs or
-    in-memory maximum-ID cache are added to checkpoint storage.
+    Legacy `c.sys.Init` events carry caller-supplied record IDs and leave the
+    earlier checkpoint in place. Initial recovery stores zero for a workspace
+    with only these events, and Workspace recovery scans its full WLog. No
+    allocated IDs or in-memory maximum-ID cache are added to checkpoint storage.
   - impl: [pkg/checkpoints/impl.go](../../../../pkg/checkpoints/impl.go)
   - impl: [pkg/checkpoints/provide.go](../../../../pkg/checkpoints/provide.go)
 
@@ -239,6 +238,57 @@ Application operations
     application and WSID. Recovery reads but never rewrites checkpoints.
   - decl: [pkg/checkpoints/interface.go](../../../../pkg/checkpoints/interface.go)
   - impl: [pkg/vvm/storage/impl_recoverycheckpoint.go](../../../../pkg/vvm/storage/impl_recoverycheckpoint.go)
+
+#### Recovery checkpoint storage format
+
+Partition checkpoints and Workspace checkpoints are separate entries in the
+`sys/vvm` application storage, accessed through `ISysVvmStorage`. Each entry
+consists of a binary partition key (`pKey`), clustering columns (`cCols`), and
+a UTF-8 JSON value.
+
+Key fields are concatenated in the order shown below. All integers in the key
+are unsigned and encoded in big-endian byte order. Both checkpoint types use
+the single byte `0x01` as `cCols`.
+
+Partition checkpoint `pKey` (10 bytes, prefix `pKeyPrefix_SeqStorage_Part`):
+
+```text
+[ pKeyPrefix_SeqStorage_Part(uint32(2)) | ClusterAppID (uint32) | PartitionID (uint16) ]
+          bytes 0..3                          bytes 4..7             bytes 8..9
+```
+
+Workspace checkpoint `pKey` (16 bytes, prefix `pKeyPrefix_SeqStorage_WS`):
+
+```text
+[ pKeyPrefix_SeqStorage_WS(uint32(3)) | ClusterAppID (uint32) | WSID (uint64) ]
+          bytes 0..3                         bytes 4..7          bytes 8..15
+```
+
+The numeric prefixes retain the existing sequence-storage namespaces. Workspace
+keys identify the application and WSID; the containing PartitionID is not part
+of the Workspace checkpoint key.
+
+| Checkpoint | JSON value example           | Offset meaning                                                    |
+|------------|------------------------------|-------------------------------------------------------------------|
+| Partition  | `{"lastPLogOffset":42}`      | Inclusive PLog scan start                                         |
+| Workspace  | `{"wlogIDBearingOffset":43}` | Inclusive WLog scan start at an ID-bearing event |
+
+Writers store exactly the indicated field as an unsigned 64-bit decimal JSON
+number. Readers require that field and ignore additional fields. Malformed
+JSON, a missing required field, or a value that cannot be decoded as an
+`istructs.Offset` returns a checkpoint-storage read error.
+
+A missing entry returns `exists=false`. A stored offset of zero returns
+`exists=true` and selects a full scan from `FirstOffset` without checkpoint
+validation. Partition checkpoint presence, including zero, also marks Initial
+recovery complete. Writes use unconditional `Put`, so the last write replaces
+the previous value even when its offset is lower.
+
+The layout is defined by
+[storage constants](../../../../pkg/vvm/storage/consts.go) and
+[checkpoint encoding](../../../../pkg/vvm/storage/impl_recoverycheckpoint.go).
+[Storage tests](../../../../pkg/vvm/storage/impl_recoverycheckpoint_test.go)
+verify key isolation, JSON values, read errors, and replacement behavior.
 
 ### Application operations
 
@@ -290,21 +340,7 @@ Application operations
 Workspace writes for one partition complete before its partition marker. The
 relative ordering of different partition attempts is unconstrained.
 
-#### Initial recovery initializes checkpoints but not runtime sequence state
-
-```text
-[Bootstrap operator]
-  -> [Checkpoint initial recovery]: persist missing checkpoints only
-  -> [App partitions engine]: deploy partition workers; server ready
-*Client
-  -> [Command processor]: first command
-      -> [Partition recovery manager]: start recovery -> 503
-  -> [Command processor]: retry after partition recovery
-      -> [Workspace recovery manager]: start lazy workspace recovery -> 503
-  -> [Command processor]: retry after workspace recovery -> command succeeds
-```
-
-#### Initial recovery failures do not prevent server readiness
+#### Initial recovery failures are logged while the server becomes ready
 
 ```text
 [Checkpoint initial recovery]
@@ -317,13 +353,23 @@ relative ordering of different partition attempts is unconstrained.
       -> [App partitions engine]: deploy only returned IDs; skip call if empty
       - failed IDs have no runtime partitions, actualizers, or schedulers
       - server ready even if every partition was excluded
+```
+
+#### Commands fail on a failed partition and succeed with the correct sequence numbers on initialized partitions
+
+```text
+[Bootstrap operator]
+  -> [Checkpoint initial recovery]: partition 1 PLog scan fails; recover partitions 0 and 2
+  -> [App partitions engine]: deploy partitions 0 and 2; server ready
+      - start configured actualizers and schedulers only for partitions 0 and 2
 *Client
-  -> [Command processor]: command for excluded partition
+  -> [Command processor]: insert into Orders (partition 0) and Inventory (partition 2); retry 503 during runtime recovery
+      - recover each workspace's own WLog offset and last ordinary record ID
+      - return 200: Orders offset=8, record ID=200004; Inventory offset=21, record ID=200010
+  -> [Command processor]: insert into Billing (excluded partition 1)
       -> [App partitions engine]: Borrow -> existing ErrNotFound
       - return 500: partition not found
-  -> [Command processor]: repeat command after storage becomes healthy
-      -> [App partitions engine]: Borrow -> same ErrNotFound -> 500
-      - no runtime recovery, deployment, or event writes
+      - partition 1 remains undeployed with no asynchronous projectors or scheduled jobs
 ```
 
 If setup fails before partition scheduling or the bootstrap context is canceled,
@@ -332,7 +378,7 @@ application's partitions. Readiness is otherwise independent of how many
 scheduled non-cluster application partition attempts failed, including all of
 them. Failure of the cluster application's sole partition stops bootstrap.
 
-#### Checkpoint failures preserve the descriptor partition count
+#### The router receives the full partition count from the application descriptor despite initial recovery failures
 
 ```text
 [Bootstrap operator]
@@ -342,7 +388,9 @@ them. Failure of the cluster application's sole partition stops bootstrap.
   -> [App partitions engine]: deploy eligible IDs [0, 2], or skip deployment
   - preserve descriptor and advertised partition count 3
 *Client
-  -> [Command processor]: routed command for workspace 10, using 10 % 3 = 1
+  -> [Router]: compute the request partition using the application descriptor's NumPartitions=3
+      - workspace 10 maps to partition 10 % 3 = 1 regardless of checkpoint failures
+      -> [Command processor]: command for workspace 10 in partition 1
       -> [App partitions engine]: Borrow(partition 1) -> ErrNotFound
       - return 500: partition not found
       - do not reroute using the successful count or append events in any partition
@@ -354,21 +402,21 @@ compatibility check remains independent of the runtime deployment set. The
 source-of-count contract and overwrite risk are specified in
 [Preserve declared partition count after partial initialization](./arch-deployment.md#preserve-declared-partition-count-after-partial-initialization).
 
-#### A changed descriptor partition count is rejected after partial deployment
+#### A changed app descriptor partition count causes panic
 
 ```text
-[Bootstrap operator]
-  - previous run: descriptor count 3, runtime partitions [0, 2]
-  - configured descriptor on restart: count 2
-  - c.cluster.DeployApp validates the configured descriptor
-      - persisted count 3 differs -> existing 409 Conflict
-  - stop bootstrap; preserve persisted count and workspace placement
+[VIT.RestartVVM]: WithNewConfig declares NumPartitions=2; retain existing storage
+  -> [Bootstrap operator]: c.cluster.DeployApp validates the configured descriptor
+      - persisted count 3 differs -> existing 409 Conflict; VVM launch panics
+  - preserve the complete persisted descriptor; do not start the application
 ```
+
+The VIT test restarts a fully deployed application using a replacement configuration.
 
 The descriptor-validation implementation and components belong to
 [Reject incompatible redeployment](./arch-deployment.md#reject-incompatible-redeployment).
 
-#### Cluster partition failure stops bootstrap
+#### VVM launch fails with an error on failure of the initial recovery of a partition of the Cluster app
 
 ```text
 [Bootstrap operator]
@@ -378,130 +426,243 @@ The descriptor-validation implementation and components belong to
   - server does not become ready
 ```
 
-#### Healthy partitions continue while a failed partition remains undeployed
-
-```text
-[Bootstrap operator]
-  -> [Checkpoint initial recovery]: partition 1 fails; return [0, 2], {1: error}, nil
-  - log partition 1 error once with app QName and partition ID
-  -> [App partitions engine]: DeployAppPartitions(test1/app1, [0, 2])
-      - start configured actualizers and schedulers only for partitions 0 and 2
-*Client
-  -> [Command processor]: commands for deployed partitions 0 and 2
-      - follow existing runtime recovery scenarios; later retries succeed
-  -> [Command processor]: command for partition 1
-      -> [App partitions engine]: Borrow -> ErrNotFound -> 500
-      - partition 1 still has no asynchronous projectors or scheduled jobs
-```
+The test provides a fresh VVM with a PLog read failure enabled for `sys/cluster`
+partition 0. Its first `VoedgerVM.Launch` returns a closed problem context.
+`Shutdown` exposes the cluster partition error and `ErrVVMServicesLaunch`.
 
 #### A later bootstrap deploys a previously failed partition after successful initial recovery
 
 ```text
-[Bootstrap operator]
-  - restart after partition 1 storage becomes healthy
-  -> [App partitions engine]: register test1/app1 in the new server run
-  -> [Checkpoint initial recovery]: InitializeCheckpoints(test1/app1, 3)
-      -> [(Recovery checkpoint storage)]: partitions 0 and 2 present -> preserve
-      -> [Application events]: scan partition 1 from FirstOffset through PLog end
-      -> [(Recovery checkpoint storage)]: workspace checkpoints, then partition 1 marker
-      - return [0, 1, 2], empty error map, nil
-  -> [App partitions engine]: deploy partitions 0..2; server ready
+[Previous VVM start]
+  - partition 1 initial recovery failed; partition 1 was not deployed
+[Next VVM start]: partition 1 storage is healthy
+  -> [Checkpoint initial recovery]: retry partition 1 without a completion marker
+      - initial recovery succeeds; include partition 1 in deployable IDs
+  -> [App partitions engine]: deploy partition 1
 *Client
-  -> [Command processor]: command for deployed partition 1
-      - follow existing runtime recovery scenarios; later retry succeeds
+  -> [Command processor]: insert an ordinary record into Billing; retry 503 during runtime recovery
+      - recover Billing's WLog offset 14 and last ordinary record ID 200005
+      - return 200 with CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
-### Partition checkpoint
+### Partition recovery orchestration
 
-#### Partition recovery starts from a checkpoint
+#### At least the first two command requests to a partition and workspace return 503 after initial recovery
+
+```text
+[Bootstrap operator]
+  -> [Checkpoint initial recovery]: persist missing checkpoints only
+  -> [App partitions engine]: deploy partition workers; server ready
+*Client
+  -> [Command processor]: first command, without retries -> 503
+      -> [Partition recovery manager]: start recovery
+  -> [Command processor]: second command, without retries -> 503
+      - partition still recovering, or start lazy workspace recovery
+  -> [Command processor]: third command, retry 503 -> 200 after both recoveries complete
+```
+
+Initial recovery creates checkpoints without publishing runtime recovery state.
+The second request receives 503 whether partition recovery is still running or
+has completed and workspace recovery starts. VIT verifies the HTTP responses;
+the internal command-processor test also verifies the partition and workspace
+lifecycle logs and their order.
+
+#### A query does not trigger partition recovery
 
 ```text
 *Client
-  -> [Command processor]: command
+  -> [Query processor]: first query to an existing workspace, without retries
+      -> [Application records]: read persisted query data -> 200
+      - start no partition or workspace recovery
+```
+
+#### Requests to a partition being recovered share one recovery
+
+```text
+*Client
+  -> [Command processor]: request 1 -> start partition recovery -> 503
+  -> [Command processor]: concurrent requests 2..6 while recovery is blocked -> 503
+      - retain one attempt; log cp.error with partition 1: recovery is in progress
+  -> [Command processor]: request 7 after partition recovery; retry 503 for workspace recovery -> 200
+      - CurrentWLogOffset=2; new record IDs=200001..200003
+      - exactly one cp.partition_recovery.start for partition 1
+```
+
+#### A command succeeds in another partition while partition recovery is running
+
+```text
+[Partition recovery manager]: partition 1 recovery is blocked
+*Client
+  -> [Command processor]: insert into workspace 2 in partition 0; retry 503
+      -> [Partition recovery manager]: recover partition 0 independently
+      -> [Workspace recovery manager]: recover workspace 2
+      - return 200 with CurrentWLogOffset=2 and new ordinary record ID=FirstUserRecordID
+      - partition 1 recovery has not completed
+```
+
+#### Canceling the initiating request does not stop partition recovery
+
+```text
+*Client
+  -> [Command processor]: command starts partition 1 recovery -> 503
+  - cancel the initiating request
+[Partition recovery manager]: continue with the command service's context
+  - complete the original attempt
+*Client
+  -> [Command processor]: insert three ordinary records; retry 503 for workspace recovery -> 200
+      - CurrentWLogOffset=2; new record IDs=200001..200003
+      - exactly one cp.partition_recovery.start for partition 1
+```
+
+#### An unauthenticated command does not trigger partition recovery
+
+```text
+*Client
+  -> [Command processor]: command with invalid token, without retries
+      -> [Authenticator]: reject -> 401
+      - start no partition or workspace recovery
+```
+
+#### The next request reports a failed partition recovery and starts a new attempt
+
+```text
+*Client
+  -> [Command processor]: request 1 -> start partition recovery -> 503
+[Partition recovery manager]: retain PLog read failed
+*Client
+  -> [Command processor]: request 2 -> report retained failure and start one new attempt -> 500
+  -> [Command processor]: request 3 while the new attempt is blocked -> 503
+      - start no additional attempt
+  -> [Command processor]: request 4 after the new attempt completes; retry 503 for workspace recovery -> 200
+      - CurrentWLogOffset=2; new record IDs=200001..200003
+```
+
+The existing `TestPartitionRecovery` tests cover these command scenarios with
+deterministic recovery gates and injected failures. They retain the concurrent
+requests, lifecycle logs, cancellation, and successful command checks. Production
+partition recovery has no concurrency limit; the synthetic zero-capacity and
+service-shutdown tests remain internal checks. Workspace recovery continuing
+across a partition reset remains under Workspace recovery orchestration.
+
+### Partition checkpoint
+
+#### Partition recovery starts from a checkpoint in basic usage
+
+```text
+*Client
+  -> [Command processor]: insert an ordinary record into recovery-test-workspace; retry 503 during runtime recovery
       -> [Partition recovery manager]: start -> 503
           -> [(Recovery checkpoint storage)]: absent, zero, or valid lastPLogOffset
           -> [Application events]: ReadPLog(checkpoint or FirstOffset, through log end)
-          -> [Offsets bookkeeping]: nextPLogOffset = actual log end + 1
+          -> [Offsets bookkeeping]: nextPLogOffset = 51 after PLog end 50
           -> [Application records]: reapply final event when present
-  -> [Command processor]: later request enters workspace recovery
+  -> [Command processor]: retry enters workspace recovery -> 503
+      -> [Workspace recovery manager]: recover recovery-test-workspace
+          -> [Offsets bookkeeping]: next WLog offset = 15 after WLog end 14
+          -> [Record ID generator]: next ordinary record ID = 200006 after 200005
+  -> [Command processor]: retry inserts the record
+      - return 200 OK with CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
 Absent and zero checkpoints select `FirstOffset` directly. A nonzero checkpoint
 must equal the first returned event offset.
 
-#### Invalid partition checkpoint falls back to the PLog beginning
+#### Invalid partition checkpoint causes PLog read out from beginning
 
 ```text
 [Partition recovery manager]
   -> [(Recovery checkpoint storage)]: nonzero lastPLogOffset
   -> [Application events]: inclusive log tail scan returns no callback or a different first offset
+      - checkpoint is beyond the PLog end, before its first available event,
+        or points to a missing event between available events
   - log cp.partition_recovery.checkpoint.invalid
   -> [Application events]: one fallback ReadPLog(FirstOffset, through log end)
-  -> [Offsets bookkeeping]: restore nextPLogOffset from fallback's actual log end
+  -> [Offsets bookkeeping]: nextPLogOffset = actual log end + 1
+*Client
+  -> [Command processor]: insert into recovery-test-workspace; retry 503 during runtime recovery
+      -> [Workspace recovery manager]: recover workspace offsets and ordinary record IDs
+      - return 200 OK with CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
-#### Empty PLog recovery starts at FirstOffset
+These cases are tested through commands after a VVM restart.
+
+#### Empty PLog recovery preserves initial sequence numbers
 
 ```text
 [Partition recovery manager]
-  -> [(Recovery checkpoint storage)]: absent or zero checkpoint
+  -> [(Recovery checkpoint storage)]: absent, zero, or nonzero checkpoint
+      - absent or zero: read directly from FirstOffset
+      - nonzero: read checkpoint -> empty; log cp.partition_recovery.checkpoint.invalid
+        and retry from FirstOffset
   -> [Application events]: ReadPLog(FirstOffset, through log end) -> empty
   -> [Offsets bookkeeping]: nextPLogOffset = FirstOffset
-  - publish partition without reapplication or invalid-checkpoint log
+  - publish partition without reapplication
+*Client
+  -> [Command processor]: insert an ordinary record; retry 503 during runtime recovery
+      -> [Workspace recovery manager]: recover the empty WLog
+          -> [Offsets bookkeeping]: next WLog offset = 1
+          -> [Record ID generator]: next ordinary record ID = 200001
+      - return 200 OK with CurrentWLogOffset=1 and new ordinary record ID=200001
 ```
 
-#### Invalid partition checkpoint over an empty PLog
+Tests send insert commands through the internal command processor and verify
+the returned status, offset, and record ID. The fixture seeds only the system
+workspace descriptor directly into records, keeping both logs empty; VIT
+workspace provisioning would write log events.
 
-```text
-[Partition recovery manager]
-  -> [Application events]: read nonzero checkpoint -> no callback
-  - log invalid checkpoint
-  -> [Application events]: fallback from FirstOffset -> empty
-  -> [Offsets bookkeeping]: nextPLogOffset = FirstOffset
-```
+An empty WLog has no corresponding workspace events in the PLog, so Initial
+recovery does not encounter that workspace and does not create its checkpoint.
+The absent-checkpoint test also verifies that no workspace checkpoint is stored
+and no invalid workspace-checkpoint error is logged after recovery. Initial
+allocation values are specified in [Sequence allocation](./sequences.feature).
 
 ### Workspace checkpoint
 
-#### Workspace recovery starts from a checkpoint
+#### Workspace recovery starts from a checkpoint in basic usage
 
 ```text
 *Client
-  -> [Command processor]: command after partition recovery
+  -> [Command processor]: insert after partition recovery; retry 503 during workspace recovery
       -> [Workspace recovery manager]: reserve slot; start -> 503
           -> [(Recovery checkpoint storage)]: absent, zero, or valid wlogIDBearingOffset
           -> [Application events]: ReadWLog(checkpoint or FirstOffset, through log end)
+              - when the ID-bearing checkpoint is at the WLog end, read only that event
           -> [Offsets bookkeeping]: NextWLogOffset = actual log end + 1
           -> [Record ID generator]: advance from maximum allocated ID found by the log tail scan
-  -> [Command processor]: later retry succeeds with following offset and record ID
+  -> [Command processor]: retry returns 200 OK with CurrentWLogOffset=lastWLogOffset+1
+      - WLog end 14 -> CurrentWLogOffset=15; WLog end 10 -> CurrentWLogOffset=11
+      - new ordinary record ID=200006 in every case
 ```
 
-#### Workspace recovery starts from an ID-bearing checkpoint at the WLog end
+#### Workspace recovery preserves sequence numbers after a mixed non-ID-bearing WLog tail
 
 ```text
 [Workspace recovery manager]
-  -> [Application events]: ReadWLog(ID-bearing checkpoint at log end, through log end)
-      - first and final callback are the checkpoint event
-  -> [Offsets bookkeeping]: NextWLogOffset = checkpoint offset + 1
-  -> [Record ID generator]: next ID = greatest new ordinary ID + 1
-```
-
-#### Non-ID-bearing log tail events advance only the WLog offset
-
-```text
-[Workspace recovery manager]
-  -> [Application events]: scan from ID-bearing checkpoint through CUD-free,
-                           singleton-only, or existing-record-update events at log end
-  -> [Offsets bookkeeping]: advance from the actual final event
-  -> [Record ID generator]: advance only from the earlier ID-bearing event
+  -> [Application events]: ReadWLog(10, through log end)
+      - offset 10: ID-bearing event; greatest allocated record ID is 200005
+      - offsets 11 and 12: non-CUD events
+      - offset 13: singleton insert; no ordinary ID allocated
+      - offset 14: update of record 200002; no new ID allocated
+  -> [Offsets bookkeeping]: next WLog offset = 15
+  -> [Record ID generator]: next ordinary record ID = 200006
+*Client
+  -> [Command processor]: insert one ordinary record; retry 503 during workspace recovery
+      - return 200 OK with CurrentWLogOffset=15 and NewIDs={"1":200006}
 ```
 
 #### Workspace without user record IDs starts allocation at FirstUserRecordID
 
 ```text
 [Workspace recovery manager]
-  -> [Application events]: complete WLog scan finds no ID-bearing event
-  -> [Offsets bookkeeping]: NextWLogOffset = actual log end + 1
+  -> [(Recovery checkpoint storage)]: wlogIDBearingOffset = FirstOffset (1)
+  -> [Application events]: checkpoint event is non-ID-bearing
+  - log cp.workspace_recovery.checkpoint.invalid
+  -> [Application events]: rescan from FirstOffset; offsets 1 through 3 have no ID-bearing event
+  -> [Offsets bookkeeping]: NextWLogOffset = 4
   -> [Record ID generator]: retain FirstUserRecordID
+*Client
+  -> [Command processor]: insert one ordinary record; retry 503 during workspace recovery
+      - return 200 OK with CurrentWLogOffset=4 and new ordinary record ID=FirstUserRecordID (200001)
 ```
 
 #### Invalid workspace checkpoint falls back to the WLog beginning
@@ -513,19 +674,12 @@ must equal the first returned event offset.
   - log cp.workspace_recovery.checkpoint.invalid
   -> [Application events]: one fallback ReadWLog(FirstOffset, through log end)
   -> [Offsets bookkeeping] + [Record ID generator]: restore from complete fallback
+*Client
+  -> [Command processor]: insert one ordinary record; retry 503 during workspace recovery
+      - return 200 OK with CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
 ### Empty WLog
-
-#### Empty WLog recovery starts at FirstOffset and FirstUserRecordID
-
-```text
-[Workspace recovery manager]
-  -> [(Recovery checkpoint storage)]: absent or zero checkpoint
-  -> [Application events]: ReadWLog(FirstOffset, through log end) -> empty
-  -> [Offsets bookkeeping]: NextWLogOffset = FirstOffset
-  -> [Record ID generator]: next ID = FirstUserRecordID
-```
 
 #### Invalid workspace checkpoint over an empty WLog
 
@@ -536,19 +690,29 @@ must equal the first returned event offset.
   -> [Application events]: fallback from FirstOffset -> empty
   -> [Offsets bookkeeping]: NextWLogOffset = FirstOffset
   -> [Record ID generator]: next ID = FirstUserRecordID
+*Client
+  -> [Command processor]: insert one ordinary record; retry 503 during workspace recovery
+      - return 200 OK with CurrentWLogOffset=FirstOffset and new ordinary record ID=FirstUserRecordID
 ```
 
-### Workspace recovery admission
+### Workspace recovery orchestration
 
-#### Duplicate requests share one workspace recovery
+#### A new request to a workspace being recovered does not start another recovery
 
 ```text
 *Client
-  -> [Workspace recovery manager]: first request; reserve slot and start -> 503
-  -> [Workspace recovery manager]: duplicate request; share attempt -> 503
+  -> [Command processor]: first ordinary record insert, without retries -> 503
+      -> [Workspace recovery manager]: reserve slot and start recovery
+  -> [Command processor]: second insert while recovery is blocked, without retries -> 503
+      -> [Workspace recovery manager]: share the running attempt
   - exactly one workspace-recovery start is logged
-  -> [Workspace recovery manager]: later request after completion -> recovered value
+  -> [Command processor]: third insert after recovery completes, without retries -> 200 OK
+      - CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
+
+The test uses internal command-processor recovery gates to hold the first
+recovery open through the second request. VIT has no direct recovery gate;
+testing this through VIT would require a custom storage wrapper to delay reads.
 
 #### Recovery limit rejects without queueing and permits a later retry
 
@@ -560,9 +724,11 @@ must equal the first returned event offset.
       - create no state and queue no worker for workspace 43
   -> [Workspace recovery manager]: after workspace 42 releases slot,
                                    a new request starts workspace 43 -> 503
+  -> [Command processor]: insert after workspace 43 recovery completes -> 200 OK
+      - CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
-#### Partition reset preserves workspace recovery capacity
+#### A partition reset does not stop ongoing workspace recoveries
 
 ```text
 *Client
@@ -570,13 +736,16 @@ must equal the first returned event offset.
   -> [Command processor]: command failure resets partition state
   -> [Partition recovery manager]: recover replacement partition
       - reuse the partition key's existing workspace-recovery slot pool
+      - keep the original workspace recovery workers running
   -> [Workspace recovery manager]: workspace 11; old-generation workers still occupy all slots -> 503
       - create no state and queue no worker for workspace 11
   -> [Workspace recovery manager]: one detached worker finishes and releases its shared slot
   -> [Workspace recovery manager]: workspace 11; reserve returned slot and start -> 503
+  -> [Workspace recovery manager]: all four original workspace recoveries complete successfully
+      - each workspace has exactly one recovery attempt
 ```
 
-#### Failed workspace recovery is reported and retried once
+#### The next request reports a failed workspace recovery and starts a new attempt
 
 ```text
 *Client
@@ -585,7 +754,8 @@ must equal the first returned event offset.
   -> [Workspace recovery manager]: next request gets retained failure;
                                    reserve slot and start one retry -> 500
   -> [Workspace recovery manager]: request while retry runs -> 503
-  -> [Workspace recovery manager]: request after completion -> recovered value
+  -> [Command processor]: insert after the new attempt completes -> 200 OK
+      - CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
 ## Sequence diagrams
@@ -694,9 +864,12 @@ sequenceDiagram
 ### Testing
 
 - Feature scenarios are traced to `recovery: scn:` tests in
-  [VIT recovery tests](../../../../pkg/sys/it/impl_recovery_test.go), with mocked
-  command-processor coverage only for empty logs and lifecycle control that VIT
-  cannot construct deterministically.
+  [VIT recovery tests](../../../../pkg/sys/it/impl_recovery_test.go) and
+  [command-processor tests](../../../../pkg/processors/command/impl_test.go)
+- VIT covers readiness responses and query behavior
+- Internal command tests preserve partition and workspace orchestration
+  coverage using deterministic recovery gates and injected failures
+- Empty-log command fixtures seed only system workspace records
 - The empty-partition case in "Missing checkpoints are computed for every
   declared partition" is covered by
   [initial-recovery tests](../../../../pkg/checkpoints/initial_recovery_test.go).

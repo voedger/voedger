@@ -3,6 +3,13 @@ Feature: Sequence allocation
   VAOperator issues successful commands and creates workspaces using the next
   offset or identifier within each value's defined scope.
 
+  Rule: Initial values
+
+    Scenario: The first insert in a new workspace uses FirstOffset and FirstUserRecordID
+      Given a new workspace has an empty WLog
+      When VAOperator submits an ordinary record insert into the new workspace, retrying "503 Service Unavailable" responses
+      Then the insert returns "200 OK" with CurrentWLogOffset FirstOffset and new ordinary record ID FirstUserRecordID
+
   Rule: Log offsets
 
     Scenario: PLog offsets advance within an application partition

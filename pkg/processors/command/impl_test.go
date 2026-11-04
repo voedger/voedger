@@ -367,28 +367,50 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 }
 
 func TestPartitionRecovery(t *testing.T) {
-	t.Run("logs recovery lifecycle and starts workspace recovery after partition recovery", func(t *testing.T) {
+	t.Run("recovery: scn: At least the first two command requests to a partition and workspace return 503 after initial recovery", func(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		// Given the server has become ready
 		app := setUpRecoveryTestApp(t)
 		defer tearDown(app)
 		partitionKey := partitionManagerKeyForWSID(1)
 		workspaceKey := workspaceManagerKey(1)
 		gate := app.recoveryTestControl.workspaces.blockNext(workspaceKey)
+		release := sync.OnceFunc(func() { close(gate) })
+		defer release()
 
+		// When VAOperator submits command requests to a workspace in partition 1 in this order:
+		// | request | timing               | retry policy            |
+		// | 1       | after readiness      | none                    |
 		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(1, app))
 		require.NoError(err)
+		// Then the responses are:
+		// | request | status                  |
+		// | 1       | 503 Service Unavailable |
 		require.Equal(http.StatusServiceUnavailable, status)
 		require.NoError(app.recoveryTestControl.partitions.wait(app.ctx, partitionKey))
 		require.Equal(0, app.recoveryTestControl.workspaces.startCount(workspaceKey))
 
+		// When VAOperator submits command requests to a workspace in partition 1 in this order:
+		// | request | timing               | retry policy            |
+		// | 2       | after response 1     | none                    |
 		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(1, app))
 		require.NoError(err)
+		// Then the responses are:
+		// | request | status                  |
+		// | 2       | 503 Service Unavailable |
 		require.Equal(http.StatusServiceUnavailable, status)
 		require.Equal(1, app.recoveryTestControl.workspaces.startCount(workspaceKey))
 
-		close(gate)
+		release()
 		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, workspaceKey))
+		// When VAOperator submits command requests to a workspace in partition 1 in this order:
+		// | request | timing               | retry policy            |
+		// | 3       | after response 2     | 503 Service Unavailable |
+		// Then the responses are:
+		// | request | status                  |
+		// | 3       | 200 OK                  |
+		sendCUD_3Inserts(t, 1, app)
 
 		logCap.HasLine(
 			"stage=cp.partition_recovery.start",
@@ -440,53 +462,72 @@ func TestPartitionRecovery(t *testing.T) {
 		manager.shutdown()
 	})
 
-	t.Run("authentication precedes recovery", func(t *testing.T) {
-		// Send an invalid token to a partition that has not been recovered yet. A 401 response and
-		// zero scheduled recoveries prove that authentication rejects the request before recovery
-		// state is inspected or a recovery worker is started.
+	t.Run("recovery: scn: An unauthenticated command does not trigger partition recovery", func(t *testing.T) {
 		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		// Given partition 1 is deployed but unrecovered
 		app := setUpRecoveryTestApp(t)
 		defer tearDown(app)
 
 		request := newCUD_3Inserts_Request(1, app)
 		request.Header = map[string]string{httpu.Authorization: "Bearer invalid-token"}
+		// When VAOperator submits a command to workspace 1 with an invalid token without automatic retries
 		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, request)
 		require.NoError(err)
+		// Then response status is "401 Unauthorized"
 		require.Equal(http.StatusUnauthorized, status)
+		// And no partition or workspace recovery is started by the command
 		require.Equal(0, app.recoveryTestControl.partitions.startCount(partitionManagerKeyForWSID(1)))
+		require.Equal(0, app.recoveryTestControl.workspaces.startCount(workspaceManagerKey(1)))
+		logCap.NotContains("stage=cp.partition_recovery.start", "stage=cp.workspace_recovery.start")
 	})
 
-	t.Run("another partition remains available", func(t *testing.T) {
-		// Block recovery of WSID 1, then execute a command in WSID 2, which maps to another partition.
-		// Successful recovery and command execution for WSID 2 while WSID 1 remains blocked prove
-		// that recovery work is asynchronous and isolated by partition key.
+	t.Run("recovery: scn: A command succeeds in another partition while partition recovery is running", func(t *testing.T) {
 		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		// And workspace 2 in partition 0 has only its initialization event at WLog offset 1 and no user record IDs
 		app := setUpRecoveryTestApp(t)
 		defer tearDown(app)
 
 		recoveringKey := partitionManagerKeyForWSID(1)
 		gate := app.recoveryTestControl.partitions.blockNext(recoveringKey)
+		release := sync.OnceFunc(func() { close(gate) })
+		defer release()
+		// Given partition 1 recovery is in progress
 		sendCUD_3Inserts_WithSender(t, 1, app, app.rawRequestSender, http.StatusServiceUnavailable)
 
-		sendCUD_3Inserts(t, 2, app)
+		// When VAOperator inserts an ordinary record into workspace 2, retrying "503 Service Unavailable" responses
+		response := sendCUDWithBody(t, 2, app, `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`)
+		// Then the insert returns "200 OK" with CurrentWLogOffset 2 and new ordinary record ID FirstUserRecordID
+		requireIssuedNumbers(t, response, 2, istructs.FirstUserRecordID)
+		require.Len(response["NewIDs"], 1)
+		// And partition 1 recovery has not completed when the insert succeeds
+		require.Equal(0, countCapturedLogLines(logCap, "stage=cp.partition_recovery.complete", "partid=1"))
 		require.Equal(1, app.recoveryTestControl.partitions.startCount(recoveringKey))
 
-		close(gate)
+		release()
 		require.NoError(app.recoveryTestControl.partitions.wait(app.ctx, recoveringKey))
 		sendCUD_3Inserts(t, 1, app)
 	})
 
-	t.Run("one worker per recovering partition", func(t *testing.T) {
-		// Block the first recovery worker and issue several requests for the same partition while it
-		// is recovering. Every request must receive 503, and the unchanged start count proves that
-		// the manager deduplicates recovery work instead of starting one worker per request.
+	t.Run("recovery: scn: Requests to a partition being recovered share one recovery", func(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		// Given partition 1 is deployed but unrecovered
+		// And workspace 1 has only its initialization event at WLog offset 1 and no user record IDs
 		app := setUpRecoveryTestApp(t)
 		defer tearDown(app)
 
 		key := partitionManagerKeyForWSID(1)
 		gate := app.recoveryTestControl.partitions.blockNext(key)
+		release := sync.OnceFunc(func() { close(gate) })
+		defer release()
+		// When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
+		// | request     | timing                                   | retry policy            |
+		// | 1           | before partition recovery starts         | none                    |
+		// Then the responses are:
+		// | request     | status                  |
+		// | 1 through 6 | 503 Service Unavailable |
 		sendCUD_3Inserts_WithSender(t, 1, app, app.rawRequestSender, http.StatusServiceUnavailable)
 
 		const concurrentRequests = 5
@@ -495,6 +536,9 @@ func TestPartitionRecovery(t *testing.T) {
 			err    error
 		}
 		results := make(chan result, concurrentRequests)
+		// When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
+		// | request     | timing                                   | retry policy            |
+		// | 2 through 6 | concurrently while recovery is running   | none                    |
 		for range concurrentRequests {
 			go func() {
 				status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(1, app))
@@ -504,38 +548,62 @@ func TestPartitionRecovery(t *testing.T) {
 		for range concurrentRequests {
 			result := <-results
 			require.NoError(result.err)
+			// Then the responses are:
+			// | request     | status                  |
+			// | 1 through 6 | 503 Service Unavailable |
 			require.Equal(http.StatusServiceUnavailable, result.status)
 		}
 		require.Equal(1, app.recoveryTestControl.partitions.startCount(key))
-		logCap.HasLine("partition 1: recovery is in progress")
+		// And error stage "cp.error" logs message "partition 1: recovery is in progress"
+		logCap.HasLine("level=ERROR", "stage=cp.error", "partition 1: recovery is in progress")
 
-		close(gate)
+		release()
 		require.NoError(app.recoveryTestControl.partitions.wait(app.ctx, key))
-		sendCUD_3Inserts(t, 1, app)
+		// When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
+		// | request     | timing                                   | retry policy            |
+		// | 7           | after partition recovery completes       | 503 Service Unavailable |
+		// Then the responses are:
+		// | request     | status                  |
+		// | 7           | 200 OK                  |
+		response := sendCUD_3Inserts(t, 1, app)
+		// And response 7 contains CurrentWLogOffset 2 and new record IDs 200001 through 200003
+		require.Equal(float64(2), response["CurrentWLogOffset"])
+		require.Equal(map[string]interface{}{"1": float64(200001), "2": float64(200002), "3": float64(200003)}, response["NewIDs"])
+		// And exactly one partition-recovery start is logged for partition 1
+		require.Equal(1, countCapturedLogLines(logCap, "stage=cp.partition_recovery.start", "partid=1"))
 	})
 
-	t.Run("request cancellation does not cancel recovery", func(t *testing.T) {
-		// Start recovery from a request-scoped context, cancel that context after receiving 503, and
-		// then unblock recovery. Waiting successfully and executing the next command prove that the
-		// detached worker uses the service lifetime rather than the initiating request lifetime.
+	t.Run("recovery: scn: Canceling the initiating request does not stop partition recovery", func(t *testing.T) {
 		require := require.New(t)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+		// And workspace 1 has only its initialization event at WLog offset 1 and no user record IDs
 		app := setUpRecoveryTestApp(t)
 		defer tearDown(app)
 
 		key := partitionManagerKeyForWSID(1)
 		gate := app.recoveryTestControl.partitions.blockNext(key)
+		release := sync.OnceFunc(func() { close(gate) })
+		defer release()
 		requestCtx, cancelRequest := context.WithCancel(app.ctx)
+		defer cancelRequest()
+		// Given partition 1 recovery was started by a command request to workspace 1
 		status, err := sendRequestForStatus(requestCtx, app.rawRequestSender, newCUD_3Inserts_Request(1, app))
 		require.NoError(err)
 		require.Equal(http.StatusServiceUnavailable, status)
 
+		// When VAOperator cancels the initiating request
 		cancelRequest()
-		close(gate)
+		release()
 		require.NoError(app.recoveryTestControl.partitions.wait(app.ctx, key))
-		sendCUD_3Inserts(t, 1, app)
+		// Then inserting three ordinary records into workspace 1 after recovery completes, retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 2 and new record IDs 200001 through 200003
+		response := sendCUD_3Inserts(t, 1, app)
+		require.Equal(float64(2), response["CurrentWLogOffset"])
+		require.Equal(map[string]interface{}{"1": float64(200001), "2": float64(200002), "3": float64(200003)}, response["NewIDs"])
+		// And exactly one partition-recovery start is logged for partition 1
+		require.Equal(1, countCapturedLogLines(logCap, "stage=cp.partition_recovery.start", "partid=1"))
 	})
 
-	t.Run("failed recovery is reported, then retry is started", func(t *testing.T) {
+	t.Run("recovery: scn: The next request reports a failed partition recovery and starts a new attempt", func(t *testing.T) {
 		//
 		//	request 1 ──> start recovery 1 ──> 503 Service Unavailable
 		//	                     |
@@ -553,27 +621,61 @@ func TestPartitionRecovery(t *testing.T) {
 		//	                     |
 		//	request 4 ───────────+────────────> success
 		require := require.New(t)
+		// Given partition 1 is deployed but unrecovered
+		// And workspace 1 has only its initialization event at WLog offset 1 and no user record IDs
 		app := setUpRecoveryTestApp(t)
 		defer tearDown(app)
 
 		key := partitionManagerKeyForWSID(1)
-		recoveryErr := errors.New("injected recovery failure")
+		recoveryErr := errors.New("PLog read failed")
+		// And its first partition recovery fails with "PLog read failed"
 		app.recoveryTestControl.partitions.failNext(key, recoveryErr)
+		// When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
+		// | request | timing                               | retry policy            |
+		// | 1       | before partition recovery starts     | none                    |
+		// Then the responses are:
+		// | request | status                    |
+		// | 1       | 503 Service Unavailable   |
 		sendCUD_3Inserts_WithSender(t, 1, app, app.rawRequestSender, http.StatusServiceUnavailable)
 		require.ErrorIs(app.recoveryTestControl.partitions.wait(app.ctx, key), recoveryErr)
 		require.Equal(1, app.recoveryTestControl.partitions.startCount(key))
 
 		gate := app.recoveryTestControl.partitions.blockNext(key)
+		release := sync.OnceFunc(func() { close(gate) })
+		defer release()
+		// When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
+		// | request | timing                               | retry policy            |
+		// | 2       | after the first recovery fails       | none                    |
+		// Then the responses are:
+		// | request | status                    |
+		// | 2       | 500 Internal Server Error |
 		respData := sendCUD_3Inserts_WithSender(t, 1, app, app.rawRequestSender, http.StatusInternalServerError)
 		sysError := respData["sys.Error"].(map[string]interface{})
-		require.Equal("partition 1: recovery failed: injected recovery failure", sysError["Message"])
+		// And request 2 returns error "partition 1: recovery failed: PLog read failed" and starts one new recovery attempt
+		require.Equal("partition 1: recovery failed: PLog read failed", sysError["Message"])
 		require.Equal(2, app.recoveryTestControl.partitions.startCount(key))
 
+		// When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
+		// | request | timing                               | retry policy            |
+		// | 3       | while the new attempt is in progress | none                    |
+		// Then the responses are:
+		// | request | status                    |
+		// | 3       | 503 Service Unavailable   |
 		sendCUD_3Inserts_WithSender(t, 1, app, app.rawRequestSender, http.StatusServiceUnavailable)
+		// And request 3 does not start another recovery attempt
 		require.Equal(2, app.recoveryTestControl.partitions.startCount(key))
-		close(gate)
+		release()
 		require.NoError(app.recoveryTestControl.partitions.wait(app.ctx, key))
-		sendCUD_3Inserts(t, 1, app)
+		// When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
+		// | request | timing                               | retry policy            |
+		// | 4       | after the new attempt completes      | 503 Service Unavailable |
+		// Then the responses are:
+		// | request | status                    |
+		// | 4       | 200 OK                    |
+		respData = sendCUD_3Inserts(t, 1, app)
+		// And the fourth response contains CurrentWLogOffset 2 and new record IDs 200001 through 200003
+		require.Equal(float64(2), respData["CurrentWLogOffset"])
+		require.Equal(map[string]interface{}{"1": float64(200001), "2": float64(200002), "3": float64(200003)}, respData["NewIDs"])
 	})
 
 	t.Run("command processors shuts down -> recovery attempts finished by context cancellation", func(t *testing.T) {
@@ -959,334 +1061,279 @@ func TestRecoveryCheckpoints_RecordIDsRecovery(t *testing.T) {
 	})
 }
 
+func TestSequenceAllocation(t *testing.T) {
+	t.Run("sequences: scn: The first insert in a new workspace uses FirstOffset and FirstUserRecordID", func(t *testing.T) {
+		require := require.New(t)
+		// Given a new workspace has an empty WLog
+		app, _, _ := newEmptyRecoveryCommandApp(t)
+		// When VAOperator submits an ordinary record insert into the new workspace, retrying "503 Service Unavailable" responses
+		response := sendCUDWithBody(t, emptyRecoveryWSID, *app, emptyRecoveryInsert)
+		// Then the insert returns "200 OK" with CurrentWLogOffset FirstOffset and new ordinary record ID FirstUserRecordID
+		requireIssuedNumbers(t, response, istructs.FirstOffset, istructs.FirstUserRecordID)
+		require.Len(response["NewIDs"], 1)
+	})
+}
+
 func TestRecoveryFeatureCommandProcessorScenarios(t *testing.T) {
-	t.Run("recovery: scn: Empty PLog recovery starts at FirstOffset: absent", func(t *testing.T) {
-		// Empty logs cannot be produced by VIT because workspace provisioning writes
-		// initial events, so this scenario exercises both recovery managers directly.
+	t.Run("recovery: scn: Empty PLog recovery preserves initial sequence numbers: absent", func(t *testing.T) {
+		require := require.New(t)
 		// | checkpoint       |
 		// | absent           |
 		// Given the PLog is empty
+		app, storage, logs := newEmptyRecoveryCommandApp(t)
 		// And the stored partition checkpoint is <checkpoint>
 		// checkpoint = absent
-		// When VAOperator restarts the VVM and submits a command
-		// Then response status is "503 Service Unavailable" while partition recovery runs
-		// When VAOperator retries the command after partition recovery completes
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
-		// When VAOperator retries the command after workspace recovery completes
-		// Then the command succeeds with a PLog event at FirstOffset
-		// And no invalid partition-checkpoint error is logged
-		runEmptyPartitionFeatureScenario(t, false, false)
+		_, exists, err := storage.GetPartitionCheckpoint(app.appStructs.ClusterAppID(), 0)
+		require.NoError(err)
+		require.False(exists)
+		_, exists, err = storage.GetWorkspaceCheckpoint(app.appStructs.ClusterAppID(), emptyRecoveryWSID)
+		require.NoError(err)
+		require.False(exists)
+		// When VAOperator restarts the VVM
+		restartCmdProc(app)
+		logs.Reset()
+		// Then inserting an ordinary record into a workspace, retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 1 and new ordinary record ID 200001
+		response := sendCUDWithBody(t, emptyRecoveryWSID, *app, emptyRecoveryInsert)
+		requireIssuedNumbers(t, response, istructs.FirstOffset, istructs.FirstUserRecordID)
+		require.Len(response["NewIDs"], 1)
+		logs.NotContains("cp.partition_recovery.checkpoint.invalid", "cp.workspace_recovery.checkpoint.invalid")
 	})
 
-	t.Run("recovery: scn: Empty PLog recovery starts at FirstOffset: lastPLogOffset 0", func(t *testing.T) {
-		// Empty logs cannot be produced by VIT because workspace provisioning writes
-		// initial events, so this scenario exercises both recovery managers directly.
+	t.Run("recovery: scn: Empty PLog recovery preserves initial sequence numbers: lastPLogOffset 0", func(t *testing.T) {
+		require := require.New(t)
 		// | checkpoint       |
 		// | lastPLogOffset 0 |
 		// Given the PLog is empty
+		app, storage, logs := newEmptyRecoveryCommandApp(t)
 		// And the stored partition checkpoint is <checkpoint>
 		// checkpoint = lastPLogOffset 0
-		// When VAOperator restarts the VVM and submits a command
-		// Then response status is "503 Service Unavailable" while partition recovery runs
-		// When VAOperator retries the command after partition recovery completes
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
-		// When VAOperator retries the command after workspace recovery completes
-		// Then the command succeeds with a PLog event at FirstOffset
-		// And no invalid partition-checkpoint error is logged
-		runEmptyPartitionFeatureScenario(t, true, false)
+		storage.ForcePutPartitionCheckpoint(t, app.appStructs.ClusterAppID(), 0,
+			checkpoints.PartitionCheckpoint{LastPLogOffset: 0})
+		// When VAOperator restarts the VVM
+		restartCmdProc(app)
+		logs.Reset()
+		// Then inserting an ordinary record into a workspace, retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 1 and new ordinary record ID 200001
+		response := sendCUDWithBody(t, emptyRecoveryWSID, *app, emptyRecoveryInsert)
+		requireIssuedNumbers(t, response, istructs.FirstOffset, istructs.FirstUserRecordID)
+		require.Len(response["NewIDs"], 1)
+		logs.NotContains("cp.partition_recovery.checkpoint.invalid")
 	})
 
-	t.Run("recovery: scn: Empty WLog recovery starts at FirstOffset and FirstUserRecordID: absent", func(t *testing.T) {
-		// Empty logs cannot be produced by VIT because workspace provisioning writes
-		// initial events, so this scenario exercises workspace recovery directly.
-		// | checkpoint            |
-		// | absent                |
-		// Given the WLog is empty
-		// And the stored workspace checkpoint is <checkpoint>
-		// checkpoint = absent
-		// And the VVM has restarted and completed partition recovery
-		// When VAOperator submits an insert into the unrecovered workspace
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
-		// When VAOperator retries the insert after workspace recovery completes
-		// Then the insert succeeds with a WLog event at FirstOffset
-		// And the inserted record has ID 200001
-		// And no invalid workspace-checkpoint error is logged
-		runEmptyWorkspaceFeatureScenario(t, false, false)
-	})
-
-	t.Run("recovery: scn: Empty WLog recovery starts at FirstOffset and FirstUserRecordID: wlogIDBearingOffset 0", func(t *testing.T) {
-		// Empty logs cannot be produced by VIT because workspace provisioning writes
-		// initial events, so this scenario exercises workspace recovery directly.
-		// | checkpoint            |
-		// | wlogIDBearingOffset 0 |
-		// Given the WLog is empty
-		// And the stored workspace checkpoint is <checkpoint>
-		// checkpoint = wlogIDBearingOffset 0
-		// And the VVM has restarted and completed partition recovery
-		// When VAOperator submits an insert into the unrecovered workspace
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
-		// When VAOperator retries the insert after workspace recovery completes
-		// Then the insert succeeds with a WLog event at FirstOffset
-		// And the inserted record has ID 200001
-		// And no invalid workspace-checkpoint error is logged
-		runEmptyWorkspaceFeatureScenario(t, true, false)
-	})
-
-	t.Run("recovery: scn: Invalid partition checkpoint over an empty PLog", func(t *testing.T) {
-		// Empty logs cannot be produced by VIT because workspace provisioning writes
-		// initial events, so this scenario exercises both recovery managers directly.
+	t.Run("recovery: scn: Empty PLog recovery preserves initial sequence numbers: lastPLogOffset 5", func(t *testing.T) {
+		require := require.New(t)
+		// | checkpoint       |
+		// | lastPLogOffset 5 |
 		// Given the PLog is empty
-		// And the stored partition checkpoint is lastPLogOffset 5
-		// When VAOperator restarts the VVM and submits a command
-		// Then response status is "503 Service Unavailable" while partition recovery runs
-		// When VAOperator retries the command after partition recovery completes
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
-		// When VAOperator retries the command after workspace recovery completes
-		// Then the command succeeds with a PLog event at FirstOffset
-		// And error stage "cp.partition_recovery.checkpoint.invalid" is logged
-		// And error message is "stored PLog offset 5 does not identify an existing event; retrying from FirstOffset"
-		runEmptyPartitionFeatureScenario(t, false, true)
+		app, storage, logs := newEmptyRecoveryCommandApp(t)
+		// And the stored partition checkpoint is <checkpoint>
+		// checkpoint = lastPLogOffset 5
+		storage.ForcePutPartitionCheckpoint(t, app.appStructs.ClusterAppID(), 0,
+			checkpoints.PartitionCheckpoint{LastPLogOffset: 5})
+		// When VAOperator restarts the VVM
+		restartCmdProc(app)
+		logs.Reset()
+		// Then inserting an ordinary record into a workspace, retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 1 and new ordinary record ID 200001
+		response := sendCUDWithBody(t, emptyRecoveryWSID, *app, emptyRecoveryInsert)
+		requireIssuedNumbers(t, response, istructs.FirstOffset, istructs.FirstUserRecordID)
+		require.Len(response["NewIDs"], 1)
+		requireLogError(logs, "cp.partition_recovery.checkpoint.invalid",
+			"stored PLog offset 5 does not identify an existing event; retrying from FirstOffset")
 	})
 
 	t.Run("recovery: scn: Invalid workspace checkpoint over an empty WLog", func(t *testing.T) {
-		// Empty logs cannot be produced by VIT because workspace provisioning writes
-		// initial events, so this scenario exercises workspace recovery directly.
+		require := require.New(t)
 		// Given the WLog is empty
+		app, storage, logs := newEmptyRecoveryCommandApp(t)
 		// And the stored workspace checkpoint is wlogIDBearingOffset 5
+		storage.ForcePutWorkspaceCheckpoint(t, app.appStructs.ClusterAppID(), emptyRecoveryWSID,
+			checkpoints.WorkspaceCheckpoint{WLogIDBearingOffset: 5})
 		// And the VVM has restarted and completed partition recovery
-		// When VAOperator submits an insert into the unrecovered workspace
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
-		// When VAOperator retries the insert after workspace recovery completes
-		// Then the insert succeeds with a WLog event at FirstOffset
-		// And the inserted record has ID 200001
+		restartCmdProc(app)
+		status, recoveryErr := sendRequestForStatus(app.ctx, app.rawRequestSender, emptyRecoveryRequest(*app))
+		require.NoError(recoveryErr)
+		require.Equal(http.StatusServiceUnavailable, status)
+		require.NoError(app.recoveryTestControl.partitions.wait(app.ctx, recoveryKeyForTestApp(*app, emptyRecoveryWSID)))
+		logs.Reset()
+		// When VAOperator submits an ordinary record insert into the unrecovered workspace, retrying "503 Service Unavailable" responses
+		response := sendCUDWithBody(t, emptyRecoveryWSID, *app, emptyRecoveryInsert)
+		// Then the insert returns "200 OK" with CurrentWLogOffset FirstOffset and new ordinary record ID FirstUserRecordID
+		requireIssuedNumbers(t, response, istructs.FirstOffset, istructs.FirstUserRecordID)
+		require.Len(response["NewIDs"], 1)
 		// And error stage "cp.workspace_recovery.checkpoint.invalid" is logged
 		// And error message is "stored WLog offset 5 does not identify an ID-bearing event; retrying from FirstOffset"
-		runEmptyWorkspaceFeatureScenario(t, false, true)
-	})
-
-}
-
-func runEmptyPartitionFeatureScenario(t *testing.T, zeroCheckpoint, invalidCheckpoint bool) {
-	t.Helper()
-	require := require.New(t)
-	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-	storage := testutils.NewCheckpointStorageMem()
-	app := setUpRecoveryTestApp(t, withCheckpointStorage(storage))
-	defer tearDown(app)
-	control := newRecoveryTestControl()
-	cmdProc := newDirectRecoveryCmdProc(storage, control)
-	cmdProc.partitionManager = newPartitionManager(control.partitions.hooks(), cmdProc.recoverPartition)
-	defer cmdProc.partitionManager.shutdown()
-	emptyPartitionKey := partitionKey{appQName: testAppName, partitionID: 100}
-	emptyWorkspaceKey := workspaceKey{partitionKey: emptyPartitionKey, wsid: 100}
-	if invalidCheckpoint {
-		storage.ForcePutPartitionCheckpoint(t, app.appStructs.ClusterAppID(), emptyPartitionKey.partitionID,
-			checkpoints.PartitionCheckpoint{LastPLogOffset: 5})
-	} else if zeroCheckpoint {
-		storage.ForcePutPartitionCheckpoint(t, app.appStructs.ClusterAppID(), emptyPartitionKey.partitionID,
-			checkpoints.PartitionCheckpoint{})
-	}
-	newCommand := func() *cmdWorkpiece {
-		return &cmdWorkpiece{
-			cmdMes: &implICommandMessage{
-				requestCtx:  t.Context(),
-				appQName:    testAppName,
-				partitionID: emptyPartitionKey.partitionID,
-			},
-			appStructs: app.appStructs,
-		}
-	}
-	logCap.Reset()
-
-	recoveredPartition, err := cmdProc.partitionManager.getOrStart(t.Context(), emptyPartitionKey, newCommand())
-	require.Nil(recoveredPartition)
-	require.ErrorIs(err, coreutils.SysError{
-		HTTPStatus: http.StatusServiceUnavailable,
-		Message:    "partition 100: recovery is in progress",
-	})
-	require.NoError(control.partitions.wait(t.Context(), emptyPartitionKey))
-	recoveredPartition, err = cmdProc.partitionManager.getOrStart(t.Context(), emptyPartitionKey, newCommand())
-	require.NoError(err)
-	require.Equal(istructs.FirstOffset, recoveredPartition.nextPLogOffset)
-
-	recoverWorkspace := func(ctx context.Context, key workspaceKey) (*workspace, error) {
-		return cmdProc.recoverWorkspace(ctx, t.Context(), key, recoveredPartition.appStructs)
-	}
-	recoveredWorkspace, err := recoveredPartition.workspaces.getOrStart(
-		t.Context(), emptyWorkspaceKey, recoverWorkspace)
-	require.Nil(recoveredWorkspace)
-	require.ErrorIs(err, coreutils.SysError{
-		HTTPStatus: http.StatusServiceUnavailable,
-		Message:    "workspace 100: recovery is in progress",
-	})
-	require.NoError(control.workspaces.wait(t.Context(), emptyWorkspaceKey))
-	recoveredWorkspace, err = recoveredPartition.workspaces.getOrStart(
-		t.Context(), emptyWorkspaceKey, recoverWorkspace)
-	require.NoError(err)
-	require.Equal(istructs.FirstOffset, recoveredWorkspace.NextWLogOffset)
-	nextRecordID, err := recoveredWorkspace.idGenerator.NextID(1)
-	require.NoError(err)
-	require.Equal(istructs.FirstUserRecordID, nextRecordID)
-
-	if invalidCheckpoint {
-		requireCheckpointFallbackReads(t, 5, control.pLogReads.values(emptyPartitionKey))
-		requireLogError(logCap, "cp.partition_recovery.checkpoint.invalid",
-			"stored PLog offset 5 does not identify an existing event; retrying from FirstOffset")
-	} else {
-		require.Equal([]logReadFromTo{{offset: istructs.FirstOffset, count: istructs.ReadToTheEnd}},
-			control.pLogReads.values(emptyPartitionKey))
-		logCap.NotContains("cp.partition_recovery.checkpoint.invalid")
-	}
-}
-
-func runEmptyWorkspaceFeatureScenario(t *testing.T, zeroCheckpoint, invalidCheckpoint bool) {
-	t.Helper()
-	require := require.New(t)
-	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-	storage := testutils.NewCheckpointStorageMem()
-	app := setUpRecoveryTestApp(t, withCheckpointStorage(storage))
-	defer tearDown(app)
-	control := newRecoveryTestControl()
-	cmdProc := newDirectRecoveryCmdProc(storage, control)
-	emptyPartitionKey := partitionKey{appQName: testAppName, partitionID: 100}
-	emptyWorkspaceKey := workspaceKey{partitionKey: emptyPartitionKey, wsid: 100}
-	recoveredPartition := newAppPartition(cmdProc.workspaceRecoveryHooks)
-	recoveredPartition.clusterAppID = app.appStructs.ClusterAppID()
-	recoveredPartition.appStructs = app.appStructs
-	defer recoveredPartition.workspaces.workspaces.shutdown()
-	if invalidCheckpoint {
-		storage.ForcePutWorkspaceCheckpoint(t, app.appStructs.ClusterAppID(), emptyWorkspaceKey.wsid,
-			checkpoints.WorkspaceCheckpoint{WLogIDBearingOffset: 5})
-	} else if zeroCheckpoint {
-		storage.ForcePutWorkspaceCheckpoint(t, app.appStructs.ClusterAppID(), emptyWorkspaceKey.wsid,
-			checkpoints.WorkspaceCheckpoint{})
-	}
-	recoverWorkspace := func(ctx context.Context, key workspaceKey) (*workspace, error) {
-		return cmdProc.recoverWorkspace(ctx, t.Context(), key, recoveredPartition.appStructs)
-	}
-	logCap.Reset()
-
-	recoveredWorkspace, err := recoveredPartition.workspaces.getOrStart(
-		t.Context(), emptyWorkspaceKey, recoverWorkspace)
-	require.Nil(recoveredWorkspace)
-	require.ErrorIs(err, coreutils.SysError{
-		HTTPStatus: http.StatusServiceUnavailable,
-		Message:    "workspace 100: recovery is in progress",
-	})
-	require.NoError(control.workspaces.wait(t.Context(), emptyWorkspaceKey))
-	recoveredWorkspace, err = recoveredPartition.workspaces.getOrStart(
-		t.Context(), emptyWorkspaceKey, recoverWorkspace)
-	require.NoError(err)
-	require.Equal(istructs.FirstOffset, recoveredWorkspace.NextWLogOffset)
-	nextRecordID, err := recoveredWorkspace.idGenerator.NextID(1)
-	require.NoError(err)
-	require.Equal(istructs.FirstUserRecordID, nextRecordID)
-
-	if invalidCheckpoint {
-		requireCheckpointFallbackReads(t, 5, control.wLogReads.values(emptyWorkspaceKey))
-		requireLogError(logCap, "cp.workspace_recovery.checkpoint.invalid",
+		requireLogError(logs, "cp.workspace_recovery.checkpoint.invalid",
 			"stored WLog offset 5 does not identify an ID-bearing event; retrying from FirstOffset")
-	} else {
-		require.Equal([]logReadFromTo{{offset: istructs.FirstOffset, count: istructs.ReadToTheEnd}},
-			control.wLogReads.values(emptyWorkspaceKey))
-		logCap.NotContains("cp.workspace_recovery.checkpoint.invalid")
-	}
+	})
+}
+
+const (
+	emptyRecoveryWSID   istructs.WSID = 100
+	emptyRecoveryInsert               = `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`
+)
+
+func emptyRecoveryRequest(app testApp) bus.Request {
+	request := newCUD_3Inserts_Request(emptyRecoveryWSID, app)
+	request.Body = []byte(emptyRecoveryInsert)
+	return request
+}
+
+func newEmptyRecoveryCommandApp(t *testing.T) (*testApp, *testutils.CheckpointStorage, logger.ILogCaptor) {
+	t.Helper()
+	require := require.New(t)
+	logs := logger.StartCapture(t, logger.LogLevelVerbose)
+	storage := testutils.NewCheckpointStorageMem()
+	app := setUpRecoveryTestApp(t, withCheckpointStorage(storage), withTestWorkspaces(), withTestAppPartitions(1))
+	t.Cleanup(func() { tearDown(app) })
+	id, err := app.appStructs.Records().GetSingletonID(appdef.QNameCDocWorkspaceDescriptor)
+	require.NoError(err)
+	// Seed only system metadata so the first command starts with genuinely empty logs.
+	require.NoError(app.appStructs.Records().PutJSON(emptyRecoveryWSID, map[appdef.FieldName]any{
+		appdef.SystemField_QName: appdef.QNameCDocWorkspaceDescriptor.String(),
+		appdef.SystemField_ID:    id,
+		"WSKind":                 appdef.NewQName(appdef.SysPackage, "TestWSKind").String(), "Status": int32(0), "InitCompletedAtMs": int64(1),
+	}))
+	events := 0
+	require.NoError(app.appStructs.Events().ReadPLog(t.Context(), 0, istructs.FirstOffset, istructs.ReadToTheEnd,
+		func(_ istructs.Offset, event istructs.IPLogEvent) error {
+			event.Release()
+			events++
+			return nil
+		}))
+	require.NoError(app.appStructs.Events().ReadWLog(t.Context(), emptyRecoveryWSID, istructs.FirstOffset, istructs.ReadToTheEnd,
+		func(_ istructs.Offset, event istructs.IWLogEvent) error {
+			event.Release()
+			events++
+			return nil
+		}))
+	require.Zero(events)
+	return &app, storage, logs
 }
 
 func TestWorkspaceRecovery(t *testing.T) {
-	t.Run("recovery: scn: Duplicate requests share one workspace recovery", func(t *testing.T) {
+	t.Run("recovery: scn: A new request to a workspace being recovered does not start another recovery", func(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-		// This scenario uses command-processor recovery gates because holding a VIT
-		// workspace recovery open across two requests would require exposing test-only
-		// lifecycle controls through the full VVM.
-		// Given workspace 42 is unrecovered after partition recovery
-		// And its WLog ends at offset 14 with last user record ID 200005
-		app := setRecoveryAdmissionApp(t, 42)
-		defer tearDown(app)
-		key := recoveryWorkspaceKeyForTestApp(app, 42)
-		gate := app.recoveryTestControl.workspaces.blockNext(key)
-		logCap.Reset()
-
-		// When VAOperator submits an insert into workspace 42
-		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(42, app))
-		require.NoError(err)
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
-		require.Equal(http.StatusServiceUnavailable, status)
-		// When VAOperator submits another insert into workspace 42 before recovery completes
-		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(42, app))
-		require.NoError(err)
-		// Then response status is "503 Service Unavailable" while the same recovery runs
-		require.Equal(http.StatusServiceUnavailable, status)
-		// And error stage "cp.error" logs message "workspace 42: recovery is in progress"
-		logCap.HasLine("stage=cp.error", "workspace 42: recovery is in progress")
-		close(gate)
-		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, key))
-		// And exactly one workspace-recovery start is logged for workspace 42
-		require.Equal(1, countCapturedLogLines(logCap,
-			"stage=cp.workspace_recovery.start", "wsid=42"))
-		// When VAOperator retries the insert after workspace recovery completes
-		response := sendCUDWithBody(t, 42, app,
-			`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`)
-		// Then the insert succeeds with a WLog event at offset 15
-		// And the inserted record has ID 200006
-		requireIssuedNumbers(t, response, 15, 200006)
-	})
-
-	t.Run("recovery: scn: Failed workspace recovery is reported and retried once", func(t *testing.T) {
-		require := require.New(t)
-		// Failure injection is not available through VIT, so this scenario uses the
-		// command processor's deterministic recovery hook.
 		// Given workspace 42 is unrecovered after partition recovery
 		// And its WLog ends at offset 14 with last user record ID 200005
 		app := setRecoveryAdmissionApp(t, 42)
 		defer tearDown(app)
 		key := recoveryWorkspaceKeyForTestApp(app, 42)
 		initialStarts := app.recoveryTestControl.workspaces.startCount(key)
-		// And its first workspace recovery fails with "WLog read failed"
+		gate := app.recoveryTestControl.workspaces.blockNext(key)
+		release := sync.OnceFunc(func() { close(gate) })
+		defer release()
+		request := newCUD_3Inserts_Request(42, app)
+		request.Body = []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`)
+		logCap.Reset()
+
+		// When VAOperator submits ordinary record inserts into workspace 42 without automatic retries at these times:
+		// | request | timing                                   |
+		// | 1       | before workspace recovery starts         |
+		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, request)
+		require.NoError(err)
+		// Then the responses are:
+		// | request | status                  |
+		// | 1       | 503 Service Unavailable |
+		require.Equal(http.StatusServiceUnavailable, status)
+		require.Equal(initialStarts+1, app.recoveryTestControl.workspaces.startCount(key))
+
+		// When VAOperator submits ordinary record inserts into workspace 42 without automatic retries at these times:
+		// | request | timing                                   |
+		// | 2       | while that recovery is still in progress |
+		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, request)
+		require.NoError(err)
+		// Then the responses are:
+		// | request | status                  |
+		// | 2       | 503 Service Unavailable |
+		require.Equal(http.StatusServiceUnavailable, status)
+		require.Equal(initialStarts+1, app.recoveryTestControl.workspaces.startCount(key))
+		// And error stage "cp.error" logs message "workspace 42: recovery is in progress"
+		logCap.HasLine("stage=cp.error", "workspace 42: recovery is in progress")
+
+		release()
+		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, key))
+		// When VAOperator submits ordinary record inserts into workspace 42 without automatic retries at these times:
+		// | request | timing                                   |
+		// | 3       | after that recovery completes            |
+		// Then the responses are:
+		// | request | status                  |
+		// | 3       | 200 OK                  |
+		response := sendRequestWithSender(t, app, app.rawRequestSender, request)
+		// And the third response contains CurrentWLogOffset 15 and new ordinary record ID 200006
+		requireIssuedNumbers(t, response, 15, 200006)
+		require.Len(response["NewIDs"], 1)
+		require.Equal(initialStarts+1, app.recoveryTestControl.workspaces.startCount(key))
+		// And exactly one workspace-recovery start is logged for workspace 42
+		require.Equal(1, countCapturedLogLines(logCap,
+			"stage=cp.workspace_recovery.start", "wsid=42"))
+	})
+
+	t.Run("recovery: scn: The next request reports a failed workspace recovery and starts a new attempt", func(t *testing.T) {
+		require := require.New(t)
+		// Given workspace 42 is unrecovered after partition recovery
+		// And its WLog ends at offset 14 with last user record ID 200005
+		app := setRecoveryAdmissionApp(t, 42)
+		defer tearDown(app)
+		key := recoveryWorkspaceKeyForTestApp(app, 42)
+		initialStarts := app.recoveryTestControl.workspaces.startCount(key)
 		injectedErr := errors.New("WLog read failed")
+		// And its first workspace recovery fails with "WLog read failed"
 		app.recoveryTestControl.workspaces.failNext(key, injectedErr)
 
-		// When VAOperator submits an insert into workspace 42
+		// When VAOperator submits inserts into workspace 42 at these times:
+		// | request | timing                               |
+		// | 1       | before workspace recovery starts     |
 		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(42, app))
 		require.NoError(err)
-		// Then response status is "503 Service Unavailable" while workspace recovery runs
+		// Then the responses are:
+		// | request | status                    |
+		// | 1       | 503 Service Unavailable   |
 		require.Equal(http.StatusServiceUnavailable, status)
 		require.ErrorIs(app.recoveryTestControl.workspaces.wait(app.ctx, key), injectedErr)
 
 		retryGate := app.recoveryTestControl.workspaces.blockNext(key)
-		// When VAOperator submits another insert after that recovery fails
+		// When VAOperator submits inserts into workspace 42 at these times:
+		// | request | timing                               |
+		// | 2       | after the first recovery fails       |
+		// Then the responses are:
+		// | request | status                    |
+		// | 2       | 500 Internal Server Error |
 		response := sendCUD_3Inserts_WithSender(t, 42, app, app.rawRequestSender, http.StatusInternalServerError)
-		// Then response status is "500 Internal Server Error"
-		// And response error is "workspace 42: recovery failed: WLog read failed"
+		// And request 2 returns error "workspace 42: recovery failed: WLog read failed" and starts one new recovery attempt
 		require.Equal("workspace 42: recovery failed: WLog read failed",
 			response["sys.Error"].(map[string]interface{})["Message"])
-		// And one retry of workspace 42 recovery starts
 		require.Equal(initialStarts+2, app.recoveryTestControl.workspaces.startCount(key))
-		// When VAOperator submits another insert before that retry completes
+		// When VAOperator submits inserts into workspace 42 at these times:
+		// | request | timing                               |
+		// | 3       | while the new attempt is in progress |
 		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(42, app))
 		require.NoError(err)
-		// Then response status is "503 Service Unavailable" while the retry runs
+		// Then the responses are:
+		// | request | status                    |
+		// | 3       | 503 Service Unavailable   |
 		require.Equal(http.StatusServiceUnavailable, status)
+		// And request 3 does not start another recovery attempt
 		require.Equal(initialStarts+2, app.recoveryTestControl.workspaces.startCount(key))
 
 		close(retryGate)
 		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, key))
-		// When VAOperator retries the insert after workspace recovery completes
+		// When VAOperator submits inserts into workspace 42 at these times:
+		// | request | timing                               |
+		// | 4       | after the new attempt completes      |
+		// Then the responses are:
+		// | request | status                    |
+		// | 4       | 200 OK                    |
 		response = sendCUDWithBody(t, 42, app,
 			`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`)
-		// Then the insert succeeds with a WLog event at offset 15
-		// And the inserted record has ID 200006
+		// And the fourth response contains CurrentWLogOffset 15 and new ordinary record ID 200006
 		requireIssuedNumbers(t, response, 15, 200006)
 	})
 
 	t.Run("recovery: scn: Recovery limit rejects without queueing and permits a later retry", func(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-		// A full-VVM test would need to pause one workspace recovery while proving
-		// that another workspace was not queued, so deterministic command-processor
-		// recovery gates provide the simpler integration boundary.
 		// Given the workspace recovery limit is 4
+		require.Equal(uint(4), numWSRecoverers)
 		// And workspaces 42 and 43 are unrecovered after partition recovery
 		// And both WLogs end at offset 14 with last user record ID 200005
 		app := setRecoveryAdmissionApp(t, 42, 43, 44, 45, 46)
@@ -1317,45 +1364,61 @@ func TestWorkspaceRecovery(t *testing.T) {
 		secondGate := app.recoveryTestControl.workspaces.blockNext(secondKey)
 		logCap.Reset()
 
-		// When VAOperator submits an insert into workspace 42
+		// When VAOperator submits inserts in this order:
+		// | request | workspace | timing                                 |
+		// | 1       | 42        | while workspaces 44 through 46 recover |
 		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(42, app))
 		require.NoError(err)
-		// Then response status is "503 Service Unavailable" while workspace 42 recovery runs
+		// Then the responses are:
+		// | request | status                  |
+		// | 1       | 503 Service Unavailable |
 		require.Equal(http.StatusServiceUnavailable, status)
 		require.Equal(firstInitialStarts+1, app.recoveryTestControl.workspaces.startCount(firstKey))
-		// When VAOperator submits an insert into workspace 43 before workspace 42 recovery completes
+		// When VAOperator submits inserts in this order:
+		// | request | workspace | timing                                 |
+		// | 2       | 43        | before workspace 42 recovery completes |
 		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(43, app))
 		require.NoError(err)
-		// Then response status is "503 Service Unavailable" because the recovery limit is reached
+		// Then the responses are:
+		// | request | status                  |
+		// | 2       | 503 Service Unavailable |
 		require.Equal(http.StatusServiceUnavailable, status)
-		// And error stage "cp.error" logs message "workspace 43: recovery concurrency limit is reached"
+		// And request 2 logs message "workspace 43: recovery concurrency limit is reached" at error stage "cp.error"
 		logCap.HasLine("stage=cp.error", "workspace 43: recovery concurrency limit is reached")
-		// And no workspace-recovery start is logged for workspace 43
+		// And no workspace-recovery start is logged for workspace 43 before request 3
 		require.Zero(countCapturedLogLines(logCap,
 			"stage=cp.workspace_recovery.start", "wsid=43"))
 
 		close(firstGate)
 		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, firstKey))
 		require.Equal(secondInitialStarts, app.recoveryTestControl.workspaces.startCount(secondKey), "rejected recovery was queued")
-		// When workspace 42 recovery completes and VAOperator submits another insert into workspace 43
+		// When VAOperator submits inserts in this order:
+		// | request | workspace | timing                                 |
+		// | 3       | 43        | after workspace 42 recovery completes  |
 		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(43, app))
 		require.NoError(err)
-		// Then response status is "503 Service Unavailable" while workspace 43 recovery runs
+		// Then the responses are:
+		// | request | status                  |
+		// | 3       | 503 Service Unavailable |
 		require.Equal(http.StatusServiceUnavailable, status)
 		require.Equal(secondInitialStarts+1, app.recoveryTestControl.workspaces.startCount(secondKey))
 		close(secondGate)
 		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, secondKey))
 		require.Equal(1, countCapturedLogLines(logCap,
 			"stage=cp.workspace_recovery.start", "wsid=43"))
-		// When VAOperator retries the insert after workspace 43 recovery completes
+		// When VAOperator submits inserts in this order:
+		// | request | workspace | timing                                 |
+		// | 4       | 43        | after workspace 43 recovery completes  |
+		// Then the responses are:
+		// | request | status                  |
+		// | 4       | 200 OK                  |
 		response := sendCUDWithBody(t, 43, app,
 			`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`)
-		// Then the insert succeeds with a WLog event at offset 15
-		// And the inserted record has ID 200006
+		// And the fourth response contains CurrentWLogOffset 15 and new ordinary record ID 200006
 		requireIssuedNumbers(t, response, 15, 200006)
 	})
 
-	t.Run("recovery: scn: Partition reset preserves workspace recovery capacity", func(t *testing.T) {
+	t.Run("recovery: scn: A partition reset does not stop ongoing workspace recoveries", func(t *testing.T) {
 		require := require.New(t)
 		var failNextProjector atomic.Bool
 		projectorErr := errors.New("reset partition while workspace recoveries are running")
@@ -1383,9 +1446,9 @@ func TestWorkspaceRecovery(t *testing.T) {
 		// And workspace 1 is recovered
 		sendCUD_3Inserts(t, 1, app)
 
-		// And workspace recoveries for workspaces 3, 5, 7, and 9 are running in the same partition
 		oldKeys := make([]workspaceKey, 0, numWSRecoverers)
 		oldReleases := make([]func(), 0, numWSRecoverers)
+		// And workspace recoveries for workspaces 3, 5, 7, and 9 are running in the same partition
 		for _, wsid := range []istructs.WSID{3, 5, 7, 9} {
 			key := recoveryWorkspaceKeyForTestApp(app, wsid)
 			gate := app.recoveryTestControl.workspaces.blockNext(key)
@@ -1409,25 +1472,40 @@ func TestWorkspaceRecovery(t *testing.T) {
 		targetGate := app.recoveryTestControl.workspaces.blockNext(targetKey)
 		releaseTarget := sync.OnceFunc(func() { close(targetGate) })
 		t.Cleanup(releaseTarget)
-		// And VAOperator submits an insert into unrecovered workspace 11
+		// And VAOperator submits inserts into unrecovered workspace 11 at these times:
+		// | request | timing                                          |
+		// | 1       | before any detached workspace recovery finishes |
 		status, err := sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(11, app))
 		require.NoError(err)
-		// Then response status is "503 Service Unavailable" because the recovery limit is reached
+		// Then the responses are:
+		// | request | status                  | reason                        |
+		// | 1       | 503 Service Unavailable | recovery limit reached        |
 		require.Equal(http.StatusServiceUnavailable, status)
-		// And no workspace recovery starts for workspace 11
+		// And no recovery starts for workspace 11 before request 2
 		require.Zero(app.recoveryTestControl.workspaces.startCount(targetKey))
 
-		// When one detached workspace recovery completes
 		oldReleases[0]()
 		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, oldKeys[0]))
-		// And VAOperator submits another insert into workspace 11
+		// And VAOperator submits inserts into unrecovered workspace 11 at these times:
+		// | request | timing                                          |
+		// | 2       | after one detached workspace recovery finishes  |
 		status, err = sendRequestForStatus(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(11, app))
 		require.NoError(err)
-		// Then response status is "503 Service Unavailable" while workspace 11 recovery runs
+		// Then the responses are:
+		// | request | status                  | reason                        |
+		// | 2       | 503 Service Unavailable | workspace 11 recovery running |
 		require.Equal(http.StatusServiceUnavailable, status)
+		// And request 2 starts exactly one recovery for workspace 11
 		require.Equal(1, app.recoveryTestControl.workspaces.startCount(targetKey))
 		releaseTarget()
 		require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, targetKey))
+
+		// And the recoveries for workspaces 3, 5, 7, and 9 complete successfully without restarting
+		for index, key := range oldKeys {
+			oldReleases[index]()
+			require.NoError(app.recoveryTestControl.workspaces.wait(app.ctx, key))
+			require.Equal(1, app.recoveryTestControl.workspaces.startCount(key))
+		}
 	})
 
 	t.Run("service cancellation stops active workspace attempts", func(t *testing.T) {
@@ -1628,16 +1706,16 @@ func prepareRecoveryAdmissionWLog(t *testing.T, app testApp, wsid istructs.WSID)
 		response := sendNoCUDCommand(t, wsid, app)
 		require.Equal(int(expectedOffset), int(response["CurrentWLogOffset"].(float64)))
 	}
-	lastIDBearing := sendCUDWithBody(t, wsid, app, `{"cuds":[
+	lastRecordIDBearing := sendCUDWithBody(t, wsid, app, `{"cuds":[
 		{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}},
 		{"fields":{"sys.ID":2,"sys.QName":"test.TestCDoc"}},
 		{"fields":{"sys.ID":3,"sys.QName":"test.TestCDoc"}},
 		{"fields":{"sys.ID":4,"sys.QName":"test.TestCDoc"}}
 	]}`)
-	require.Equal(10, int(lastIDBearing["CurrentWLogOffset"].(float64)))
+	require.Equal(10, int(lastRecordIDBearing["CurrentWLogOffset"].(float64)))
 	for rawID := 1; rawID <= 4; rawID++ {
 		require.Equal(istructs.RecordID(200001+rawID),
-			istructs.RecordID(lastIDBearing["NewIDs"].(map[string]interface{})[strconv.Itoa(rawID)].(float64)))
+			istructs.RecordID(lastRecordIDBearing["NewIDs"].(map[string]interface{})[strconv.Itoa(rawID)].(float64)))
 	}
 
 	for expectedOffset := istructs.Offset(11); expectedOffset <= 14; expectedOffset++ {
