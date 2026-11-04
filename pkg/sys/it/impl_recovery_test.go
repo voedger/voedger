@@ -501,7 +501,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 		defer vit.TearDown()
 		owner := vit.GetPrincipal(istructs.AppQName_test1_app1, recoveryTestLoginName)
 		var workspaces []*it.AppWorkspace
-		for partitionID := istructs.PartitionID(0); partitionID < 3; partitionID++ {
+		for partitionID := range istructs.PartitionID(3) {
 			workspaces = append(workspaces, createWorkspacesInPartition(t, vit, owner, partitionID, 2)...)
 		}
 
@@ -2120,23 +2120,6 @@ type sysVVMWriteRecorder struct {
 	keys [][]byte
 }
 
-func (c *sysVVMWriteRecorder) reset() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.keys = nil
-}
-
-func (c *sysVVMWriteRecorder) index(key []byte) int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for index, written := range c.keys {
-		if bytes.Equal(written, key) {
-			return index
-		}
-	}
-	return -1
-}
-
 func createWorkspacesInPartition(t *testing.T, vit *it.VIT, owner *it.Principal,
 	partitionID istructs.PartitionID, count int) []*it.AppWorkspace {
 	t.Helper()
@@ -2296,9 +2279,10 @@ func checkRecoveryCheckpointLogs(t *testing.T, logCap logger.ILogCaptor, chType 
 	partitionCheckpointInvalid := testCase == checkpointBeyondTail || testCase == checkpointMissingEvent || testCase == checkpointBeforeBeginning
 	if chType == checkpointTypePartition && partitionCheckpointInvalid {
 		offset := testOffsetBeyondPLogTail
-		if testCase == checkpointMissingEvent {
+		switch testCase {
+		case checkpointMissingEvent:
 			offset = 10
-		} else if testCase == checkpointBeforeBeginning {
+		case checkpointBeforeBeginning:
 			offset = istructs.FirstOffset
 		}
 		message := fmt.Sprintf(

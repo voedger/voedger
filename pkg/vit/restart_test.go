@@ -197,11 +197,12 @@ func TestVITRestartCleanupLifetimes(t *testing.T) {
 		stopSharedVITAfterTest(t, vit)
 		workspace := restartTestAppWorkspace(vit)
 		offsets := vit.SubscribeForN10n(workspace, collection.QNameCollectionView)
+		require := require.New(t)
 		vit.trackBLOBReader(iblobstorage.BLOBReader{ReadCloser: reader})
 		captor := vit.emailCaptor
-		require.NoError(t, vit.RestartVVM())
-		require.Zero(t, afterTestCalls.Load(), "a direct restart does not end the test phase")
-		require.EqualValues(t, 1, reader.closes.Load(), "even an exhausted reader must be closed")
+		require.NoError(vit.RestartVVM())
+		require.Zero(afterTestCalls.Load(), "a direct restart does not end the test phase")
+		require.EqualValues(1, reader.closes.Load(), "even an exhausted reader must be closed")
 		func() {
 			timer := time.NewTimer(testTimeout)
 			defer timer.Stop()
@@ -218,13 +219,13 @@ func TestVITRestartCleanupLifetimes(t *testing.T) {
 		}()
 		select {
 		case _, open := <-captor.emailCaptorCh:
-			require.False(t, open, "old email capture is closed after its services stop")
+			require.False(open, "old email capture is closed after its services stop")
 		default:
 			t.Fatal("old email capture remains open after restart")
 		}
-		require.NotSame(t, captor, vit.emailCaptor)
-		vit.emailCaptor.Send("", state.EmailMessage{Subject: "restart generation"})
-		require.Equal(t, "restart generation", vit.CaptureEmail().Subject)
+		require.NotSame(captor, vit.emailCaptor)
+		require.NoError(vit.emailCaptor.Send("", state.EmailMessage{Subject: "restart generation"}))
+		require.Equal("restart generation", vit.CaptureEmail().Subject)
 		vit.trackBLOBReader(iblobstorage.BLOBReader{ReadCloser: readerAfterRestart})
 	})
 	require.EqualValues(t, 1, afterTestCalls.Load())
@@ -504,9 +505,7 @@ func stopSharedVITAfterTest(t *testing.T, vit *VIT) {
 
 func restartTestAppWorkspace(vit *VIT) *AppWorkspace {
 	return &AppWorkspace{
-		WorkspaceDescriptor: WorkspaceDescriptor{
-			WSID: istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID),
-		},
+		WSID:  istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID),
 		Owner: vit.GetSystemPrincipal(istructs.AppQName_test1_app1),
 	}
 }
@@ -547,10 +546,10 @@ func requireRestartContextClosed(t *testing.T, ctx context.Context) {
 
 // startSharedVITForRestartFailure returns the running VIT and an assertion for
 // its terminal state. The caller can run that assertion from a FailNow cleanup.
-func startSharedVITForRestartFailure(t *testing.T, opts ...VITConfigOptFunc) (*VIT, func()) {
+func startSharedVITForRestartFailure(t *testing.T, opts ...VITConfigOptFunc) (vit *VIT, assertTerminal func()) {
 	t.Helper()
 	cfg := newSharedRestartTestConfig(opts...)
-	vit := NewVIT(t, &cfg)
+	vit = NewVIT(t, &cfg)
 	previousProblem := vit.vvmProblemCtx
 	return vit, func() {
 		t.Helper()

@@ -6,7 +6,6 @@
 package sys_it
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -46,7 +45,6 @@ import (
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
-	vvmstorage "github.com/voedger/voedger/pkg/vvm/storage"
 )
 
 func TestBoostrap_BasicUsage(t *testing.T) {
@@ -368,16 +366,6 @@ type deploymentCommand struct {
 type federationRecorder struct {
 	federation.IFederationWithRetry
 	deploymentCommands []deploymentCommand
-}
-
-type vvmStorageKeyCaptorOnGet struct {
-	vvmstorage.ISysVvmStorage
-	key []byte
-}
-
-func (s *vvmStorageKeyCaptorOnGet) Get(key, _ []byte, _ *[]byte) (bool, error) {
-	s.key = bytes.Clone(key)
-	return false, nil
 }
 
 func (f *federationRecorder) AdminFunc(relativeURL, body string, opts ...httpu.ReqOptFunc) (*federation.FuncResponse, error) {

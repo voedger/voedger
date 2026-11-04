@@ -125,7 +125,7 @@ func (vit *VIT) runConfigCleanups() {
 	callbacks := vit.currentAfterTest
 	vit.currentAfterTest = nil
 	for _, callback := range slices.Backward(callbacks) {
-		defer callback(vit)
+		defer callback(vit) //nolint:revive,gocritic // Run every callback even on panic or Goexit.
 	}
 }
 
@@ -143,7 +143,7 @@ func (vit *VIT) releaseResources() {
 	}
 	// Run all callbacks in registration order, even on panic or Goexit.
 	for _, cleanup := range slices.Backward(cleanups) {
-		defer cleanup()
+		defer cleanup() //nolint:revive,gocritic // Run every cleanup even on panic or Goexit.
 	}
 }
 
