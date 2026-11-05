@@ -206,17 +206,19 @@ Feature: Partition and workspace recovery
 
     Scenario Outline: Partition recovery starts from a checkpoint in basic usage
       Given the PLog contains events through offset 50
-      And workspace "recovery-test-workspace" has last WLog offset 14 and last allocated ordinary record ID 200005
+      And workspace 1 has last WLog offset 14 and last allocated ordinary record ID 200005
       And the stored partition checkpoint is <checkpoint>
-      When VAOperator restarts the VVM
-      Then inserting an ordinary record into "recovery-test-workspace", retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+      And the Command processor has restarted
+      When VAOperator submits an insert into the unrecovered partition, retrying "503 Service Unavailable" responses
+      Then Partition recovery calls ReadPLog once from offset <startOffset> through the log end
+      And the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
 
       Examples:
-        | checkpoint        |
-        | absent            |
-        | lastPLogOffset 0  |
-        | lastPLogOffset 10 |
-        | lastPLogOffset 50 |
+        | checkpoint        | startOffset |
+        | lastPLogOffset 10 | 10          |
+        | lastPLogOffset 50 | 50          |
+        | lastPLogOffset 0  | 1           |
+        | absent            | 1           |
 
 
     Scenario Outline: Invalid partition checkpoint causes PLog read out from beginning
@@ -254,17 +256,18 @@ Feature: Partition and workspace recovery
       And any WLog events after offset 10 are CUD-free
       And the WLog ends at offset <lastWLogOffset>
       And the stored workspace checkpoint is <checkpoint>
-      And the VVM has restarted and completed partition recovery
+      And the Command processor has restarted and completed Partition recovery
       When VAOperator submits an insert into the unrecovered workspace, retrying "503 Service Unavailable" responses
-      Then the insert returns "200 OK" with CurrentWLogOffset <lastWLogOffset> + 1 and new ordinary record ID 200006
+      Then Workspace recovery calls ReadWLog once from offset <startOffset> through the log end
+      And the insert returns "200 OK" with CurrentWLogOffset <lastWLogOffset> + 1 and new ordinary record ID 200006
 
       Examples:
-        | checkpoint             | lastWLogOffset |
-        | absent                 | 14             |
-        | wlogIDBearingOffset 0  | 14             |
-        | wlogIDBearingOffset 6  | 14             |
-        | wlogIDBearingOffset 10 | 14             |
-        | wlogIDBearingOffset 10 | 10             |
+        | checkpoint             | lastWLogOffset | startOffset |
+        | wlogIDBearingOffset 6  | 14             | 6           |
+        | wlogIDBearingOffset 10 | 14             | 10          |
+        | wlogIDBearingOffset 10 | 10             | 10          |
+        | wlogIDBearingOffset 0  | 14             | 1           |
+        | absent                 | 14             | 1           |
 
     Scenario: Workspace recovery preserves sequence numbers after a mixed non-ID-bearing WLog tail
       Given the WLog has an ID-bearing event at offset 6 with record ID 200001

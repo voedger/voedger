@@ -53,7 +53,7 @@ In the production application-processing context:
 - **Checkpoint invalid**: a nonzero checkpoint exists but any of:
   - `Read*Log(storedOffset, ReadToTheEnd)` produces no callback (e.g. beyond the end)
   - offset of the event on the first callback of `Read*Log(storedOffset, ReadToTheEnd)` is not equal to `storedOffset` (e.g. points to an unoccupied offset in the middle of the log)
-  - for `Workspace checkpoint`: event on the first callback of `Read*Log(storedOffset, ReadToTheEnd)` has no new IDs (e.g. `storedOffset` incorrectly recorded)
+  - for `Workspace checkpoint`: event on the first callback of `ReadWLog(storedOffset, ReadToTheEnd)` has no new IDs (e.g. `storedOffset` incorrectly recorded)
 - **Checkpoint fallback**: one inclusive scan from `FirstOffset` when a stored checkpoint is invalid. Recovery does not rewrite the checkpoint.
 - **Partition recovery**: Command-processor-scoped recovery that restores the next PLog offset and republishes the application partition.
 - **Workspace recovery**: Command-prcoessor-scoped recovery that restores one workspace's next WLog offset and record ID after its partition has recovered.

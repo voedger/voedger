@@ -553,22 +553,25 @@ across a partition reset remains under Workspace recovery orchestration.
 
 ```text
 *Client
-  -> [Command processor]: insert an ordinary record into recovery-test-workspace; retry 503 during runtime recovery
+  -> [Command processor]: insert an ordinary record into workspace 1; retry 503 during runtime recovery
       -> [Partition recovery manager]: start -> 503
           -> [(Recovery checkpoint storage)]: absent, zero, or valid lastPLogOffset
           -> [Application events]: ReadPLog(checkpoint or FirstOffset, through log end)
           -> [Offsets bookkeeping]: nextPLogOffset = 51 after PLog end 50
           -> [Application records]: reapply final event when present
   -> [Command processor]: retry enters workspace recovery -> 503
-      -> [Workspace recovery manager]: recover recovery-test-workspace
+      -> [Workspace recovery manager]: recover workspace 1
           -> [Offsets bookkeeping]: next WLog offset = 15 after WLog end 14
           -> [Record ID generator]: next ordinary record ID = 200006 after 200005
   -> [Command processor]: retry inserts the record
       - return 200 OK with CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
-Absent and zero checkpoints select `FirstOffset` directly. A nonzero checkpoint
-must equal the first returned event offset.
+Local Command processor tests restart only the processor, preserving the stored
+checkpoints. They record the offset and count passed to `ReadPLog` and require
+exactly one read from the checkpoint, or `FirstOffset` for an absent or zero
+checkpoint, with `ReadToTheEnd`. The successful insert verifies recovered
+sequence numbers. Initial recovery is outside these tests.
 
 #### Invalid partition checkpoint causes PLog read out from beginning
 
@@ -636,6 +639,11 @@ allocation values are specified in [Sequence allocation](./sequences.feature).
       - WLog end 14 -> CurrentWLogOffset=15; WLog end 10 -> CurrentWLogOffset=11
       - new ordinary record ID=200006 in every case
 ```
+
+Local Command processor tests complete Partition recovery before submitting the
+insert. They record the offset and count passed to `ReadWLog` and require exactly
+one read from the checkpoint, or `FirstOffset` for an absent or zero checkpoint,
+with `ReadToTheEnd`. The successful insert verifies recovered sequence numbers.
 
 #### Workspace recovery preserves sequence numbers after a mixed non-ID-bearing WLog tail
 
