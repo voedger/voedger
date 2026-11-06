@@ -23,7 +23,7 @@ Systems:
   - When the request has no token, the `Guest` user, the `Anonymous` role, the `Host` principal, and any `[(cdoc.sys.Subject)]` rows that match `sys.Guest` in `RequestWSID` are emitted.
 
 - **`Compose principals - API token`**
-  - When `PrincipalPayload.IsAPIToken=true`, principal composition uses only `Roles` filtered to `RequestWSID` plus `AuthenticatedUser`; no Host, no Subject, no derived workspace roles.
+  - When `PrincipalPayload.IsAPIToken=true`, principal composition uses only matching `RoleScopeWorkspace` grants plus `AuthenticatedUser`; no Host, no Subject, no GlobalRoles, no derived workspace roles, and no Workspace descriptor read
 
 - **`Compose principals - user or device token`**
   - When `IsAPIToken=false`, the subsystem emits `AuthenticatedUser`, the `Host` principal, all four role sources, and the workspace-derived roles (`ProfileOwner` / `WorkspaceOwner` / `WorkspaceDevice`) appropriate to the `RequestWSID`.
@@ -68,7 +68,7 @@ Role sources
 ### Composition
 
 - `[Token validator]`
-  - When `Token` is non-empty, calls `[IAppTokens].ValidateToken(token, &PrincipalPayload)` (see [arch-tokens.md](./arch-tokens.md)). Failures short-circuit composition with the validation error.
+  - When `Token` is non-empty, calls `[IAppTokens].ValidateToken(token, &PrincipalPayload)`, which returns role grants with validated, normalized scopes according to the [principal payload contract](./arch-tokens.md#payload-contract). Failures short-circuit composition with the validation error
   - impl: [pkg/iauthnzimpl/impl.go#Authenticate](../../../../pkg/iauthnzimpl/impl.go)
 
 - `[Subjects reader]`
@@ -92,8 +92,9 @@ Four sources by origin contribute to a request's principal set; each is enumerat
   - Composition: `[Subjects reader]` reads `[(cdoc.sys.Subject)]` rows in `RequestWSID` matching either `PrincipalPayload.Login` or `PrincipalPayload.Alias` and emits one `Principal{Kind: Role, WSID: RequestWSID, QName: role}` per matched role.
 
 - `[Token-carried]`
-  - Origin: `[[Authentication]]` snapshots roles into `PrincipalPayload` at sign-in (per-app `Roles` from the registry login record) and `[c.registry.UpdateGlobalRoles]` updates the `GlobalRoles` field consumed at the next sign-in; see [arch-authn.md](./arch-authn.md). A second runtime write path is `[q.sys.EnrichPrincipalToken]`, which folds the request's composed `Principal{Kind: Role}` set into `PrincipalPayload.Roles` and re-issues the token so those roles travel into workspaces where they would not otherwise be composed; the token-lifecycle detail lives in [arch-tokens.md](./arch-tokens.md).
-  - Composition: `PrincipalPayload.Roles []{WSID, QName}` is filtered to `RequestWSID` for API tokens, or to `OwnerWSID` of `RequestWSID` and re-keyed to `RequestWSID` for user/device tokens; `PrincipalPayload.GlobalRoles []QName` is emitted in any workspace as `Principal{Kind: Role, WSID: RequestWSID, QName: role}` when `IsAPIToken=false`.
+  - Origin: `[[Authentication]]` snapshots `GlobalRoles` at sign-in, including updates made through `[c.registry.UpdateGlobalRoles]`; see [arch-authn.md](./arch-authn.md). Token role grants are populated by API-token issuance and `[q.sys.EnrichPrincipalToken]`; their lifecycle and scope encoding are defined in [Token management](./arch-tokens.md)
+  - Composition: normalized `PrincipalPayload.Roles []{Scope, WSID, QName}` are matched using the scope table below. A matching grant produces `Principal{Kind: Role, WSID: RequestWSID, QName: role.QName}`, retaining the existing token-role principal WSID. `PrincipalPayload.GlobalRoles []QName` continues to apply in any Workspace when `IsAPIToken=false`
+  - The existing composition stages remain intact: API tokens process exact-Workspace grants before returning, while regular User/Device tokens process owned-by grants after their existing System short-circuits and descriptor-based role derivation. Scope does not introduce new role sources, descriptor reads, or token-kind and scope combinations in this change
 
 - `[Request-context]`
   - Origin: computed at composition time from request state (`RequestWSID`, `Host`, token presence, `ProfileWSID`, workspace descriptor's `OwnerWSID`, app-supplied `isDeviceAllowed`), not from any persisted record.
@@ -102,6 +103,15 @@ Four sources by origin contribute to a request's principal set; each is enumerat
 - `[Anonymous-grants]`
   - Origin: emitted when no token is presented; combines the reserved `Anonymous` role and the `Guest` user (`sys.Guest @ GuestWSID`) defined in [pkg/iauthnz/authn-types.go](../../../../pkg/iauthnz/authn-types.go) with any `[(cdoc.sys.Subject)]` rows in `RequestWSID` that match `sys.Guest`.
   - Composition: `Anonymous` and `Guest` are added unconditionally on the no-token branch; the `[Subjects reader]` is invoked with the `sys.Guest` login so any guest-bound role grants persisted by `[[Workspace membership]]` apply.
+
+Token-carried role matching:
+
+| Role scope                   | Matching condition                                                              | Existing composition stage |
+| ---------------------------- | ------------------------------------------------------------------------------- | -------------------------- |
+| `RoleScopeWorkspace`         | `role.WSID == RequestWSID`                                                      | API token                  |
+| `RoleScopeWorkspacesOwnedBy` | The request Workspace descriptor exists and `role.WSID == descriptor.OwnerWSID` | Regular User/Device token  |
+
+Owned-by matching uses immediate ownership. Missing scopes, explicit zero, and invalid scope claims are handled by the [principal payload validation contract](./arch-tokens.md#payload-contract) before composition. Derived principals retain their current WSIDs, including the device ProfileWSID on `WorkspaceDevice`.
 
 VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later by the ACL engine, not during composition; see `[Role inheritance map]` above.
 
@@ -117,10 +127,10 @@ VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later
             emit [Anonymous-grants] via [Subjects reader] for sys.Guest in RequestWSID
             emit [Request-context]: Host
             return (principals, NullWSID)
-       -> [Token validator]: appTokens.ValidateToken(Token, &PrincipalPayload)
+       -> [Token validator]: appTokens.ValidateToken(Token, &PrincipalPayload) -> normalized role scopes
        -> emit [Request-context]: Role(AuthenticatedUser @ RequestWSID)
        -> if PrincipalPayload.IsAPIToken:
-            emit [Token-carried] PrincipalPayload.Roles filtered to RequestWSID
+            emit [Token-carried] RoleScopeWorkspace grants matched by the scope table; WSID = RequestWSID
             return (principals, NullWSID)
        -> emit [Token-carried] PrincipalPayload.GlobalRoles in RequestWSID
        -> emit [Invite-granted] via [Subjects reader] for PrincipalPayload.Login and PrincipalPayload.Alias in RequestWSID
@@ -130,7 +140,7 @@ VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later
        -> emit User|Device principal at profileWSID
        -> read cdoc.WorkspaceDescriptor in RequestWSID
        -> emit [Request-context]: ProfileOwner (if RequestWSID==profileWSID), WorkspaceOwner (user, OwnerWSID==profileWSID), WorkspaceDevice (device, app's isDeviceAllowed)
-       -> emit [Token-carried] PrincipalPayload.Roles filtered to OwnerWSID of RequestWSID
+       -> emit [Token-carried] RoleScopeWorkspacesOwnedBy grants matched by the scope table; WSID = RequestWSID
        -> emit [Request-context]: Host
        -> return (principals, profileWSID)
 ```

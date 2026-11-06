@@ -5,10 +5,12 @@
 package sys_it
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
@@ -146,6 +148,46 @@ func TestForeignAuthorization(t *testing.T) {
 		// expect no errors
 		body = `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 		vit.PostWS(childWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(enrichedToken))
+		enrichedPrincipalPayload, enrichedGenericPayload := decodeScopedPrincipalToken(t, require, vit, enrichedToken)
+		require.Contains(enrichedPrincipalPayload.Roles, payloads.RoleType{
+			Scope: payloads.RoleScopeWorkspacesOwnedBy, WSID: parentWS.WSID, QName: iauthnz.QNameRoleWorkspaceOwner,
+		})
+		for _, role := range enrichedPrincipalPayload.Roles {
+			require.Equal(payloads.RoleScopeWorkspacesOwnedBy, role.Scope)
+		}
+
+		enrichBody := `{"args":{"Login":"login"},"elements":[{"fields":["EnrichedToken"]}]}`
+		repeatedToken := vit.PostWS(parentWS, "q.sys.EnrichPrincipalToken", enrichBody,
+			httpu.WithAuthorizeBy(enrichedToken)).SectionRow()[0].(string)
+		repeatedPayload, _ := decodeScopedPrincipalToken(t, require, vit, repeatedToken)
+		require.Equal(enrichedPrincipalPayload, repeatedPayload)
+
+		refreshBody := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
+		refreshedToken := vit.PostProfile(parentWS.Owner, "q.sys.RefreshPrincipalToken", refreshBody,
+			httpu.WithAuthorizeBy(repeatedToken)).SectionRow()[0].(string)
+		refreshedPayload, refreshedMetadata := decodeScopedPrincipalToken(t, require, vit, refreshedToken)
+		require.Equal(repeatedPayload, refreshedPayload)
+		require.Equal(enrichedGenericPayload.AppQName, refreshedMetadata.AppQName)
+		require.Equal(enrichedGenericPayload.Duration, refreshedMetadata.Duration)
+		vit.PostWS(childWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(refreshedToken))
+
+		grandchildName := vit.NextName()
+		grandchildBody, err := json.Marshal(map[string]any{"args": map[string]any{
+			"WSName": grandchildName, "WSKind": "app1pkg.test_ws",
+			"WSKindInitializationData": `{"IntFld":10}`, "WSClusterID": 1,
+		}})
+		require.NoError(err)
+		vit.PostWS(childWS, "c.sys.InitChildWorkspace", string(grandchildBody), httpu.WithAuthorizeBy(refreshedToken))
+		grandchildWS := vit.WaitForChildWorkspace(childWS, grandchildName, httpu.WithAuthorizeBy(refreshedToken))
+		vit.PostWS(grandchildWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(refreshedToken), httpu.Expect403())
+		nextToken := vit.PostWS(childWS, "q.sys.EnrichPrincipalToken", enrichBody,
+			httpu.WithAuthorizeBy(refreshedToken)).SectionRow()[0].(string)
+		nextPayload, _ := decodeScopedPrincipalToken(t, require, vit, nextToken)
+		require.Subset(nextPayload.Roles, refreshedPayload.Roles)
+		require.Contains(nextPayload.Roles, payloads.RoleType{
+			Scope: payloads.RoleScopeWorkspacesOwnedBy, WSID: childWS.WSID, QName: iauthnz.QNameRoleWorkspaceOwner,
+		})
+		vit.PostWS(grandchildWS, "c.sys.CUD", body, httpu.WithAuthorizeBy(nextToken))
 	})
 
 	t.Run("API token", func(t *testing.T) {
@@ -166,5 +208,27 @@ func TestForeignAuthorization(t *testing.T) {
 
 		// API token has role.app1pkg.SpecialAPITokenRole, q.sys.Collection is allowed for that role according to grants in vsql -> the request should be successful
 		vit.PostWS(childWS, "q.sys.Collection", body, httpu.WithAuthorizeBy(apiToken))
+		apiPayload, _ := decodeScopedPrincipalToken(t, require, vit, apiToken)
+		require.Equal([]payloads.RoleType{{
+			Scope: payloads.RoleScopeWorkspace, WSID: childWS.WSID, QName: appdef.NewQName("app1pkg", "SpecialAPITokenRole"),
+		}}, apiPayload.Roles)
+		vit.PostWS(parentWS, "q.sys.Collection", body, httpu.WithAuthorizeBy(apiToken), httpu.Expect403())
 	})
+}
+
+func decodeScopedPrincipalToken(t *testing.T, require *require.Assertions, vit *it.VIT, token string) (payloads.PrincipalPayload, istructs.GenericPayload) {
+	t.Helper()
+	var payload payloads.PrincipalPayload
+	metadata, err := vit.ValidateToken(token, &payload)
+	require.NoError(err)
+	parsed, _, err := jwt.NewParser().ParseUnverified(token, jwt.MapClaims{})
+	require.NoError(err)
+	roles := parsed.Claims.(jwt.MapClaims)["Roles"].([]any)
+	require.Len(roles, len(payload.Roles))
+	for i, role := range payload.Roles {
+		claims := roles[i].(map[string]any)
+		require.Contains(claims, "Scope")
+		require.Equal(float64(role.Scope), claims["Scope"])
+	}
+	return payload, metadata
 }

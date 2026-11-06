@@ -42,12 +42,17 @@ func provideExecQryEnrichPrincipalToken(atf payloads.IAppTokensFactory) istructs
 			return err
 		}
 
+		scope := payloads.RoleScopeWorkspacesOwnedBy
+		if principalPayload.IsAPIToken {
+			scope = payloads.RoleScopeWorkspace
+		}
 		principals := args.Workpiece.(processors.IProcessorWorkpiece).GetPrincipals()
 		for _, prn := range principals {
 			if prn.Kind != iauthnz.PrincipalKind_Role {
 				continue
 			}
 			newRole := payloads.RoleType{
+				Scope: scope,
 				WSID:  prn.WSID,
 				QName: prn.QName,
 			}

@@ -17,11 +17,14 @@ Roles:
 - **`Issue principal token`**
   - At the end of sign-in (see [arch-authn.md](./arch-authn.md#sign-in-by-login-or-by-active-alias)) the authentication subsystem builds `PrincipalPayload` and calls `[ITokens].IssueToken(appQName, ttl, &payload)` to mint a `[Principal Token]`. The `Login` field carries the canonical primary login (the immutable internal identity); the new `Alias` field carries the active alias snapshot at issue time, or is empty when no alias is set. Both are captured at issue time and are immune to any subsequent change to `[(registry.Login)]` or `[(registry.LoginAlias)]`.
 
+- **`Issue API token`**
+  - `@System` uses `[API-token issuer]` to convert the supplied principal payload into an API token with exact-Workspace role grants
+
 - **`Refresh principal token`**
   - `@Client` calls `[q.sys.RefreshPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, the same identity (including the captured `Login` and `Alias`) is re-encoded with the same TTL/AppQName by `[ITokens].IssueToken`, and the new token is returned. Refresh never re-resolves the login or alias and never updates the captured values.
 
 - **`Enrich principal token`**
-  - `@Client` (basic auth, `WorkspaceOwner`) calls `[q.sys.EnrichPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, every runtime-composed `Principal{Kind: Role}` for the request is folded into `PrincipalPayload.Roles` (deduplicated by `RoleType{WSID, QName}`), and a fresh `[Principal Token]` is minted by `[IAppTokens].IssueToken` with `DefaultPrincipalTokenExpiration`. Unlike refresh, enrich rewrites the `Roles` set; the other identity fields are preserved.
+  - `@Client` (basic auth, `WorkspaceOwner`) calls `[q.sys.EnrichPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, every runtime-composed `Principal{Kind: Role}` for the request is folded into `PrincipalPayload.Roles` (deduplicated by `RoleType{Scope, WSID, QName}`), and a fresh `[Principal Token]` is minted by `[IAppTokens].IssueToken` with `DefaultPrincipalTokenExpiration`. Enrichment preserves existing grants and appends absent grants; the other identity fields are preserved
 
 - **`Validate principal token`**
   - On every request the authorization subsystem calls `[IAppTokens].ValidateToken(token, &payload)` (via `[Auth boundary]`) to verify the signature, audience, and expiry and to decode `PrincipalPayload` for principal composition (see [arch-authz.md](./arch-authz.md)).
@@ -45,6 +48,7 @@ Token endpoints
     v
 Token primitives
     |
+    +-- [API-token issuer]
     +-- [ITokens]
     +-- [IAppTokens]
     |
@@ -58,19 +62,26 @@ Payload contract
 ### Token endpoints
 
 - `[q.sys.RefreshPrincipalToken]`
-  - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPayloadRegistry`, and re-issues a token for the same AppQName, duration, and payload. The decoded `Login` and `Alias` are preserved verbatim, so the snapshot taken at the original issue time survives the refresh; alias changes performed in the registry between issue and refresh have no effect on the refreshed token.
+  - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPayloadRegistry`, and re-issues a token for the same AppQName and duration. Token validation resolves legacy role scopes before reissue; explicit scopes and all other decoded payload fields are preserved. Alias changes performed in the registry between issue and refresh have no effect on the refreshed token
   - impl: [pkg/sys/authnz/impl_refreshprincipaltoken.go#provideRefreshPrincipalTokenExec](../../../../pkg/sys/authnz/impl_refreshprincipaltoken.go)
 
 - `[q.sys.EnrichPrincipalToken]`
-  - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPrincipalPayload`, aggregates every `Principal{Kind: Role}` exposed by `args.Workpiece.(processors.IProcessorWorkpiece).GetPrincipals()` into `PrincipalPayload.Roles` (each as `RoleType{WSID, QName}`, appended only when not already present), and re-issues through `[IAppTokens].IssueToken` with `DefaultPrincipalTokenExpiration`. Runs under basic auth with the `WorkspaceOwner` role; it snapshots the request's runtime-composed roles into the token so they survive into workspaces where they are not otherwise composed (see the `[Token-carried]` role source in [arch-authz.md](./arch-authz.md)).
+  - Reads the bearer token from request state via `storages.GetPrincipalTokenFromState`, decodes `PrincipalPayload` through `payloads.GetPrincipalPayload`, and snapshots every `Principal{Kind: Role}` from `args.Workpiece.(processors.IProcessorWorkpiece).GetPrincipals()`. Each new grant retains the principal's WSID and QName and receives `RoleScopeWorkspace` for an API token or `RoleScopeWorkspacesOwnedBy` for a regular token. Grants are appended only when the complete `{Scope, WSID, QName}` is absent, and the token is reissued with `DefaultPrincipalTokenExpiration`
+  - Runs under the existing `WorkspaceOwner` authorization. The input remains the effective-principal list; existing token grants retain their scopes, and newly captured regular-token roles retain current parent-to-child propagation. Repeated enrichment can therefore add grants for another ownership level; source-grant bookkeeping and delegation-policy changes belong to a separate change
   - impl: [pkg/sys/authnz/impl_enrichprincipaltoken.go#provideExecQryEnrichPrincipalToken](../../../../pkg/sys/authnz/impl_enrichprincipaltoken.go)
   - decl: [pkg/sys/sys.vsql#EnrichPrincipalToken](../../../../pkg/sys/sys.vsql)
 
 ### Token primitives
 
+- `[API-token issuer]`
+  - Retains the supplied payload's carried roles, converts their scopes to `RoleScopeWorkspace`, and appends the requested roles with the supplied target WSID and the same scope before selecting API-token principal composition. Builds the output role collection without modifying the source payload's entries
+  - Preserves the existing rejection of a null target WSID or a requested system role
+  - impl: [pkg/iauthnzimpl/utils.go#IssueAPIToken](../../../../pkg/iauthnzimpl/utils.go)
+
 - `[ITokens]`
   - VVM-level token signer and validator that turns any payload-by-reference into a JWT and back. Audience is derived from the payload type. Returns `ErrTokenExpired`, `ErrInvalidToken`, `ErrInvalidAudience` from `ValidateToken`. Also exposes `CryptoHash256` used by the verifier sub-flow.
   - decl: [pkg/itokens/interface.go#ITokens](../../../../pkg/itokens/interface.go)
+  - impl: [pkg/itokensjwt/impl.go#ValidateToken](../../../../pkg/itokensjwt/impl.go)
 
 - `[IAppTokens]`
   - Per-app facade over `[ITokens]` produced by `payloads.implIAppTokensFactory`. Bind a token to a specific `AppQName` so that `ValidateToken` rejects cross-app reuse. Used by `[Auth boundary]` on every authn enforcement.
@@ -84,10 +95,15 @@ Payload contract
     - `Alias` - active alias snapshot at issue time, empty when no alias is set; never re-read on refresh
     - `SubjectKind` - `User` or `Device`
     - `ProfileWSID` - profile workspace of the subject (`NullWSID` for system-only tokens)
-    - `Roles []{WSID, QName}` - workspace-scoped roles emitted on every request; for `IsAPIToken=true` these are the only persisted-role source (alongside the implicit `AuthenticatedUser`)
+    - `Roles []RoleType` - grants represented by `{Scope RoleScope, WSID istructs.WSID, QName appdef.QName}`; the [auth model](./context.md#rolegrant) defines grant equality and [RoleScope](./context.md#rolescope) defines applicability
     - `GlobalRoles []QName` - global roles to be applied in any workspace; emitted by `[[Authorization]]` on every request when `IsAPIToken=false`
-    - `IsAPIToken` - when true, principal composition emits only `AuthenticatedUser` and `Roles` filtered to `RequestWSID`, and omits the `Host` principal, `GlobalRoles`, the `WorkspaceOwner`/`ProfileOwner`/`WorkspaceDevice` derivations, the `System` short-circuit, and the `[(cdoc.sys.Subject)]` read
+    - `IsAPIToken` - selects restricted principal composition as defined in [Authorization](./arch-authz.md#composition)
   - decl: [pkg/itokens-payloads/types.go#PrincipalPayload](../../../../pkg/itokens-payloads/types.go)
+  - impl: [pkg/itokens-payloads/impl_principalpayload.go#ValidateTokenClaims](../../../../pkg/itokens-payloads/impl_principalpayload.go)
+  - The payload type and existing claim names remain unchanged so JWT audience derivation and identity claims stay compatible. `RoleScope` is an `int`, with `RoleScopeWorkspacesOwnedBy = 0` first in the enumeration and `RoleScopeWorkspace = 1`; a Go role literal may omit `Scope` to select the owned-by default
+  - `PrincipalPayload` uses standard JSON encoding and decoding. After successful JWT verification, audience checking, and payload decoding, `ValidateToken` invokes the optional payload method `ValidateTokenClaims([]byte) error` with the original claim bytes, shared by direct `[ITokens]` calls and the `[IAppTokens]` facade. Scope interpretation stays in `PrincipalPayload`; the generic JWT signer owns signature, audience, expiry, and application metadata
+  - Encoding includes the numeric `Scope` claim even for zero; the claim must not use `omitempty`. Encoding does not validate scopes or change the caller's role entries; a token issued with an unsupported scope fails `ValidateToken`
+  - `PrincipalPayload.ValidateTokenClaims` inspects raw scope claims to distinguish missing values from explicit zero. An absent legacy claim resolves to `RoleScopeWorkspace` when the original `IsAPIToken` is true and to `RoleScopeWorkspacesOwnedBy` otherwise. An explicit zero retains the owned-by meaning; null, non-integer, and unknown integer values fail token validation
 
 - `[Principal Token]`
   - Shared concept; see [arch.md#shared-concepts](./arch.md#shared-concepts).
@@ -103,14 +119,29 @@ Payload contract
   -> @Client: principalToken, profileWSID
 ```
 
+### Issue API token
+
+```text
+@System
+  -> [API-token issuer]: duration, requested roles, target WSID, current principal payload
+       -> reject a null target WSID or a requested system role
+       -> copy carried role entries and set their Scope = RoleScopeWorkspace
+       -> append requested roles with Scope = RoleScopeWorkspace and WSID = target WSID
+       -> set IsAPIToken = true on the output payload
+       -> [IAppTokens].IssueToken(duration, &payload)
+            -> [PrincipalPayload]: validate and encode role scopes
+            -> [ITokens]: sign for the application and requested lifetime
+  -> @System: API token
+```
+
 ### Refresh principal token
 
 ```text
 @Client POST q.sys.RefreshPrincipalToken (Authorization: Bearer <current token>)
   -> [q.sys.RefreshPrincipalToken]
        -> storages.GetPrincipalTokenFromState(state) -> current token
-       -> payloads.GetPayloadRegistry([ITokens], token, &payload) -> decode + appQName + ttl
-       -> [ITokens].IssueToken(appQName, ttl, &payload)
+       -> payloads.GetPayloadRegistry([ITokens], token, &payload) -> decode and normalize scopes + appQName + ttl
+       -> [ITokens].IssueToken(appQName, ttl, &payload) -> preserve scopes and encode zero explicitly
   -> @Client: principalToken (new), Login and Alias unchanged from original issue
 ```
 
@@ -122,9 +153,10 @@ The `Login` and `Alias` fields are taken verbatim from the decoded payload and a
 @Client POST q.sys.EnrichPrincipalToken (Authorization: Bearer <current token>, WorkspaceOwner)
   -> [q.sys.EnrichPrincipalToken]
        -> storages.GetPrincipalTokenFromState(state) -> current token
-       -> payloads.GetPrincipalPayload(appTokens, token) -> decode payload
+       -> payloads.GetPrincipalPayload(appTokens, token) -> decode payload and normalize scopes
        -> for each Principal{Kind: Role} in IProcessorWorkpiece.GetPrincipals():
-            append RoleType{WSID, QName} to payload.Roles if absent
+            Scope = RoleScopeWorkspace if IsAPIToken, otherwise RoleScopeWorkspacesOwnedBy
+            append RoleType{Scope, WSID: Principal.WSID, QName: Principal.QName} if absent
        -> [IAppTokens].IssueToken(DefaultPrincipalTokenExpiration, &payload)
   -> @Client: EnrichedToken
 ```
@@ -135,7 +167,7 @@ The `Login` and `Alias` fields are taken verbatim from the decoded payload and a
 [Auth boundary] (see arch.md)
   -> [IAppTokens].ValidateToken(token, &payload)
        -> verify signature, audience (AppQName), expiry
-       -> decode PrincipalPayload
+       -> decode PrincipalPayload and normalize and validate role scopes
   -> return to [[Authorization]] for principal composition (see arch-authz.md)
 ```
 
@@ -144,3 +176,12 @@ The `Login` and `Alias` fields are taken verbatim from the decoded payload and a
 `DefaultPrincipalTokenExpiration = 1h` is defined in `pkg/sys/authnz/consts.go`; `[q.registry.IssuePrincipalToken]` rejects TTLs above `maxTokenTTLHours`. The TTL is preserved across refresh: each refresh extends the bearer-token wall-clock lifetime by the same duration that the original issue requested. Enrich does not preserve the input token's remaining lifetime; it mints with `DefaultPrincipalTokenExpiration`, consistent with a freshly issued token.
 
 The `IsAPIToken` branch of principal composition is documented in [arch-authz.md](./arch-authz.md); the token subsystem owns only the flag's presence on `PrincipalPayload`, not the composition rules driven by it.
+
+## Cross-cutting concerns
+
+### Versioning and compatibility
+
+- Every token issuer in this subsystem emits only the existing scope combinations: `RoleScopeWorkspace` for API tokens and `RoleScopeWorkspacesOwnedBy` for regular tokens
+- Every principal-token validation path uses the shared payload validation hook, including authentication, refresh, and enrichment
+
+The additive claim allows existing validators to ignore scope while these combinations remain unchanged. An older refresh or enrichment node can drop the claim; a newer decoder recovers the same meaning from the preserved token kind. New token-kind and scope combinations require a separate rollout after validators understand explicit scope

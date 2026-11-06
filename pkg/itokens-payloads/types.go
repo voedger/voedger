@@ -29,10 +29,16 @@ type PrincipalPayload struct {
 	IsAPIToken  bool
 }
 
+type RoleScope int
+
+const (
+	RoleScopeWorkspacesOwnedBy RoleScope = iota
+	RoleScopeWorkspace
+)
+
 type RoleType struct {
-	// for role must be OwnerWSID, not the request WSID
-	WSID istructs.WSID
-	// E.g. air.LinkedDevice
+	Scope RoleScope
+	WSID  istructs.WSID
 	QName appdef.QName
 }
 
