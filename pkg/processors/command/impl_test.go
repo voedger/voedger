@@ -1700,7 +1700,7 @@ func prepareRecoveryCheckpointWLog(t *testing.T, app testApp, wsid istructs.WSID
 	for index := range 4 {
 		expectedOffset := 2 + index
 		response := sendNoCUDCommand(t, wsid, app)
-		require.Equal(int(expectedOffset), int(response["CurrentWLogOffset"].(float64)))
+		require.Equal(expectedOffset, int(response["CurrentWLogOffset"].(float64)))
 	}
 	firstIDBearing := sendCUDWithBody(t, wsid, app,
 		`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`)
@@ -1711,7 +1711,7 @@ func prepareRecoveryCheckpointWLog(t *testing.T, app testApp, wsid istructs.WSID
 	for index := range 3 {
 		expectedOffset := 7 + index
 		response := sendNoCUDCommand(t, wsid, app)
-		require.Equal(int(expectedOffset), int(response["CurrentWLogOffset"].(float64)))
+		require.Equal(expectedOffset, int(response["CurrentWLogOffset"].(float64)))
 	}
 	lastRecordIDBearing := sendCUDWithBody(t, wsid, app, `{"cuds":[
 		{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}},
