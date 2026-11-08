@@ -31,11 +31,6 @@ type PrincipalPayload struct {
 
 type RoleScope int
 
-const (
-	RoleScopeWorkspacesOwnedBy RoleScope = iota
-	RoleScopeWorkspace
-)
-
 type RoleType struct {
 	Scope RoleScope
 	WSID  istructs.WSID
