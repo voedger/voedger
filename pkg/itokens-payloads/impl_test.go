@@ -344,23 +344,32 @@ func TestPrincipalPayloadIncompleteRoles(t *testing.T) {
 
 func TestPrincipalPayloadInvalidScopes(t *testing.T) {
 	require := require.New(t)
+	const scopeError = "roles[1].scope must be 0 (owned-by) or 1 (workspace)"
 	for _, tc := range []struct {
-		name  string
-		scope any
+		name      string
+		scope     any
+		wantError string
 	}{
-		{"null", nil}, {"string", "0"}, {"fraction", 0.5},
-		{"negative", -1}, {"unknown", 2}, {"boolean", false},
+		{"null", nil, scopeError}, {"string", "0", ""}, {"fraction", 0.5, ""},
+		{"negative", -1, scopeError}, {"unknown", 2, scopeError}, {"boolean", false, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			token := signPrincipalRoleClaims(t, require, false, []map[string]any{
+				{"Scope": 0, "WSID": 100, "QName": "test.valid"},
 				{"Scope": tc.scope, "WSID": 100, "QName": "test.role"},
 			})
 			tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
 			var actual PrincipalPayload
 			_, err := tokens.ValidateToken(token, &actual)
 			require.Error(err)
+			if tc.wantError != "" {
+				require.EqualError(err, tc.wantError)
+			}
 			_, err = ProvideIAppTokensFactory(tokens).New(testApp).ValidateToken(token, &actual)
 			require.Error(err)
+			if tc.wantError != "" {
+				require.EqualError(err, tc.wantError)
+			}
 		})
 	}
 	for name, scope := range map[string]RoleScope{"negative issued scope is rejected": -1, "unknown issued scope is rejected": 2} {

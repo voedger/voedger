@@ -8,6 +8,7 @@ package payloads
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type roleScopeClaim struct {
@@ -37,11 +38,8 @@ func (p *PrincipalPayload) ValidateTokenClaims(claims []byte) error {
 		if err := json.Unmarshal(role.Scope, &scope); err != nil {
 			return err
 		}
-		if scope == nil {
-			return errors.New("role scope cannot be null")
-		}
-		if *scope != RoleScopeWorkspacesOwnedBy && *scope != RoleScopeWorkspace {
-			return errors.New("invalid role scope")
+		if scope == nil || (*scope != RoleScopeWorkspacesOwnedBy && *scope != RoleScopeWorkspace) {
+			return fmt.Errorf("roles[%d].scope must be %d (owned-by) or %d (workspace)", i, RoleScopeWorkspacesOwnedBy, RoleScopeWorkspace)
 		}
 	}
 	return nil
