@@ -19,37 +19,9 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-type mockCUDRow struct {
-	istructs.ICUDRow
-	mock.Mock
-}
-
-type mockWLogEvent struct {
-	mock.Mock
-}
-
-func (e *mockWLogEvent) ArgumentObject() istructs.IObject {
-	return e.Called().Get(0).(istructs.IObject)
-}
-func (e *mockWLogEvent) Bytes() []byte { return e.Called().Get(0).([]byte) }
-func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow) bool) {
-	e.Called(cb)
-}
-func (e *mockWLogEvent) RegisteredAt() istructs.UnixMilli {
-	return e.Called().Get(0).(istructs.UnixMilli)
-}
-func (e *mockWLogEvent) DeviceID() istructs.ConnectedDeviceID {
-	return e.Called().Get(0).(istructs.ConnectedDeviceID)
-}
-func (e *mockWLogEvent) Synced() bool                 { return e.Called().Bool(0) }
-func (e *mockWLogEvent) QName() appdef.QName          { return e.Called().Get(0).(appdef.QName) }
-func (e *mockWLogEvent) SyncedAt() istructs.UnixMilli { return e.Called().Get(0).(istructs.UnixMilli) }
-func (e *mockWLogEvent) Error() istructs.IEventError  { return e.Called().Get(0).(istructs.IEventError) }
-func (e *mockWLogEvent) Release()                     {}
-
 func TestWLogStorage_Read(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		touched := false
 		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
@@ -73,7 +45,6 @@ func TestWLogStorage_Read(t *testing.T) {
 		require.True(touched)
 	})
 	t.Run("Should return error on read wlog", func(t *testing.T) {
-		require := require.New(t)
 		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).Return(errTest)
 		eventsFunc := func() istructs.IEvents { return events }
@@ -88,9 +59,9 @@ func TestWLogStorage_Read(t *testing.T) {
 }
 
 func TestWLogStorage_Get(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
-		event := new(mockWLogEvent)
+		event := new(coreutils.MockPLogEvent)
 		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
 			Return(nil).
@@ -111,12 +82,12 @@ func TestWLogStorage_Get(t *testing.T) {
 
 }
 func TestWLogStorage_GetBatch(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
-		event := new(mockWLogEvent)
+		event := new(coreutils.MockPLogEvent)
 		event.On("CUDs", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 			cb := args.Get(0).(func(rec istructs.ICUDRow) bool)
-			cb(new(mockCUDRow))
+			cb(new(coreutils.MockCUDRow))
 		})
 		events := &coreutils.MockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
@@ -148,7 +119,6 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		require.PanicsWithError(errRecordIDFieldUndefined(sys.Storage_WLog_Field_Offset).Error(), func() { sv.AsRecordID(sys.Storage_WLog_Field_Offset) })
 	})
 	t.Run("Should return error when error occurred on read wlog", func(t *testing.T) {
-		require := require.New(t)
 		events := &coreutils.MockEvents{}
 		events.
 			On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
@@ -180,6 +150,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 }
 
 func TestWLogKeyBuilder(t *testing.T) {
+	require := require.New(t)
 	t.Run("String", func(t *testing.T) {
 		s := &wLogStorage{
 			wsidFunc: func() istructs.WSID { return istructs.WSID(42) },
@@ -189,6 +160,6 @@ func TestWLogKeyBuilder(t *testing.T) {
 		kb.PutInt64(sys.Storage_WLog_Field_Offset, 20)
 		kb.PutInt64(sys.Storage_WLog_Field_WSID, 30)
 
-		require.Equal(t, "storage:sys.WLog, wsid:30, offset:20, count:10", kb.(fmt.Stringer).String())
+		require.Equal("storage:sys.WLog, wsid:30, offset:20, count:10", kb.(fmt.Stringer).String())
 	})
 }
