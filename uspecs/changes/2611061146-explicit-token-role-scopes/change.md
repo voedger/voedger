@@ -14,7 +14,7 @@ Refs:
 
 ## Why
 
-Need to specify a role in token for an exact workspace -> let's add a role scope and use [RoleType.WSID](https://github.com/voedger/voedger/blob/5c45e847270a93a7c5c45f7f4026c9d9415aeb6d/pkg/itokens-payloads/types.go#L32). It expected to mean "any workspace whose WorkspaceDesriptor.OwnerWSID == RoleType.WSID", but there is a confuse: `RoleType.WSID` currently has two meanings, selected implicitly by `PrincipalPayload.IsAPIToken`:
+We need to specify a role in a token for an exact workspace, so let's add a role scope and use [RoleType.WSID](https://github.com/voedger/voedger/blob/5c45e847270a93a7c5c45f7f4026c9d9415aeb6d/pkg/itokens-payloads/types.go#L32). It's expected to mean "any workspace whose WorkspaceDescriptor.OwnerWSID == RoleType.WSID", but there is confusion: `RoleType.WSID` currently has two meanings, selected implicitly by `PrincipalPayload.IsAPIToken`:
 
 - For an API token, `WSID = 42` grants the role in Workspace 42 only
 - For a regular User or Device token, `WSID = 42` grants the role in each Workspace whose immediate owner is Workspace 42
