@@ -22,6 +22,9 @@ func (p *PrincipalPayload) ValidateTokenClaims(claims []byte) error {
 	if err := json.Unmarshal(claims, &wire); err != nil {
 		return err
 	}
+	if len(p.Roles) < len(wire.Roles) {
+		return errors.New("payload has fewer roles than token claims")
+	}
 	for i, role := range wire.Roles {
 		if len(role.Scope) == 0 {
 			p.Roles[i].Scope = RoleScopeWorkspacesOwnedBy

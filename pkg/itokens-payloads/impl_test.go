@@ -323,6 +323,25 @@ func TestPrincipalPayloadExplicitScopes(t *testing.T) {
 	}
 }
 
+func TestPrincipalPayloadIncompleteRoles(t *testing.T) {
+	require := require.New(t)
+	for _, tc := range []struct {
+		name  string
+		roles []RoleType
+	}{
+		{name: "uninitialized roles"},
+		{name: "partially decoded roles", roles: []RoleType{{WSID: 42}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := PrincipalPayload{Roles: tc.roles}
+			before := slices.Clone(payload.Roles)
+			err := payload.ValidateTokenClaims([]byte(`{"IsAPIToken":true,"Roles":[{"WSID":42},{"WSID":43}]}`))
+			require.EqualError(err, "payload has fewer roles than token claims")
+			require.Equal(before, payload.Roles)
+		})
+	}
+}
+
 func TestPrincipalPayloadInvalidScopes(t *testing.T) {
 	require := require.New(t)
 	for _, tc := range []struct {
