@@ -508,6 +508,9 @@ func (m *MockAppStructs) Records() istructs.IRecords {
 func (m *MockAppStructs) ViewRecords() istructs.IViewRecords {
 	return mockResult[istructs.IViewRecords](m.Called().Get(0))
 }
+func (m *MockAppStructs) ClusterAppID() istructs.ClusterAppID {
+	return m.Called().Get(0).(istructs.ClusterAppID)
+}
 
 type MockRecords struct {
 	istructs.IRecords
