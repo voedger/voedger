@@ -1690,11 +1690,17 @@ func setRecoveryAdmissionApp(t *testing.T, wsids ...istructs.WSID) testApp {
 
 func prepareRecoveryAdmissionWLog(t *testing.T, app testApp, wsid istructs.WSID) {
 	t.Helper()
+	prepareRecoveryCheckpointWLog(t, app, wsid, 14)
+}
+
+func prepareRecoveryCheckpointWLog(t *testing.T, app testApp, wsid istructs.WSID, lastWLogOffset istructs.Offset) {
+	t.Helper()
 	require := require.New(t)
 
-	for expectedOffset := istructs.Offset(2); expectedOffset <= 5; expectedOffset++ {
+	for index := range 4 {
+		expectedOffset := 2 + index
 		response := sendNoCUDCommand(t, wsid, app)
-		require.Equal(int(expectedOffset), int(response["CurrentWLogOffset"].(float64)))
+		require.Equal(expectedOffset, int(response["CurrentWLogOffset"].(float64)))
 	}
 	firstIDBearing := sendCUDWithBody(t, wsid, app,
 		`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`)
@@ -1702,9 +1708,10 @@ func prepareRecoveryAdmissionWLog(t *testing.T, app testApp, wsid istructs.WSID)
 	require.Equal(istructs.FirstUserRecordID,
 		istructs.RecordID(firstIDBearing["NewIDs"].(map[string]interface{})["1"].(float64)))
 
-	for expectedOffset := istructs.Offset(7); expectedOffset <= 9; expectedOffset++ {
+	for index := range 3 {
+		expectedOffset := 7 + index
 		response := sendNoCUDCommand(t, wsid, app)
-		require.Equal(int(expectedOffset), int(response["CurrentWLogOffset"].(float64)))
+		require.Equal(expectedOffset, int(response["CurrentWLogOffset"].(float64)))
 	}
 	lastRecordIDBearing := sendCUDWithBody(t, wsid, app, `{"cuds":[
 		{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}},
@@ -1713,12 +1720,14 @@ func prepareRecoveryAdmissionWLog(t *testing.T, app testApp, wsid istructs.WSID)
 		{"fields":{"sys.ID":4,"sys.QName":"test.TestCDoc"}}
 	]}`)
 	require.Equal(10, int(lastRecordIDBearing["CurrentWLogOffset"].(float64)))
-	for rawID := 1; rawID <= 4; rawID++ {
+	for index := range 4 {
+		rawID := index + 1
 		require.Equal(istructs.RecordID(200001+rawID),
 			istructs.RecordID(lastRecordIDBearing["NewIDs"].(map[string]interface{})[strconv.Itoa(rawID)].(float64)))
 	}
 
-	for expectedOffset := istructs.Offset(11); expectedOffset <= 14; expectedOffset++ {
+	for index := range lastWLogOffset - 10 {
+		expectedOffset := 11 + index
 		response := sendNoCUDCommand(t, wsid, app)
 		require.Equal(int(expectedOffset), int(response["CurrentWLogOffset"].(float64)))
 		require.Empty(response["NewIDs"])
