@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -44,34 +45,35 @@ func TestHostState_BasicUsage(t *testing.T) {
 }
 
 func TestHostState_RequestContext(t *testing.T) {
+	require := require.New(t)
 	requestCtx := t.Context()
 	hostState := newHostState(requestCtx, "ForTest", 10, nil)
 
-	require.Same(t, requestCtx, hostState.RequestContext())
+	require.Same(requestCtx, hostState.RequestContext())
 }
 
 func mockedHostStateStructs() istructs.IAppStructs {
-	mv := &mockValue{}
+	mv := &coreutils.MockStateValue{}
 	mv.
 		On("AsInt64", "vFld").Return(int64(10)).
 		On("AsInt64", state.ColOffset).Return(int64(45))
-	mvb1 := &mockValueBuilder{}
+	mvb1 := &coreutils.MockStateValueBuilder{}
 	mvb1.
 		On("PutInt64", "vFld", int64(10)).
 		On("PutInt64", state.ColOffset, int64(45)).
 		On("Build").Return(mv)
-	mvb2 := &mockValueBuilder{}
+	mvb2 := &coreutils.MockStateValueBuilder{}
 	mvb2.
 		On("PutInt64", "vFld", int64(10)).Once().
 		On("PutInt64", state.ColOffset, int64(45)).Once().
 		On("PutInt64", "vFld", int64(17)).Once().
 		On("PutInt64", state.ColOffset, int64(46)).Once()
-	mkb := &mockKeyBuilder{}
+	mkb := &coreutils.MockStateKeyBuilder{}
 	mkb.
 		On("PutInt64", "pkFld", int64(64))
-	value := &mockValue{}
+	value := &coreutils.MockStateValue{}
 	value.On("AsString", "vk").Return("value")
-	viewRecords := &mockViewRecords{}
+	viewRecords := &coreutils.MockViewRecords{}
 	viewRecords.
 		On("KeyBuilder", testViewRecordQName1).Return(mkb).
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb1).Once().
@@ -100,13 +102,13 @@ func mockedHostStateStructs() istructs.IAppStructs {
 
 	app := adb.MustBuild()
 
-	mockWorkspaceRecord := &mockRecord{}
+	mockWorkspaceRecord := &coreutils.MockRecord{}
 	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 	mockWorkspaceRecord.On("QName").Return(appdef.QNameCDocWorkspaceDescriptor)
-	mockedRecords := &mockRecords{}
+	mockedRecords := &coreutils.MockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
-	appStructs := &mockAppStructs{}
+	appStructs := &coreutils.MockAppStructs{}
 	appStructs.
 		On("AppDef").Return(app).
 		On("AppQName").Return(testAppQName).
@@ -124,15 +126,15 @@ func TestHostState_KeyBuilder_Should_return_unknown_storage_ID_error(t *testing.
 	require.ErrorIs(err, ErrUnknownStorage)
 }
 func TestHostState_CanExist(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -144,7 +146,6 @@ func TestHostState_CanExist(t *testing.T) {
 		require.True(ok)
 	})
 	t.Run("Should return error when error occurred", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -158,7 +159,6 @@ func TestHostState_CanExist(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 	t.Run("Should return get batch not supported by storage error", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, _ := emptyHostStateForTest(ms)
@@ -171,8 +171,8 @@ func TestHostState_CanExist(t *testing.T) {
 	})
 }
 func TestHostState_CanExistAll(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		times := 0
 		ms := &mockStorage{}
 		ms.
@@ -180,7 +180,7 @@ func TestHostState_CanExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -197,7 +197,6 @@ func TestHostState_CanExistAll(t *testing.T) {
 		require.Equal(1, times)
 	})
 	t.Run("Should return error when error occurred", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -211,7 +210,6 @@ func TestHostState_CanExistAll(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 	t.Run("Should return get not supported by storage error", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, _ := emptyHostStateForTest(ms)
@@ -224,15 +222,15 @@ func TestHostState_CanExistAll(t *testing.T) {
 	})
 }
 func TestHostState_MustExist(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -243,7 +241,6 @@ func TestHostState_MustExist(t *testing.T) {
 		require.NoError(err)
 	})
 	t.Run("Should return error when entity not exists", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", testEntity, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -262,7 +259,6 @@ func TestHostState_MustExist(t *testing.T) {
 		require.Equal("state ForTest, key {storage:test.testStorage}: not exists", err.Error())
 	})
 	t.Run("Should return error when error occurred on get batch", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -277,16 +273,16 @@ func TestHostState_MustExist(t *testing.T) {
 	})
 }
 func TestHostState_MustExistAll(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
-				args.Get(0).([]state.GetBatchItem)[1].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[1].Value = &coreutils.MockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k1, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -306,7 +302,6 @@ func TestHostState_MustExistAll(t *testing.T) {
 		require.Equal(k1, kk[1])
 	})
 	t.Run("Should return error on get batch", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -320,14 +315,13 @@ func TestHostState_MustExistAll(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 	t.Run("Should return error when entity not exists", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 				args.Get(0).([]state.GetBatchItem)[1].Value = nil
 			})
 		s := hostStateForTest(ms)
@@ -341,7 +335,6 @@ func TestHostState_MustExistAll(t *testing.T) {
 		require.ErrorIs(err, ErrNotExists)
 	})
 	t.Run("Should return get not supported by storage error", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, _ := emptyHostStateForTest(ms)
@@ -354,8 +347,8 @@ func TestHostState_MustExistAll(t *testing.T) {
 	})
 }
 func TestHostState_MustNotExist(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -373,14 +366,13 @@ func TestHostState_MustNotExist(t *testing.T) {
 		require.NoError(err)
 	})
 	t.Run("Should return error when entity exists", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -391,7 +383,6 @@ func TestHostState_MustNotExist(t *testing.T) {
 		require.ErrorIs(err, ErrExists)
 	})
 	t.Run("Should return error when error occurred on get batch", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -406,8 +397,8 @@ func TestHostState_MustNotExist(t *testing.T) {
 	})
 }
 func TestHostState_MustNotExistAll(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -428,7 +419,6 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 		require.NoError(err)
 	})
 	t.Run("Should return error on get batch", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -442,7 +432,6 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 	t.Run("Should return error when entity exists", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
@@ -450,7 +439,7 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]state.GetBatchItem)[0].Value = nil
-				args.Get(0).([]state.GetBatchItem)[1].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[1].Value = &coreutils.MockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k1, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -463,7 +452,6 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 		require.ErrorIs(err, ErrExists)
 	})
 	t.Run("Should return get not supported by storage error", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, _ := emptyHostStateForTest(ms)
@@ -476,6 +464,7 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 	})
 }
 func TestHostState_Read(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
@@ -483,14 +472,13 @@ func TestHostState_Read(t *testing.T) {
 			On("Read", mock.Anything, mock.AnythingOfType("istructs.ValueCallback")).Return(nil)
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.NoError(t, s.Read(k, nil))
+		require.NoError(s.Read(k, nil))
 
 		ms.AssertExpectations(t)
 	})
 	t.Run("Should return read not supported by storage error", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, _ := emptyHostStateForTest(ms)
@@ -503,8 +491,8 @@ func TestHostState_Read(t *testing.T) {
 	})
 }
 func TestHostState_NewValue(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should return error when intents limit exceeded", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, i := limitedIntentsHostStateForTest(ms)
@@ -516,7 +504,6 @@ func TestHostState_NewValue(t *testing.T) {
 		require.ErrorIs(err, ErrIntentsLimitExceeded)
 	})
 	t.Run("Should return insert not supported by storage error", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, i := emptyHostStateForTest(ms)
@@ -529,8 +516,8 @@ func TestHostState_NewValue(t *testing.T) {
 	})
 }
 func TestHostState_UpdateValue(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should return error when intents limit exceeded", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, i := limitedIntentsHostStateForTest(ms)
@@ -542,7 +529,6 @@ func TestHostState_UpdateValue(t *testing.T) {
 		require.ErrorIs(err, ErrIntentsLimitExceeded)
 	})
 	t.Run("Should return update not supported by storage error", func(t *testing.T) {
-		require := require.New(t)
 		ms := &mockStorage{}
 		ms.On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName))
 		s, i := emptyHostStateForTest(ms)
@@ -555,27 +541,28 @@ func TestHostState_UpdateValue(t *testing.T) {
 	})
 }
 func TestHostState_ValidateIntents(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&coreutils.MockStateValueBuilder{}, nil).
 			On("Validate", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
-		require.NoError(t, err)
+		require.NoError(err)
 		_, err = s.NewValue(kb)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		err = s.ValidateIntents()
 
-		require.NoError(t, err)
+		require.NoError(err)
 	})
 	t.Run("Should return immediately when intents are empty", func(t *testing.T) {
 		ms := &mockStorage{}
 		s := hostStateForTest(&mockStorage{})
 
-		require.NoError(t, s.ValidateIntents())
+		require.NoError(s.ValidateIntents())
 
 		ms.AssertNotCalled(t, "Validate", mock.Anything)
 	})
@@ -583,33 +570,34 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&coreutils.MockStateValueBuilder{}, nil).
 			On("Validate", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
-		require.NoError(t, err)
+		require.NoError(err)
 		_, err = s.NewValue(kb)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		err = s.ValidateIntents()
 
-		require.ErrorIs(t, err, errTest)
+		require.ErrorIs(err, errTest)
 	})
 }
 func TestHostState_ApplyIntents(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&coreutils.MockStateValueBuilder{}, nil).
 			On("ApplyBatch", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
-		require.NoError(t, err)
+		require.NoError(err)
 		_, err = s.NewValue(kb)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.NoError(t, s.ApplyIntents())
+		require.NoError(s.ApplyIntents())
 
 		ms.AssertExpectations(t)
 	})
@@ -617,17 +605,17 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&coreutils.MockStateValueBuilder{}, nil).
 			On("ApplyBatch", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
-		require.NoError(t, err)
+		require.NoError(err)
 		_, err = s.NewValue(kb)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		err = s.ApplyIntents()
 
-		require.ErrorIs(t, err, errTest)
+		require.ErrorIs(err, errTest)
 	})
 }
 func hostStateForTest(s state.IStateStorage) state.IHostState {

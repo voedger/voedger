@@ -132,6 +132,12 @@ func (j *JWTSigner) ValidateToken(token string, pointerToPayload interface{}) (g
 		}
 
 		err = coreutils.JSONUnmarshal(claimBytes, &pointerToPayload)
+		if err != nil {
+			return gp, err
+		}
+		if validator, ok := pointerToPayload.(interface{ ValidateTokenClaims([]byte) error }); ok {
+			err = validator.ValidateTokenClaims(claimBytes)
+		}
 
 		return gp, err
 	}

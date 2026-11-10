@@ -12,17 +12,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestViewRecordsStorage_GetBatch(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 
 		mockedStructs, mockedViews := mockedStructs(t)
-		valueOnGet := &mockValue{}
+		valueOnGet := &coreutils.MockStateValue{}
 		valueOnGet.On("AsString", "vk").Return("value")
 		mockedViews.
 			On("Get", istructs.WSID(1), mock.Anything).Return(valueOnGet, nil)
@@ -41,7 +42,6 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		require.Equal("value", sv.AsString("vk"))
 	})
 	t.Run("Should return error on get", func(t *testing.T) {
-		require := require.New(t)
 		mockedStructs, mockedViews := mockedStructs(t)
 		mockedViews.
 			On("Get", istructs.WSID(1), mock.Anything).Return(nil, errTest)
@@ -58,8 +58,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	})
 }
 func TestViewRecordsStorage_Read(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		mockedStructs, mockedViews := mockedStructs(t)
 		touched := false
 		mockedViews.
@@ -83,7 +83,6 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		require.True(touched)
 	})
 	t.Run("Should return error on read", func(t *testing.T) {
-		require := require.New(t)
 		mockedStructs, mockedViews := mockedStructs(t)
 		mockedViews.
 			On("KeyBuilder", testViewRecordQName1).Return(newUniqKeyBuilder(sys.Storage_View, testViewRecordQName1)).
@@ -227,7 +226,7 @@ func TestViewRecordsStorage_PutInt64ForRecordIDFields(t *testing.T) {
 	value1 := int64(1)
 	value2 := int64(2)
 
-	mockedValueBuilder := &mockValueBuilder{}
+	mockedValueBuilder := &coreutils.MockStateValueBuilder{}
 	mockedValueBuilder.On("PutInt64", fieldName1, value1)
 	mockedValueBuilder.On("PutRecordID", fieldName2, istructs.RecordID(value2))
 

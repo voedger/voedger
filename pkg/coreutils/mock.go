@@ -325,7 +325,7 @@ type MockStateValueBuilder struct {
 }
 
 func (m *MockStateValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
-	return true
+	return m.Called(src).Bool(0)
 }
 func (m *MockStateValueBuilder) PutInt8(name appdef.FieldName, value int8) {
 	m.Called(name, value)
@@ -377,8 +377,7 @@ func (m *MockStateValueBuilder) Build() istructs.IValue {
 	return args.Get(0).(istructs.IValue)
 }
 func (m *MockStateValueBuilder) BuildValue() istructs.IStateValue {
-	args := m.Called()
-	return args.Get(0).(istructs.IStateValue)
+	return mockResult[istructs.IStateValue](m.Called().Get(0))
 }
 func (m *MockStateValueBuilder) PutFromJSON(map[string]any) {
 	m.Called(0)
@@ -468,30 +467,107 @@ func (m *MockIntents) UpdateValue(key istructs.IStateKeyBuilder, existingValue i
 	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
 }
 
-// MockAppStructsProvider provides application structures to focused unit tests.
-type MockAppStructsProvider struct {
-	istructs.IAppStructsProvider
-	mock.Mock
-}
-
-func (m *MockAppStructsProvider) BuiltIn(name appdef.AppQName) (istructs.IAppStructs, error) {
-	args := m.Called(name)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func mockResult[T any](value any) (result T) {
+	if value != nil {
+		result = value.(T)
 	}
-	return args.Get(0).(istructs.IAppStructs), args.Error(1)
+	return result
 }
 
-// MockAppStructs provides the app-structure methods commonly needed by focused unit tests.
 type MockAppStructs struct {
 	istructs.IAppStructs
 	mock.Mock
 }
 
-func (m *MockAppStructs) ClusterAppID() istructs.ClusterAppID {
-	return m.Called().Get(0).(istructs.ClusterAppID)
+func (m *MockAppStructs) AppQName() appdef.AppQName {
+	return m.Called().Get(0).(appdef.AppQName)
+}
+func (m *MockAppStructs) AppDef() appdef.IAppDef {
+	return mockResult[appdef.IAppDef](m.Called().Get(0))
+}
+func (m *MockAppStructs) Events() istructs.IEvents {
+	return mockResult[istructs.IEvents](m.Called().Get(0))
+}
+func (m *MockAppStructs) Records() istructs.IRecords {
+	return mockResult[istructs.IRecords](m.Called().Get(0))
+}
+func (m *MockAppStructs) ViewRecords() istructs.IViewRecords {
+	return mockResult[istructs.IViewRecords](m.Called().Get(0))
 }
 
-func (m *MockAppStructs) Events() istructs.IEvents {
-	return m.Called().Get(0).(istructs.IEvents)
+type MockRecords struct {
+	istructs.IRecords
+	mock.Mock
+}
+
+func (m *MockRecords) Get(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (istructs.IRecord, error) {
+	args := m.Called(workspace, highConsistency, id)
+	return mockResult[istructs.IRecord](args.Get(0)), args.Error(1)
+}
+func (m *MockRecords) GetBatch(workspace istructs.WSID, highConsistency bool, items []istructs.RecordGetBatchItem) error {
+	return m.Called(workspace, highConsistency, items).Error(0)
+}
+func (m *MockRecords) GetSingleton(workspace istructs.WSID, entity appdef.QName) (istructs.IRecord, error) {
+	args := m.Called(workspace, entity)
+	return mockResult[istructs.IRecord](args.Get(0)), args.Error(1)
+}
+
+type MockViewRecords struct {
+	istructs.IViewRecords
+	mock.Mock
+}
+
+func (m *MockViewRecords) KeyBuilder(view appdef.QName) istructs.IKeyBuilder {
+	return mockResult[istructs.IKeyBuilder](m.Called(view).Get(0))
+}
+func (m *MockViewRecords) NewValueBuilder(view appdef.QName) istructs.IValueBuilder {
+	return mockResult[istructs.IValueBuilder](m.Called(view).Get(0))
+}
+func (m *MockViewRecords) UpdateValueBuilder(view appdef.QName, existing istructs.IValue) istructs.IValueBuilder {
+	return mockResult[istructs.IValueBuilder](m.Called(view, existing).Get(0))
+}
+func (m *MockViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder) (istructs.IValue, error) {
+	args := m.Called(workspace, key)
+	return mockResult[istructs.IValue](args.Get(0)), args.Error(1)
+}
+func (m *MockViewRecords) GetBatch(workspace istructs.WSID, items []istructs.ViewRecordGetBatchItem) error {
+	return m.Called(workspace, items).Error(0)
+}
+func (m *MockViewRecords) PutBatch(workspace istructs.WSID, items []istructs.ViewKV) error {
+	return m.Called(workspace, items).Error(0)
+}
+func (m *MockViewRecords) Read(ctx context.Context, workspace istructs.WSID, key istructs.IKeyBuilder, callback istructs.ValuesCallback) error {
+	return m.Called(ctx, workspace, key, callback).Error(0)
+}
+
+type MockRecord struct {
+	MockKey
+}
+
+func (m *MockRecord) QName() appdef.QName { return m.Called().Get(0).(appdef.QName) }
+func (m *MockRecord) ID() istructs.RecordID {
+	return m.Called().Get(0).(istructs.RecordID)
+}
+func (m *MockRecord) Parent() istructs.RecordID {
+	return m.Called().Get(0).(istructs.RecordID)
+}
+func (m *MockRecord) Container() string { return m.Called().String(0) }
+
+type MockCUD struct {
+	mock.Mock
+}
+
+func (m *MockCUD) Create(entity appdef.QName) istructs.IRowWriter {
+	return mockResult[istructs.IRowWriter](m.Called(entity).Get(0))
+}
+func (m *MockCUD) Update(record istructs.IRecord) istructs.IRowWriter {
+	return mockResult[istructs.IRowWriter](m.Called(record).Get(0))
+}
+
+type MockStateRecordValue struct {
+	MockStateValue
+}
+
+func (m *MockStateRecordValue) AsRecord() istructs.IRecord {
+	return mockResult[istructs.IRecord](m.Called().Get(0))
 }

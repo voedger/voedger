@@ -20,3 +20,8 @@ var (
 )
 
 const DefaultSystemPrincipalDuration = 10 * time.Minute
+
+const (
+	RoleScopeWorkspacesOwnedBy RoleScope = iota
+	RoleScopeWorkspace
+)

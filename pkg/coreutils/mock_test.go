@@ -26,5 +26,18 @@ func TestMockInterfacesCompliance(t *testing.T) {
 		_ istructs.IEvents             = &MockEvents{}
 		_ istructs.IAppStructsProvider = &MockAppStructsProvider{}
 		_ istructs.IAppStructs         = &MockAppStructs{}
+		_ istructs.IAppStructs        = &MockAppStructs{}
+		_ istructs.IRecords           = &MockRecords{}
+		_ istructs.IViewRecords       = &MockViewRecords{}
+		_ istructs.IRecord            = &MockRecord{}
+		_ istructs.ICUD               = &MockCUD{}
+		_ istructs.IStateValue        = &MockStateRecordValue{}
+		_ istructs.IStateRecordValue  = &MockStateRecordValue{}
+		_ istructs.IValue             = &MockStateValue{}
+		_ istructs.IValueBuilder      = &MockStateValueBuilder{}
+		_ istructs.IRowReader         = &MockKey{}
+		_ istructs.IRowWriter         = &MockStateValueBuilder{}
+		_ istructs.IKeyBuilder        = &MockStateKeyBuilder{}
+		_ istructs.IWLogEvent         = &MockPLogEvent{}
 	)
 }

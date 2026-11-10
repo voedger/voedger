@@ -18,11 +18,10 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func TestEnrichmentOperator_DoSync(t *testing.T) {
+func TestEnrichmentOperatorResolvesReferencesInNestedRows(t *testing.T) {
+	require := require.New(t)
 
-	t.Run("Should set reference fields", func(t *testing.T) {
-		require := require.New(t)
-
+	t.Run("References are resolved in root and nested rows", func(t *testing.T) {
 		appDef := func() appdef.IAppDef {
 			adb := builder.New()
 			wsb := adb.AddWorkspace(appdef.NewQName("test", "workspace"))
@@ -92,12 +91,12 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 			}
 		}
 		record := func(name string) istructs.IStateValue {
-			r := &mockRecord{}
+			r := &coreutils.MockRecord{}
 			r.
 				On("AsString", "name").Return(name).
 				On("QName").Return(qNameXLowerCase)
-			sv := &mockStateValue{}
-			sv.On("AsRecord", "").Return(r)
+			sv := &coreutils.MockStateRecordValue{}
+			sv.On("AsRecord").Return(r)
 			return sv
 		}
 		work := func() pipeline.IWorkpiece {
@@ -229,20 +228,20 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 				enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
 			}
 		}
-		skb := &mockStateKeyBuilder{}
+		skb := &coreutils.MockStateKeyBuilder{}
 		skb.On("PutRecordID", mock.Anything, mock.Anything)
-		s := &mockState{}
+		s := &coreutils.MockState{}
 		s.
-			On("KeyBuilder", sys.Storage_Record, appdef.NullQName).Return(skb).
-			On("MustExist", mock.Anything).Return(record("root")).Once().
-			On("MustExist", mock.Anything).Return(record("first_children_1_101")).Once().
-			On("MustExist", mock.Anything).Return(record("first_children_1_102")).Once().
-			On("MustExist", mock.Anything).Return(record("deep_children_1_201")).Once().
-			On("MustExist", mock.Anything).Return(record("very_deep_children_1_301")).Once().
-			On("MustExist", mock.Anything).Return(record("first_children_2_401")).Once().
-			On("MustExist", mock.Anything).Return(record("deep_children_1_501")).Once().
-			On("MustExist", mock.Anything).Return(record("very_deep_children_1_601")).Once().
-			On("MustExist", mock.Anything).Return(record("very_deep_children_1_602")).Once()
+			On("KeyBuilder", sys.Storage_Record, appdef.NullQName).Return(skb, nil).
+			On("MustExist", mock.Anything).Return(record("root"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("first_children_1_101"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("first_children_1_102"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("deep_children_1_201"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("very_deep_children_1_301"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("first_children_2_401"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("deep_children_1_501"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("very_deep_children_1_601"), nil).Once().
+			On("MustExist", mock.Anything).Return(record("very_deep_children_1_602"), nil).Once()
 		op := &EnrichmentOperator{
 			state:      s,
 			elements:   elements,
@@ -250,31 +249,31 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 			metrics:    &testMetrics{},
 		}
 
-		outWork, err := op.DoAsync(context.Background(), work())
+		// Resolve record references at every nesting level using the shared state and record mocks
+		actualWork, err := op.DoAsync(context.Background(), work())
 
 		require.NoError(err)
-		require.Len(outWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow), 1)
-		require.Equal("root", outWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow), 2)
-		require.Equal("first_children_1_101", outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Equal("first_children_1_102", outWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow), 1)
-		require.Equal("deep_children_1_201", outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow), 1)
-		require.Equal("very_deep_children_1_301", outWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow), 1)
-		require.Equal("first_children_2_401", outWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow), 1)
-		require.Equal("deep_children_1_501", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Len(outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow), 2)
-		require.Equal("very_deep_children_1_601", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
-		require.Equal("very_deep_children_1_602", outWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
+		require.Len(actualWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow), 1)
+		require.Equal("root", actualWork.(IWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(actualWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow), 2)
+		require.Equal("first_children_1_101", actualWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Equal("first_children_1_102", actualWork.(IWorkpiece).OutputRow().Value("first_children_1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
+		require.Len(actualWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow), 1)
+		require.Equal("deep_children_1_201", actualWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(actualWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow), 1)
+		require.Equal("very_deep_children_1_301", actualWork.(IWorkpiece).OutputRow().Value("first_children_1/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(actualWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow), 1)
+		require.Equal("first_children_2_401", actualWork.(IWorkpiece).OutputRow().Value("first_children_2").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(actualWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow), 1)
+		require.Equal("deep_children_1_501", actualWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Len(actualWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow), 2)
+		require.Equal("very_deep_children_1_601", actualWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[0].Value("id_lower_case_name/name"))
+		require.Equal("very_deep_children_1_602", actualWork.(IWorkpiece).OutputRow().Value("first_children_2/deep_children_1/very_deep_children_1").([]IOutputRow)[1].Value("id_lower_case_name/name"))
 	})
-	t.Run("Should handle ctx error during row fill with ref fields", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("Canceled enrichment returns the original rows", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		work := rowsWorkpiece{
+		expectedWork := rowsWorkpiece{
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{rootDocument: 0},
 				values: []interface{}{
@@ -287,9 +286,10 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 			metrics:  &testMetrics{},
 		}
 
-		outWork, err := op.DoAsync(ctx, work)
+		// Cancellation must preserve the original rows and report why enrichment stopped
+		actualWork, err := op.DoAsync(ctx, expectedWork)
 
-		require.Equal("context canceled", err.Error())
-		require.Equal(work, outWork)
+		require.EqualError(err, "context canceled")
+		require.Equal(expectedWork, actualWork)
 	})
 }

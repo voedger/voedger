@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -52,36 +53,38 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 }
 
 func mockedAppStructs() istructs.IAppStructs {
-	mv := &mockValue{}
+	mv := &coreutils.MockStateValue{}
 	mv.
 		On("AsInt64", "vFld").Return(int64(10)).
 		On("AsInt64", state.ColOffset).Return(int64(45))
-	mvb1 := &mockValueBuilder{}
+	mvb1 := &coreutils.MockStateValueBuilder{}
+	mvb1.On("BuildValue").Return(nil)
 	mvb1.
 		On("PutInt64", "vFld", int64(10)).
 		On("PutInt64", state.ColOffset, int64(45)).
 		On("Build").Return(mv)
-	mvb2 := &mockValueBuilder{}
+	mvb2 := &coreutils.MockStateValueBuilder{}
+	mvb2.On("BuildValue").Return(nil)
 	mvb2.
 		On("PutInt64", "vFld", int64(10)).Once().
 		On("PutInt64", state.ColOffset, int64(45)).Once().
 		On("PutInt64", "vFld", int64(17)).Once().
 		On("PutInt64", state.ColOffset, int64(46)).Once()
-	mkb := &mockKeyBuilder{}
+	mkb := &coreutils.MockStateKeyBuilder{}
 	mkb.
 		On("PutInt64", "pkFld", int64(64))
 
-	viewRecords := &mockViewRecords{}
+	viewRecords := &coreutils.MockViewRecords{}
 	viewRecords.
 		On("KeyBuilder", testViewRecordQName1).Return(mkb).
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb1).Once().
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb2).Once().
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	mockWorkspaceRecord := &mockRecord{}
+	mockWorkspaceRecord := &coreutils.MockRecord{}
 	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 	mockWorkspaceRecord.On("QName").Return(appdef.QNameCDocWorkspaceDescriptor)
-	mockedRecords := &mockRecords{}
+	mockedRecords := &coreutils.MockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
 	adb := builder.New()
@@ -99,7 +102,7 @@ func mockedAppStructs() istructs.IAppStructs {
 
 	app := adb.MustBuild()
 
-	appStructs := &mockAppStructs{}
+	appStructs := &coreutils.MockAppStructs{}
 	appStructs.
 		On("AppDef").Return(app).
 		On("AppQName").Return(testAppQName).
@@ -110,15 +113,15 @@ func mockedAppStructs() istructs.IAppStructs {
 }
 
 func TestAsyncActualizerState_CanExist(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -130,7 +133,6 @@ func TestAsyncActualizerState_CanExist(t *testing.T) {
 		require.True(ok)
 	})
 	t.Run("Should return error when error occurred on get batch", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -145,8 +147,8 @@ func TestAsyncActualizerState_CanExist(t *testing.T) {
 	})
 }
 func TestAsyncActualizerState_CanExistAll(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		times := 0
 		stateStorage := &mockStorage{}
 		stateStorage.
@@ -166,7 +168,6 @@ func TestAsyncActualizerState_CanExistAll(t *testing.T) {
 		require.Equal(2, times)
 	})
 	t.Run("Should return error when error occurred on can exist", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -183,15 +184,15 @@ func TestAsyncActualizerState_CanExistAll(t *testing.T) {
 	})
 }
 func TestAsyncActualizerState_MustExist(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -202,7 +203,6 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 		require.NoError(err)
 	})
 	t.Run("Should return error when entity not exists", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -220,7 +220,6 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 		require.ErrorIs(err, ErrNotExists)
 	})
 	t.Run("Should return error when error occurred on can exist", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -235,15 +234,15 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 	})
 }
 func TestAsyncActualizerState_MustExistAll(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -262,7 +261,6 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 		require.Equal(k1, kk[1])
 	})
 	t.Run("Should return error when entity not exists", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -283,8 +281,8 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 	})
 }
 func TestAsyncActualizerState_MustNotExist(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -302,14 +300,13 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 		require.NoError(err)
 	})
 	t.Run("Should return error when entity exists", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -320,7 +317,6 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 		require.ErrorIs(err, ErrExists)
 	})
 	t.Run("Should return error when error occurred on must exist", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -335,8 +331,8 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 	})
 }
 func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should be ok", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
@@ -356,14 +352,13 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 		require.NoError(err)
 	})
 	t.Run("Should return error when entity exists", func(t *testing.T) {
-		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
 			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &coreutils.MockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -377,8 +372,8 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 	})
 }
 func TestAsyncActualizerState_Read(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should flush bundle before read", func(t *testing.T) {
-		require := require.New(t)
 		touched := false
 		mockedStructs, mockedViews := mockedStructs(t)
 		mockedViews.
@@ -418,7 +413,6 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		require.True(touched)
 	})
 	t.Run("Should return error when error occurred on apply batch", func(t *testing.T) {
-		require := require.New(t)
 		touched := false
 		mockedStructs, mockedViews := mockedStructs(t)
 		mockedViews.
