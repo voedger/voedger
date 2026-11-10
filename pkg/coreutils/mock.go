@@ -467,6 +467,20 @@ func (m *MockIntents) UpdateValue(key istructs.IStateKeyBuilder, existingValue i
 	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
 }
 
+// MockAppStructsProvider provides application structures to focused unit tests.
+type MockAppStructsProvider struct {
+	istructs.IAppStructsProvider
+	mock.Mock
+}
+
+func (m *MockAppStructsProvider) BuiltIn(name appdef.AppQName) (istructs.IAppStructs, error) {
+	args := m.Called(name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(istructs.IAppStructs), args.Error(1)
+}
+
 func mockResult[T any](value any) (result T) {
 	if value != nil {
 		result = value.(T)
