@@ -14,7 +14,14 @@ Refs:
 
 ## Why
 
-In the auth context, a token role's workspace identifier currently names either the exact target Workspace or the owner of target Workspaces, depending on the token kind. Explicit scope makes token grants understandable without relying on the token kind to interpret their workspace identifiers.
+We need to specify a role in a token for an exact workspace, so let's add a role scope and use [RoleType.WSID](https://github.com/voedger/voedger/blob/5c45e847270a93a7c5c45f7f4026c9d9415aeb6d/pkg/itokens-payloads/types.go#L32). It's expected to mean "any workspace whose WorkspaceDescriptor.OwnerWSID == RoleType.WSID", but there is confusion: `RoleType.WSID` currently has two meanings, selected implicitly by `PrincipalPayload.IsAPIToken`:
+
+- For an API token, `WSID = 42` grants the role in Workspace 42 only
+- For a regular User or Device token, `WSID = 42` grants the role in each Workspace whose immediate owner is Workspace 42
+
+The role entry itself does not say which meaning applies. Understanding or transforming a grant therefore requires knowing the token kind; changing `IsAPIToken` can reinterpret the same `{WSID, QName}` as a different set of target Workspaces. This makes authentication, API-token conversion, and enrichment easy to misunderstand.
+
+This PR records that distinction explicitly in each role grant and preserves it through validation, refresh, and deduplication, while retaining existing authorization and enrichment behavior.
 
 ## What
 
