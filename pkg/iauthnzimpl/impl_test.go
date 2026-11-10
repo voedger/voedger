@@ -6,6 +6,7 @@ package iauthnzimpl
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -196,9 +197,21 @@ func TestAuthenticate(t *testing.T) {
 		Login:       login,
 		SubjectKind: istructs.SubjectKind_User,
 		ProfileWSID: 1,
-		Roles:       []payloads.RoleType{{WSID: 1, QName: testRole}, {WSID: 2, QName: notIncludedRole}},
+		Roles: []payloads.RoleType{
+			{Scope: payloads.RoleScopeWorkspacesOwnedBy, WSID: 1, QName: testRole},
+			{Scope: payloads.RoleScopeWorkspacesOwnedBy, WSID: 2, QName: notIncludedRole},
+		},
 	}
 	enrichedToken, err := appTokens.IssueToken(time.Minute, &pp)
+	require.NoError(err)
+	exactRolePayload := pp
+	exactRolePayload.Roles = []payloads.RoleType{{Scope: payloads.RoleScopeWorkspace, WSID: 1, QName: testRole}}
+	exactRoleToken, err := appTokens.IssueToken(time.Minute, &exactRolePayload)
+	require.NoError(err)
+	apiOwnedRolePayload := pp
+	apiOwnedRolePayload.IsAPIToken = true
+	apiOwnedRolePayload.Roles = []payloads.RoleType{{Scope: payloads.RoleScopeWorkspacesOwnedBy, WSID: 2, QName: testRole}}
+	apiOwnedRoleToken, err := appTokens.IssueToken(time.Minute, &apiOwnedRolePayload)
 	require.NoError(err)
 
 	qNameCDocComputers := appdef.NewQName("untill", "computers")
@@ -242,6 +255,9 @@ func TestAuthenticate(t *testing.T) {
 					"OwnerWSID": int64(2),
 				},
 			},
+		},
+		istructs.WSID(5): {
+			appdef.QNameCDocWorkspaceDescriptor: {1: {"OwnerWSID": int64(1)}},
 		},
 	})
 
@@ -357,6 +373,51 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		{
+			desc: "API token does not reinterpret an explicit owned-by scope as an exact grant",
+			req:  iauthnz.AuthnRequest{Host: "127.0.0.1", RequestWSID: 2, Token: apiOwnedRoleToken},
+			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
+			},
+		},
+		{
+			desc: "regular token does not reinterpret an exact scope as an owned-by grant",
+			req:  iauthnz.AuthnRequest{Host: "127.0.0.1", RequestWSID: 2, Token: exactRoleToken},
+			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
+				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleWorkspaceOwner},
+				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
+			},
+		},
+		{
+			desc: "API token does not grant access to a workspace owned by its target",
+			req:  iauthnz.AuthnRequest{Host: "127.0.0.1", RequestWSID: 3, Token: apiKeyToken},
+			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 3, QName: iauthnz.QNameRoleAuthenticatedUser},
+			},
+		},
+		{
+			desc: "owned-by grant applies in a sibling workspace with the same owner",
+			req:  iauthnz.AuthnRequest{Host: "127.0.0.1", RequestWSID: 5, Token: enrichedToken},
+			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 5, QName: iauthnz.QNameRoleAuthenticatedUser},
+				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 5, QName: iauthnz.QNameRoleWorkspaceOwner},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 5, QName: testRole},
+				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
+			},
+		},
+		{
+			desc: "owned-by grants match only the immediate owner",
+			req:  iauthnz.AuthnRequest{Host: "127.0.0.1", RequestWSID: 3, Token: enrichedToken},
+			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 3, QName: iauthnz.QNameRoleAuthenticatedUser},
+				{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 3, QName: notIncludedRole},
+				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
+			},
+		},
+		{
 			desc: "enriched token -> roles from token taken if its wsid == ownerWSID (one of 2 roles is matched by wsid)",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
@@ -399,6 +460,78 @@ func TestAuthenticate(t *testing.T) {
 			require.Equal(tc.expectedPrincipals, principals, tc.desc)
 		})
 	}
+
+	t.Run("API token skips Subject and Workspace descriptor reads", func(t *testing.T) {
+		authn := NewDefaultAuthenticator(func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]appdef.QName, error) {
+			panic("unexpected Subject lookup")
+		}, TestIsDeviceAllowedFuncs)
+		principals, profile, err := authn.Authenticate(context.Background(), &implIAppStructs{}, appTokens,
+			iauthnz.AuthnRequest{RequestWSID: 2, Token: apiKeyToken})
+		require.NoError(err)
+		require.Zero(profile)
+		require.Equal([]iauthnz.Principal{
+			{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleAuthenticatedUser},
+			{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: testRole},
+		}, principals)
+	})
+
+	globalSystemToken, err := appTokens.IssueToken(time.Minute, &payloads.PrincipalPayload{
+		Login: login, SubjectKind: istructs.SubjectKind_User, ProfileWSID: 1,
+		GlobalRoles: []appdef.QName{iauthnz.QNameRoleSystem},
+	})
+	require.NoError(err)
+	for _, tc := range []struct {
+		name    string
+		token   string
+		profile istructs.WSID
+	}{
+		{"missing profile", sysToken, 0},
+		{"global System role", globalSystemToken, 1},
+	} {
+		t.Run(tc.name+" skips Workspace descriptor reads", func(t *testing.T) {
+			authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
+			principals, profile, err := authn.Authenticate(context.Background(), &implIAppStructs{}, appTokens,
+				iauthnz.AuthnRequest{RequestWSID: 2, Token: tc.token})
+			require.NoError(err)
+			require.Equal(tc.profile, profile)
+			require.Len(principals, 3)
+			require.Contains(principals, iauthnz.Principal{Kind: iauthnz.PrincipalKind_Role, WSID: 2, QName: iauthnz.QNameRoleSystem})
+		})
+	}
+}
+
+func TestIssueAPITokenScopes(t *testing.T) {
+	require := require.New(t)
+	carriedRole := appdef.NewQName("test", "carried")
+	requestedRole := appdef.NewQName("test", "requested")
+	roles := make([]payloads.RoleType, 1, 2)
+	roles[0] = payloads.RoleType{WSID: 100, QName: carriedRole}
+	backing := roles[:cap(roles)]
+	backing[1] = payloads.RoleType{WSID: 300, QName: appdef.NewQName("test", "spare")}
+	beforeBacking := slices.Clone(backing)
+	src := payloads.PrincipalPayload{
+		Login: "login", Alias: "alias", SubjectKind: istructs.SubjectKind_User,
+		ProfileWSID: 42, Roles: roles,
+	}
+	before := src
+	before.Roles = slices.Clone(src.Roles)
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeu.NewITime())
+	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
+	token, err := IssueAPIToken(appTokens, time.Hour, []appdef.QName{requestedRole}, 200, src)
+	require.NoError(err)
+	var actual payloads.PrincipalPayload
+	gp, err := appTokens.ValidateToken(token, &actual)
+	require.NoError(err)
+	expected := before
+	expected.IsAPIToken = true
+	expected.Roles = []payloads.RoleType{
+		{Scope: payloads.RoleScopeWorkspace, WSID: 100, QName: carriedRole},
+		{Scope: payloads.RoleScopeWorkspace, WSID: 200, QName: requestedRole},
+	}
+	require.Equal(expected, actual)
+	require.Equal(time.Hour, gp.Duration)
+	require.Equal(before, src)
+	require.Equal(beforeBacking, backing)
 }
 
 func TestErrors(t *testing.T) {

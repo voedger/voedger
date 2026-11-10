@@ -6,6 +6,7 @@ package iauthnzimpl
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -22,11 +23,16 @@ func IssueAPIToken(appTokens istructs.IAppTokens, duration time.Duration, roles 
 	if wsid == istructs.NullWSID {
 		return "", ErrPersonalAccessTokenOnNullWSID
 	}
+	currentPrincipalPayload.Roles = slices.Clone(currentPrincipalPayload.Roles)
+	for i := range currentPrincipalPayload.Roles {
+		currentPrincipalPayload.Roles[i].Scope = payloads.RoleScopeWorkspace
+	}
 	for _, roleQName := range roles {
 		if iauthnz.IsSystemRole(roleQName) {
 			return "", ErrPersonalAccessTokenOnSystemRole
 		}
 		currentPrincipalPayload.Roles = append(currentPrincipalPayload.Roles, payloads.RoleType{
+			Scope: payloads.RoleScopeWorkspace,
 			WSID:  wsid,
 			QName: roleQName,
 		})

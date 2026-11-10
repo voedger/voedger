@@ -63,7 +63,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 
 	if principalPayload.IsAPIToken {
 		for _, role := range principalPayload.Roles {
-			if role.WSID != req.RequestWSID {
+			if role.Scope != payloads.RoleScopeWorkspace || role.WSID != req.RequestWSID {
 				continue
 			}
 			principals = append(principals, iauthnz.Principal{
@@ -200,7 +200,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	if wsDesc.QName() != appdef.NullQName {
 		ownerWSID := wsDesc.AsInt64(field_OwnerWSID)
 		for _, role := range principalPayload.Roles {
-			if role.WSID != istructs.WSID(ownerWSID) { // nolint G115
+			if role.Scope != payloads.RoleScopeWorkspacesOwnedBy || role.WSID != istructs.WSID(ownerWSID) { // nolint G115
 				continue
 			}
 			prn := iauthnz.Principal{

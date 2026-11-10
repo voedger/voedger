@@ -149,14 +149,14 @@ References: an inviting workspace and, after acceptance, the canonical `Login` a
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `invitation_id` | `string` | Stable identity of the Invitation |
-| `workspace_id` | `string` | Workspace offering membership |
-| `recipient` | `SignInIdentifier` | Canonical or alias identifier to which the Invitation is addressed |
-| `roles` | `RoleSet` | Roles offered in the workspace |
-| `state` | `enum(Pending, Joined, Cancelled, Left)` | Current invitation lifecycle state |
-| `accepted_login_id` | `string?` | Canonical Login that accepted the Invitation |
+| Field               | Type                                     | Description                                                        |
+| ------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| `invitation_id`     | `string`                                 | Stable identity of the Invitation                                  |
+| `workspace_id`      | `string`                                 | Workspace offering membership                                      |
+| `recipient`         | `SignInIdentifier`                       | Canonical or alias identifier to which the Invitation is addressed |
+| `roles`             | `RoleSet`                                | Roles offered in the workspace                                     |
+| `state`             | `enum(Pending, Joined, Cancelled, Left)` | Current invitation lifecycle state                                 |
+| `accepted_login_id` | `string?`                                | Canonical Login that accepted the Invitation                       |
 
 Invariants:
 
@@ -175,15 +175,15 @@ Referenced by: `WorkspaceMembership`.
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `login_id` | `string` | Stable internal identity of the Login |
-| `canonical_identifier` | `SignInIdentifier` | Primary sign-in identifier, reserved while the Login remains active |
-| `subject_kind` | `enum(User, Device)` | Kind of subject represented by the Login |
+| Field                  | Type                       | Description                                                                                   |
+| ---------------------- | -------------------------- | --------------------------------------------------------------------------------------------- |
+| `login_id`             | `string`                   | Stable internal identity of the Login                                                         |
+| `canonical_identifier` | `SignInIdentifier`         | Primary sign-in identifier, reserved while the Login remains active                           |
+| `subject_kind`         | `enum(User, Device)`       | Kind of subject represented by the Login                                                      |
 | `canonical_enablement` | `CanonicalLoginEnablement` | Reversible availability of the canonical SignInIdentifier, independent of registry activation |
-| `credential` | `Credential` | Current authentication proof or verifier |
-| `active_alias_id` | `string?` | Reference to the active LoginAlias, when one exists |
-| `profile_workspace_id` | `string` | Reference to the subject's ProfileWorkspace |
+| `credential`           | `Credential`               | Current authentication proof or verifier                                                      |
+| `active_alias_id`      | `string?`                  | Reference to the active LoginAlias, when one exists                                           |
+| `profile_workspace_id` | `string`                   | Reference to the subject's ProfileWorkspace                                                   |
 
 Invariants:
 
@@ -218,12 +218,12 @@ References: `Login`.
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `alias_id` | `string` | Stable identity of the LoginAlias record |
-| `login_id` | `string` | Canonical Login resolved by the alias |
-| `identifier` | `SignInIdentifier` | Alternative sign-in value |
-| `state` | `enum(Active, Inactive)` | Whether the alias can resolve sign-in and recovery requests |
+| Field        | Type                     | Description                                                 |
+| ------------ | ------------------------ | ----------------------------------------------------------- |
+| `alias_id`   | `string`                 | Stable identity of the LoginAlias record                    |
+| `login_id`   | `string`                 | Canonical Login resolved by the alias                       |
+| `identifier` | `SignInIdentifier`       | Alternative sign-in value                                   |
+| `state`      | `enum(Active, Inactive)` | Whether the alias can resolve sign-in and recovery requests |
 
 Invariants:
 
@@ -241,14 +241,14 @@ Controlled by: one joined `Invitation` while active.
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `membership_id` | `string` | Stable identity of the membership |
-| `login_id` | `string` | Canonical Login that holds the membership |
-| `workspace_id` | `string` | Workspace in which roles are granted |
-| `invitation_id` | `string` | Controlling joined Invitation |
-| `roles` | `RoleSet` | Application roles granted in the workspace |
-| `state` | `enum(Active, Inactive)` | Whether the membership contributes roles |
+| Field           | Type                     | Description                                |
+| --------------- | ------------------------ | ------------------------------------------ |
+| `membership_id` | `string`                 | Stable identity of the membership          |
+| `login_id`      | `string`                 | Canonical Login that holds the membership  |
+| `workspace_id`  | `string`                 | Workspace in which roles are granted       |
+| `invitation_id` | `string`                 | Controlling joined Invitation              |
+| `roles`         | `RoleSet`                | Application roles granted in the workspace |
+| `state`         | `enum(Active, Inactive)` | Whether the membership contributes roles   |
 
 Invariants:
 
@@ -309,10 +309,10 @@ Authentication evidence or stored verifier associated with a Login; secret value
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `kind` | `enum(Password, VerifiedValue)` | Proof mechanism used by an authentication or recovery operation |
-| `verifier` | `string` | Protected representation used to validate the presented proof |
+| Field      | Type                            | Description                                                     |
+| ---------- | ------------------------------- | --------------------------------------------------------------- |
+| `kind`     | `enum(Password, VerifiedValue)` | Proof mechanism used by an authentication or recovery operation |
+| `verifier` | `string`                        | Protected representation used to validate the presented proof   |
 
 #### Principal
 
@@ -320,11 +320,11 @@ An authenticated identity or role used as input to authorization.
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `kind` | `enum(User, Device, Role, Host)` | Principal category |
-| `name` | `string` | Login, role, or host name represented by the Principal |
-| `workspace_id` | `string?` | Workspace scope when the Principal is workspace-specific |
+| Field          | Type                             | Description                                              |
+| -------------- | -------------------------------- | -------------------------------------------------------- |
+| `kind`         | `enum(User, Device, Role, Host)` | Principal category                                       |
+| `name`         | `string`                         | Login, role, or host name represented by the Principal   |
+| `workspace_id` | `string?`                        | Workspace scope when the Principal is workspace-specific |
 
 #### PrincipalToken
 
@@ -332,33 +332,50 @@ An app-scoped bearer value carrying an immutable identity snapshot until expirat
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `canonical_login` | `SignInIdentifier` | Canonical Login captured when the token is issued |
-| `alias` | `SignInIdentifier?` | Active LoginAlias captured when the token is issued |
-| `subject_kind` | `enum(User, Device)` | Subject kind captured from Login |
-| `profile_workspace_id` | `string` | ProfileWorkspace reference captured from Login |
-| `workspace_roles` | `list<RoleGrant>` | Workspace-scoped roles captured or enriched into the token |
-| `global_roles` | `RoleSet` | Roles applicable across workspaces |
-| `api_token` | `boolean` | Whether restricted API-token principal composition applies |
-| `expires_at` | `timestamp` | Normal expiration boundary |
+| Field                  | Type                 | Description                                                                                    |
+| ---------------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
+| `canonical_login`      | `SignInIdentifier`   | Canonical Login captured when the token is issued                                              |
+| `alias`                | `SignInIdentifier?`  | Active LoginAlias captured when the token is issued                                            |
+| `subject_kind`         | `enum(User, Device)` | Subject kind captured from Login                                                               |
+| `profile_workspace_id` | `string`             | ProfileWorkspace reference captured from Login                                                 |
+| `workspace_roles`      | `list<RoleGrant>`    | Role grants captured or enriched into the token, each carrying an explicit applicability scope |
+| `global_roles`         | `RoleSet`            | Roles applicable across workspaces                                                             |
+| `api_token`            | `boolean`            | Whether restricted API-token principal composition applies                                     |
+| `expires_at`           | `timestamp`          | Normal expiration boundary                                                                     |
 
 Invariants:
 
 - PrincipalToken validity depends on signature, application audience, and expiration, not a live Login lookup.
 - PrincipalToken validation and renewal do not read `CanonicalLoginEnablement`.
 - LoginAlias or canonical enablement changes do not rewrite an already-issued PrincipalToken.
+- `api_token` selects restricted principal composition, while each `RoleGrant` carries its applicability through `RoleScope`
+- Existing scope combinations remain `RoleScopeWorkspace` for API tokens and `RoleScopeWorkspacesOwnedBy` for regular User and Device tokens
+- Legacy tokens without explicit role scopes retain the scope implied by their original token kind
 
 #### RoleGrant
 
-A role assignment scoped to one workspace.
+An application role assignment whose applicability is determined by `RoleScope` and a Workspace reference.
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `workspace_id` | `string` | Workspace in which the role applies |
-| `role` | `string` | Qualified application role name |
+| Field          | Type        | Description                                                   |
+| -------------- | ----------- | ------------------------------------------------------------- |
+| `scope`        | `RoleScope` | How the Workspace reference determines where the role applies |
+| `workspace_id` | `string`    | Workspace reference interpreted according to `scope`          |
+| `role`         | `string`    | Qualified application role name                               |
+
+Equality:
+
+- Two `RoleGrant` values are equal only when their `scope`, `workspace_id`, and `role` are all equal
+
+#### RoleScope
+
+An integer discriminator defining the meaning of the Workspace reference carried by `RoleGrant`. Its zero value defaults to `RoleScopeWorkspacesOwnedBy`.
+
+Values:
+
+- `RoleScopeWorkspacesOwnedBy = 0` - the role is emitted in each Workspace whose immediate owner is the referenced Workspace
+- `RoleScopeWorkspace = 1` - the role applies only to the referenced Workspace
 
 #### RoleSet
 
@@ -374,8 +391,8 @@ A short-lived, single-use Credential proving control of one verified value for a
 
 Fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `value` | `string` | Verified value bound to the token |
-| `purpose` | `string` | Operation for which the proof can be consumed |
-| `expires_at` | `timestamp` | Expiration boundary of the proof |
+| Field        | Type        | Description                                   |
+| ------------ | ----------- | --------------------------------------------- |
+| `value`      | `string`    | Verified value bound to the token             |
+| `purpose`    | `string`    | Operation for which the proof can be consumed |
+| `expires_at` | `timestamp` | Expiration boundary of the proof              |
