@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -82,7 +83,9 @@ func (b *mapKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	}
 	return true
 }
-func (b *mapKeyBuilder) ToBytes(istructs.WSID) (pk []byte, cc []byte, err error) { panic(ErrNotSupported) }
+func (b *mapKeyBuilder) ToBytes(istructs.WSID) (pk []byte, cc []byte, err error) {
+	panic(ErrNotSupported)
+}
 
 func TestKeyBuilder(t *testing.T) {
 	require := require.New(t)
@@ -94,7 +97,8 @@ func TestKeyBuilder(t *testing.T) {
 	require.PanicsWithValue(ErrNotSupported, func() { k.ClusteringColumns() })
 }
 
-func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
+func mockedStructs(t *testing.T) (*coreutils.MockAppStructs, *coreutils.MockViewRecords) {
+	t.Helper()
 	adb := builder.New()
 
 	adb.AddPackage("test", "test.com/test")
@@ -114,19 +118,18 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
 
-	app, err := adb.Build()
-	require.NoError(t, err)
+	app := adb.MustBuild()
 
-	mockWorkspaceRecord := &mockRecord{}
+	mockWorkspaceRecord := &coreutils.MockRecord{}
 	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 	mockWorkspaceRecord.On("QName").Return(appdef.QNameCDocWorkspaceDescriptor)
-	mockedRecords := &mockRecords{}
+	mockedRecords := &coreutils.MockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
-	mockedViews := &mockViewRecords{}
+	mockedViews := &coreutils.MockViewRecords{}
 	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(sys.Storage_View, testViewRecordQName1))
 
-	appStructs := &mockAppStructs{}
+	appStructs := &coreutils.MockAppStructs{}
 	appStructs.
 		On("AppDef").Return(app).
 		On("AppQName").Return(testAppQName).
@@ -138,6 +141,7 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 }
 
 func TestBundle(t *testing.T) {
+	require := require.New(t)
 	newKey := func(qname appdef.QName, id istructs.RecordID) (k istructs.IStateKeyBuilder) {
 		k = newMapKeyBuilder(sys.Storage_View, qname)
 		k.PutRecordID(sys.Storage_Record_Field_ID, id)
@@ -151,7 +155,7 @@ func TestBundle(t *testing.T) {
 		b.put(newKey(testRecordQName1, istructs.RecordID(2)), state.ApplyBatchItem{})
 		b.put(newKey(testRecordQName2, istructs.RecordID(1)), state.ApplyBatchItem{})
 
-		require.Equal(t, 3, b.size())
+		require.Equal(3, b.size())
 	})
 	t.Run("get", func(t *testing.T) {
 		b := newBundle()
@@ -176,11 +180,10 @@ func TestBundle(t *testing.T) {
 		for _, test := range tests {
 			_, ok := b.get(test.key)
 
-			require.Equal(t, test.want, ok)
+			require.Equal(test.want, ok)
 		}
 	})
 	t.Run("containsKeysForSameView", func(t *testing.T) {
-		require := require.New(t)
 		b := newBundle()
 
 		b.put(newKey(testRecordQName1, istructs.RecordID(1)), state.ApplyBatchItem{})

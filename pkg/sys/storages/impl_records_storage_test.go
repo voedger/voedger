@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -36,15 +37,15 @@ func createAppDef() appdef.IAppDef {
 }
 
 func TestRecordsStorage_GetBatch(t *testing.T) {
+	require := require.New(t)
 	t.Run("Should handle general records", func(t *testing.T) {
-		require := require.New(t)
-		records := &mockRecords{}
+		records := &coreutils.MockRecords{}
 		records.
 			On("GetBatch", istructs.WSID(1), true, mock.AnythingOfType("[]istructs.RecordGetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				items := args.Get(2).([]istructs.RecordGetBatchItem)
-				record := &mockRecord{}
+				record := &coreutils.MockRecord{}
 				record.On("QName").Return(testRecordQName1)
 				record.On("AsInt64", "number").Return(int64(10))
 				items[0].Record = record
@@ -53,12 +54,12 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				items := args.Get(2).([]istructs.RecordGetBatchItem)
-				record1 := &mockRecord{}
+				record1 := &coreutils.MockRecord{}
 				record1.
 					On("QName").Return(testRecordQName2).
 					On("AsInt64", "age").Return(int64(20))
 				items[0].Record = record1
-				record2 := &mockRecord{}
+				record2 := &coreutils.MockRecord{}
 				record2.
 					On("QName").Return(testRecordQName2).
 					On("AsInt64", "age").Return(int64(21))
@@ -75,7 +76,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		app, err := adb.Build()
 		require.NoError(err)
 
-		appStructs := &mockAppStructs{}
+		appStructs := &coreutils.MockAppStructs{}
 		appStructs.
 			On("AppDef").Return(app).
 			On("AppQName").Return(testAppQName).
@@ -108,8 +109,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.Equal(int64(21), batchItems[2].Value.AsInt64("age"))
 	})
 	t.Run("Should handle singleton records", func(t *testing.T) {
-		require := require.New(t)
-		singleton1 := &mockRecord{}
+		singleton1 := &coreutils.MockRecord{}
 		singleton1.
 			On("QName").Return(testRecordQName1).
 			On("AsQName", mock.Anything).Return(testRecordQName1).
@@ -118,7 +118,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			x := a.Get(0).(func(name string))
 			x("number")
 		})
-		singleton2 := &mockRecord{}
+		singleton2 := &coreutils.MockRecord{}
 		singleton2.
 			On("QName").Return(testRecordQName2).
 			On("AsQName", mock.Anything).Return(testRecordQName2).
@@ -127,21 +127,21 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			x := a.Get(0).(func(name string))
 			x("age")
 		})
-		nullRecord := &mockRecord{}
+		nullRecord := &coreutils.MockRecord{}
 		nullRecord.On("QName").Return(appdef.NullQName)
 
-		mockWorkspaceRecord := &mockRecord{}
+		mockWorkspaceRecord := &coreutils.MockRecord{}
 		mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 		mockWorkspaceRecord.On("QName").Return(appdef.QNameCDocWorkspaceDescriptor)
 
-		records := &mockRecords{}
+		records := &coreutils.MockRecords{}
 		records.
 			On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(singleton1, nil).
 			On("GetSingleton", istructs.WSID(2), testRecordQName2).Return(nullRecord, nil).
 			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil).
 			On("GetSingleton", mock.Anything, appdef.QNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
 
-		appStructs := &mockAppStructs{}
+		appStructs := &coreutils.MockAppStructs{}
 		appStructs.
 			On("AppDef").Return(createAppDef()).
 			On("AppQName").Return(testAppQName).
@@ -175,8 +175,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.Equal(int64(18), batchItems[2].Value.AsInt64("age"))
 	})
 	t.Run("Should return error when 'id' not found", func(t *testing.T) {
-		require := require.New(t)
-		appStructs := &mockAppStructs{}
+		appStructs := &coreutils.MockAppStructs{}
 		appStructsFunc := func() istructs.IAppStructs {
 			return appStructs
 		}
@@ -186,10 +185,9 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.ErrorIs(err, ErrNotFound)
 	})
 	t.Run("Should return error on get", func(t *testing.T) {
-		require := require.New(t)
-		records := &mockRecords{}
+		records := &coreutils.MockRecords{}
 		records.On("Get", istructs.WSID(1), true, mock.Anything).Return(nil, errTest)
-		appStructs := &mockAppStructs{}
+		appStructs := &coreutils.MockAppStructs{}
 		appStructs.
 			On("AppDef").Return(createAppDef()).
 			On("AppQName").Return(testAppQName).
@@ -206,16 +204,15 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 	t.Run("Should return error on get singleton", func(t *testing.T) {
-		require := require.New(t)
 
-		mockWorkspaceRecord := &mockRecord{}
+		mockWorkspaceRecord := &coreutils.MockRecord{}
 		mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 		mockWorkspaceRecord.On("QName").Return(appdef.QNameCDocWorkspaceDescriptor)
 
-		records := &mockRecords{}
-		records.On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(&mockRecord{}, errTest)
+		records := &coreutils.MockRecords{}
+		records.On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(&coreutils.MockRecord{}, errTest)
 		records.On("GetSingleton", mock.Anything, appdef.QNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
-		appStructs := &mockAppStructs{}
+		appStructs := &coreutils.MockAppStructs{}
 		appStructs.
 			On("AppDef").Return(createAppDef()).
 			On("AppQName").Return(testAppQName).
@@ -236,15 +233,15 @@ func TestRecordsStorage_Insert(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
 	value := "Voedger"
-	rw := &mockRowWriter{}
+	rw := &coreutils.MockStateValueBuilder{}
 	rw.
 		On("PutString", fieldName, value)
-	cud := &mockCUD{}
-	cud.On("Create").Return(rw)
+	cud := &coreutils.MockCUD{}
+	cud.On("Create", testRecordQName1).Return(rw)
 
-	records := &mockRecords{}
+	records := &coreutils.MockRecords{}
 
-	appStructs := &mockAppStructs{}
+	appStructs := &coreutils.MockAppStructs{}
 	appStructs.
 		On("AppDef").Return(createAppDef()).
 		On("AppQName").Return(testAppQName).
@@ -271,17 +268,17 @@ func TestRecordsStorage_InsertRecordIDField(t *testing.T) {
 	var value1 int64 = 1234
 	var value2 int64 = 18
 
-	rw := &mockRowWriter{}
+	rw := &coreutils.MockStateValueBuilder{}
 	rw.
 		On("PutRecordID", fieldName1, istructs.RecordID(value1))
 	rw.
 		On("PutInt64", fieldName2, value2)
-	cud := &mockCUD{}
-	cud.On("Create").Return(rw)
+	cud := &coreutils.MockCUD{}
+	cud.On("Create", testRecordQName2).Return(rw)
 
-	records := &mockRecords{}
+	records := &coreutils.MockRecords{}
 
-	appStructs := &mockAppStructs{}
+	appStructs := &coreutils.MockAppStructs{}
 	appStructs.
 		On("AppDef").Return(createAppDef()).
 		On("AppQName").Return(testAppQName).
@@ -306,17 +303,17 @@ func TestRecordsStorage_Update(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
 	value := "Voedger"
-	rw := &mockRowWriter{}
+	rw := &coreutils.MockStateValueBuilder{}
 	rw.On("PutString", fieldName, value)
-	r := &mockRecord{}
+	r := &coreutils.MockRecord{}
 	r.On("QName").Return(appdef.NewQName("test", "Record1"))
 	sv := &recordsValue{record: r}
-	cud := &mockCUD{}
+	cud := &coreutils.MockCUD{}
 	cud.On("Update", mock.Anything).Return(rw)
 	cudFunc := func() istructs.ICUD {
 		return cud
 	}
-	appStructs := &mockAppStructs{}
+	appStructs := &coreutils.MockAppStructs{}
 	appStructsFunc := func() istructs.IAppStructs {
 		return appStructs
 	}

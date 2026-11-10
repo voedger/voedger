@@ -66,23 +66,23 @@ var (
 func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require := require.New(t)
 	department := func(name string) istructs.IStateValue {
-		r := &mockRecord{}
+		r := &coreutils.MockRecord{}
 		r.
 			On("AsString", "name").Return(name).
 			On("QName").Return(qNamePosDepartment)
-		sv := &mockStateValue{}
-		sv.On("AsRecord", "").Return(r)
+		sv := &coreutils.MockStateRecordValue{}
+		sv.On("AsRecord").Return(r)
 		return sv
 	}
-	skb := &mockStateKeyBuilder{}
+	skb := &coreutils.MockStateKeyBuilder{}
 	skb.On("PutRecordID", mock.Anything, mock.Anything)
-	s := &mockState{}
+	s := &coreutils.MockState{}
 	s.
-		On("KeyBuilder", sys.Storage_Record, appdef.NullQName).Return(skb).
-		On("MustExist", mock.Anything).Return(department("Soft drinks")).Once().
-		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
-		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
-		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
+		On("KeyBuilder", sys.Storage_Record, appdef.NullQName).Return(skb, nil).
+		On("MustExist", mock.Anything).Return(department("Soft drinks"), nil).Once().
+		On("MustExist", mock.Anything).Return(department("Alcohol drinks"), nil).Once().
+		On("MustExist", mock.Anything).Return(department("Alcohol drinks"), nil).Once().
+		On("MustExist", mock.Anything).Return(department("Sweet"), nil).Once()
 
 	var (
 		appDef     appdef.IAppDef
@@ -460,7 +460,7 @@ func TestRawMode(t *testing.T) {
 	requestSender := bus.NewIRequestSender(testingu.MockTime, func(requestCtx context.Context, request bus.Request, responder bus.IResponder) {
 		go func() {
 			// SendToBus op will send to the respCh chan so let's handle in a separate goroutine
-			processor, respWriterGetter := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{},
+			processor, respWriterGetter := ProvideRowsProcessorFactory()(context.Background(), appDef, &coreutils.MockState{},
 				queryParams{}, resultMeta, responder, &testMetrics{}, rowsProcessorErrCh)
 
 			require.NoError(processor.SendAsync(rowsWorkpiece{
@@ -499,6 +499,7 @@ func TestRawMode(t *testing.T) {
 }
 
 func Test_epsilon(t *testing.T) {
+	require := require.New(t)
 	options := func(epsilon interface{}) map[string]interface{} {
 		options := make(map[string]interface{})
 		if epsilon != nil {
@@ -516,30 +517,30 @@ func Test_epsilon(t *testing.T) {
 	t.Run("Should return epsilon", func(t *testing.T) {
 		epsilon, err := epsilon(args(options(json.Number(fmt.Sprint(math.E)))))
 
-		require.Equal(t, math.E, epsilon)
-		require.NoError(t, err)
+		require.Equal(math.E, epsilon)
+		require.NoError(err)
 	})
 	t.Run("Should return error when options is nil", func(t *testing.T) {
 		//TODO (FILTER0001)
 		t.Skip("//TODO (FILTER0001)")
 		epsilon, err := epsilon(args(nil))
 
-		require.Equal(t, 0.0, epsilon)
-		require.ErrorIs(t, err, ErrNotFound)
+		require.Equal(0.0, epsilon)
+		require.ErrorIs(err, ErrNotFound)
 	})
 	t.Run("Should return error when epsilon is nil", func(t *testing.T) {
 		//TODO (FILTER0001)
 		t.Skip("//TODO (FILTER0001)")
 		epsilon, err := epsilon(args(options(nil)))
 
-		require.Equal(t, 0.0, epsilon)
-		require.ErrorIs(t, err, ErrNotFound)
+		require.Equal(0.0, epsilon)
+		require.ErrorIs(err, ErrNotFound)
 	})
 	t.Run("Should return error when epsilon has wrong type", func(t *testing.T) {
 		epsilon, err := epsilon(args(options("0.00000001")))
 
-		require.Equal(t, 0.0, epsilon)
-		require.ErrorIs(t, err, coreutils.ErrFieldTypeMismatch)
+		require.Equal(0.0, epsilon)
+		require.ErrorIs(err, coreutils.ErrFieldTypeMismatch)
 	})
 }
 
@@ -1358,44 +1359,3 @@ func getSystemToken(appTokens istructs.IAppTokens) string {
 	}
 	return token
 }
-
-type mockState struct {
-	istructs.IState
-	mock.Mock
-}
-
-func (s *mockState) KeyBuilder(storage, entity appdef.QName) (builder istructs.IStateKeyBuilder, err error) {
-	return s.Called(storage, entity).Get(0).(istructs.IStateKeyBuilder), err
-}
-
-func (s *mockState) MustExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	return s.Called(key).Get(0).(istructs.IStateValue), err
-}
-
-type mockStateKeyBuilder struct {
-	istructs.IStateKeyBuilder
-	mock.Mock
-}
-
-func (b *mockStateKeyBuilder) String() string { return "" }
-func (b *mockStateKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
-	b.Called(name, value)
-}
-
-type mockStateValue struct {
-	istructs.IStateValue
-	istructs.IStateRecordValue
-	mock.Mock
-}
-
-func (o *mockStateValue) AsRecord() istructs.IRecord {
-	return o.Called("").Get(0).(istructs.IRecord)
-}
-
-type mockRecord struct {
-	istructs.IRecord
-	mock.Mock
-}
-
-func (r *mockRecord) AsString(name string) string { return r.Called(name).String(0) }
-func (r *mockRecord) QName() appdef.QName         { return r.Called().Get(0).(appdef.QName) }
