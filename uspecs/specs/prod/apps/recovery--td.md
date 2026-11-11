@@ -182,6 +182,9 @@ Application operations
     publish into a replacement. The caller cancels the context; the generic
     manager's shutdown waits for its registered workers and then clears its state.
     New attempts and retries share one capacity check and startup path.
+    On reset, atomically remove the partition entry and return its recovered
+    value, if any. Outside the manager mutex, cancel that value's workspace
+    recovery context with cause `errPartitionReset`. Reset performs no join.
   - Constructs an attempt only after admission reserves a slot. For partition
     recovery this is when the request's borrowed partition is transferred to
     the recovery workpiece, which releases it when the attempt finishes. The
@@ -198,8 +201,12 @@ Application operations
     so workers detached by reset continue to consume capacity until they finish.
     No VVM configuration field changes this limit.
     Saturation returns `503` without creating state or queueing work.
-  - Reuses the generic manager's retained-failure, retry, stale-completion, and
-    service-context behavior. The generic constructor also supports zero
+  - Reuses the generic manager's retained-failure, retry, and stale-completion
+    behavior. Each recovered partition owns a workspace-recovery context derived
+    from the service context with `context.WithCancelCause`; reset cancels only
+    that partition instance. Request cancellation does not cancel this context.
+    A replacement partition receives a fresh child of the service context.
+    The generic constructor also supports zero
     capacity for technical tests, where no attempt is admitted.
   - Before a recovered partition is published, its workspace manager shares the
     partition manager's worker wait group. The existing shutdown call therefore
@@ -325,7 +332,9 @@ verify key isolation, JSON values, read errors, and replacement behavior.
 
 ### Initial recovery
 
-#### Missing checkpoints are computed for every declared partition
+#### Normal initial partition recovery
+
+Initial recovery does not fail in this scenario.
 
 ```text
 [Bootstrap operator]
@@ -358,21 +367,16 @@ relative ordering of different partition attempts is unconstrained.
       - server ready even if every partition was excluded
 ```
 
-#### Commands fail on a failed partition and succeed with the correct sequence numbers on initialized partitions
+#### Commands return 500 on a partition whose initial recovery failed
 
 ```text
 [Bootstrap operator]
-  -> [Checkpoint initial recovery]: partition 1 PLog scan fails; recover partitions 0 and 2
-  -> [App partitions engine]: deploy partitions 0 and 2; server ready
-      - start configured actualizers and schedulers only for partitions 0 and 2
+  -> [Checkpoint initial recovery]: partition 1 PLog scan fails
+  -> [App partitions engine]: exclude partition 1; server ready
 *Client
-  -> [Command processor]: insert into Orders (partition 0) and Inventory (partition 2); retry 503 during runtime recovery
-      - recover each workspace's own WLog offset and last ordinary record ID
-      - return 200: Orders offset=8, record ID=200004; Inventory offset=21, record ID=200010
-  -> [Command processor]: insert into Billing (excluded partition 1)
-      -> [App partitions engine]: Borrow -> existing ErrNotFound
+  -> [Command processor]: insert into Billing (partition 1), without retries
+      -> [App partitions engine]: Borrow -> ErrNotFound
       - return 500: partition not found
-      - partition 1 remains undeployed with no asynchronous projectors or scheduled jobs
 ```
 
 If setup fails before partition scheduling or the bootstrap context is canceled,
@@ -479,7 +483,7 @@ lifecycle logs and their order.
       - start no partition or workspace recovery
 ```
 
-#### Requests to a partition being recovered share one recovery
+#### Concurrent requests to the same partition start only one recovery
 
 ```text
 *Client
@@ -526,7 +530,7 @@ lifecycle logs and their order.
       - start no partition or workspace recovery
 ```
 
-#### The next request reports a failed partition recovery and starts a new attempt
+#### The next request restarts recovery of the failed partition and report the error
 
 ```text
 *Client
@@ -547,9 +551,9 @@ partition recovery has no concurrency limit; the synthetic zero-capacity and
 service-shutdown tests remain internal checks. Workspace recovery continuing
 across a partition reset remains under Workspace recovery orchestration.
 
-### Partition checkpoint
+### Partition recovery
 
-#### Partition recovery starts from a checkpoint in basic usage
+#### Normal partion recovery from checkpoint
 
 ```text
 *Client
@@ -622,9 +626,9 @@ The absent-checkpoint test also verifies that no workspace checkpoint is stored
 and no invalid workspace-checkpoint error is logged after recovery. Initial
 allocation values are specified in [Sequence allocation](./sequences.feature).
 
-### Workspace checkpoint
+### Workspace recovery
 
-#### Workspace recovery starts from a checkpoint in basic usage
+#### Normal workspace recovery from checkpoint
 
 ```text
 *Client
@@ -708,7 +712,7 @@ with `ReadToTheEnd`. The successful insert verifies recovered sequence numbers.
 
 ### Workspace recovery orchestration
 
-#### A new request to a workspace being recovered does not start another recovery
+#### Concurrent requests to the same workspace start only one recovery
 
 ```text
 *Client
@@ -725,7 +729,10 @@ The test uses internal command-processor recovery gates to hold the first
 recovery open through the second request. VIT has no direct recovery gate;
 testing this through VIT would require a custom storage wrapper to delay reads.
 
-#### Recovery limit rejects without queueing and permits a later retry
+#### Num of workspaces recovering at the same time is limited per partition
+
+The glossary defines a limit of four simultaneous workspace recoveries per
+partition. Workspaces 42 through 46 in this scenario belong to the same partition.
 
 ```text
 *Client
@@ -739,24 +746,54 @@ testing this through VIT would require a custom storage wrapper to delay reads.
       - CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
-#### A partition reset does not stop ongoing workspace recoveries
+#### A partition reset cancels current workspace recoveries without waiting for them to finish
 
 ```text
 *Client
-  -> [Workspace recovery manager]: workspaces 3, 5, 7, and 9 reserve all four slots
-  -> [Command processor]: command failure resets partition state
-  -> [Partition recovery manager]: recover replacement partition
-      - reuse the partition key's existing workspace-recovery slot pool
-      - keep the original workspace recovery workers running
-  -> [Workspace recovery manager]: workspace 11; old-generation workers still occupy all slots -> 503
-      - create no state and queue no worker for workspace 11
-  -> [Workspace recovery manager]: one detached worker finishes and releases its shared slot
-  -> [Workspace recovery manager]: workspace 11; reserve returned slot and start -> 503
-  -> [Workspace recovery manager]: all four original workspace recoveries complete successfully
-      - each workspace has exactly one recovery attempt
+  -> [Workspace recovery manager]: workspaces 3 and 5 are reading WLogs
+  -> [Command processor]: request 1 fails in a synchronous projector -> 500
+      -> [Partition recovery manager]: detach old partition state under its mutex
+      -> [Workspace recovery manager]: cancel old partition context with errPartitionReset
+          - signal cancellation outside the mutex; do not wait for storage or workers
+  -> [Command processor]: request 2 while old reads have not returned
+      -> [Partition recovery manager]: start replacement partition recovery -> 503
+          - recover using service context; create a fresh workspace-recovery context
+          - retain the same partition-key slot pool and service worker wait group
+      - replacement partition recovery completes before old reads return
+  -> [Workspace recovery manager]: old reads return; observe cancellation and discard results
+      - emit INFO cp.workspace_recovery.canceled, message "partition reset"
+      - release each slot through normal worker completion; join only during shutdown
 ```
 
-#### The next request reports a failed workspace recovery and starts a new attempt
+**Cancellation ownership and cooperative exit**
+
+Each `appPartition` owns `workspaceRecoveryCtx` and `cancelWorkspaceRecovery`,
+created from the service context before publication. Cancel on construction
+failure; replacements get fresh contexts.
+
+`recoveryManager.reset(key)` atomically detaches and returns the recovered value.
+`partitionManager.scheduleRecovery` cancels it with `errPartitionReset` outside
+the mutex, without canceling the service or waiting. Missing entries are no-ops;
+unrecovered entries have no workspace workers.
+
+Use the partition context for WLog scans and let `ReadWLog` handle cancellation
+during reads. Check before the context-free checkpoint read, before fallback,
+and when finalizing the result and its log. Always release events.
+The generic worker discards data returned after cancellation and treats recovery
+as canceled instead of marking it ready. Completion updates
+only captured state, so late results cannot overwrite replacement state.
+
+Storage calls may ignore cancellation and remain blocked. Workers retain slots
+and shutdown registration until exit; admission returns concurrency-limit 503
+while full. Reset and replacement partition recovery never join workers. Add no
+helper goroutines or forced timeouts.
+
+Observed `errPartitionReset` produces one INFO cancellation log instead of
+completion or WLog-read ERROR logs. Earlier completions and genuine storage
+errors keep normal handling. Service shutdown still cancels and joins workers;
+it is not a partition reset.
+
+#### The next request restarts recovery of the failed workspace and report the error
 
 ```text
 *Client
@@ -830,8 +867,10 @@ sequenceDiagram
   recovery starts. Commands never retry initial recovery or deploy a partition.
 - Every bootstrap-context cancellation stops scheduling, cancels in-flight
   initialization, waits for started work, and is returned to `[Bootstrap operator]`.
-- Every request-recovery attempt uses the VVM service context rather than request
-  cancellation. Command-service shutdown joins the shared partition/workspace
+- Every partition-recovery attempt uses the VVM service context; workspace
+  recovery uses a child context owned by its partition instance. Request
+  cancellation does not cancel either recovery. Reset cancels the old partition's
+  workspace context without joining its workers. Command-service shutdown joins the shared partition/workspace
   worker wait group before clearing partition state, including workers belonging
   to partitions detached by reset.
 - Every recovery-manager key has at most one current attempt; reset may detach
@@ -855,6 +894,10 @@ sequenceDiagram
   has finished.
 - Every undeployed-partition rejection uses the standard not-found message
   through `cp.error`; the initial-recovery cause remains only in the attempt log.
+- Every workspace recovery that observes partition-reset cancellation emits one
+  INFO `cp.workspace_recovery.canceled` record with message `partition reset` and
+  attributes `app`, `partid`, and `wsid`; it emits no success or WLog-read-error
+  record for that canceled attempt
 
 ### Performance and persistence
 
@@ -881,8 +924,7 @@ sequenceDiagram
 - Internal command tests preserve partition and workspace orchestration
   coverage using deterministic recovery gates and injected failures
 - Empty-log command fixtures seed only system workspace records
-- The empty-partition case in "Missing checkpoints are computed for every
-  declared partition" is covered by
+- The empty-partition case in "Normal initial partition recovery" is covered by
   [initial-recovery tests](../../../../pkg/checkpoints/initial_recovery_test.go).
   VIT provisioning creates both PLog and WLog events; those tests use an
   unprovisioned mock partition rather than deleting a provisioned partition's PLog.

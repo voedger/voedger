@@ -230,10 +230,12 @@ type partitionManager struct {
 }
 
 type appPartition struct {
-	clusterAppID   istructs.ClusterAppID
-	appStructs     istructs.IAppStructs
-	workspaces     *workspaceManager
-	nextPLogOffset istructs.Offset
+	clusterAppID            istructs.ClusterAppID
+	appStructs              istructs.IAppStructs
+	workspaces              *workspaceManager
+	nextPLogOffset          istructs.Offset
+	workspaceRecoveryCtx    context.Context
+	cancelWorkspaceRecovery context.CancelCauseFunc
 }
 
 type recoverPartitionFunc func(context.Context, *cmdWorkpiece) (*appPartition, error)

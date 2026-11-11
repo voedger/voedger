@@ -12,12 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/checkpoints/testutils"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestRecoveryCheckpointBasicUsage(t *testing.T) {
-	t.Run("recovery: scn: Partition recovery starts from a checkpoint in basic usage: lastPLogOffset 10", func(t *testing.T) {
-		require := require.New(t)
+	require := require.New(t)
+	t.Run("recovery: scn: Normal partion recovery from checkpoint: lastPLogOffset 10", func(t *testing.T) {
 		// | checkpoint        | startOffset |
 		// | lastPLogOffset 10 | 10          |
 		// Given the PLog contains events through offset 50
@@ -45,8 +46,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
-	t.Run("recovery: scn: Partition recovery starts from a checkpoint in basic usage: lastPLogOffset 50", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal partion recovery from checkpoint: lastPLogOffset 50", func(t *testing.T) {
 		// | checkpoint        | startOffset |
 		// | lastPLogOffset 50 | 50          |
 		// Given the PLog contains events through offset 50
@@ -74,8 +74,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
-	t.Run("recovery: scn: Partition recovery starts from a checkpoint in basic usage: lastPLogOffset 0", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal partion recovery from checkpoint: lastPLogOffset 0", func(t *testing.T) {
 		// | checkpoint        | startOffset |
 		// | lastPLogOffset 0  | 1           |
 		// Given the PLog contains events through offset 50
@@ -103,8 +102,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
-	t.Run("recovery: scn: Partition recovery starts from a checkpoint in basic usage: absent", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal partion recovery from checkpoint: absent", func(t *testing.T) {
 		// | checkpoint        | startOffset |
 		// | absent            | 1           |
 		// Given the PLog contains events through offset 50
@@ -133,8 +131,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
-	t.Run("recovery: scn: Workspace recovery starts from a checkpoint in basic usage: wlogIDBearingOffset 6, lastWLogOffset 14", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal workspace recovery from checkpoint: wlogIDBearingOffset 6, lastWLogOffset 14", func(t *testing.T) {
 		// | checkpoint             | lastWLogOffset | startOffset |
 		// | wlogIDBearingOffset 6  | 14             | 6           |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -143,6 +140,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		// And the WLog ends at offset <lastWLogOffset>
 		// lastWLogOffset = 14
 		app, storage := newCheckpointCommandApp(t, 14)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		// And the stored workspace checkpoint is <checkpoint>
 		// checkpoint = wlogIDBearingOffset 6
@@ -151,7 +149,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 
 		// And the Command processor has restarted and completed Partition recovery
 		storage.ForcePutPartitionCheckpoint(t, app.appStructs.ClusterAppID(), partitionManagerKeyForWSID(1).partitionID,
-			checkpoints.PartitionCheckpoint{LastPLogOffset: 50})
+			checkpoints.PartitionCheckpoint{LastPLogOffset: 10})
 		restartCmdProc(app)
 		app.recoveryTestControl.pLogReads.reset(partitionManagerKeyForWSID(1))
 		app.recoveryTestControl.wLogReads.reset(workspaceManagerKey(1))
@@ -170,10 +168,13 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		// lastWLogOffset = 14
 		requireIssuedNumbers(t, response, 14+1, 200006)
 		require.Len(response["NewIDs"], 1)
+		// Both scans must honor valid checkpoints without falling back to the beginning
+		require.Equal([]logReadFromTo{{offset: 10, count: istructs.ReadToTheEnd}},
+			app.recoveryTestControl.pLogReads.values(partitionManagerKeyForWSID(1)))
+		logCap.NotContains("cp.partition_recovery.checkpoint.invalid", "cp.workspace_recovery.checkpoint.invalid")
 	})
 
-	t.Run("recovery: scn: Workspace recovery starts from a checkpoint in basic usage: wlogIDBearingOffset 10, lastWLogOffset 14", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal workspace recovery from checkpoint: wlogIDBearingOffset 10, lastWLogOffset 14", func(t *testing.T) {
 		// | checkpoint             | lastWLogOffset | startOffset |
 		// | wlogIDBearingOffset 10 | 14             | 10          |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -211,8 +212,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
-	t.Run("recovery: scn: Workspace recovery starts from a checkpoint in basic usage: wlogIDBearingOffset 10, lastWLogOffset 10", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal workspace recovery from checkpoint: wlogIDBearingOffset 10, lastWLogOffset 10", func(t *testing.T) {
 		// | checkpoint             | lastWLogOffset | startOffset |
 		// | wlogIDBearingOffset 10 | 10             | 10          |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -221,6 +221,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		// And the WLog ends at offset <lastWLogOffset>
 		// lastWLogOffset = 10
 		app, storage := newCheckpointCommandApp(t, 10)
+		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
 		// And the stored workspace checkpoint is <checkpoint>
 		// checkpoint = wlogIDBearingOffset 10
@@ -248,10 +249,13 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		// lastWLogOffset = 10
 		requireIssuedNumbers(t, response, 10+1, 200006)
 		require.Len(response["NewIDs"], 1)
+		// Both scans must honor valid checkpoints without falling back to the beginning
+		require.Equal([]logReadFromTo{{offset: 50, count: istructs.ReadToTheEnd}},
+			app.recoveryTestControl.pLogReads.values(partitionManagerKeyForWSID(1)))
+		logCap.NotContains("cp.partition_recovery.checkpoint.invalid", "cp.workspace_recovery.checkpoint.invalid")
 	})
 
-	t.Run("recovery: scn: Workspace recovery starts from a checkpoint in basic usage: wlogIDBearingOffset 0, lastWLogOffset 14", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal workspace recovery from checkpoint: wlogIDBearingOffset 0, lastWLogOffset 14", func(t *testing.T) {
 		// | checkpoint             | lastWLogOffset | startOffset |
 		// | wlogIDBearingOffset 0  | 14             | 1           |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -289,8 +293,7 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
-	t.Run("recovery: scn: Workspace recovery starts from a checkpoint in basic usage: absent, lastWLogOffset 14", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal workspace recovery from checkpoint: absent, lastWLogOffset 14", func(t *testing.T) {
 		// | checkpoint             | lastWLogOffset | startOffset |
 		// | absent                 | 14             | 1           |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001

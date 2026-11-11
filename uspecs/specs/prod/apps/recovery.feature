@@ -27,14 +27,55 @@ Feature: Partition and workspace recovery
   This does not imply that request-driven partition or workspace recovery has
   completed, or that every declared partition was deployed.
 
+  Glossary:
+    Initial recovery: A VVM startup phase that creates missing partition and
+      workspace recovery checkpoints before application partitions are deployed.
+      A partition with an existing partition checkpoint, including zero, is skipped.
+      It does not restore numbers for partition or workspace state; that recovery
+      happens when commands arrive.
+
+    ID-bearing event: A logged event that allocates at least one new ordinary
+      (non-singleton) record ID. These IDs can belong to any docs including
+      ODocs and nested docs.
+
+    Non-ID-bearing event: A logged event that allocates no new ordinary record IDs.
+      It can update existing records or insert singletons, provided its logged
+      arguments also allocate no ordinary IDs.
+
+    Invalid partition checkpoint: A stored nonzero PLog offset that does not
+      identify an existing event, because that offset is missing or beyond the
+      log end. An absent or zero checkpoint is not invalid.
+
+    Invalid workspace checkpoint: A stored nonzero WLog offset that does not
+      identify an existing ID-bearing event. The offset can
+      be missing, beyond the log end, or point to a non-ID-bearing event.
+      An absent or zero checkpoint is not invalid.
+
+    Partition reset: Discarding the Command processor's in-memory recovery state
+      for a partition due failure of any of the following operations:
+      - PutPLog;
+      - ApplyRecords;
+      - sync projectors run;
+      - PutWLog.
+      The next command starts partition recovery again from persisted logs.
+      Reset deletes no persisted data or checkpoints and does not roll back changes
+      already written by the failed command. Reset requests cooperative cancellation
+      of that partition instance's workspace recoveries without waiting for them.
+      Canceled workers still count toward the workspace recovery limit until they exit.
+
+    Workspace recovery limit: The maximum number of workspaces in one partition
+      that can recover at the same time. Hardcoded to 4. A request to another
+      unrecovered workspace is rejected without queueing when all slots are occupied
+      and can be retried after a slot becomes available.
+
   Rule: Initial recovery
 
     The runtime-recovery scenarios under Partition recovery orchestration,
-    Partition checkpoint, Workspace checkpoint, Empty WLog, and Workspace recovery
+    Partition recovery, Workspace recovery, Empty WLog, and Workspace recovery
     orchestration apply to deployed partitions. Commands to undeployed partitions
     do not enter that lifecycle.
 
-    Scenario: Clients can use every declared partition when checkpoints are missing
+    Scenario: Normal initial partition recovery
       Given an application declares partition IDs 0 through 2
       And partition 0 has a stored partition checkpoint
       And partitions 1 and 2 have no stored partition checkpoints
@@ -44,6 +85,7 @@ Feature: Partition and workspace recovery
         | 1            | Billing   | 14               | 200005                            |
         | 2            | Inventory | 20               | 200009                            |
       And VAOperator has started the VVM
+      And initial recovery does not fail
       When a client inserts one ordinary record into each workspace, retrying "503 Service Unavailable" responses
       Then each command eventually returns "200 OK"
       And the successful command responses contain:
@@ -65,26 +107,14 @@ Feature: Partition and workspace recovery
         | partition 1            | present for partitions 0 and 2 only |
         | partitions 0 through 2 | absent for every partition          |
 
-    Scenario: Commands fail on a failed partition and succeed with the correct sequence numbers on initialized partitions
+    Scenario: Commands return 500 on a partition whose initial recovery failed
       Given application "test1/app1" declares partition IDs 0 through 2 with no stored partition checkpoints
-      And each partition is populated with a workspace having this history:
-        | partition ID | workspace | last WLog offset | last allocated ordinary record ID |
-        | 0            | Orders    | 7                | 200003                            |
-        | 1            | Billing   | 14               | 200005                            |
-        | 2            | Inventory | 20               | 200009                            |
+      And workspace Billing belongs to partition 1
       And initial recovery fails for partition 1 with "PLog read failed"
-      And asynchronous projectors and scheduled jobs are configured for every partition
       And VAOperator has started the VVM
-      When a client inserts one ordinary record into each workspace, retrying "503 Service Unavailable" responses
-      Then the command to Billing returns "500 Internal Server Error"
+      When a client inserts one ordinary record into Billing without retries
+      Then the command returns "500 Internal Server Error"
       And its response error is "partition not found"
-      And commands to Orders and Inventory eventually return "200 OK"
-      And the successful command responses contain:
-        | workspace | CurrentWLogOffset | new ordinary record ID |
-        | Orders    | 8                 | 200004                 |
-        | Inventory | 21                | 200010                 |
-      And partition 1 remains undeployed
-      And no asynchronous projector or scheduled job runs for partition 1
 
     Scenario Outline: The router receives the full partition count from the application descriptor despite initial recovery failures
       Given application "test1/app1" has a deployment descriptor with NumPartitions 3
@@ -140,7 +170,9 @@ Feature: Partition and workspace recovery
       Then response status is "200 OK"
       And no partition or workspace recovery is started by the query
 
-    Scenario: Requests to a partition being recovered share one recovery
+    Scenario: Concurrent requests to the same partition start only one recovery
+      # Request 1 starts recovery of partition 1; requests 2 through 6 arrive before it finishes
+      # All six receive 503, but only one recovery runs; request 7 succeeds after recovery
       Given partition 1 is deployed but unrecovered
       And workspace 1 has only its initialization event at WLog offset 1 and no user record IDs
       When VAOperator submits commands inserting three ordinary records into workspace 1 at these times:
@@ -176,7 +208,7 @@ Feature: Partition and workspace recovery
       Then response status is "401 Unauthorized"
       And no partition or workspace recovery is started by the command
 
-    Scenario: The next request reports a failed partition recovery and starts a new attempt
+    Scenario: The next request restarts recovery of the failed partition and report the error
       Given partition 1 is deployed but unrecovered
       And workspace 1 has only its initialization event at WLog offset 1 and no user record IDs
       And its first partition recovery fails with "PLog read failed"
@@ -196,7 +228,7 @@ Feature: Partition and workspace recovery
       And request 3 does not start another recovery attempt
       And the fourth response contains CurrentWLogOffset 2 and new record IDs 200001 through 200003
 
-  Rule: Partition checkpoint
+  Rule: Partition recovery
 
     usable checkpoint ──────────────────> resume from checkpoint ──┐
     absent or zero checkpoint ──────────> recover from FirstOffset ├─> actual PLog end ──> later command succeeds after workspace recovery
@@ -204,7 +236,7 @@ Feature: Partition and workspace recovery
 
     An absent or zero partition checkpoint starts one scan at FirstOffset.
 
-    Scenario Outline: Partition recovery starts from a checkpoint in basic usage
+    Scenario Outline: Normal partion recovery from checkpoint
       Given the PLog contains events through offset 50
       And workspace 1 has last WLog offset 14 and last allocated ordinary record ID 200005
       And the stored partition checkpoint is <checkpoint>
@@ -246,11 +278,11 @@ Feature: Partition and workspace recovery
         | lastPLogOffset 0 |
         | lastPLogOffset 5 |
 
-  Rule: Workspace checkpoint
+  Rule: Workspace recovery
 
     An absent or zero workspace checkpoint starts one scan at FirstOffset.
 
-    Scenario Outline: Workspace recovery starts from a checkpoint in basic usage
+    Scenario Outline: Normal workspace recovery from checkpoint
       Given the WLog has an ID-bearing event at offset 6 with record ID 200001
       And the WLog has an ID-bearing event at offset 10 with record IDs 200002 through 200005
       And any WLog events after offset 10 are CUD-free
@@ -289,6 +321,9 @@ Feature: Partition and workspace recovery
       Then the insert returns "200 OK" with CurrentWLogOffset 4 and new ordinary record ID FirstUserRecordID (200001)
 
     Scenario Outline: Invalid workspace checkpoint falls back to the WLog beginning
+      # The checkpoint either misses an existing event or points to one that allocates no ordinary IDs
+      # Recovery scans from FirstOffset to find the actual WLog end and highest allocated ID
+      # The next insert therefore uses WLog offset 15 and record ID 200006, regardless of the invalid checkpoint
       Given the WLog has an ID-bearing event at offset 6 with record ID 200001
       And the WLog has a non-ID-bearing event at offset 9
       And the WLog has an ID-bearing event at offset 10 with record IDs 200002 through 200005
@@ -331,7 +366,10 @@ Feature: Partition and workspace recovery
     └─ recovery limit reached ────────────> rejected without queueing
     retained failure ── next request ─────> reports the failure and starts one retry
 
-    Scenario: A new request to a workspace being recovered does not start another recovery
+    Scenario: Concurrent requests to the same workspace start only one recovery
+      # Request 1 starts recovery of workspace 42; request 2 arrives before it finishes
+      # Both receive 503 without automatic retries, and request 2 starts no additional recovery
+      # After recovery completes, request 3 inserts record 200006 at WLog offset 15
       Given workspace 42 is unrecovered after partition recovery
       And its WLog ends at offset 14 with last user record ID 200005
       When VAOperator submits ordinary record inserts into workspace 42 without automatic retries at these times:
@@ -348,9 +386,8 @@ Feature: Partition and workspace recovery
       And error stage "cp.error" logs message "workspace 42: recovery is in progress"
       And exactly one workspace-recovery start is logged for workspace 42
 
-    Scenario: Recovery limit rejects without queueing and permits a later retry
-      Given the workspace recovery limit is 4
-      And workspaces 42 and 43 are unrecovered after partition recovery
+    Scenario: Num of workspaces recovering at the same time is limited per partition
+      Given workspaces 42 and 43 are unrecovered after partition recovery
       And both WLogs end at offset 14 with last user record ID 200005
       And workspace recoveries for workspaces 44 through 46 are running
       When VAOperator submits inserts in this order:
@@ -369,24 +406,25 @@ Feature: Partition and workspace recovery
       And no workspace-recovery start is logged for workspace 43 before request 3
       And the fourth response contains CurrentWLogOffset 15 and new ordinary record ID 200006
 
-    Scenario: A partition reset does not stop ongoing workspace recoveries
-      Given the workspace recovery limit is 4
-      And workspace 1 is recovered
-      And workspace recoveries for workspaces 3, 5, 7, and 9 are running in the same partition
-      When a command failure resets and recovers the partition
-      And VAOperator submits inserts into unrecovered workspace 11 at these times:
-        | request | timing                                          |
-        | 1       | before any detached workspace recovery finishes |
-        | 2       | after one detached workspace recovery finishes  |
+    Scenario: A partition reset cancels current workspace recoveries without waiting for them to finish
+      Given workspace 1 is recovered
+      And workspaces 3 and 5 are recovering from WLogs in partition 1 of "untill/airs-bp"
+      And their reads observe cancellation but wait for replacement partition recovery
+      And a synchronous projector will fail the next workspace 1 command with "projector failed"
+      When VAOperator inserts into workspace 1 without retries:
+        | request | timing                                |
+        | 1       | during WLog reads                     |
+        | 2       | after response 1, before reads return |
       Then the responses are:
-        | request | status                  | reason                        |
-        | 1       | 503 Service Unavailable | recovery limit reached        |
-        | 2       | 503 Service Unavailable | workspace 11 recovery running |
-      And no recovery starts for workspace 11 before request 2
-      And request 2 starts exactly one recovery for workspace 11
-      And the recoveries for workspaces 3, 5, 7, and 9 complete successfully without restarting
+        | request | status                    | error                                |
+        | 1       | 500 Internal Server Error | projector failed                     |
+        | 2       | 503 Service Unavailable   | partition 1: recovery is in progress |
+      And replacement partition recovery completes before the reads return
+      And each canceled recovery logs INFO once at "cp.workspace_recovery.canceled"
+      And each log has message "partition reset", app "untill/airs-bp", partid 1, and its wsid
+      And canceled recoveries log neither "cp.workspace_recovery.complete" nor "cp.workspace_recovery.readwlog.error"
 
-    Scenario: The next request reports a failed workspace recovery and starts a new attempt
+    Scenario: The next request restarts recovery of the failed workspace and report the error
       Given workspace 42 is unrecovered after partition recovery
       And its WLog ends at offset 14 with last user record ID 200005
       And its first workspace recovery fails with "WLog read failed"

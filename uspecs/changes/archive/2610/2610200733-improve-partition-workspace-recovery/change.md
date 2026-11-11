@@ -72,7 +72,7 @@ In the production application-processing context:
 - An absent or zero checkpoint starts one scan at `FirstOffset` without validation or invalid-checkpoint logging. A nonzero checkpoint must identify the first returned event, and a workspace checkpoint must identify an ID-bearing event; otherwise recovery logs the error and performs one fallback scan from `FirstOffset`.
 - Partition recovery restores the next PLog offset from the actual PLog end and reapplies the final event. A later request starts workspace recovery, which restores the next WLog offset and next non-singleton record ID from the actual WLog end.
 - On a deployed partition, runtime recovery admission remains `503` while work runs. A retained runtime failure is returned as `500` while one retry starts; an in-progress runtime retry returns `503`. An undeployed partition instead returns `500` on every command without entering that lifecycle.
-- Workspace recovery is bounded by the fixed `numWSRecoverers = 4` limit per partition key, deduplicated by WSID, and tied to the service context. Before a recovered partition is published, its workspace manager shares both the partition key's stable recovery-slot pool and the partition manager's worker wait group, so reset cannot create fresh capacity while detached workers run and shutdown joins those workers.
+- Workspace recovery is bounded by the fixed `numWSRecoverers = 4` limit per partition key and deduplicated by WSID within the current partition instance. Each partition instance owns a workspace-recovery context derived from the service context. Reset detaches its state and requests cancellation without waiting for workers. Old workers retain their shared slots until they exit; replacement state receives a fresh context and reuses the partition key's stable slot pool and worker wait group
 - Recovery logs identify the application, partition, workspace when applicable, failed operation, and underlying error.
 - `sequences.feature` covers successful user-visible issuance; `sequences--td.md` keeps issuance internals and failure-induced gaps. All checkpoint and recovery behavior belongs in `recovery.feature` and `recovery--td.md`.
 
@@ -224,6 +224,9 @@ References (external):
   - align admission examples with the implemented four-worker limit; keep zero-capacity behavior as a generic-manager technical test rather than a selectable VVM configuration
   - specify that partition reset preserves the four-worker limit across detached and replacement workspace managers
 
+- [x] update: [apps/recovery.feature](../../../../specs/prod/apps/recovery.feature)
+  - Replace successful continuation after reset with cooperative cancellation, nonblocking replacement recovery, cancellation logs, delayed slot release, and a fresh recovery of a previously canceled workspace
+
 - [x] create: [apps/sequences.feature](../../../../specs/prod/apps/sequences.feature)
   - Feature specification for successful, externally observable allocation of PLog offsets, WLog offsets, ordinary record IDs, singleton IDs, and workspace IDs; exclude failed-command behavior, implementation-level persistence policy, restart, checkpoint, and recovery behavior
 
@@ -247,6 +250,13 @@ References (external):
   - retain the existing runtime-recovery admission/retry scenarios for deployed partitions and cross-reference them rather than duplicating them
 
 ## Technical design
+
+- [x] update: [apps/recovery--td.md](../../../../specs/prod/apps/recovery--td.md)
+  - Design per-partition-instance context ownership, cancellation outside locks, no reset-time join, fresh replacement context, cancellation checks, stable slot accounting, and shutdown ownership
+  - Record cooperative-I/O limitations and the tests needed for delayed cancellation exit, cross-partition isolation, late results, and replacement requests
+
+- [x] update: [apps/logging--td.md](../../../../specs/prod/apps/logging--td.md)
+  - Define INFO cp.workspace_recovery.canceled with message partition reset and app, partid, and wsid; distinguish reset cancellation from storage failure and service shutdown
 
 - [x] update: [apps/arch-deployment.md](../../../../specs/prod/apps/arch-deployment.md)
   - separate descriptor count from runtime deployment IDs; keep `c.cluster.DeployApp` independent of checkpoint outcomes and preserve compatibility validation
@@ -316,17 +326,40 @@ Gherkin scenario test placement:
 - Implement the normal allocation scenarios in [apps/sequences.feature](../../../../specs/prod/apps/sequences.feature) as VIT integration tests in [sys/it/impl_sequences_test.go](../../../../../pkg/sys/it/impl_sequences_test.go); reuse or move exact existing coverage instead of duplicating it.
 - Implement the scenarios in [apps/recovery.feature](../../../../specs/prod/apps/recovery.feature) as VIT integration tests in [sys/it/impl_recovery_test.go](../../../../../pkg/sys/it/impl_recovery_test.go).
 - Implement the empty-PLog and empty-WLog scenarios as mocked command-processor tests because VIT cannot create those states.
-- Cover "Missing checkpoints are computed for every declared partition" in [checkpoints/initial_recovery_test.go](../../../../../pkg/checkpoints/initial_recovery_test.go): its empty partition must have no WLog history, which VIT provisioning cannot produce. Do not delete a provisioned PLog while retaining its WLogs to simulate this case.
+- Cover "Normal initial partition recovery" as a VIT integration test in [sys/it/impl_recovery_test.go](../../../../../pkg/sys/it/impl_recovery_test.go)
 - Use a mocked command-processor test for any other scenario only when its VIT implementation proves impossible or disproportionately complicated. Document the concrete reason next to that fallback test; otherwise, do not duplicate Gherkin scenario coverage in command-processor tests.
 
 ### Tests
+
+- [x] update: [command/impl_test.go](../../../../../pkg/processors/command/impl_test.go) and [command/recovery_checkpoint_test.go](../../../../../pkg/processors/command/recovery_checkpoint_test.go)
+  - Remove the two overlapping final-checkpoint and ID-bearing-tail technical cases; preserve both scan-boundary and invalid-checkpoint-log assertions in the explicit workspace checkpoint scenarios
+  - Keep the first-two-503 scenario in VIT; retain focused partition-before-workspace admission and lifecycle-log checks in the command tests
+
+- [x] update: [command/impl_test.go](../../../../../pkg/processors/command/impl_test.go)
+  - Replace the old reset-survival scenario with the reset-cancellation scenario from recovery.feature
+  - Hold old recovery workers inside the real recoverWorkspace path until cancellation is observed, delay their exit, and prove that the command loop and replacement partition recovery progress without joining them
+  - Assert the cancellation INFO stage, message, and application/partition/workspace identifiers; assert no success or WLog-read-error log for an attempt that observes reset cancellation
+  - Preserve shutdown joining after reset and add cancellation isolation for another partition and application; keep request-cancellation independence
+  - Verify nonblocking cancellation at the partition-manager boundary, including reentrant observation after detachment, and follow AGENTS.md root assertion ownership
+  - Reuse existing recovery controls and shared storage doubles, with bounded test waits and no sleeps or mock-only assertions
+
+- [x] update: [command/recovery_manager_test.go](../../../../../pkg/processors/command/recovery_manager_test.go)
+  - Combine returned-value and repeated-reset assertions with stale-completion coverage; keep domain-specific cancellation tests at the partition-manager boundary
+  - Remove the small cancellation-propagation test covered by the canceled-read test
+  - Verify data returned after cancellation is discarded and recovery is treated as canceled; slot release and worker accounting follow actual attempt exit
+
+- [x] update: [command/recovery_test_utils_test.go](../../../../../pkg/processors/command/recovery_test_utils_test.go)
+  - Extend existing attempt observation only where required to signal cancellation and hold exit independently
+  - Delegate to production recovery for lifecycle and logging assertions; do not reproduce cancellation or result-publication logic in test doubles
+  - Before production implementation, ordinary builds awaited the partition context fields and reset return value; a test-only overlay excluding those contracts passed existing recovery, request-independence, and shutdown checks, including race checks
+  - That baseline overlay exposed missing reset cancellation and acceptance of canceled recovery data; completed production verification is recorded below
+  - Completed construction self-review stages A and B for the three test files and this plan; reused schema, history preparation, and request decoding while keeping distinct lifecycle scenarios separate
 
 - [x] update: [command/impl_test.go](../../../../../pkg/processors/command/impl_test.go)
   - align the existing four-workspace admission test's scenario name and Given comments with the synchronized feature; retain zero-capacity coverage in generic recovery-manager tests
   - Verify partition recovery releases borrowed engines when an attempt hook injects an error or returns after cancellation
   - verify command-service shutdown cannot finish while a canceled workspace recovery is still exiting, including workers belonging to a partition detached by reset; reuse the existing recovery gates
   - both shutdown regression cases pass after the `command/impl.go` worker-lifecycle fix, including the early-service-exit assertion
-  - verify that four workspace recoveries detached by partition reset still occupy all capacity seen by the replacement partition until one finishes
 
 - [x] update: [sys/it/impl_test.go](../../../../../pkg/sys/it/impl_test.go)
   - resolve the preserved profile workspace from the second-run VIT instead of referencing the first callback's out-of-scope `ws`; retain the no-reprovisioning assertion
@@ -465,9 +498,13 @@ Gherkin scenario test placement:
   - directly verify generic recovery-manager startup, ready lookup, duplicate suppression, retained failures, retries, admission limits, hooks, cancellation, reset, stale-completion rejection, and shutdown clearing
   - relocate stale-completion coverage from the partition-manager integration-style test
 
-- [ ] create: [testutils/storage_test.go](../../../../../pkg/checkpoints/testutils/storage_test.go)
+- [x] create: [testutils/storage_test.go](../../../../../pkg/checkpoints/testutils/storage_test.go)
   - verify shared checkpoint-test-storage key isolation, missing versus present-zero values, last-write-wins replacement, and concurrent access
-  - verify fault injection, reentrant hooks, forced setup bypassing observations, delegated backend behavior, successful-write ordering, and rejection of unexpected strict-mock calls
+  - Verify fault injection, reentrant hooks, forced setup bypassing observations, delegated backend behavior, successful-write ordering, and independent history snapshots
+  - Package tests pass normally and with the race detector; temporary source overlays confirm failures when application-key isolation or successful-write history is broken
+  - Completed construction self-review stages A and B; reuse one operation dispatcher for fault, hook, and concurrency checks without adding test doubles
+  - Consolidate fixture setup and ordinary-write observation in one test; drop the strict-mock panic test and redundant assertion-helper calls, and use explicit operation fixtures instead of reproducing field-normalization rules
+  - Check snapshot independence after all writes so reallocation cannot hide aliasing; the combined test fails against a temporary implementation that returns internal history directly
 
 - [x] create: [command/recovery_test_utils_test.go](../../../../../pkg/processors/command/recovery_test_utils_test.go)
   - centralize deterministic test support for asynchronous partition and workspace recovery
@@ -658,6 +695,38 @@ Gherkin scenario test placement:
   - register the single checkpoint projector with stateless resources
 
 ### Command recovery
+
+- [x] update: [command/types.go](../../../../../pkg/processors/command/types.go)
+  - Give each appPartition its own workspaceRecoveryCtx and cancelWorkspaceRecovery function, derived from the service context before publication
+
+- [x] update: [command/errors.go](../../../../../pkg/processors/command/errors.go)
+  - Add the private errPartitionReset cancellation cause; expose no new HTTP error or public API
+
+- [x] update: [command/recovery_manager.go](../../../../../pkg/processors/command/recovery_manager.go)
+  - Return the old recovered value while atomically removing its map entry; invoke no external cancellation callback under the manager mutex
+  - Discard data returned after cancellation and treat recovery as canceled; retain captured-state completion, normal slot release, and shutdown worker joining
+
+- [x] update: [command/impl.go](../../../../../pkg/processors/command/impl.go)
+  - Initialize a child context per partition instance and cancel it on retirement or failed construction; create replacement contexts from the service context
+  - Detach old partition state in scheduleRecovery and request cancellation afterward, without waiting or replacing shared slots
+  - Run workspace attempts with their partition context and rely on ReadWLog for scan cancellation; check before context-free checkpoint reads, before fallback, and when finalizing or publishing results
+  - Keep canceled workers registered and occupying slots until actual exit; discard late results and emit one cancellation INFO record instead of success or a read error when reset cancellation is observed
+  - Preserve existing reset triggers, public interfaces, request-cancellation independence, and shutdown joining; add no timeout framework or per-workspace cancellation registry
+
+- [x] verify: Cooperative cancellation on reset
+  - Run the focused reset, replacement-recovery, isolation, generic-manager, and shutdown tests normally and with the race detector
+  - Run affected recovery regression tests and scoped lint, verify Gherkin step/test traceability, and check formatting and whitespace
+  - Confirm production mutants that skip cancellation, join during reset, or mark canceled recovery as ready fail the corresponding tests
+  - The full command package passes normally; focused recovery, reset, isolation, and shutdown tests pass with the race detector without overlays
+  - Scoped production lint reports zero issues; formatting, whitespace, and reset scenario step/table traceability checks pass
+  - Temporary production overlays are rejected: skipping cancellation times out the isolation check, joining during reset prevents replacement requests, and keeping canceled data fails the generic-manager check
+  - Completed construction self-review stages A and B for the four production files and this plan; deferred completion logging requires a fully constructed result, and final normal/race tests and scoped lint remain clean
+
+- [x] review: Cooperative cancellation design
+  - Reviewed recovery.feature, recovery--td.md, logging--td.md, decisions.md, and this plan using uimpl self-review stages A and B
+  - Clarified cancellation ownership, kept cancellation outside generic manager locks, separated partition-specific tests from generic lifecycle tests, and matched the reset-cancellation scenario name and technical-design heading
+  - Verified one When and one Then per scenario, planned source targets, and whitespace; existing recovery and detached-worker shutdown baseline tests pass
+  - Design review only: test construction is recorded above and production verification is recorded here; context-free or cancellation-ignoring storage calls can still retain slots and delay shutdown until they return
 
 - [x] update: [command/impl.go](../../../../../pkg/processors/command/impl.go)
   - join workspace recovery workers during command-service shutdown, including workers owned by partitions detached after reset; do not rely on service-context cancellation alone

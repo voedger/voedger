@@ -127,6 +127,9 @@ func (m *recoveryManager[K, T]) startRecover(vvmCtx context.Context, key K, valu
 func (m *recoveryManager[K, T]) recover(vvmCtx context.Context, key K, value *recoverableValue[T], attempt recoveryAttemptFunc[T]) {
 	defer m.workers.Done()
 	recovered, err := attempt(vvmCtx)
+	if err == nil {
+		err = vvmCtx.Err()
+	}
 	if err != nil {
 		err = fmt.Errorf("%w: %w", errRecoveryFailed, err)
 	}
@@ -153,10 +156,15 @@ func (m *recoveryManager[K, T]) complete(value *recoverableValue[T], recovered *
 	}
 }
 
-func (m *recoveryManager[K, T]) reset(key K) {
+func (m *recoveryManager[K, T]) reset(key K) *T {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	state := m.values[key]
 	delete(m.values, key)
+	if state != nil {
+		return state.value
+	}
+	return nil
 }
 
 func (m *recoveryManager[K, T]) clear() {

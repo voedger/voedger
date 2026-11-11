@@ -138,8 +138,8 @@ func timedReadChan[T any](t *testing.T, ch <-chan T) T {
 }
 
 func TestRecoveryManager(t *testing.T) {
+	require := require.New(t)
 	t.Run("retains a failure and starts exactly one retry", func(t *testing.T) {
-		require := require.New(t)
 		manager := newTestRecoveryManager(t, nil)
 		recoveryErr := errors.New("recovery failed")
 		recoveryKey := 1
@@ -197,7 +197,6 @@ func TestRecoveryManager(t *testing.T) {
 	})
 
 	t.Run("does not create an attempt when the recovery limit is reached", func(t *testing.T) {
-		require := require.New(t)
 		// Recovery Manager with 1 recovery slot
 		manager := newTestRecoveryManager(t, make(chan struct{}, 1))
 		blockAttempt := make(chan struct{})
@@ -244,7 +243,6 @@ func TestRecoveryManager(t *testing.T) {
 	})
 
 	t.Run("a failed value cannot retry until a recovery slot is available", func(t *testing.T) {
-		require := require.New(t)
 		manager := newTestRecoveryManager(t, make(chan struct{}, 1))
 		errRecoveryFailure := errors.New("first attempt failed")
 		blockAttempt2 := make(chan struct{})
@@ -308,26 +306,7 @@ func TestRecoveryManager(t *testing.T) {
 		manager.shutdown()
 	})
 
-	t.Run("passes context to the attempt without interpreting it", func(t *testing.T) {
-		require := require.New(t)
-		manager := newTestRecoveryManager(t, nil)
-		ctx, cancel := context.WithCancel(t.Context())
-		cancel()
-		newAttempt := func() recoveryAttemptFunc[valueToRecover] {
-			return func(ctx context.Context) (*valueToRecover, error) {
-				return nil, ctx.Err()
-			}
-		}
-
-		recovered, err := manager.getOrStart(ctx, 1, newAttempt)
-		require.Nil(recovered)
-		require.ErrorIs(err, errRecoveryInProgress)
-		require.ErrorIs(manager.requireCompleted(1), context.Canceled)
-		manager.shutdown()
-	})
-
 	t.Run("a stale completion cannot overwrite state created after reset", func(t *testing.T) {
-		require := require.New(t)
 		manager := newTestRecoveryManager(t, nil)
 		attempt1Block := make(chan struct{})
 		attempt2Block := make(chan struct{})
@@ -402,5 +381,54 @@ func TestRecoveryManager(t *testing.T) {
 		require.Same(attempt2RecoveredValue, recovered)
 		require.Equal(2, factoryCalls)
 		require.Equal(int32(2), attemptCalls.Load())
+
+		// Reset returns the recovered value for cancellation and detaches it only once
+		require.Same(attempt2RecoveredValue, manager.reset(1))
+		require.Nil(manager.reset(1))
 	})
+}
+
+func TestRecoveryManagerDiscardsLogReadAfterCancellation(t *testing.T) {
+	require := require.New(t)
+	manager := newTestRecoveryManager(t, make(chan struct{}, 1))
+	ctx, cancel := context.WithCancel(t.Context())
+	canceled := make(chan struct{})
+	allowExit := make(chan struct{})
+	release := sync.OnceFunc(func() { close(allowExit) })
+	defer manager.shutdown()
+	defer release()
+	defer cancel()
+	_, err := manager.getOrStart(ctx, 1, func() recoveryAttemptFunc[valueToRecover] {
+		return func(ctx context.Context) (*valueToRecover, error) {
+			<-ctx.Done()
+			close(canceled)
+			<-allowExit
+			// Simulate storage returning data without an error after cancellation
+			return &valueToRecover{id: 1}, nil
+		}
+	})
+	require.ErrorIs(err, errRecoveryInProgress)
+	cancel()
+	timedReadChan(t, canceled)
+
+	// Cancellation alone must not make the still-running attempt's slot available
+	_, err = manager.getOrStart(t.Context(), 2, func() recoveryAttemptFunc[valueToRecover] {
+		require.FailNow("a full manager must not construct an attempt")
+		return nil
+	})
+	require.ErrorIs(err, errRecoveryLimit)
+	release()
+	// Discard the returned data and treat recovery as canceled instead of marking it ready
+	require.ErrorIs(manager.requireCompleted(1), context.Canceled)
+	require.Empty(manager.slots)
+
+	// A fresh attempt must recover new data instead of reusing the canceled attempt's data
+	_, err = manager.getOrStart(t.Context(), 1, func() recoveryAttemptFunc[valueToRecover] {
+		return func(context.Context) (*valueToRecover, error) { return &valueToRecover{id: 2}, nil }
+	})
+	require.ErrorIs(err, context.Canceled)
+	require.NoError(manager.requireCompleted(1))
+	actual, err := manager.getOrStart(t.Context(), 1, nil)
+	require.NoError(err)
+	require.Equal(2, actual.id)
 }

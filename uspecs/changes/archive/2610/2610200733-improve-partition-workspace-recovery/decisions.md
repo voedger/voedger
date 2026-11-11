@@ -232,19 +232,31 @@ Alternatives:
 
 ## Safety: workspace recovery capacity survives partition reset
 
-Decision: Own workspace-recovery capacity in the partition manager as one four-slot pool per partition key. Attach that stable pool to every recovered generation of the partition. Reset detaches recoverable partition state but does not replace its slot pool; workspace scans belonging to detached state continue to consume capacity until they finish. The existing shared worker wait group continues to provide shutdown joining independently of slot ownership.
+Decision: Own workspace-recovery capacity in the partition manager as one four-slot pool per partition key. Attach that stable pool to every recovered generation of the partition. Each partition instance also owns a workspace-recovery context derived from the service context with `context.WithCancelCause`. Reset atomically detaches old state, then cancels that instance with cause `errPartitionReset` outside the manager mutex. Reset never waits for workers. Cancellation is cooperative; detached workers consume capacity until they exit. Replacement state gets a fresh child context and the same slot pool. The existing shared worker wait group continues to provide shutdown joining independently of slot ownership.
 
-- Pros: enforces the configured per-partition limit across current and detached generations; prevents repeated resets from accumulating WLog scans; does not block command processing while old scans exit.
-- Cons: replacement partition state may temporarily have no workspace-recovery capacity because detached scans still occupy the shared pool; slot pools remain allocated until command-processor shutdown.
+- Pros: preserves the per-partition bound across current and detached instances, stops obsolete work when dependencies observe cancellation, and keeps reset nonblocking
+- Cons: uninterruptible storage calls can still occupy slots and delay shutdown; the extra context must be canceled when its partition is retired or construction fails
 - Confidence: high
 
 Alternatives:
 
 1. Cancel and join all workspace scans when resetting a partition
-   - Pros: replacement state begins with an empty slot pool and no detached scans.
-   - Cons: reset blocks on storage operations and changes the service-context lifetime promised to recovery attempts.
-   - Confidence: rejected for availability and lifecycle consistency
+   - Pros: no detached scans remain when reset returns
+   - Cons: reset can block indefinitely on a storage call that ignores cancellation
+   - Confidence: rejected for availability
 2. Keep a new slot pool in every recovered partition generation
    - Pros: replacement state can immediately start four scans.
    - Cons: every reset can add four more concurrent WLog scans for the same partition, defeating the configured bound.
    - Confidence: rejected for resource safety
+3. Leave detached workers running under the service context
+   - Pros: minimal context lifecycle code
+   - Cons: obsolete scans continue to consume I/O and shared capacity even when their reads support cancellation
+   - Confidence: superseded by cooperative cancellation without joining
+
+Canceled workspace results stay in the retired manager and cannot become failures
+of replacement requests. Only observed reset cancellation emits INFO
+`cp.workspace_recovery.canceled` with message `partition reset` and the application,
+partition, and workspace identifiers. It replaces that attempt's success or
+WLog-read-error log. Let `ReadWLog` handle cancellation during scans; check before
+context-free checkpoint reads, fallback admission, and result publication. No I/O interface,
+timeout, detached helper goroutine, or cancellation registry is added.

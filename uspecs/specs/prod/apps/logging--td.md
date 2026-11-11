@@ -306,6 +306,9 @@ for the request lifecycle and status policy.
 - Inherits the partition-recovery attributes `vapp=sys/voedger`, `extension=sys._Recovery`, and `partid=<partitionID>`
 - `wsid` attrib: workspace ID
 - Workspace recovery start: level `Info`, stage `cp.workspace_recovery.start`, msg (empty)
+- Workspace recovery observes cancellation caused by partition reset: level `Info`, stage `cp.workspace_recovery.canceled`, msg `partition reset`
+  - Emitted once when the worker exits; uses `vapp=sys/voedger`, `extension=sys._Recovery`, `app=<appQName>`, `partid=<partitionID>`, and `wsid=<workspaceID>`
+  - Replaces the success or WLog-read-error entry for that canceled attempt; service shutdown and request cancellation are not reported as partition resets
 - Invalid workspace checkpoint: level `Error`, stage `cp.workspace_recovery.checkpoint.invalid`, msg `stored WLog offset <checkpointOffset> does not identify an ID-bearing event; retrying from FirstOffset`
   - emitted when an inclusive read from a present nonzero checkpoint returns no event, its first event offset differs from the stored offset, or the checkpoint event has no newly allocated non-singleton record ID; absent and zero checkpoints start at `FirstOffset` without validation
   - uses the workspace recovery context attributes and precedes the fallback read from `FirstOffset`

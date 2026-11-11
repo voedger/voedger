@@ -12,4 +12,5 @@ var (
 	errRecoveryLimit             = errors.New("recovery concurrency limit is reached")
 	errRecoveryFailed            = errors.New("recovery failed")
 	errInvalidRecoveryCheckpoint = errors.New("invalid recovery checkpoint")
+	errPartitionReset            = errors.New("partition reset")
 )

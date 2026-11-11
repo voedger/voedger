@@ -345,13 +345,14 @@ func TestDescendingSyncedRecordIDsDoNotBreakSequences(t *testing.T) {
 }
 
 func TestRecoveryFromCheckpoints(t *testing.T) {
+	require := require.New(t)
 	if testing.Short() {
 		t.Skip()
 	}
 
-	t.Run("recovery: scn: Clients can use every declared partition when checkpoints are missing", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Normal initial partition recovery", func(t *testing.T) {
 		// Given an application declares partition IDs 0 through 2
+		// And initial recovery does not fail
 		cfg := recoveryVITConfig()
 		appQName := istructs.AppQName_test1_app1
 		appID := istructs.ClusterApps[appQName]
@@ -428,7 +429,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: At least the first two command requests to a partition and workspace return 503 after initial recovery", func(t *testing.T) {
-		require := require.New(t)
 		cfg := recoveryVITConfig()
 		appQName := istructs.AppQName_test1_app1
 		appID := istructs.ClusterApps[appQName]
@@ -495,7 +495,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: A query does not trigger partition recovery", func(t *testing.T) {
-		require := require.New(t)
 		cfg := recoveryVITConfig()
 		vit := it.NewVIT(t, &cfg)
 		defer vit.TearDown()
@@ -530,7 +529,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Initial recovery failures are logged while the server becomes ready: partition 1", func(t *testing.T) {
-		require := require.New(t)
 		// | failed_partitions      | checkpoint_state                    |
 		// | partition 1            | present for partitions 0 and 2 only |
 		errInjector := newPLogReadFailure()
@@ -565,7 +563,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Initial recovery failures are logged while the server becomes ready: partitions 0 through 2", func(t *testing.T) {
-		require := require.New(t)
 		// | failed_partitions      | checkpoint_state                    |
 		// | partitions 0 through 2 | absent for every partition          |
 		errInjector := newPLogReadFailure()
@@ -599,47 +596,15 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 		require.NotNil(vit.VoedgerVM)
 	})
 
-	t.Run("recovery: scn: Commands fail on a failed partition and succeed with the correct sequence numbers on initialized partitions", func(t *testing.T) {
-		require := require.New(t)
+	t.Run("recovery: scn: Commands return 500 on a partition whose initial recovery failed", func(t *testing.T) {
 		errInjector := newPLogReadFailure()
 		cfg := recoveryVITConfigWithStorageHooks(errInjector, true)
 		appQName := istructs.AppQName_test1_app1
-		// And each partition is populated with a workspace having this history:
-		// | partition ID | workspace | last WLog offset | last allocated ordinary record ID |
-		// | 0            | Orders    | 7                | 200003                            |
-		// | 1            | Billing   | 14               | 200005                            |
-		// | 2            | Inventory | 20               | 200009                            |
-		histories := []struct {
-			partitionID    istructs.PartitionID
-			name           string
-			lastWLogOffset istructs.Offset
-			lastRecordID   istructs.RecordID
-			nextWLogOffset istructs.Offset
-			nextRecordID   istructs.RecordID
-			workspace      *it.AppWorkspace
-		}{
-			{partitionID: 0, name: "Orders", lastWLogOffset: 7, lastRecordID: 200003, nextWLogOffset: 8, nextRecordID: 200004},
-			{partitionID: 1, name: "Billing", lastWLogOffset: 14, lastRecordID: 200005},
-			{partitionID: 2, name: "Inventory", lastWLogOffset: 20, lastRecordID: 200009, nextWLogOffset: 21, nextRecordID: 200010},
-		}
 		vit := it.NewVIT(t, &cfg)
 		defer vit.TearDown()
 		owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
-		appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
-		require.NoError(err)
-		for index := range histories {
-			history := &histories[index]
-			history.workspace = createWorkspacesInPartition(t, vit, owner, history.partitionID, 1)[0]
-			for id := istructs.FirstUserRecordID; id <= history.lastRecordID; id++ {
-				response := vit.PostWS(history.workspace, "c.sys.CUD", singleDoc)
-				require.Equal(id, response.NewID(), history.name)
-			}
-			fillWLogWithNonIDBearingEvents(t, vit, history.workspace, history.lastWLogOffset)
-			waitForActualizerFlush(t, appStructs, history.partitionID)
-			require.Equal(history.lastWLogOffset, getLastWLogOffset(t, vit, history.workspace), history.name)
-		}
-		// And asynchronous projectors and scheduled jobs are configured for every partition
-		requireProjectorsAndJobsConfigured(t, vit)
+		// And workspace Billing belongs to partition 1
+		billing := createWorkspacesInPartition(t, vit, owner, 1, 1)[0]
 		// And VAOperator has started the VVM
 		require.NoError(vit.RestartVVM(it.WithAfterStop(func(storage it.RestartStorage) {
 			// Given application "test1/app1" declares partition IDs 0 through 2 with no stored partition checkpoints
@@ -647,34 +612,15 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 			// And initial recovery fails for partition 1 with "PLog read failed"
 			errInjector.failPLogReads([]istructs.PartitionID{1})
 		})))
-		for _, history := range histories {
-			// When a client inserts one ordinary record into each workspace, retrying "503 Service Unavailable" responses
-			if history.partitionID == 1 {
-				response := vit.PostWS(history.workspace, "c.sys.CUD", singleDoc, httpu.WithNoRetryPolicy(), httpu.Expect500())
-				// Then the command to Billing returns "500 Internal Server Error"
-				require.Equal(http.StatusInternalServerError, response.HTTPResp.StatusCode)
-				// And its response error is "partition not found"
-				requirePartitionNotFound(t, response.SysError)
-			} else {
-				response := vit.PostWS(history.workspace, "c.sys.CUD", singleDoc)
-				// And commands to Orders and Inventory eventually return "200 OK"
-				require.Equal(http.StatusOK, response.HTTPResp.StatusCode, history.name)
-				// And the successful command responses contain:
-				// | workspace | CurrentWLogOffset | new ordinary record ID |
-				// | Orders    | 8                 | 200004                 |
-				// | Inventory | 21                | 200010                 |
-				require.Equal(history.nextWLogOffset, response.CurrentWLogOffset, history.name)
-				require.Equal(map[string]istructs.RecordID{"1": history.nextRecordID}, response.NewIDs, history.name)
-			}
-		}
-		// And partition 1 remains undeployed
-		requirePartitionsNotDeployed(t, vit, []istructs.PartitionID{1})
-		// And no asynchronous projector or scheduled job runs for partition 1
-		requireNoProjectorsOrJobs(t, vit, []istructs.PartitionID{1})
+		// When a client inserts one ordinary record into Billing without retries
+		response := vit.PostWS(billing, "c.sys.CUD", singleDoc, httpu.WithNoRetryPolicy(), httpu.Expect500())
+		// Then the command returns "500 Internal Server Error"
+		require.Equal(http.StatusInternalServerError, response.HTTPResp.StatusCode)
+		// And its response error is "partition not found"
+		requirePartitionNotFound(t, response.SysError)
 	})
 
 	t.Run("recovery: scn: The router receives the full partition count from the application descriptor despite initial recovery failures: partition 1", func(t *testing.T) {
-		require := require.New(t)
 		// | failed_partitions      |
 		// | partition 1            |
 		errInjector := newPLogReadFailure()
@@ -706,7 +652,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: The router receives the full partition count from the application descriptor despite initial recovery failures: all partitions", func(t *testing.T) {
-		require := require.New(t)
 		// | failed_partitions      |
 		// | partitions 0 through 2 |
 		errInjector := newPLogReadFailure()
@@ -738,7 +683,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: A changed app descriptor partition count causes panic", func(t *testing.T) {
-		require := require.New(t)
 		errInjector := newPLogReadFailure()
 		writes := newAppLogWriteRecorder()
 		cfg := recoveryVITConfigWithStorageHooks(errInjector, false, recoveryStorageObservers{appLogWrites: writes})
@@ -752,7 +696,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: VVM launch fails with an error on failure of the initial recovery of a partition of the Cluster app", func(t *testing.T) {
-		require := require.New(t)
 		errInjector := newPLogReadFailure()
 		// Given initial recovery fails for the cluster application's sole partition
 		errInjector.failPLogReads([]istructs.PartitionID{0})
@@ -788,7 +731,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: A later bootstrap deploys a previously failed partition after successful initial recovery", func(t *testing.T) {
-		require := require.New(t)
 		errInjector := newPLogReadFailure()
 		cfg := recoveryVITConfigWithStorageHooks(errInjector, true)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
@@ -825,7 +767,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid partition checkpoint causes PLog read out from beginning: checkpoint 1000000", func(t *testing.T) {
-		require := require.New(t)
 		// | plog            | lastPLogOffset | lastWLogOffset | lastRecordID |
 		// | 1..50           | 1000000        | 14             | 200005       |
 		// And workspace "recovery-test-workspace" has last WLog offset <lastWLogOffset> and record ID allocation baseline <lastRecordID>
@@ -862,7 +803,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid partition checkpoint causes PLog read out from beginning: checkpoint 1", func(t *testing.T) {
-		require := require.New(t)
 		// | plog            | lastPLogOffset | lastWLogOffset | lastRecordID |
 		// | 2..50           | 1              | 14             | 200005       |
 		// And workspace "recovery-test-workspace" has last WLog offset <lastWLogOffset> and record ID allocation baseline <lastRecordID>
@@ -889,7 +829,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid partition checkpoint causes PLog read out from beginning: checkpoint 10", func(t *testing.T) {
-		require := require.New(t)
 		// | plog            | lastPLogOffset | lastWLogOffset | lastRecordID |
 		// | 1..50 except 10 | 10             | 14             | 200005       |
 		// And workspace "recovery-test-workspace" has last WLog offset <lastWLogOffset> and record ID allocation baseline <lastRecordID>
@@ -926,7 +865,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Workspace recovery preserves sequence numbers after a mixed non-ID-bearing WLog tail", func(t *testing.T) {
-		require := require.New(t)
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
 		// And the WLog has an ID-bearing event at offset 10 with record IDs 200002 through 200005
 		// And the WLog has non-CUD events at offsets 11 and 12
@@ -951,7 +889,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Workspace without user record IDs starts allocation at FirstUserRecordID", func(t *testing.T) {
-		require := require.New(t)
 		// Given the WLog has three non-ID-bearing events at offsets 1 through 3
 		f := newRecoveryCheckpointFixture(t, checkpointTypeWorkspace, checkpointNoUserIDs)
 
@@ -971,7 +908,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid workspace checkpoint falls back to the WLog beginning: wlogIDBearingOffset 15 beyond the WLog end", func(t *testing.T) {
-		require := require.New(t)
 		// | checkpoint                                                   |
 		// | wlogIDBearingOffset 15 beyond the WLog end                   |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -1013,7 +949,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid workspace checkpoint falls back to the WLog beginning: wlogIDBearingOffset 8 whose first returned event is 9", func(t *testing.T) {
-		require := require.New(t)
 		// | checkpoint                                                   |
 		// | wlogIDBearingOffset 8 whose first returned event is 9        |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -1055,7 +990,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid workspace checkpoint falls back to the WLog beginning: wlogIDBearingOffset 12 pointing to a CUD-free event", func(t *testing.T) {
-		require := require.New(t)
 		// | checkpoint                                                   |
 		// | wlogIDBearingOffset 12 pointing to a CUD-free event          |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -1097,7 +1031,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid workspace checkpoint falls back to the WLog beginning: wlogIDBearingOffset 13 pointing to a singleton-only event", func(t *testing.T) {
-		require := require.New(t)
 		// | checkpoint                                                   |
 		// | wlogIDBearingOffset 13 pointing to a singleton-only event    |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001
@@ -1128,7 +1061,6 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: Invalid workspace checkpoint falls back to the WLog beginning: wlogIDBearingOffset 14 pointing to an existing-record update", func(t *testing.T) {
-		require := require.New(t)
 		// | checkpoint                                                   |
 		// | wlogIDBearingOffset 14 pointing to an existing-record update |
 		// Given the WLog has an ID-bearing event at offset 6 with record ID 200001

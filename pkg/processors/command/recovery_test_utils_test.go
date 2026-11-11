@@ -64,10 +64,36 @@ func (r *logReadsRecorder[K]) values(key K) []logReadFromTo {
 // gate is optional. err initially carries an injected failure and is replaced
 // with the manager's final wrapped result when the attempt completes.
 type recoveryAttempt struct {
-	done chan struct{}
-	gate <-chan struct{}
-	err  error
+	done     chan struct{}
+	gate     <-chan struct{}
+	err      error
+	ctx      context.Context
+	readGate *recoveryReadGate
 }
+
+// recoveryReadGate holds the real recovery at its WLog read boundary. Cancellation
+// and exit are separate observations so reset cannot free a slot prematurely.
+type recoveryReadGate struct {
+	entered   chan context.Context
+	canceled  chan struct{}
+	exit      chan struct{}
+	release   sync.Once
+	blockOnce sync.Once
+}
+
+func (g *recoveryReadGate) block(ctx context.Context) {
+	g.blockOnce.Do(func() {
+		g.entered <- ctx
+		select {
+		case <-ctx.Done():
+			close(g.canceled)
+			<-g.exit
+		case <-g.exit:
+		}
+	})
+}
+
+func (g *recoveryReadGate) allowExit() { g.release.Do(func() { close(g.exit) }) }
 
 // recoveryTestAttempts solves deterministic testing of asynchronous managers:
 //
@@ -82,19 +108,21 @@ type recoveryAttempt struct {
 // that duplicate and over-limit requests did not launch work. K lets the same
 // mechanism control both partition and workspace recovery.
 type recoveryTestAttempts[K comparable, T any] struct {
-	mu           sync.Mutex
-	attempts     map[K]*recoveryAttempt
-	starts       map[K]int
-	nextGates    map[K]<-chan struct{}
-	nextFailures map[K]error
+	mu            sync.Mutex
+	attempts      map[K]*recoveryAttempt
+	starts        map[K]int
+	nextGates     map[K]<-chan struct{}
+	nextFailures  map[K]error
+	nextReadGates map[K]*recoveryReadGate
 }
 
 func newRecoveryTestAttempts[K comparable, T any]() *recoveryTestAttempts[K, T] {
 	return &recoveryTestAttempts[K, T]{
-		attempts:     map[K]*recoveryAttempt{},
-		starts:       map[K]int{},
-		nextGates:    map[K]<-chan struct{}{},
-		nextFailures: map[K]error{},
+		attempts:      map[K]*recoveryAttempt{},
+		starts:        map[K]int{},
+		nextGates:     map[K]<-chan struct{}{},
+		nextFailures:  map[K]error{},
+		nextReadGates: map[K]*recoveryReadGate{},
 	}
 }
 
@@ -117,12 +145,14 @@ func (c *recoveryTestAttempts[K, T]) scheduled(key K) {
 	defer c.mu.Unlock()
 	c.starts[key]++
 	c.attempts[key] = &recoveryAttempt{
-		done: make(chan struct{}),
-		gate: c.nextGates[key],
-		err:  c.nextFailures[key],
+		done:     make(chan struct{}),
+		gate:     c.nextGates[key],
+		err:      c.nextFailures[key],
+		readGate: c.nextReadGates[key],
 	}
 	delete(c.nextGates, key)
 	delete(c.nextFailures, key)
+	delete(c.nextReadGates, key)
 }
 
 // wrapAttempt turns test controls into recovery behavior inside the admitted
@@ -138,6 +168,9 @@ func (c *recoveryTestAttempts[K, T]) wrapAttempt(key K, next recoveryAttemptFunc
 	attempt := c.attempts[key]
 	c.mu.Unlock()
 	return func(ctx context.Context) (*T, error) {
+		c.mu.Lock()
+		attempt.ctx = ctx
+		c.mu.Unlock()
 		if attempt.gate != nil {
 			select {
 			case <-attempt.gate:
@@ -166,6 +199,28 @@ func (c *recoveryTestAttempts[K, T]) blockNext(key K) chan struct{} {
 	gate := make(chan struct{})
 	c.nextGates[key] = gate
 	return gate
+}
+
+func (c *recoveryTestAttempts[K, T]) holdNextRead(key K) *recoveryReadGate {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	gate := &recoveryReadGate{entered: make(chan context.Context, 1), canceled: make(chan struct{}), exit: make(chan struct{})}
+	c.nextReadGates[key] = gate
+	return gate
+}
+
+func (c *recoveryTestAttempts[K, T]) onLogRead(key K) {
+	c.mu.Lock()
+	attempt := c.attempts[key]
+	if attempt == nil {
+		c.mu.Unlock()
+		return
+	}
+	gate, ctx := attempt.readGate, attempt.ctx
+	c.mu.Unlock()
+	if gate != nil {
+		gate.block(ctx)
+	}
 }
 
 func (c *recoveryTestAttempts[K, T]) failNext(key K, err error) {
@@ -242,7 +297,10 @@ func (c *recoveryTestControl) testHooks() (
 	partitionHooks = c.partitions.hooks()
 	partitionHooks.onLogRead = c.pLogReads.record
 	workspaceHooks = c.workspaces.hooks()
-	workspaceHooks.onLogRead = c.wLogReads.record
+	workspaceHooks.onLogRead = func(key workspaceKey, offset istructs.Offset, count int) {
+		c.wLogReads.record(key, offset, count)
+		c.workspaces.onLogRead(key)
+	}
 	return partitionHooks, workspaceHooks
 }
 
