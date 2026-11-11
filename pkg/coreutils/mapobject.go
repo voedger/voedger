@@ -7,8 +7,6 @@ package coreutils
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/voedger/voedger/pkg/appdef"
 )
 
 type MapObject map[string]interface{}
@@ -51,11 +49,11 @@ func (m MapObject) AsInt64(name string) (val int64, ok bool, err error) {
 	case nil:
 		return 0, false, nil
 	case json.Number:
-		int64Intf, err := ClarifyJSONNumber(v, appdef.DataKind_int64)
+		int64Val, err := ClarifyJSONNumber[int64](v)
 		if err != nil {
 			return 0, false, err
 		}
-		return int64Intf.(int64), true, nil
+		return int64Val, true, nil
 	case int64:
 		return v, true, nil
 	default:
@@ -79,11 +77,11 @@ func (m MapObject) AsFloat64(name string) (val float64, ok bool, err error) {
 	case nil:
 		return 0, false, nil
 	case json.Number:
-		float64Intf, err := ClarifyJSONNumber(v, appdef.DataKind_float64)
+		float64Val, err := ClarifyJSONNumber[float64](v)
 		if err != nil {
 			return 0, false, err
 		}
-		return float64Intf.(float64), true, nil
+		return float64Val, true, nil
 	default:
 		return 0, true, fmt.Errorf("field %q must be json.Number: %w", name, ErrFieldTypeMismatch)
 	}

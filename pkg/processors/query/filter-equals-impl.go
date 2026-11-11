@@ -22,39 +22,39 @@ type EqualsFilter struct {
 func (f EqualsFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, error) {
 	switch fk[f.field] {
 	case appdef.DataKind_int32:
-		int32Intf, err := coreutils.ClarifyJSONNumber(f.value.(json.Number), appdef.DataKind_int32)
+		int32Val, err := coreutils.ClarifyJSONNumber[int32](f.value.(json.Number))
 		if err != nil {
 			return false, err
 		}
-		return outputRow.Value(f.field).(int32) == int32Intf.(int32), nil
+		return outputRow.Value(f.field).(int32) == int32Val, nil
 	case appdef.DataKind_int64:
-		int64Intf, err := coreutils.ClarifyJSONNumber(f.value.(json.Number), appdef.DataKind_int64)
+		int64Val, err := coreutils.ClarifyJSONNumber[int64](f.value.(json.Number))
 		if err != nil {
 			return false, err
 		}
-		return outputRow.Value(f.field).(int64) == int64Intf.(int64), nil
+		return outputRow.Value(f.field).(int64) == int64Val, nil
 	case appdef.DataKind_float32:
-		float32Intf, err := coreutils.ClarifyJSONNumber(f.value.(json.Number), appdef.DataKind_float32)
+		float32Val, err := coreutils.ClarifyJSONNumber[float32](f.value.(json.Number))
 		if err != nil {
 			return false, err
 		}
-		return nearlyEqual(float64(float32Intf.(float32)), float64(outputRow.Value(f.field).(float32)), f.epsilon), nil
+		return nearlyEqual(float64(float32Val), float64(outputRow.Value(f.field).(float32)), f.epsilon), nil
 	case appdef.DataKind_float64:
-		float64Intf, err := coreutils.ClarifyJSONNumber(f.value.(json.Number), appdef.DataKind_float64)
+		float64Val, err := coreutils.ClarifyJSONNumber[float64](f.value.(json.Number))
 		if err != nil {
 			return false, err
 		}
-		return nearlyEqual(float64Intf.(float64), outputRow.Value(f.field).(float64), f.epsilon), nil
+		return nearlyEqual(float64Val, outputRow.Value(f.field).(float64), f.epsilon), nil
 	case appdef.DataKind_string, appdef.DataKind_QName:
 		return outputRow.Value(f.field).(string) == f.value.(string), nil
 	case appdef.DataKind_bool:
 		return outputRow.Value(f.field).(bool) == f.value.(bool), nil
 	case appdef.DataKind_RecordID:
-		recordIDIntf, err := coreutils.ClarifyJSONNumber(f.value.(json.Number), appdef.DataKind_RecordID)
+		recordID, err := coreutils.ClarifyJSONNumber[istructs.RecordID](f.value.(json.Number))
 		if err != nil {
 			return false, err
 		}
-		return outputRow.Value(f.field).(istructs.RecordID) == recordIDIntf.(istructs.RecordID), nil
+		return outputRow.Value(f.field).(istructs.RecordID) == recordID, nil
 	case appdef.DataKind_null:
 		return false, nil
 	default:
