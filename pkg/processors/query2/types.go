@@ -438,11 +438,11 @@ type Where map[string]interface{}
 func (w Where) getAsInt32(k string) (vv []int32, err error) {
 	switch v := w[k].(type) {
 	case json.Number:
-		int32Val, err := coreutils.ClarifyJSONNumber(v, appdef.DataKind_int32)
+		int32Val, err := coreutils.ClarifyJSONNumber[int32](v)
 		if err != nil {
 			return nil, err
 		}
-		vv = append(vv, int32Val.(int32))
+		vv = append(vv, int32Val)
 		return vv, nil
 	case map[string]interface{}:
 		in, ok := v["$in"]
@@ -454,11 +454,11 @@ func (w Where) getAsInt32(k string) (vv []int32, err error) {
 			return nil, errUnexpectedParams
 		}
 		for _, param := range params {
-			int32Val, err := coreutils.ClarifyJSONNumber(param.(json.Number), appdef.DataKind_int32)
+			int32Val, err := coreutils.ClarifyJSONNumber[int32](param.(json.Number))
 			if err != nil {
 				return nil, err
 			}
-			vv = append(vv, int32Val.(int32))
+			vv = append(vv, int32Val)
 		}
 		return vv, nil
 	case nil:

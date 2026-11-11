@@ -118,12 +118,12 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 		// notest
 		return istructs.NullRecordID, errors.New("wrong blob create response: " + resp.Body)
 	}
-	newBLOBIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(matches[1]), appdef.DataKind_RecordID)
+	newBLOBID, err := coreutils.ClarifyJSONNumber[istructs.RecordID](json.Number(matches[1]))
 	if err != nil {
 		// notest
 		return istructs.NullRecordID, fmt.Errorf("failed to parse the received blobID string: %w", err)
 	}
-	return newBLOBIDIntf.(istructs.RecordID), nil
+	return newBLOBID, nil
 }
 
 func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, ownerRecord appdef.QName, ownerRecordField appdef.FieldName, ownerID istructs.RecordID,

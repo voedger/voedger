@@ -476,11 +476,11 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 				return nil, fmt.Errorf("wrong blob file name format: %s", ent.Name())
 			}
 			blobOwnerRawIDStr := ent.Name()[:underscorePos]
-			blobOwnerRawIDIntf, err := coreutils.ClarifyJSONNumber(json.Number(blobOwnerRawIDStr), appdef.DataKind_RecordID)
+			blobOwnerRawID, err := coreutils.ClarifyJSONNumber[istructs.RecordID](json.Number(blobOwnerRawIDStr))
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
-			blobOwnerRawID := blobOwnerRawIDIntf.(istructs.RecordID)
+
 			fieldName := strings.ReplaceAll(ent.Name()[underscorePos+1:], filepath.Ext(ent.Name()), "")
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
@@ -501,11 +501,11 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID
 			ownerQName := appdef.NullQName
 			for _, wsTemplateRecord := range wsTemplateData {
 				recordNumberFromTemplate := wsTemplateRecord[appdef.SystemField_ID].(json.Number)
-				recordIDFromTemplateIntf, err := coreutils.ClarifyJSONNumber(recordNumberFromTemplate, appdef.DataKind_RecordID)
+				recordIDFromTemplate, err := coreutils.ClarifyJSONNumber[istructs.RecordID](recordNumberFromTemplate)
 				if err != nil {
 					return nil, err
 				}
-				recordIDFromTemplate := recordIDFromTemplateIntf.(istructs.RecordID)
+
 				if recordIDFromTemplate == blobOwnerRawID {
 					ownerQNameStr := wsTemplateRecord[appdef.SystemField_QName].(string)
 					ownerQName, err = appdef.ParseQName(ownerQNameStr)
@@ -543,11 +543,11 @@ func checkOrphanedBLOBs(blobIDs map[istructs.RecordID]map[string]struct{}, works
 			return errors.New("record with missing sys.ID field is met")
 		}
 		recIDJSONNumber := recIDIntf.(json.Number)
-		clarifiedRecIDIntf, err := coreutils.ClarifyJSONNumber(recIDJSONNumber, appdef.DataKind_RecordID)
+		recID, err := coreutils.ClarifyJSONNumber[istructs.RecordID](recIDJSONNumber)
 		if err != nil {
 			return fmt.Errorf("wrong blobID %s is met in workspace data: %w", recIDJSONNumber.String(), err)
 		}
-		recID := clarifiedRecIDIntf.(istructs.RecordID)
+
 		blobFields, ok := blobIDs[recID]
 		if !ok {
 			continue
