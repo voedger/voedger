@@ -285,23 +285,23 @@ func (mkb *mockedKeyBuilder) Equals(kb istructs.IKeyBuilder) bool {
 		}
 
 		if jsonNumber, ok := v2.(json.Number); ok {
-			var dataKind appdef.DataKind
+			var clarified any
+			var err error
 			switch v1.(type) {
 			case int8:
-				dataKind = appdef.DataKind_int8
+				clarified, err = coreutils.ClarifyJSONNumber[int8](jsonNumber)
 			case int16:
-				dataKind = appdef.DataKind_int16
+				clarified, err = coreutils.ClarifyJSONNumber[int16](jsonNumber)
 			case int32:
-				dataKind = appdef.DataKind_int32
+				clarified, err = coreutils.ClarifyJSONNumber[int32](jsonNumber)
 			case int64:
-				dataKind = appdef.DataKind_int64
+				clarified, err = coreutils.ClarifyJSONNumber[int64](jsonNumber)
 			default:
 				if !reflect.DeepEqual(v1, v2) {
 					return false
 				}
 				continue
 			}
-			clarified, err := coreutils.ClarifyJSONNumber(jsonNumber, dataKind)
 			if err != nil {
 				// notest
 				panic(err)
@@ -551,12 +551,12 @@ func (m *mockedStateValue) AsInt8(name appdef.FieldName) int8 {
 	case int8:
 		return t
 	case json.Number:
-		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int8)
+		t2, err := coreutils.ClarifyJSONNumber[int8](t)
 		if err != nil {
 			panic(err)
 		}
 
-		return t2.(int8)
+		return t2
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsInt8(%s): unexpected type", name))
 	}
@@ -567,12 +567,12 @@ func (m *mockedStateValue) AsInt16(name appdef.FieldName) int16 {
 	case int16:
 		return t
 	case json.Number:
-		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int16)
+		t2, err := coreutils.ClarifyJSONNumber[int16](t)
 		if err != nil {
 			panic(err)
 		}
 
-		return t2.(int16)
+		return t2
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsInt16(%s): unexpected type", name))
 	}
@@ -583,12 +583,12 @@ func (m *mockedStateValue) AsInt32(name appdef.FieldName) int32 {
 	case int32:
 		return t
 	case json.Number:
-		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int32)
+		t2, err := coreutils.ClarifyJSONNumber[int32](t)
 		if err != nil {
 			panic(err)
 		}
 
-		return t2.(int32)
+		return t2
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsInt32(%s): unexpected type", name))
 	}
@@ -607,12 +607,12 @@ func (m *mockedStateValue) AsInt64(name appdef.FieldName) int64 {
 		// nolint gosec
 		return int64(t)
 	case json.Number:
-		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_int64)
+		t2, err := coreutils.ClarifyJSONNumber[int64](t)
 		if err != nil {
 			panic(err)
 		}
 
-		return t2.(int64)
+		return t2
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsInt64(%s): unexpected type", name))
 	}
@@ -623,12 +623,12 @@ func (m *mockedStateValue) AsFloat32(name appdef.FieldName) float32 {
 	case float32:
 		return t
 	case json.Number:
-		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_float32)
+		t2, err := coreutils.ClarifyJSONNumber[float32](t)
 		if err != nil {
 			panic(err)
 		}
 
-		return t2.(float32)
+		return t2
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsFloat32(%s): unexpected type", name))
 	}
@@ -639,12 +639,12 @@ func (m *mockedStateValue) AsFloat64(name appdef.FieldName) float64 {
 	case float64:
 		return t
 	case json.Number:
-		t2, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_float64)
+		t2, err := coreutils.ClarifyJSONNumber[float64](t)
 		if err != nil {
 			panic(err)
 		}
 
-		return t2.(float64)
+		return t2
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsFloat64(%s): unexpected type", name))
 	}
@@ -678,11 +678,11 @@ func (m *mockedStateValue) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	case istructs.RecordID:
 		return t
 	case json.Number:
-		res, err := coreutils.ClarifyJSONNumber(t, appdef.DataKind_RecordID)
+		res, err := coreutils.ClarifyJSONNumber[istructs.RecordID](t)
 		if err != nil {
 			panic(err)
 		}
-		return res.(istructs.RecordID)
+		return res
 	default:
 		panic(fmt.Sprintf("mockedStateValue.AsRecordID(%s): unexpected type", name))
 	}

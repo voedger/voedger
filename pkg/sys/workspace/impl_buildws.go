@@ -52,12 +52,12 @@ func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsK
 func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap blobsMap) {
 	for _, record := range wsData {
 		recordIDIntf := record[appdef.SystemField_ID] // record id existence is checked on validation stage
-		recordIDClarified, err := coreutils.ClarifyJSONNumber(recordIDIntf.(json.Number), appdef.DataKind_RecordID)
+		recordID, err := coreutils.ClarifyJSONNumber[istructs.RecordID](recordIDIntf.(json.Number))
 		if err != nil {
 			// notest
 			panic(err)
 		}
-		recordID := recordIDClarified.(istructs.RecordID)
+
 		if fieldsBlobIDs, ok := blobsMap[recordID]; ok {
 			for fieldName, blobIDToSet := range fieldsBlobIDs {
 				// blob fields existence is checked on validation stage

@@ -38,42 +38,42 @@ func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, 
 		case int8:
 			return v, nil
 		case json.Number:
-			return coreutils.ClarifyJSONNumber(v, kind)
+			return coreutils.ClarifyJSONNumber[int8](v)
 		}
 	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
 		switch v := value.(type) {
 		case int16:
 			return v, nil
 		case json.Number:
-			return coreutils.ClarifyJSONNumber(v, kind)
+			return coreutils.ClarifyJSONNumber[int16](v)
 		}
 	case appdef.DataKind_int32:
 		switch v := value.(type) {
 		case int32:
 			return v, nil
 		case json.Number:
-			return coreutils.ClarifyJSONNumber(v, kind)
+			return coreutils.ClarifyJSONNumber[int32](v)
 		}
 	case appdef.DataKind_int64:
 		switch v := value.(type) {
 		case int64:
 			return v, nil
 		case json.Number:
-			return coreutils.ClarifyJSONNumber(v, kind)
+			return coreutils.ClarifyJSONNumber[int64](v)
 		}
 	case appdef.DataKind_float32:
 		switch v := value.(type) {
 		case float32:
 			return v, nil
 		case json.Number:
-			return coreutils.ClarifyJSONNumber(v, kind)
+			return coreutils.ClarifyJSONNumber[float32](v)
 		}
 	case appdef.DataKind_float64:
 		switch v := value.(type) {
 		case float64:
 			return v, nil
 		case json.Number:
-			return coreutils.ClarifyJSONNumber(v, kind)
+			return coreutils.ClarifyJSONNumber[float64](v)
 		}
 	case appdef.DataKind_RecordID:
 		switch v := value.(type) {
@@ -85,7 +85,7 @@ func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, 
 		case istructs.RecordID:
 			return v, nil
 		case json.Number:
-			return coreutils.ClarifyJSONNumber(v, kind)
+			return coreutils.ClarifyJSONNumber[istructs.RecordID](v)
 		}
 	case appdef.DataKind_bytes:
 		switch v := value.(type) {

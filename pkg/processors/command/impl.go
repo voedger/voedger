@@ -760,12 +760,12 @@ func appendBLOBOwnershipUpdaters(_ context.Context, cmd *cmdWorkpiece) (err erro
 				continue
 			}
 			blobIDJSONNumber := cudFieldValue.(json.Number)
-			blobIDIntf, err := coreutils.ClarifyJSONNumber(blobIDJSONNumber, appdef.DataKind_RecordID)
+			blobID, err := coreutils.ClarifyJSONNumber[istructs.RecordID](blobIDJSONNumber)
 			if err != nil {
 				// notest
 				return err
 			}
-			blobID := blobIDIntf.(istructs.RecordID)
+
 			blobRecord, err := cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, blobID)
 			if err != nil {
 				// notest
