@@ -114,9 +114,10 @@ func TestCheckpointStorageFailuresDoNotCommitOrRunAfterHooks(t *testing.T) {
 
 			require.NoError(callCheckpointStorage(storage, op))
 			require.Equal(1, afterCalls)
-			if op.Kind == PutPartition {
+			switch op.Kind {
+			case PutPartition:
 				require.Equal(op.Partition, base.RequirePartitionCheckpoint(t, 1, 1))
-			} else if op.Kind == PutWorkspace {
+			case PutWorkspace:
 				require.Equal(op.Workspace, base.RequireWorkspaceCheckpoint(t, 1, 1))
 			}
 		})

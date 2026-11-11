@@ -1572,48 +1572,6 @@ func deployedPartitionIDs(t *testing.T, vit *it.VIT) []istructs.PartitionID {
 	return deployed
 }
 
-func requirePartitionsNotDeployed(t *testing.T, vit *it.VIT, ids []istructs.PartitionID) {
-	t.Helper()
-	count, err := vit.IAppPartitions.AppPartsCount(istructs.AppQName_test1_app1)
-	require.NoError(t, err)
-	require.Equal(t, istructs.NumAppPartitions(3), count)
-	for _, id := range ids {
-		partition, err := vit.IAppPartitions.Borrow(istructs.AppQName_test1_app1, id, appparts.ProcessorKind_Command)
-		require.Nil(t, partition)
-		require.ErrorIs(t, err, appparts.ErrNotFound)
-	}
-}
-
-func requireProjectorsAndJobsConfigured(t *testing.T, vit *it.VIT) {
-	t.Helper()
-	actualizers := map[istructs.PartitionID][]appdef.QName{}
-	for id, names := range vit.IAppPartitions.WorkedActualizers(istructs.AppQName_test1_app1) {
-		actualizers[id] = names
-	}
-	jobs := map[istructs.PartitionID]bool{}
-	for id, names := range vit.IAppPartitions.WorkedSchedulers(istructs.AppQName_test1_app1) {
-		_, jobs[id] = names[appdef.NewQName("app1pkg", "InitialRecoveryJob")]
-	}
-	for id := range istructs.PartitionID(3) {
-		require.Contains(t, actualizers[id], checkpoints.QNameApplyRecoveryCheckpoint)
-		require.True(t, jobs[id], "partition %d must have a configured scheduler", id)
-	}
-}
-
-func requireNoProjectorsOrJobs(t *testing.T, vit *it.VIT, ids []istructs.PartitionID) {
-	t.Helper()
-	for id, names := range vit.IAppPartitions.WorkedActualizers(istructs.AppQName_test1_app1) {
-		if containsPartition(ids, id) {
-			require.Empty(t, names, "excluded partition %d has actualizers", id)
-		}
-	}
-	for id, jobs := range vit.IAppPartitions.WorkedSchedulers(istructs.AppQName_test1_app1) {
-		if containsPartition(ids, id) {
-			require.Empty(t, jobs, "excluded partition %d has schedulers", id)
-		}
-	}
-}
-
 func requirePartitionNotFound(t *testing.T, err error) {
 	t.Helper()
 	var responseError coreutils.SysError

@@ -1366,11 +1366,15 @@ func TestWorkspaceRecovery(t *testing.T) {
 		// And workspaces 3 and 5 are recovering from WLogs in partition 1 of "untill/airs-bp"
 		// And their reads observe cancellation but wait for replacement partition recovery
 		gates := make(map[workspaceKey]*recoveryReadGate)
+		defer func() {
+			for _, gate := range gates {
+				gate.allowExit()
+			}
+		}()
 		attempts := make(map[workspaceKey]*recoveryAttempt)
 		for _, wsid := range []istructs.WSID{3, 5} {
 			key := recoveryWorkspaceKeyForTestApp(app, wsid)
 			gate := app.recoveryTestControl.workspaces.holdNextRead(key)
-			defer gate.allowExit()
 			gates[key] = gate
 			status, err := sendRequestForStatus(requestCtx, app.rawRequestSender, newCUD_3Inserts_Request(wsid, app))
 			require.NoError(err)
@@ -1488,11 +1492,17 @@ func TestPartitionResetCancelsOnlyItsOwnWorkspaceRecoveries(t *testing.T) {
 		{appQName: istructs.AppQName_test1_app1, partitionID: 1},
 	}
 	contexts := make([]context.Context, len(keys))
+	cancels := make([]context.CancelCauseFunc, 0, len(keys))
+	defer func() {
+		for _, cancel := range cancels {
+			cancel(nil)
+		}
+	}()
 	cancelCalls := 0
 	var canceledAfterDetachment, canceledOutsideLock bool
 	for i, key := range keys {
 		ctx, cancel := context.WithCancelCause(t.Context())
-		defer cancel(nil)
+		cancels = append(cancels, cancel)
 		contexts[i] = ctx
 		partition := &appPartition{workspaceRecoveryCtx: ctx, cancelWorkspaceRecovery: cancel}
 		if i == 0 {
@@ -1650,11 +1660,11 @@ func setRecoveryAdmissionApp(t *testing.T, require *require.Assertions, wsids ..
 	return prepareRecoveryAdmissionApp(t, require, app, storage, wsids...)
 }
 
-func setUpResetRecoveryApp(t *testing.T, require *require.Assertions, wsids ...istructs.WSID) (testApp, func()) {
+func setUpResetRecoveryApp(t *testing.T, require *require.Assertions, wsids ...istructs.WSID) (app testApp, failNextProjector func()) {
 	t.Helper()
 	storage := testutils.NewCheckpointStorageMem()
 	var failNext atomic.Bool
-	app := setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
+	app = setUp(t, func(wsb appdef.IWorkspaceBuilder, cfg *istructsmem.AppConfigType) {
 		prepareRecoveryTestApp(wsb, cfg)
 		projectorName := appdef.NewQName("test", "FailNextProjector")
 		cfg.AddSyncProjectors(istructs.Projector{
