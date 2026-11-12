@@ -34,59 +34,25 @@ import (
 func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, err error) {
 	switch kind {
 	case appdef.DataKind_int8: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
-		switch v := value.(type) {
-		case int8:
-			return v, nil
-		case json.Number:
-			return coreutils.ClarifyJSONNumber[int8](v)
-		}
+		return clarifyJSONNumber[int8](value, kind)
 	case appdef.DataKind_int16: // #3435 [~server.vsql.smallints/cmp.istructs~impl]
-		switch v := value.(type) {
-		case int16:
-			return v, nil
-		case json.Number:
-			return coreutils.ClarifyJSONNumber[int16](v)
-		}
+		return clarifyJSONNumber[int16](value, kind)
 	case appdef.DataKind_int32:
-		switch v := value.(type) {
-		case int32:
-			return v, nil
-		case json.Number:
-			return coreutils.ClarifyJSONNumber[int32](v)
-		}
+		return clarifyJSONNumber[int32](value, kind)
 	case appdef.DataKind_int64:
-		switch v := value.(type) {
-		case int64:
-			return v, nil
-		case json.Number:
-			return coreutils.ClarifyJSONNumber[int64](v)
-		}
+		return clarifyJSONNumber[int64](value, kind)
 	case appdef.DataKind_float32:
-		switch v := value.(type) {
-		case float32:
-			return v, nil
-		case json.Number:
-			return coreutils.ClarifyJSONNumber[float32](v)
-		}
+		return clarifyJSONNumber[float32](value, kind)
 	case appdef.DataKind_float64:
-		switch v := value.(type) {
-		case float64:
-			return v, nil
-		case json.Number:
-			return coreutils.ClarifyJSONNumber[float64](v)
-		}
+		return clarifyJSONNumber[float64](value, kind)
 	case appdef.DataKind_RecordID:
-		switch v := value.(type) {
-		case int64:
+		if v, ok := value.(int64); ok {
 			if v < 0 {
 				return nil, ErrWrongRecordID("negative value %d", v)
 			}
 			return istructs.RecordID(v), nil
-		case istructs.RecordID:
-			return v, nil
-		case json.Number:
-			return coreutils.ClarifyJSONNumber[istructs.RecordID](v)
 		}
+		return clarifyJSONNumber[istructs.RecordID](value, kind)
 	case appdef.DataKind_bytes:
 		switch v := value.(type) {
 		case string:
@@ -137,6 +103,16 @@ func (row *rowType) clarifyJSONValue(value any, kind appdef.DataKind) (res any, 
 		if v, ok := value.(*eventType); ok {
 			return v.storeToBytes(), nil
 		}
+	}
+	return nil, ErrWrongFieldType("value has type «%T», but «%s» expected", value, kind.TrimString())
+}
+
+func clarifyJSONNumber[T interface{ number | istructs.RecordID }](value any, kind appdef.DataKind) (any, error) {
+	switch v := value.(type) {
+	case T:
+		return v, nil
+	case json.Number:
+		return coreutils.ClarifyJSONNumber[T](v)
 	}
 	return nil, ErrWrongFieldType("value has type «%T», but «%s» expected", value, kind.TrimString())
 }
