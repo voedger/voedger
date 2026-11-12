@@ -92,9 +92,9 @@ Four sources by origin contribute to a request's principal set; each is enumerat
   - Composition: `[Subjects reader]` reads `[(cdoc.sys.Subject)]` rows in `RequestWSID` matching either `PrincipalPayload.Login` or `PrincipalPayload.Alias` and emits one `Principal{Kind: Role, WSID: RequestWSID, QName: role}` per matched role.
 
 - `[Token-carried]`
-  - Origin: `[[Authentication]]` snapshots `GlobalRoles` at sign-in, including updates made through `[c.registry.UpdateGlobalRoles]`; see [arch-authn.md](./arch-authn.md). Token role grants are populated by API-token issuance and `[q.sys.EnrichPrincipalToken]`; their lifecycle and scope encoding are defined in [Token management](./arch-tokens.md)
+  - Origin: `[[Authentication]]` snapshots `GlobalRoles` at sign-in, including updates made through `[c.registry.UpdateGlobalRoles]`; see [arch-authn.md](./arch-authn.md). Token role grants are populated by trusted application-bound issuance, API-token issuance, and `[q.sys.EnrichPrincipalToken]`; their lifecycle and scope encoding are defined in [Token management](./arch-tokens.md)
   - Composition: normalized `PrincipalPayload.Roles []{Scope, WSID, QName}` are matched using the scope table below. A matching grant produces `Principal{Kind: Role, WSID: RequestWSID, QName: role.QName}`, retaining the existing token-role principal WSID. `PrincipalPayload.GlobalRoles []QName` continues to apply in any Workspace when `IsAPIToken=false`
-  - The existing composition stages remain intact: API tokens process exact-Workspace grants before returning, while regular User/Device tokens process owned-by grants after their existing System short-circuits and descriptor-based role derivation. Scope does not introduce new role sources, descriptor reads, or token-kind and scope combinations in this change
+  - API tokens process only exact-Workspace grants before returning. Regular User/Device tokens process both exact-Workspace and owned-by grants after their existing System short-circuits and descriptor-based role derivation, and only when the request Workspace descriptor exists. Matching grants are deduplicated against already-composed principals, preserving identity, Subject, global-role, and derived-role processing
 
 - `[Request-context]`
   - Origin: computed at composition time from request state (`RequestWSID`, `Host`, token presence, `ProfileWSID`, workspace descriptor's `OwnerWSID`, app-supplied `isDeviceAllowed`), not from any persisted record.
@@ -106,12 +106,14 @@ Four sources by origin contribute to a request's principal set; each is enumerat
 
 Token-carried role matching:
 
-| Role scope                   | Matching condition                                                              | Existing composition stage |
-| ---------------------------- | ------------------------------------------------------------------------------- | -------------------------- |
-| `RoleScopeWorkspace`         | `role.WSID == RequestWSID`                                                      | API token                  |
-| `RoleScopeWorkspacesOwnedBy` | The request Workspace descriptor exists and `role.WSID == descriptor.OwnerWSID` | Regular User/Device token  |
+| Role scope                   | Matching condition                                                             | Composition stage                         |
+| ---------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
+| `RoleScopeWorkspace`         | `role.WSID == RequestWSID`                                                      | API token and regular User/Device token   |
+| `RoleScopeWorkspacesOwnedBy` | The request Workspace descriptor exists and `role.WSID == descriptor.OwnerWSID` | Regular User/Device token                 |
 
-Owned-by matching uses immediate ownership. Missing scopes, explicit zero, and invalid scope claims are handled by the [principal payload validation contract](./arch-tokens.md#payload-contract) before composition. Derived principals retain their current WSIDs, including the device ProfileWSID on `WorkspaceDevice`.
+The [auth model](./context.md#rolescope) defines scope meanings. Both scope rows require an existing request Workspace descriptor for regular tokens; API tokens do not read it. Missing scopes, explicit zero, and invalid scope claims are handled by the [principal payload validation contract](./arch-tokens.md#payload-contract) before composition. Derived principals retain their current WSIDs, including the device ProfileWSID on `WorkspaceDevice`.
+
+An exact-Workspace grant limits only that grant's applicability. A regular token can still authorize requests elsewhere through its other role sources; API-token restricted composition remains controlled by `IsAPIToken`.
 
 VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later by the ACL engine, not during composition; see `[Role inheritance map]` above.
 
@@ -140,7 +142,9 @@ VSQL role inheritance (e.g., `ProfileOwner -> WorkspaceOwner`) is expanded later
        -> emit User|Device principal at profileWSID
        -> read cdoc.WorkspaceDescriptor in RequestWSID
        -> emit [Request-context]: ProfileOwner (if RequestWSID==profileWSID), WorkspaceOwner (user, OwnerWSID==profileWSID), WorkspaceDevice (device, app's isDeviceAllowed)
-       -> emit [Token-carried] RoleScopeWorkspacesOwnedBy grants matched by the scope table; WSID = RequestWSID
+       -> if the Workspace descriptor exists:
+            emit [Token-carried] RoleScopeWorkspace and RoleScopeWorkspacesOwnedBy grants matched by the scope table
+            use WSID = RequestWSID and skip principals already composed
        -> emit [Request-context]: Host
        -> return (principals, profileWSID)
 ```

@@ -216,6 +216,66 @@ func TestForeignAuthorization(t *testing.T) {
 	})
 }
 
+func TestRoleScopedToOneForeignWorkspace(t *testing.T) {
+	require := require.New(t)
+
+	// Workspace hierarchy and q.sys.Collection results with the foreign principal's scoped token:
+	//
+	// parentWS (test_ws)                     -> 403
+	// +-- workspaces[0]                      -> 403
+	// +-- workspaces[1] (targetWS)           -> 200 (WorkspaceOwner scoped to targetWS.WSID)
+	// +-- workspaces[2]                      -> 403
+
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	login := vit.SignUp(vit.NextName(), "1", istructs.AppQName_test1_app1)
+	newPrincipal := vit.SignIn(login)
+	parentWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	workspaces := make([]*it.AppWorkspace, 3)
+
+	// create 3 childs of test_ws
+	for i := range workspaces {
+		name := vit.NextName()
+		body := fmt.Sprintf(`{"args":{"WSName":%q,"WSKind":"app1pkg.test_ws","WSKindInitializationData":"{\"IntFld\":10}","TemplateName":"test_template","WSClusterID":1}}`, name)
+		vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body)
+		workspaces[i] = vit.WaitForChildWorkspace(parentWS, name)
+		require.Empty(workspaces[i].WSError)
+	}
+	targetWS := workspaces[1]
+	body := `{"args":{"Schema":"app1pkg.articles"},"elements":[{"fields":["sys.ID"]}]}`
+
+	// The foreign caller has no access before receiving the scoped grant.
+	for _, ws := range []*it.AppWorkspace{parentWS, workspaces[0], targetWS, workspaces[2]} {
+		vit.PostWS(ws, "q.sys.Collection", body, httpu.WithAuthorizeBy(newPrincipal.Token), httpu.Expect403())
+	}
+
+	// add role.sys.WorkspaceOwner to the actual token scoped to targetWorkspace
+	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	var expectedPayload payloads.PrincipalPayload
+	_, err = as.AppTokens().ValidateToken(newPrincipal.Token, &expectedPayload)
+	require.NoError(err)
+	require.Empty(expectedPayload.Roles)
+	require.Empty(expectedPayload.GlobalRoles)
+	require.False(expectedPayload.IsAPIToken)
+	expectedPayload.Roles = []payloads.RoleType{{
+		Scope: payloads.RoleScopeWorkspace, WSID: targetWS.WSID, QName: iauthnz.QNameRoleWorkspaceOwner,
+	}}
+	token, err := as.AppTokens().IssueToken(time.Hour, &expectedPayload)
+	require.NoError(err)
+	actualPayload, _ := decodeScopedPrincipalToken(t, require, vit, token)
+	require.Equal(expectedPayload, actualPayload)
+
+	// now the enriched token allows to work in targetWS
+	vit.PostWS(targetWS, "q.sys.Collection", body, httpu.WithAuthorizeBy(token))
+
+	// but still unable to work in other foreign workspaces because it is scoped to targetWS only
+	for _, ws := range []*it.AppWorkspace{workspaces[0], workspaces[2], parentWS} {
+		vit.PostWS(ws, "q.sys.Collection", body, httpu.WithAuthorizeBy(token), httpu.Expect403())
+	}
+}
+
 func decodeScopedPrincipalToken(t *testing.T, require *require.Assertions, vit *it.VIT, token string) (payloads.PrincipalPayload, istructs.GenericPayload) {
 	t.Helper()
 	var payload payloads.PrincipalPayload
