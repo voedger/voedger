@@ -25,7 +25,7 @@ import (
 
 const (
 	alienWSID     = 3
-	nonInitedWSID = 4
+	nonInitedWSID = 7
 )
 
 func TestBasicUsage(t *testing.T) {
