@@ -25,7 +25,7 @@ import (
 
 const (
 	alienWSID     = 3
-	nonInitedWSID = 4
+	nonInitedWSID = 7
 )
 
 func TestBasicUsage(t *testing.T) {
@@ -208,6 +208,14 @@ func TestAuthenticate(t *testing.T) {
 	exactRolePayload.Roles = []payloads.RoleType{{Scope: payloads.RoleScopeWorkspace, WSID: 1, QName: testRole}}
 	exactRoleToken, err := appTokens.IssueToken(time.Minute, &exactRolePayload)
 	require.NoError(err)
+	foreignRolePayload := pp
+	foreignRolePayload.Roles = []payloads.RoleType{{Scope: payloads.RoleScopeWorkspace, WSID: 3, QName: testRole}}
+	foreignRoleToken, err := appTokens.IssueToken(time.Minute, &foreignRolePayload)
+	require.NoError(err)
+	mixedRolePayload := foreignRolePayload
+	mixedRolePayload.Roles = append([]payloads.RoleType{{Scope: payloads.RoleScopeWorkspacesOwnedBy, WSID: 2, QName: notIncludedRole}}, foreignRolePayload.Roles...)
+	mixedRoleToken, err := appTokens.IssueToken(time.Minute, &mixedRolePayload)
+	require.NoError(err)
 	apiOwnedRolePayload := pp
 	apiOwnedRolePayload.IsAPIToken = true
 	apiOwnedRolePayload.Roles = []payloads.RoleType{{Scope: payloads.RoleScopeWorkspacesOwnedBy, WSID: 2, QName: testRole}}
@@ -259,14 +267,21 @@ func TestAuthenticate(t *testing.T) {
 		istructs.WSID(5): {
 			appdef.QNameCDocWorkspaceDescriptor: {1: {"OwnerWSID": int64(1)}},
 		},
+		istructs.WSID(4): {
+			appdef.QNameCDocWorkspaceDescriptor: {1: {"OwnerWSID": int64(2)}},
+		},
+		istructs.WSID(6): {
+			appdef.QNameCDocWorkspaceDescriptor: {1: {"OwnerWSID": int64(3)}},
+		},
 	})
 
-	testCases := []struct {
+	type authnTestCase struct {
 		desc               string
 		req                iauthnz.AuthnRequest
 		expectedPrincipals []iauthnz.Principal
 		subjects           []appdef.QName
-	}{
+	}
+	testCases := []authnTestCase{
 		{
 			desc: "no auth -> host + Guest user",
 			req: iauthnz.AuthnRequest{
@@ -445,6 +460,33 @@ func TestAuthenticate(t *testing.T) {
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
+	}
+	// Exact grants apply only to the target; owned-by grants still apply to its siblings.
+	for _, tc := range []struct {
+		desc          string
+		wsid          istructs.WSID
+		token         string
+		expectedRoles []appdef.QName
+	}{
+		{"normal token grants its exact role in the foreign target", 3, foreignRoleToken, []appdef.QName{testRole}},
+		{"normal token does not grant its exact role in a sibling", 4, foreignRoleToken, nil},
+		{"normal token does not grant its exact role in the parent", 2, foreignRoleToken, []appdef.QName{iauthnz.QNameRoleWorkspaceOwner}},
+		{"normal token does not grant its exact role in a descendant", 6, foreignRoleToken, nil},
+		{"mixed scopes grant both roles in the target", 3, mixedRoleToken, []appdef.QName{notIncludedRole, testRole}},
+		{"mixed scopes grant only the owned-by role in a sibling", 4, mixedRoleToken, []appdef.QName{notIncludedRole}},
+	} {
+		expectedPrincipals := []iauthnz.Principal{
+			{Kind: iauthnz.PrincipalKind_Role, WSID: tc.wsid, QName: iauthnz.QNameRoleAuthenticatedUser},
+			{Kind: iauthnz.PrincipalKind_User, WSID: 1, Name: login},
+		}
+		for _, role := range tc.expectedRoles {
+			expectedPrincipals = append(expectedPrincipals, iauthnz.Principal{Kind: iauthnz.PrincipalKind_Role, WSID: tc.wsid, QName: role})
+		}
+		expectedPrincipals = append(expectedPrincipals, iauthnz.Principal{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"})
+		testCases = append(testCases, authnTestCase{
+			desc: tc.desc, req: iauthnz.AuthnRequest{Host: "127.0.0.1", RequestWSID: tc.wsid, Token: tc.token},
+			expectedPrincipals: expectedPrincipals,
+		})
 	}
 	var subjects *[]appdef.QName
 	subjectsGetter := func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]appdef.QName, error) {
