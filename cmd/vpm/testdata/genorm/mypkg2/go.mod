@@ -1,5 +1,5 @@
 module mypkg2
 
-go 1.27.3
+go 1.27.4
 
 require github.com/voedger/voedger v0.0.0-20260422152843-9d1d20ddb91f
