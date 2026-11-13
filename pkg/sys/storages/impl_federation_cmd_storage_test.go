@@ -94,7 +94,7 @@ func TestFederationCommandRetryOn(t *testing.T) {
 				require.NoError(actualRequest.writeError)
 				require.Equal(http.MethodPost, actualRequest.method)
 				require.Equal("/api/"+testAppQName.String()+"/123/c.test.Command", actualRequest.path)
-				require.Equal(body, actualRequest.body)
+				require.JSONEq(body, actualRequest.body)
 				require.Equal("Bearer token", actualRequest.authorization)
 			}
 			if test.expectedError != "" {
