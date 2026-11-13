@@ -46,6 +46,7 @@ func NewFederationCommandStorage(appStructs state.AppStructsFunc, wsid state.WSI
 type federationCommandKeyBuilder struct {
 	baseKeyBuilder
 	expectedCodes string
+	retryOn       string
 	owner         string
 	appname       string
 	wsid          istructs.WSID
@@ -66,6 +67,8 @@ func (b *federationCommandKeyBuilder) PutString(name string, value string) {
 		b.token = value
 	case sys.Storage_FederationCommand_Field_ExpectedCodes:
 		b.expectedCodes = value
+	case sys.Storage_FederationCommand_Field_RetryOn:
+		b.retryOn = value
 	default:
 		b.baseKeyBuilder.PutString(name, value)
 	}
@@ -118,6 +121,9 @@ func (b *federationCommandKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	if b.expectedCodes != kb.expectedCodes {
 		return false
 	}
+	if b.retryOn != kb.retryOn {
+		return false
+	}
 	return true
 }
 
@@ -146,6 +152,16 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 			return nil, err
 		}
 		opts = append(opts, httpu.WithExpectedCode(code))
+	}
+	for status := range strings.SplitSeq(kb.retryOn, ",") {
+		if status == "" {
+			continue
+		}
+		code, err := strconv.Atoi(status)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, httpu.ReqOptFunc(httpu.WithRetryOnStatus(code)))
 	}
 
 	if kb.owner != "" {

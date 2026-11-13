@@ -689,6 +689,9 @@ EXTENSION ENGINE BUILTIN (
 			Command qname
 			Body text
 			ExpectedCodes text (optional, comma-separated, default is 200)
+			RetryOn text (optional, comma-separated status codes, no additional retries by default)
+				Uses standard HTTP retries with a one-minute maximum duration
+				Retry statuses are independent of ExpectedCodes and are retried before accepting the final response
 		Value:
 			StatusCode int32
 			NewIDs value {
