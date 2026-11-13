@@ -12,23 +12,27 @@ const (
 	// [~server.design.orch/KeyPrefix_VVMLeader~impl]
 	pKeyPrefix_VVMLeader
 
-	// Deprecated: retained to preserve value of pKeyPrefix_AppTTL only
+	// Partition recovery checkpoints append the partition ID to the application partition key.
 	pKeyPrefix_SeqStorage_Part
 
-	// Deprecated: retained to preserve value of pKeyPrefix_AppTTL only
+	// Workspace recovery checkpoints append the WSID to the application partition key.
 	pKeyPrefix_SeqStorage_WS
 
 	pKeyPrefix_AppTTL
 )
 
 const (
-	PLogOffsetCC = uint32(0)
+	MaxKeyLength                 = 1024
+	MaxValueLength               = 65536
+	MaxTTLSeconds                = 31536000
+	appTTLPKSize                 = 8
+	appTTLValidationErrTemplate  = "%w: %w"
+	partitionCheckpointPKeySize  = 4 + 4 + 2 // pkeyPrefix+ClusterAppID+PartitionID
+	workspaceCheckpointPKeySize  = 4 + 4 + 8 // pkeyPrefix+ClusterAppID+WSID
+	jsonFieldLastPLogOffset      = "lastPLogOffset"
+	jsonFieldWLogIDBearingOffset = "wlogIDBearingOffset"
 )
 
-const (
-	MaxKeyLength                = 1024
-	MaxValueLength              = 65536
-	MaxTTLSeconds               = 31536000
-	appTTLPKSize                = 8
-	appTTLValidationErrTemplate = "%w: %w"
+var (
+	checkpointCCols = []byte{1}
 )

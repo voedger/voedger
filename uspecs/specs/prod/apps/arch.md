@@ -65,8 +65,9 @@ Shared engine
   - Path to file: [arch-vvm-orch.md](./arch-vvm-orch.md)
 
 - `[[Sequences]]`
-  - Covers command processing, record-ID and WSID allocation, log-offset bookkeeping, and partition recovery.
-  - Canonical architecture: [arch-sequences.md](./arch-sequences.md)
+  - Covers sequence allocation plus partition and workspace recovery through focused feature specifications.
+  - Sequence allocation: [functional design](./sequences.feature), [technical design](./sequences--td.md)
+  - Recovery: [functional design](./recovery.feature), [technical design](./recovery--td.md)
   - Historical redesign proposal: [arch2-sequences.md](./arch2-sequences.md)
 
 ### Shared engine

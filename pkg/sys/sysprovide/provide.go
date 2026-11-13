@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -37,7 +38,9 @@ import (
 func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, time timeu.ITime,
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory,
-	blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr) {
+	blobHandlerPtr blobprocessor.IRequestHandlerPtr, requestSenderPtr bus.IRequestSenderPtr,
+	checkpointStorage checkpoints.IRecoveryCheckpointStorage) {
+	checkpoints.NewApplyRecoveryCheckpointProjector(sr, checkpointStorage)
 	blobber.ProvideBlobberCmds(sr)
 	collection.Provide(sr)
 	journal.Provide(sr, eps)

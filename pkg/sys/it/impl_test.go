@@ -387,22 +387,40 @@ func TestVITResetPreservingStorage(t *testing.T) {
 		it.WithVVMConfig(func(cfg *vvm.VVMConfig) { cfg.NumQueryProcessors = 3 }),
 	)
 	categoryID := istructs.NullRecordID
+	profileWLogTail := istructs.NullOffset
+	profileWorkspace := func(ws *it.AppWorkspace) *it.AppWorkspace {
+		return &it.AppWorkspace{
+			WSID:  ws.Owner.ProfileWSID,
+			Owner: ws.Owner,
+		}
+	}
 	var wsID istructs.WSID
+	var firstVIT *it.VIT
+	var currentURL string
 	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
+		firstVIT = vit
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 		wsID = ws.WSID
 		require.EqualValues(t, 3, vit.NumQueryProcessors)
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 		categoryID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		profileWLogTail = getLastWLogOffset(t, vit, profileWorkspace(ws))
 	}, func(t *testing.T, vit *it.VIT) {
+		require.Same(t, firstVIT, vit, "owned adapters retain the stable VIT facade")
+		currentURL = vit.URLStr()
 		require.EqualValues(t, 3, vit.NumQueryProcessors)
-		require.Equal(t, wsID, vit.WS(istructs.AppQName_test1_app1, "test_ws").WSID)
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		require.Equal(t, wsID, ws.WSID)
+		// Restart must not append another child-workspace initialization event
+		// by provisioning the entities declared in cfg again.
+		require.Equal(t, profileWLogTail, getLastWLogOffset(t, vit, profileWorkspace(ws)))
 		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
 		resp := vit.PostApp(istructs.AppQName_test1_app1, wsID, "q.sys.SqlQuery", body,
 			httpu.WithAuthorizeBy(vit.GetSystemPrincipal(istructs.AppQName_test1_app1).Token))
 		require.Contains(t, resp.SectionRow()[0].(string), `"name":"Awesome food"`)
 		resp.Println()
 	})
+	requireVITHTTPStopped(t, currentURL)
 }
 
 func TestVITResetPreservingStorageWithAnotherConfig(t *testing.T) {
@@ -419,6 +437,7 @@ func TestVITResetPreservingStorageWithAnotherConfig(t *testing.T) {
 	)
 	var categoryID istructs.RecordID
 	var wsID istructs.WSID
+	var currentURL string
 	it.TestRestartPreservingStorage(t, &before, func(t *testing.T, vit *it.VIT) {
 		require.EqualValues(t, 3, vit.NumQueryProcessors)
 		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -426,6 +445,7 @@ func TestVITResetPreservingStorageWithAnotherConfig(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
 		categoryID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
 	}, func(t *testing.T, vit *it.VIT) {
+		currentURL = vit.URLStr()
 		require.EqualValues(t, 2, vit.NumQueryProcessors)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
 		resp := vit.PostApp(istructs.AppQName_test1_app1, wsID, "q.sys.SqlQuery", body,
@@ -433,6 +453,7 @@ func TestVITResetPreservingStorageWithAnotherConfig(t *testing.T) {
 		require.Contains(t, resp.SectionRow()[0].(string), `"name":"Awesome food"`)
 		resp.Println()
 	}, &after)
+	requireVITHTTPStopped(t, currentURL)
 }
 
 func TestWorkspaceInheritanceUpgrade(t *testing.T) {
@@ -472,6 +493,7 @@ func TestWorkspaceInheritanceUpgrade(t *testing.T) {
 		ids        []istructs.RecordID
 	}
 	var saved []savedWorkspace
+	var currentURL string
 	it.TestRestartPreservingStorage(t, &before, func(t *testing.T, vit *it.VIT) {
 		login := vit.SignUp("inheritance-owner", "pwd", istructs.AppQName_test1_app1)
 		owner := vit.SignIn(login)
@@ -490,6 +512,7 @@ func TestWorkspaceInheritanceUpgrade(t *testing.T) {
 			saved = append(saved, entry)
 		}
 	}, func(t *testing.T, vit *it.VIT) {
+		currentURL = vit.URLStr()
 		def, err := vit.AppDef(istructs.AppQName_test1_app1)
 		require.NoError(t, err)
 		base := def.Workspace(appdef.NewQName("app1pkg", "Base"))
@@ -540,6 +563,16 @@ func TestWorkspaceInheritanceUpgrade(t *testing.T) {
 			}
 		}
 	}, &after)
+	requireVITHTTPStopped(t, currentURL)
+}
+
+func requireVITHTTPStopped(t *testing.T, url string) {
+	t.Helper()
+	response, err := (&http.Client{Timeout: time.Second}).Get(url)
+	if response != nil {
+		require.NoError(t, response.Body.Close())
+	}
+	require.Error(t, err, "owned adapter must stop the replacement VVM HTTP endpoint at teardown")
 }
 
 func TestAdminEndpoint(t *testing.T) {

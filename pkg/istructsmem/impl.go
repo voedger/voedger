@@ -359,7 +359,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 	}
 
 	p, o := ev.HandlingPartition(), ev.PLogOffset()
-	pKey, cCols := plogKey(p, o)
+	pKey, cCols := PLogEventKey(p, o)
 
 	evData := dbEvent.storeToBytes()
 
@@ -387,7 +387,7 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 }
 
 func getEventBytes(ev istructs.IPLogEvent) (pKey, cCols, data []byte) {
-	pKey, cCols = wlogKey(ev.Workspace(), ev.WLogOffset())
+	pKey, cCols = WLogEventKey(ev.Workspace(), ev.WLogOffset())
 	data = ev.(*eventType).storeToBytes()
 	return pKey, cCols, data
 }
@@ -421,7 +421,7 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 			return cb(offset, e)
 		}
 
-		pKey, cCols := plogKey(partition, offset)
+		pKey, cCols := PLogEventKey(partition, offset)
 		data := bytespool.Get()
 		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
 		if ok {
@@ -437,7 +437,7 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 	default:
 		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0
-			pKey, cFrom := plogKey(partition, glueLogOffset(ofsHi, ofsLo1))
+			pKey, cFrom := PLogEventKey(partition, glueLogOffset(ofsHi, ofsLo1))
 			cTo := uint16bytes(ofsLo2 + 1) // storage.Read() pass half-open interval [cFrom, cTo)
 			if ofsLo2 >= lowMask {
 				cTo = nil
@@ -462,7 +462,7 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 	switch toReadCount {
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
-		pKey, cCols := wlogKey(workspace, offset)
+		pKey, cCols := WLogEventKey(workspace, offset)
 		data := bytespool.Get()
 		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
 		if ok {
@@ -478,7 +478,7 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 	default:
 		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0
-			pKey, cFrom := wlogKey(workspace, glueLogOffset(ofsHi, ofsLo1))
+			pKey, cFrom := WLogEventKey(workspace, glueLogOffset(ofsHi, ofsLo1))
 			cTo := uint16bytes(ofsLo2 + 1) // storage.Read() pass half-open interval [cFrom, cTo)
 			if ofsLo2 >= lowMask {
 				cTo = nil

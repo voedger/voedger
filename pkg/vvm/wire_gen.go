@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -69,7 +70,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -124,7 +124,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	iRequestHandlerPtr := provideBlobHandlerPtr()
 	iRequestSenderPtr := provideIRequestSenderPtr()
 	postWireInterfacePtrs := providePostWireInterfacePtrs(blobAppStoragePtr, routerAppStoragePtr, iRequestHandlerPtr, iRequestSenderPtr)
-	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory, postWireInterfacePtrs)
+	iRecoveryCheckpointStorage := storage.NewRecoveryCheckpointStorage(iSysVvmStorage)
+	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory, postWireInterfacePtrs, iRecoveryCheckpointStorage)
 	v3 := actualizers.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
 	stateOpts := provideStateOpts()
 	iEmailSender := vvmConfig.EmailSender
@@ -180,7 +181,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	v5 := provideSubjectGetterFunc()
 	isDeviceAllowedFuncs := provideIsDeviceAllowedFunc(v2)
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v5, isDeviceAllowedFuncs)
-	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, iTime, in10nBroker, iMetrics, vvmName, iAuthenticator, iSecretReader)
+	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, iTime, in10nBroker, iMetrics, vvmName, iAuthenticator, iSecretReader, iRecoveryCheckpointStorage)
 	operatorCommandProcessors := provideCommandProcessors(numCommandProcessors, commandChannelFactory, serviceFactory)
 	numQueryProcessors := vvmConfig.NumQueryProcessors
 	queryChannel_V1 := provideQueryChannel_V1(serviceChannelFactory)
@@ -215,7 +216,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	busyProcessorLogMode := vvmConfig.BusyProcessorLogMode
 	requestHandler := provideRequestHandler(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType_V1, queryProcessorsChannelGroupIdxType_V2, numCommandProcessors, vvmApps, in10NProc, busyProcessorLogMode)
 	iRequestSender := bus.NewIRequestSender(iTime, requestHandler)
-	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, iTime, iAppPartitions, v6, v4, iTokens, iAppStorageProvider, postWireInterfacePtrs, iRequestHandler, iRequestSender)
+	iInitialRecovery := checkpoints.NewInitialRecovery(iAppStructsProvider, iRecoveryCheckpointStorage)
+	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, iTime, iAppPartitions, v6, v4, iTokens, iAppStorageProvider, postWireInterfacePtrs, iRequestHandler, iRequestSender, iInitialRecovery)
 	if err != nil {
 		cleanup6()
 		cleanup5()
@@ -360,26 +362,14 @@ func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISched
 
 func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, apppar appparts.IAppPartitions,
 	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens2 itokens.ITokens, storageProvider istorage.IAppStorageProvider,
-	postWireInterfacePtrs btstrp.PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender) (BootstrapOperator, error) {
-	var clusterBuiltinApp btstrp.ClusterBuiltInApp
-	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps))
-	for _, app := range builtinApps {
-		if app.Name == istructs.AppQName_sys_cluster {
-			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
-		} else {
-			isSidecarApp := slices.ContainsFunc(sidecarApps, func(sa appparts.SidecarApp) bool {
-				return sa.Name == app.Name
-			})
-			if !isSidecarApp {
-				otherApps = append(otherApps, app)
-			}
-		}
-	}
-	if clusterBuiltinApp.Name == appdef.NullAppQName {
-		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
+	postWireInterfacePtrs btstrp.PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
+	initialRecovery checkpoints.IInitialRecovery) (BootstrapOperator, error) {
+	clusterBuiltinApp, otherApps, err := btstrp.SplitBuiltInApps(builtinApps, sidecarApps)
+	if err != nil {
+		return nil, err
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		return btstrp.Bootstrap(federation2.WithRetry(), asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, postWireInterfacePtrs, blobHandler, requestSender)
+		return btstrp.Bootstrap(ctx, federation2.WithRetry(), asp, time, apppar, initialRecovery, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, postWireInterfacePtrs, blobHandler, requestSender)
 	}), nil
 }
 
@@ -447,9 +437,10 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[appdef.AppQName]extens
 
 func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens2 itokens.ITokens, federation2 federation.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, postWireInterfacePtrs btstrp.PostWireInterfacePtrs) istructsmem.IStatelessResources {
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, postWireInterfacePtrs btstrp.PostWireInterfacePtrs,
+	checkpointStorage checkpoints.IRecoveryCheckpointStorage) istructsmem.IStatelessResources {
 	ssr := istructsmem.NewStatelessResources()
-	sysprovide.ProvideStateless(ssr, vvmCfg.SMTPConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.Time, itokens2, federation2, asp, atf, postWireInterfacePtrs.BlobHandler, postWireInterfacePtrs.RequestSender)
+	sysprovide.ProvideStateless(ssr, vvmCfg.SMTPConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.Time, itokens2, federation2, asp, atf, postWireInterfacePtrs.BlobHandler, postWireInterfacePtrs.RequestSender, checkpointStorage)
 	return ssr
 }
 

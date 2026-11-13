@@ -369,6 +369,7 @@ ABSTRACT WORKSPACE Workspace (
 			AFTER INSERT ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
 			INTENTS(sys.View(RecordsRegistry));
+		PROJECTOR ApplyRecoveryCheckpoint AFTER EXECUTE ON ALL COMMANDS;
 
 		-- authnz
 

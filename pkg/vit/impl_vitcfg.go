@@ -151,9 +151,11 @@ func WithVVMConfig(configurer func(cfg *vvm.VVMConfig)) VITConfigOptFunc {
 	}
 }
 
-func WithCleanup(cleanup func(*VIT)) VITConfigOptFunc {
+// WithAfterTest registers a callback run by TearDown, before releasing resources.
+// Direct calls to RestartVVM do not run these callbacks.
+func WithAfterTest(callback func(*VIT)) VITConfigOptFunc {
 	return func(hpc *vitPreConfig) {
-		hpc.cleanups = append(hpc.cleanups, cleanup)
+		hpc.afterTest = append(hpc.afterTest, callback)
 	}
 }
 

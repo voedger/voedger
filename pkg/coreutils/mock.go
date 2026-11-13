@@ -86,6 +86,12 @@ func (m *MockPLogEvent) Error() istructs.IEventError  { return m.Called().Get(0)
 func (m *MockPLogEvent) Workspace() istructs.WSID     { return m.Called().Get(0).(istructs.WSID) }
 func (m *MockPLogEvent) WLogOffset() istructs.Offset  { return m.Called().Get(0).(istructs.Offset) }
 func (m *MockPLogEvent) Release()                     { m.Called() }
+func (m *MockPLogEvent) PLogOffset() istructs.Offset {
+	return m.Called().Get(0).(istructs.Offset)
+}
+func (m *MockPLogEvent) HandlingPartition() istructs.PartitionID {
+	return m.Called().Get(0).(istructs.PartitionID)
+}
 
 type MockObject struct {
 	mock.Mock
@@ -461,6 +467,20 @@ func (m *MockIntents) UpdateValue(key istructs.IStateKeyBuilder, existingValue i
 	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
 }
 
+// MockAppStructsProvider provides application structures to focused unit tests.
+type MockAppStructsProvider struct {
+	istructs.IAppStructsProvider
+	mock.Mock
+}
+
+func (m *MockAppStructsProvider) BuiltIn(name appdef.AppQName) (istructs.IAppStructs, error) {
+	args := m.Called(name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(istructs.IAppStructs), args.Error(1)
+}
+
 func mockResult[T any](value any) (result T) {
 	if value != nil {
 		result = value.(T)
@@ -487,6 +507,9 @@ func (m *MockAppStructs) Records() istructs.IRecords {
 }
 func (m *MockAppStructs) ViewRecords() istructs.IViewRecords {
 	return mockResult[istructs.IViewRecords](m.Called().Get(0))
+}
+func (m *MockAppStructs) ClusterAppID() istructs.ClusterAppID {
+	return m.Called().Get(0).(istructs.ClusterAppID)
 }
 
 type MockRecords struct {
