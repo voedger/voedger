@@ -3,10 +3,6 @@
  * @author Denis Gribanov
  */
 
-/*
- * Copyright (c) 2026-present unTill Pro, Ltd.
- */
-
 package storages
 
 import (
