@@ -10,6 +10,8 @@ import (
 )
 
 var (
+	// ErrRetryExhausted marks a failure returned after its status retry duration expires.
+	ErrRetryExhausted       = errors.New("retry duration exceeded")
 	ErrUnexpectedStatusCode = errors.New("unexpected status code")
 	errRetry                = errors.New("retry")
 )

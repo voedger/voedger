@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -103,7 +104,7 @@ func (c *implIHTTPClient) compileOpts(urlStr string, optFuncs ...ReqOptFunc) (op
 	return opts, nil
 }
 
-func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, optFuncs ...ReqOptFunc) (_ *HTTPResponse, err error) {
 	opts, err := c.compileOpts(urlStr, optFuncs...)
 	if err != nil {
 		return nil, err
@@ -143,6 +144,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 		return false, fmt.Errorf("request failed: %w", opErr)
 	}
 
+	retryExhausted := false
 	resp, err := retrier.Retry(reqCtx, retrierCfg, func() (*http.Response, error) {
 		var bodyReader io.Reader
 		if bodyReaderBytes != nil {
@@ -162,6 +164,7 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 				continue
 			}
 			if retryPolicy.maxRetryDuration > 0 && time.Since(startTime) > retryPolicy.maxRetryDuration {
+				retryExhausted = true
 				break
 			}
 			if err := discardRespBody(resp); err != nil {
@@ -188,6 +191,12 @@ func (c *implIHTTPClient) req(ctx context.Context, urlStr string, body string, o
 		return nil, err
 	}
 	isCodeExpected := slices.Contains(opts.expectedHTTPCodes, resp.StatusCode)
+	defer func() {
+		if retryExhausted && !isCodeExpected && err != nil &&
+			!errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			err = fmt.Errorf("%w: %w", ErrRetryExhausted, err)
+		}
+	}()
 	if isCodeExpected && opts.discardResp {
 		err := discardRespBody(resp)
 		return nil, err
