@@ -76,6 +76,11 @@ func HTTPRespToFuncResp(httpResp *httpu.HTTPResponse, httpRespErr error) (funcRe
 	if httpRespErr != nil && !errors.Is(httpRespErr, httpu.ErrUnexpectedStatusCode) {
 		return nil, httpRespErr
 	}
+	defer func() {
+		if err != nil && errors.Is(httpRespErr, httpu.ErrRetryExhausted) {
+			err = errors.Join(httpRespErr, err)
+		}
+	}()
 	if httpResp == nil {
 		// WithDiscardResponse
 		return nil, nil

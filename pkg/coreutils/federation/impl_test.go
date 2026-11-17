@@ -7,14 +7,17 @@ package federation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -22,6 +25,65 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
 )
+
+func TestFederationRetryExhaustion(t *testing.T) {
+	require := require.New(t)
+	for _, test := range []struct {
+		name         string
+		status       int
+		body         string
+		expectedCode int
+		exhausted    bool
+	}{
+		{"structured failure", 503, `{"sys.Error":{"HTTPStatus":503,"Message":"recovering"}}`, 200, true},
+		{"empty failure", 503, "", 200, true},
+		{"malformed failure", 503, "<html>unavailable</html>", 200, true},
+		{"success", 200, "{}", 200, false},
+		{"accepted conflict", 409, "", 409, false},
+		{"permanent rejection", 400, "", 200, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(test.status)
+				_, _ = io.WriteString(w, test.body)
+			}))
+			defer server.Close()
+			serverURL, err := url.Parse(server.URL)
+			require.NoError(err)
+			fed, cleanup := New(t.Context(), func() *url.URL { return serverURL },
+				coreutils.NilAdminPortGetter, httpu.DefaultRetryPolicyOpts)
+			defer cleanup()
+			// Exercise conversion after real HTTP retry exhaustion, including discarded responses.
+			for _, discard := range []bool{false, true} {
+				opts := []httpu.ReqOptFunc{httpu.WithMaxRetryDuration(503, time.Nanosecond),
+					httpu.WithExpectedCode(test.expectedCode)}
+				if discard {
+					opts = append(opts, httpu.WithDiscardResponse())
+				}
+				_, actual := fed.WithRetry().Func("api/test", "", opts...)
+				require.Equal(test.exhausted, errors.Is(actual, httpu.ErrRetryExhausted))
+				if test.exhausted {
+					require.ErrorIs(actual, httpu.ErrUnexpectedStatusCode)
+					require.ErrorIs(fmt.Errorf("caller: %w", actual), httpu.ErrRetryExhausted)
+				}
+				if test.status == test.expectedCode {
+					require.NoError(actual)
+				} else {
+					require.Error(actual)
+				}
+				if test.name == "structured failure" {
+					serverError, ok := errors.AsType[coreutils.SysError](actual)
+					require.True(ok)
+					require.Equal(coreutils.SysError{HTTPStatus: 503, Message: "recovering"}, serverError)
+				}
+				if test.name == "malformed failure" {
+					_, ok := errors.AsType[*json.SyntaxError](actual)
+					require.True(ok)
+				}
+			}
+		})
+	}
+}
 
 func TestFederationFunc(t *testing.T) {
 	require := require.New(t)
