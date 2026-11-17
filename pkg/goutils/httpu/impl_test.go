@@ -7,10 +7,12 @@ package httpu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
@@ -20,6 +22,92 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestRetryExhaustion(t *testing.T) {
+	require := require.New(t)
+	for _, test := range []struct {
+		name       string
+		statuses   []int
+		opts       []ReqOptFunc
+		exhausted  bool
+		unexpected bool
+	}{
+		{"duration expires", []int{503}, nil, true, true},
+		{"another configured status expires", []int{429}, []ReqOptFunc{WithRetryPolicy(WithRetryOnStatus(429)), WithMaxRetryDuration(429, time.Nanosecond)}, true, true},
+		{"retry succeeds", []int{503, 200}, []ReqOptFunc{WithMaxRetryDuration(503, time.Minute)}, false, false},
+		{"retry ends with rejection", []int{503, 400}, []ReqOptFunc{WithMaxRetryDuration(503, time.Minute)}, false, true},
+		{"caller accepts response", []int{503}, []ReqOptFunc{WithExpectedCode(503)}, false, false},
+		{"caller discards accepted response", []int{503}, []ReqOptFunc{WithExpectedCode(503), WithDiscardResponse()}, false, false},
+		{"retries disabled", []int{503}, []ReqOptFunc{WithNoRetryPolicy()}, false, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var attempts atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				index := min(int(attempts.Add(1))-1, len(test.statuses)-1)
+				w.WriteHeader(test.statuses[index])
+			}))
+			defer server.Close()
+			client, cleanup := NewIHTTPClient()
+			defer cleanup()
+			opts := []ReqOptFunc{WithRetryPolicy(WithRetryOnStatus(503)), WithMaxRetryDuration(503, time.Nanosecond)}
+			opts = append(opts, test.opts...)
+			_, actual := client.Req(t.Context(), server.URL, "", opts...)
+			if test.unexpected {
+				require.Error(actual)
+			} else {
+				require.NoError(actual)
+			}
+			// Wrapping must retain the stopping reason and the HTTP failure independently.
+			if actual != nil {
+				actual = fmt.Errorf("caller: %w", actual)
+			}
+			require.Equal(test.exhausted, errors.Is(actual, ErrRetryExhausted))
+			require.Equal(test.unexpected, errors.Is(actual, ErrUnexpectedStatusCode))
+			require.GreaterOrEqual(int(attempts.Load()), len(test.statuses))
+		})
+	}
+
+	t.Run("final response body is truncated", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Length", "10")
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		defer server.Close()
+		client, cleanup := NewIHTTPClient()
+		defer cleanup()
+		_, actual := client.Req(t.Context(), server.URL, "",
+			WithRetryPolicy(WithRetryOnStatus(503)), WithMaxRetryDuration(503, time.Nanosecond))
+		// A body read failure must not erase already detected exhaustion.
+		require.ErrorIs(actual, ErrRetryExhausted)
+		// Windows can report a reset instead of EOF when the server truncates the body.
+		require.True(errors.Is(actual, io.ErrUnexpectedEOF) || errors.Is(actual, WSAECONNRESET))
+	})
+
+	t.Run("cancellation stops retries", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			cancel()
+		}))
+		defer server.Close()
+		client, cleanup := NewIHTTPClient()
+		defer cleanup()
+		_, actual := client.Req(ctx, server.URL, "", WithRetryPolicy(WithRetryOnStatus(503)))
+		require.ErrorIs(actual, context.Canceled)
+		require.NotErrorIs(actual, ErrRetryExhausted)
+	})
+
+	t.Run("context deadline expires", func(t *testing.T) {
+		ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+		defer cancel()
+		client, cleanup := NewIHTTPClient()
+		defer cleanup()
+		_, actual := client.Req(ctx, "http://127.0.0.1:1", "", WithRetryPolicy(WithRetryOnStatus(503)))
+		require.ErrorIs(actual, context.DeadlineExceeded)
+		require.NotErrorIs(actual, ErrRetryExhausted)
+	})
+}
 
 func TestHTTP(t *testing.T) {
 	require := require.New(t)

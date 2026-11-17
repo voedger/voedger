@@ -97,6 +97,28 @@ func fetch(url, token string) (string, error) {
 
 </details>
 
+## Detect retry exhaustion
+
+When a configured status retry duration expires and the response is still an
+unexpected failure, the returned error matches `httpu.ErrRetryExhausted`:
+
+```go
+_, err := client.Req(ctx, url, "", httpu.WithDefaultRetryPolicy())
+if errors.Is(err, httpu.ErrRetryExhausted) {
+    return err
+}
+```
+
+Import `errors` from the standard library. The marker survives error wrapping
+and federation response conversion; underlying HTTP, server, and decoding
+errors remain available for inspection. The caller decides whether to schedule
+another attempt or propagate the error to a workflow that retries.
+
+Successful or caller-accepted responses, non-retryable failures, and context
+cancellation or deadline termination do not acquire this marker. Its absence
+does not establish that a failure is permanent. Status retry durations are
+checked after a response arrives; they do not interrupt an in-flight request.
+
 ## Features
 
 - **Retry policies** - Retry transient statuses with configurable rules
