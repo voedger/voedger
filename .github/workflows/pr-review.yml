@@ -31,6 +31,59 @@ jobs:
           gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
             -f body="$body"
 
+      - name: Add Auggie CLI compatibility wrapper
+        shell: bash
+        run: |
+          wrapper_dir="$RUNNER_TEMP/auggie-compat"
+          mkdir -p "$wrapper_dir"
+          cat > "$wrapper_dir/auggie" <<'PY'
+          #!/usr/bin/env python3
+          import os
+          import shutil
+          import sys
+
+          wrapper_dir = os.path.dirname(os.path.abspath(__file__))
+          search_path = os.pathsep.join(
+              path for path in os.environ["PATH"].split(os.pathsep)
+              if os.path.abspath(path) != wrapper_dir
+          )
+          auggie = shutil.which("auggie", path=search_path)
+          if auggie is None:
+              sys.exit("Auggie CLI was not found on PATH")
+
+          args = sys.argv[1:]
+          translated = []
+          instruction_file = None
+          index = 0
+          while index < len(args):
+              arg = args[index]
+              if arg == "--instruction-file":
+                  if index + 1 == len(args):
+                      sys.exit("--instruction-file requires a path")
+                  instruction_file = args[index + 1]
+                  translated.append(
+                      "Review this pull request using the instructions provided through standard input."
+                  )
+                  index += 2
+              elif arg == "--rules":
+                  if index + 1 == len(args):
+                      sys.exit("--rules requires a path")
+                  translated.extend(("--rule", args[index + 1]))
+                  index += 2
+              else:
+                  translated.append(arg)
+                  index += 1
+
+          if instruction_file is not None:
+              descriptor = os.open(instruction_file, os.O_RDONLY)
+              os.dup2(descriptor, sys.stdin.fileno())
+              os.close(descriptor)
+
+          os.execv(auggie, [auggie, *translated])
+          PY
+          chmod +x "$wrapper_dir/auggie"
+          echo "$wrapper_dir" >> "$GITHUB_PATH"
+
       - name: Review pull request
         id: review
         uses: augmentcode/review-pr@v0.2.0
@@ -117,6 +170,60 @@ jobs:
         run: |
           gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
             -f body='👀 Automated review started.'
+
+      - name: Add Auggie CLI compatibility wrapper
+        if: steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
+        shell: bash
+        run: |
+          wrapper_dir="$RUNNER_TEMP/auggie-compat"
+          mkdir -p "$wrapper_dir"
+          cat > "$wrapper_dir/auggie" <<'PY'
+          #!/usr/bin/env python3
+          import os
+          import shutil
+          import sys
+
+          wrapper_dir = os.path.dirname(os.path.abspath(__file__))
+          search_path = os.pathsep.join(
+              path for path in os.environ["PATH"].split(os.pathsep)
+              if os.path.abspath(path) != wrapper_dir
+          )
+          auggie = shutil.which("auggie", path=search_path)
+          if auggie is None:
+              sys.exit("Auggie CLI was not found on PATH")
+
+          args = sys.argv[1:]
+          translated = []
+          instruction_file = None
+          index = 0
+          while index < len(args):
+              arg = args[index]
+              if arg == "--instruction-file":
+                  if index + 1 == len(args):
+                      sys.exit("--instruction-file requires a path")
+                  instruction_file = args[index + 1]
+                  translated.append(
+                      "Review this pull request using the instructions provided through standard input."
+                  )
+                  index += 2
+              elif arg == "--rules":
+                  if index + 1 == len(args):
+                      sys.exit("--rules requires a path")
+                  translated.extend(("--rule", args[index + 1]))
+                  index += 2
+              else:
+                  translated.append(arg)
+                  index += 1
+
+          if instruction_file is not None:
+              descriptor = os.open(instruction_file, os.O_RDONLY)
+              os.dup2(descriptor, sys.stdin.fileno())
+              os.close(descriptor)
+
+          os.execv(auggie, [auggie, *translated])
+          PY
+          chmod +x "$wrapper_dir/auggie"
+          echo "$wrapper_dir" >> "$GITHUB_PATH"
 
       - name: Review pull request
         if: steps.review_command.outputs.is_review_command == 'true' && steps.commenter_permission.outputs.is_writer == 'true'
