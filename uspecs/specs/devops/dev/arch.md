@@ -1,184 +1,114 @@
-# Context architecture: devops/dev
+﻿# Context architecture: devops/dev
 
-Development workflow automation for repository pull request review feedback. The context owns GitHub event routing for automated PR reviews, Writer-authorized manual review requests, NonWriter command feedback, and ReviewProvider invocation with repository rules.
+Development workflow automation for CI validation and Repository Rules. This overview covers the retained validation entry points and contributor guidance.
 
 ## External actors
 
 Roles:
 
 - `@NonWriter`
-  - User below Write repository permission who can open and update pull requests, but cannot request automated review.
-
+  - Opens and updates Pull Requests with below-Write repository permission
 - `@Writer`
-  - User with Write or higher repository permission who reviews pull requests and can request additional automated review.
+  - Reviews Pull Requests and decides whether changes can be merged
 
 Systems:
 
 - `*GitHub`
-  - Hosts pull requests, comments, repository secrets, repository rules, workflow events, workflow permissions, and published pull request reviews.
-
-- `*ReviewProvider`
-  - Produces automated review feedback from pull request changes, repository context, repository rules, and optional extra review instructions.
+  - Hosts the repository, Pull Requests, workflow events, execution results, and Repository Secrets
 
 ## Components
 
 ### Layers
 
 ```text
-External actors and systems
-    |
-    +-- @NonWriter
-    +-- @Writer
-    +-- *GitHub
-    +-- *ReviewProvider
-    |
-    v
-Workflow boundary
-    |
-    +-- [[PR review workflow]]
-    |
-    v
-Trigger handling
-    |
-    +-- [Automatic review job]
-    +-- [Comment review job]
-    |
-    v
-Command handling
-    |
-    +-- [Review command parser]
-    +-- [Writer permission check]
-    +-- [NonWriter feedback]
-    |
-    v
-Provider integration
-    |
-    +-- [Review action]
-    +-- [Repository rules]
-    +-- [(Augment session secret)]
+Contributor guidance
+    [Repository rules]
+
+Validation entry points
+    [Pull request validation]
+    [Main branch validation]
+    [Daily validation]
+    [Storage validation]
+
+Test execution
+    [Shared CI workflows]
+    [Storage test workflows]
 ```
 
-### Workflow boundary
-
-- `[[PR review workflow]]`
-  - Standalone GitHub Actions workflow that owns the `dev` context's pull request review automation without modifying CI, storage, deployment, or branch-protection workflows.
-  - impl: [.github/workflows/pr-review.yml#PR review](../../../../.github/workflows/pr-review.yml)
-
-### Trigger handling
-
-- `[Automatic review job]`
-  - Runs only for `pull_request_target` events in `voedger/voedger` when a pull request is opened or marked ready for review. It posts a start comment that tells Writers how to request another review, sends the pull request number and repository name to `[Review action]`, and posts a failure comment with the GitHub Actions run URL if `[Review action]` fails.
-  - impl: [.github/workflows/pr-review.yml#jobs.automatic-review](../../../../.github/workflows/pr-review.yml)
-
-- `[Comment review job]`
-  - Runs only for `issue_comment` `created` events in `voedger/voedger` whose issue is a pull request. It routes created PR comments through `[Review command parser]`, ignores issue comments that are not attached to pull requests, and never receives edited or deleted comments.
-  - impl: [.github/workflows/pr-review.yml#jobs.comment-review](../../../../.github/workflows/pr-review.yml)
-
-### Command handling
-
-- `[Review command parser]`
-  - Trims the PR comment body, accepts exactly `/review` or `/review` followed by whitespace as the leading command, rejects command-prefix lookalikes such as `/reviewed`, and extracts the remaining text as extra review instructions.
-  - impl: [.github/workflows/pr-review.yml#steps.Parse review command](../../../../.github/workflows/pr-review.yml)
-
-- `[Writer permission check]`
-  - Resolves the commenter permission through the GitHub collaborator permission API. `admin`, `maintain`, and `write` are treated as `@Writer`; every other permission, missing collaborator record, or API lookup failure is treated as `@NonWriter`.
-  - impl: [.github/workflows/pr-review.yml#steps.Check commenter permission](../../../../.github/workflows/pr-review.yml)
-
-- `[NonWriter feedback]`
-  - Posts a PR comment explaining that only `@Writer` can request automated review when a `@NonWriter` creates a valid `/review` command.
-  - impl: [.github/workflows/pr-review.yml#steps.Reply to NonWriter](../../../../.github/workflows/pr-review.yml)
-
-### Provider integration
-
-- `[Review action]`
-  - Calls `augmentcode/review-pr@v0.2.0` with `[(Augment session secret)]`, `GITHUB_TOKEN`, pull request number, repository name, and `[Repository rules]`. Manual reviews also pass extracted extra instructions as custom guidelines. Successful results remain ReviewProvider pull request reviews; status comments do not replace review results.
-  - impl: [.github/workflows/pr-review.yml#uses.augmentcode/review-pr@v0.2.0](../../../../.github/workflows/pr-review.yml)
+### Contributor guidance
 
 - `[Repository rules]`
-  - Versioned review guidance supplied to `*ReviewProvider`.
+  - Versioned guidance for contributors and development tools, retained independently of automated Pull Request reviews
+  - impl: [AGENTS.md](../../../../AGENTS.md)
   - impl: [.augment/rules/ar-common-develop.md](../../../../.augment/rules/ar-common-develop.md)
   - impl: [.augment/rules/ar-golang.md](../../../../.augment/rules/ar-golang.md)
   - impl: [.augment/rules/ar-markdown.md](../../../../.augment/rules/ar-markdown.md)
 
-- `[(Augment session secret)]`
-  - GitHub Actions repository secret `AUGMENT_SESSION_AUTH` containing ReviewProvider session credentials. The secret is consumed only by `[Review action]`.
+### Validation entry points
+
+- `[Pull request validation]`
+  - Uses short tests with the race detector disabled and TinyGo installation enabled; changes confined to `pkg/istorage/**` do not trigger this workflow
+  - impl: [.github/workflows/ci_pr.yml](../../../../.github/workflows/ci_pr.yml)
+- `[Main branch validation]`
+  - Uses the same test options for pushes to `main`, excluding changes confined to `pkg/istorage/**`; successful validation precedes the delivery workflow
+  - impl: [.github/workflows/ci.yml](../../../../.github/workflows/ci.yml)
+- `[Daily validation]`
+  - Requests full tests with the race detector and TinyGo installation enabled; failures trigger issue creation with the workflow run URL
+  - impl: [.github/workflows/ci-full.yml](../../../../.github/workflows/ci-full.yml)
+- `[Storage validation]`
+  - Handles Pull Request and push events affecting storage or elections paths and selects backend test workflows using changed-file outputs and job conditions
+  - impl: [.github/workflows/ci-pkg-storage.yml](../../../../.github/workflows/ci-pkg-storage.yml)
+
+### Test execution
+
+- `[Shared CI workflows]`
+  - Reusable workflows referenced from `untillpro/ci-action` at `main`; local callers supply test options and credentials
+  - impl: [.github/workflows/ci_pr.yml](../../../../.github/workflows/ci_pr.yml)
+  - impl: [.github/workflows/ci.yml](../../../../.github/workflows/ci.yml)
+  - impl: [.github/workflows/ci-full.yml](../../../../.github/workflows/ci-full.yml)
+- `[Storage test workflows]`
+  - Run backend and storage tests with the race detector against ScyllaDB or DynamoDB Local services; push-triggered failures invoke issue creation
+  - impl: [.github/workflows/ci_cas.yml](../../../../.github/workflows/ci_cas.yml)
+  - impl: [.github/workflows/ci_amazon.yml](../../../../.github/workflows/ci_amazon.yml)
 
 ## Scenarios
 
-### Automatic pull request review
+### Validating pull requests
 
 ```text
-*GitHub
-  -> [[PR review workflow]] (pull_request_target event)
-  -> [Automatic review job]
-  -> *GitHub (PR start comment with `/review` instructions)
-  -> [Review action]
-  -> [(Augment session secret)]
-  -> [Repository rules]
-  -> *ReviewProvider
-  -> *GitHub (pull request review)
+@NonWriter or @Writer opens or updates a Pull Request
+  -> *GitHub: pull_request event
+      -> [Pull request validation]: when its path filter matches
+          -> [Shared CI workflows]: short tests
+      -> [Storage validation]: when its path filter matches
+          -> [Storage test workflows]: selected backend jobs
 ```
 
-### Writer requests another review
+### Validating main branch changes
 
 ```text
-@Writer creates PR comment "/review {extra instructions}"
-  -> *GitHub
-  -> [[PR review workflow]] (issue_comment.created event)
-  -> [Comment review job]
-  -> [Review command parser] extracts extra instructions
-  -> [Writer permission check] resolves write-or-higher permission
-  -> *GitHub (PR start comment)
-  -> [Review action]
-  -> [(Augment session secret)]
-  -> [Repository rules]
-  -> *ReviewProvider
-  -> *GitHub (pull request review)
+*GitHub: push to main
+  -> [Main branch validation]: when its path filter matches
+      -> [Shared CI workflows]: short tests
+  -> [Storage validation]: when its path filter matches
+      -> [Storage test workflows]: selected backend jobs
 ```
 
-### NonWriter requests another review
+### Running full validation
 
 ```text
-@NonWriter creates PR comment "/review"
-  -> *GitHub
-  -> [[PR review workflow]] (issue_comment.created event)
-  -> [Comment review job]
-  -> [Review command parser] accepts the command
-  -> [Writer permission check] resolves below-Write permission
-  -> [NonWriter feedback]
-  -> *GitHub (PR comment)
-```
-
-### Ignored comment
-
-```text
-*GitHub
-  -> [[PR review workflow]] (issue_comment.created event)
-  -> [Comment review job]
-  -> [Review command parser] rejects non-leading command, command-prefix lookalike, or non-PR issue comment
-  -> stop without [Review action]
+*GitHub: daily schedule at 05:00 UTC or workflow_dispatch
+  -> [Daily validation]
+      -> [Shared CI workflows]: full tests with race detection
 ```
 
 ## Cross-cutting concerns
 
-### Security
+### Permissions
 
-- Every Component in `Trigger handling` runs only in `voedger/voedger` and must not execute scripts from the pull request head.
-- Every `[Review action]` invocation receives only `contents: read`, `pull-requests: write`, and `issues: write` through `GITHUB_TOKEN`.
-- Every `[(Augment session secret)]` use passes the secret directly to `[Review action]`; no Component may print or transform the secret.
-- Every `[Writer permission check]` failure must resolve to `@NonWriter`.
+- `[Pull request validation]` and `[Storage validation]` declare `contents: read` and `pull-requests: read` permissions
+- `[Pull request validation]` passes `GITHUB_TOKEN` to `[Shared CI workflows]`; `[Storage validation]` passes `GITHUB_TOKEN` for Pull Requests and `REPOREADING_TOKEN` for pushes
 
-### Concurrency
+### Repository scope
 
-- Every Component in `Trigger handling` serializes review runs by pull request number using the `pr-review-{number}` concurrency group.
-- No review run is cancelled in progress by a newer review request for the same pull request.
-
-### Configuration
-
-- Every `[Review action]` invocation uses the same `[Repository rules]` set so automatic and Writer-requested reviews apply the same repository guidance.
-- Manual extra instructions narrow a single Writer-requested review and do not alter `[Repository rules]`.
-
-### Context dependencies
-
-- The `dev` context depends on `*GitHub` for event delivery, permission lookup, secret storage, and review/comment publication.
-- The `dev` context depends on `*ReviewProvider` for review generation; provider-specific credentials and action versioning stay behind `[Review action]`.
+- `[Pull request validation]`, `[Main branch validation]`, and `[Daily validation]` invoke `[Shared CI workflows]` only in `voedger/voedger`

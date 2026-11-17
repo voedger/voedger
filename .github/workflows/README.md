@@ -6,7 +6,6 @@
 | ---------------------------- | ----------------------------------- | ---------------------------------- |
 | `ci.yml`                     | Push to main (excl. pkg/istorage)   | Run CI tests, build Docker image   |
 | `ci_pr.yml`                  | PR (excl. pkg/istorage)             | Run CI tests                       |
-| `pr-review.yml`              | pull_request_target / issue_comment | Automated pull request reviews     |
 | `ci-full.yml`                | Daily 5 AM UTC / manual             | Full test suite with race detector |
 | `ci-pkg-storage.yml`         | Push/PR to pkg/istorage paths       | Run storage backend tests          |
 | `ci_cas.yml`                 | Called by ci-pkg-storage            | Cassandra/ScyllaDB tests           |
@@ -121,28 +120,6 @@ Scripts called from `https://raw.githubusercontent.com/untillpro/ci-action/main/
 ### PR (ci_pr.yml)
 
 1. Calls `untillpro/ci-action/.github/workflows/ci_pr.yml@main`
-
-### PR review (pr-review.yml)
-
-1. Runs automatic reviews on `pull_request_target` events:
-   - `opened`
-   - `ready_for_review`
-2. Runs manual reviews on PR `issue_comment` `created` events when the trimmed comment body starts with `/review` as a command.
-3. Treats GitHub permissions `write`, `maintain`, and `admin` as Writer; all other commenters are NonWriters, receive a feedback comment, and do not trigger a review.
-4. Passes text after `/review` as extra review instructions.
-5. Posts a PR comment when automatic or Writer-requested review starts. The automatic start comment tells Writers they can request another review with `/review` or `/review <extra instructions>`.
-6. Posts a failure comment with the GitHub Actions run URL if review automation fails.
-7. Successful review results remain ReviewProvider pull request reviews; no success status comment is posted.
-8. Calls `augmentcode/review-pr@v0.2.0` with:
-   - `AUGMENT_SESSION_AUTH`
-   - `GITHUB_TOKEN`
-   - pull request number
-   - repository name
-   - `.augment/rules/ar-common-develop.md`
-   - `.augment/rules/ar-golang.md`
-   - `.augment/rules/ar-markdown.md`
-9. Uses `contents: read`, `pull-requests: write`, and `issues: write` permissions.
-10. Serializes review runs per pull request with the `pr-review-{number}` concurrency group.
 
 ### Daily Tests (ci-full.yml)
 

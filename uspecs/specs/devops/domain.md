@@ -21,16 +21,14 @@ Key features:
 Roles:
 
 - 👤NonWriter
-  - User below Write repository permission who can open and update pull requests, but cannot request automated review
+  - User below Write repository permission who can open and update pull requests
 - 👤Writer
-  - User with Write or higher repository permission who reviews pull requests, requests additional automated review, and decides whether changes can be merged
+  - User with Write or higher repository permission who reviews pull requests and decides whether changes can be merged
 
 Systems:
 
 - ⚙️GitHub
   - Hosts the repository, pull requests, comments, secrets, and workflow execution
-- ⚙️ReviewProvider
-  - Provides automated review of pull request changes using repository context and rules
 
 ---
 
@@ -42,11 +40,8 @@ Systems:
 - `Review`
   - Feedback attached to a pull request, including summary findings and inline comments
 
-- `Review Command`
-  - A pull request comment from a user with Write or higher repository permission that requests another automated review
-
 - `Repository Rule`
-  - Versioned guidance stored in the repository and supplied to automation or agents during review
+  - Versioned development guidance stored in the repository for contributors, automation, and agents
 
 - `Repository Secret`
   - Secret value managed by GitHub Actions and used by trusted workflows without committing credentials to the repository
@@ -56,7 +51,7 @@ Systems:
 ## Contexts
 
 - **dev**
-  - Development workflow automation, including pull request review triggers and Writer-requested review reruns
+  - Development workflow automation, including CI validation and repository guidance for contributors
 
 ### Context map
 
@@ -75,11 +70,8 @@ graph
   NonWriter["👤NonWriter"]
   Writer["👤Writer"]
   GitHub["⚙️GitHub"]
-  ReviewProvider["⚙️ReviewProvider"]
 
   NonWriter -->|opens and updates pull requests| dev
-  Writer -->|reviews and requests reruns| dev
-  GitHub -->|emits pull request and comment events| dev
-  dev -->|submits review requests| ReviewProvider
-  dev -->|publishes pull request reviews| GitHub
+  Writer -->|reviews pull requests| dev
+  GitHub -->|emits workflow events| dev
 ```
