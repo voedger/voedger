@@ -91,6 +91,9 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederationWithRetry, ap
 		httpu.WithExpectedCode(http.StatusOK),
 		httpu.WithExpectedCode(http.StatusConflict),
 	); createWSIDCmdErr != nil {
+		if errors.Is(createWSIDCmdErr, httpu.ErrRetryExhausted) {
+			return createWSIDCmdErr
+		}
 		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", createWSIDCmdErr.Error(), body))
 		return updateOwner(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, tokensAPI, federation)
 	}
@@ -231,6 +234,9 @@ func invokeCreateWorkspaceProjector(federation federation.IFederationWithRetry, 
 				httpu.WithExpectedCode(http.StatusOK),
 				httpu.WithExpectedCode(http.StatusConflict),
 			); err != nil {
+				if errors.Is(err, httpu.ErrRetryExhausted) {
+					return err
+				}
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
 				// nolint G115 ownerWSID came from WSID so its highest bit is always 0 -> no data loss possible
 				if err := updateOwner(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, tokensAPI, federation); err != nil {
