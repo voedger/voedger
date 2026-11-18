@@ -134,7 +134,7 @@ Alternatives:
 
 ## Uncertainty: source of the initial-recovery concurrency bound
 
-Decision: Bound partition initial-recovery workers by `runtime.GOMAXPROCS(0)`, sampled once at the start of each application's initialization. Do not add a VVM configuration field.
+Decision: Bound partition initial-recovery workers by `runtime.GOMAXPROCS(0)`, sampled once at package initialization and reused by each application's initialization. Do not add a VVM configuration field.
 
 - Pros: follows the Go runtime's effective available-processor limit; adapts to the process environment without additional configuration; keeps initial-recovery concurrency independent of workspace recovery.
 - Cons: CPU availability, rather than storage throughput, determines concurrency; operators cannot tune initial recovery independently without changing `GOMAXPROCS`.
