@@ -16,5 +16,5 @@ const partitionCheckpointUpdateInterval istructs.Offset = 100
 
 var (
 	QNameApplyRecoveryCheckpoint = appdef.NewQName(appdef.SysPackage, "ApplyRecoveryCheckpoint")
-	workerLimit                  = runtime.GOMAXPROCS(0)
+	WorkerLimit                  = runtime.GOMAXPROCS(0)
 )

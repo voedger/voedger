@@ -26,12 +26,12 @@ func (r *initialRecovery) InitializeCheckpoints(ctx context.Context, appQName ap
 		logger.LogAttr_Extension: "sys._Recovery",
 		"app":                    appQName,
 	})
-	logger.InfoCtx(logCtx, "bootstrap.initial_recovery.start", fmt.Sprintf("partitions %d, workers %d", numPartitions, workerLimit))
+	logger.InfoCtx(logCtx, "bootstrap.initial_recovery.start", fmt.Sprintf("partitions %d, workers %d", numPartitions, WorkerLimit))
 
 	results := make([]partitionResult, numPartitions)
 	jobs := make(chan istructs.PartitionID)
 	var workers sync.WaitGroup
-	for range min(workerLimit, int(numPartitions)) {
+	for range min(WorkerLimit, int(numPartitions)) {
 		workers.Go(func() {
 			for partitionID := range jobs {
 				if ctx.Err() != nil {

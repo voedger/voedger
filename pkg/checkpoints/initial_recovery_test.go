@@ -10,6 +10,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/mock"
@@ -21,6 +22,54 @@ import (
 )
 
 const testClusterAppID istructs.ClusterAppID = 7
+
+func TestInitialRecoveryOverlapsScansWithinWorkerLimit(t *testing.T) {
+	require := require.New(t)
+	originalWorkerLimit := checkpoints.WorkerLimit
+	defer func() { checkpoints.WorkerLimit = originalWorkerLimit }()
+	checkpoints.WorkerLimit = 2
+
+	var actualActive, actualPeak int
+	var actualDeployable []istructs.PartitionID
+	var actualFailed map[istructs.PartitionID]error
+	var actualError error
+	synctest.Test(t, func(t *testing.T) {
+		reads := newMockPLog(t)
+		storage := testutils.NewCheckpointStorageMem()
+		gate := make(chan struct{})
+		var mu sync.Mutex
+		active := 0
+		for partitionID := range istructs.PartitionID(5) {
+			reads.events.On("ReadPLog", mock.Anything, partitionID, istructs.FirstOffset,
+				istructs.ReadToTheEnd, mock.Anything).Run(func(mock.Arguments) {
+				mu.Lock()
+				active++
+				actualPeak = max(actualPeak, active)
+				mu.Unlock()
+				<-gate
+				mu.Lock()
+				active--
+				mu.Unlock()
+			}).Return(nil).Once()
+		}
+		recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, reads.events), storage)
+		go func() {
+			actualDeployable, actualFailed, actualError = recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 5)
+		}()
+
+		// All runnable workers reach the gate before measuring overlap and the ceiling
+		synctest.Wait()
+		actualActive = active
+		close(gate)
+		synctest.Wait()
+	})
+
+	require.Equal(2, actualActive, "exactly two partition scans must overlap")
+	require.Equal(2, actualPeak, "active scans must never exceed the worker limit")
+	require.NoError(actualError)
+	require.Empty(actualFailed)
+	require.Equal([]istructs.PartitionID{0, 1, 2, 3, 4}, actualDeployable)
+}
 
 func TestInitialRecoveryComputesMissingCheckpoints(t *testing.T) {
 	t.Run("missing checkpoints are persisted before marking partitions complete", func(t *testing.T) {
