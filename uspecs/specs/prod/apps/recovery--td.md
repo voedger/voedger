@@ -118,7 +118,7 @@ Application operations
     declared partition exactly once. An empty slice and a complete error map
     with a nil fatal error are valid. A non-nil fatal error prevents deployment
     from the returned IDs; collected partition errors can still be logged.
-  - Obtains the application's event storage and uses `checkpoints.workerLimit`,
+  - Obtains the application's event storage and uses `checkpoints.WorkerLimit`,
     sampled from `runtime.GOMAXPROCS(0)` at package initialization. A present
     partition checkpoint, including zero, makes that
     partition deployable without scanning or rewriting it. Each missing partition
@@ -356,7 +356,7 @@ relative ordering of different partition attempts is unconstrained.
 
 ```text
 [Checkpoint initial recovery]
-  -> scheduled missing partitions, bounded by package-initialized workerLimit
+  -> scheduled missing partitions, bounded by package-initialized WorkerLimit
       -> [Application events]: one or every PLog scan fails
       - collect each partition-scoped failure in the error map; write no marker for it
       - let every sibling attempt finish; wait for all scheduled attempts
@@ -761,7 +761,7 @@ partition. Workspaces 42 through 46 in this scenario belong to the same partitio
           - retain the same partition-key slot pool and service worker wait group
       - replacement partition recovery completes before old reads return
   -> [Workspace recovery manager]: old reads return; observe cancellation and discard results
-      - emit INFO cp.workspace_recovery.canceled, message "partition reset"
+      - emit INFO cp.workspace_recovery.canceled, message "partition reset, duration <milliseconds>ms"
       - release each slot through normal worker completion; join only during shutdown
 ```
 
@@ -895,13 +895,15 @@ sequenceDiagram
 - Every undeployed-partition rejection uses the standard not-found message
   through `cp.error`; the initial-recovery cause remains only in the attempt log.
 - Every workspace recovery that observes partition-reset cancellation emits one
-  INFO `cp.workspace_recovery.canceled` record with message `partition reset` and
+  INFO `cp.workspace_recovery.canceled` record with message `partition reset, duration <milliseconds>ms` and
   attributes `app`, `partid`, and `wsid`; it emits no success or WLog-read-error
   record for that canceled attempt
 
+Partition and workspace recovery functions append elapsed whole milliseconds to the final log's `msg` using `recoveryDuration`, including successful, failed, and canceled attempts. Partition failures emit `cp.partition_recovery.error`; workspace failures before scanning emit `cp.workspace_recovery.error`, and scan failures retain `cp.workspace_recovery.readwlog.error`. See [Logging](./logging--td.md#command-processor) for message formats.
+
 ### Performance and persistence
 
-- Every application's initial recovery has at most `checkpoints.workerLimit`
+- Every application's initial recovery has at most `checkpoints.WorkerLimit`
   attempts in flight; the limit is sampled from `runtime.GOMAXPROCS(0)` at package
   initialization and applications are initialized in bootstrap order
 - Every partition admits at most four concurrent workspace recovery attempts
@@ -916,6 +918,9 @@ sequenceDiagram
   request-driven recovery never writes them.
 
 ### Testing
+
+- Initial-recovery concurrency is verified with five gated scans and `checkpoints.WorkerLimit` temporarily set to two, then restored; `synctest` verifies overlapping scans and the peak concurrency without sleeps
+- Command recovery tests verify whole-millisecond duration messages on success and checkpoint failure, and the duration prefix on reset cancellation
 
 - Feature scenarios are traced to `recovery: scn:` tests in
   [VIT recovery tests](../../../../pkg/sys/it/impl_recovery_test.go) and

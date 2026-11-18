@@ -295,7 +295,9 @@ for the request lifecycle and status policy.
 - Invalid partition checkpoint: level `Error`, stage `cp.partition_recovery.checkpoint.invalid`, msg `stored PLog offset <checkpointOffset> does not identify an existing event; retrying from FirstOffset`
   - emitted when an inclusive read from a present nonzero checkpoint returns no event or its first event offset differs from the stored offset; absent and zero checkpoints start at `FirstOffset` without validation
   - uses the partition recovery context attributes and precedes the fallback read from `FirstOffset`
-- Partition recovery complete: level `Info`, stage `cp.partition_recovery.complete`, msg contains `nextPLogOffset <offset>, workspaces {}`; workspace recovery starts only after the partition is published
+- Partition recovery complete: level `Info`, stage `cp.partition_recovery.complete`, msg `nextPLogOffset <offset>, workspaces {}, duration <milliseconds>ms`; workspace recovery starts only after the partition is published
+- Partition recovery failure, including checkpoint lookup, scan, re-apply, or cancellation: level `Error`, stage `cp.partition_recovery.error`, msg `<error message>, duration <milliseconds>ms`
+  - Emitted at attempt completion in addition to any operation-specific error log; cancellation is checked before reporting success
 - ReadPLog failure during either the checkpoint scan or the `FirstOffset` fallback scan: level `Error`, stage `cp.partition_recovery.readplog.error`, msg `<error message>`
 - Last event re-apply: `processors.LogEventAndCUDs()` called with stage `cp.partition_recovery.reapply` to log which event is being re-applied (with `woffset`, `poffset`, `evqname` attribs); the enriched context is stored in `cmdWorkpiece.logCtx` and used by sync projectors during re-apply
 - `LogEventAndCUDs` failure during re-apply: level `Error`, stage `cp.partition_recovery.logeventandcuds.error`, msg `<error message>`
@@ -306,14 +308,17 @@ for the request lifecycle and status policy.
 - Inherits the partition-recovery attributes `vapp=sys/voedger`, `extension=sys._Recovery`, and `partid=<partitionID>`
 - `wsid` attrib: workspace ID
 - Workspace recovery start: level `Info`, stage `cp.workspace_recovery.start`, msg (empty)
-- Workspace recovery observes cancellation caused by partition reset: level `Info`, stage `cp.workspace_recovery.canceled`, msg `partition reset`
+- Workspace recovery observes cancellation caused by partition reset: level `Info`, stage `cp.workspace_recovery.canceled`, msg `partition reset, duration <milliseconds>ms`
   - Emitted once when the worker exits; uses `vapp=sys/voedger`, `extension=sys._Recovery`, `app=<appQName>`, `partid=<partitionID>`, and `wsid=<workspaceID>`
   - Replaces the success or WLog-read-error entry for that canceled attempt; service shutdown and request cancellation are not reported as partition resets
 - Invalid workspace checkpoint: level `Error`, stage `cp.workspace_recovery.checkpoint.invalid`, msg `stored WLog offset <checkpointOffset> does not identify an ID-bearing event; retrying from FirstOffset`
   - emitted when an inclusive read from a present nonzero checkpoint returns no event, its first event offset differs from the stored offset, or the checkpoint event has no newly allocated non-singleton record ID; absent and zero checkpoints start at `FirstOffset` without validation
   - uses the workspace recovery context attributes and precedes the fallback read from `FirstOffset`
-- ReadWLog failure during either the checkpoint scan or the `FirstOffset` fallback scan: level `Error`, stage `cp.workspace_recovery.readwlog.error`, msg `<error message>`
-- Workspace recovery complete: level `Info`, stage `cp.workspace_recovery.complete`, msg contains `nextWLogOffset <offset>` and `lastRecordID <recordID>`
+- ReadWLog failure during either the checkpoint scan or the `FirstOffset` fallback scan: level `Error`, stage `cp.workspace_recovery.readwlog.error`, msg `<error message>, duration <milliseconds>ms`
+- Workspace recovery failure before a WLog scan starts, including checkpoint lookup or cancellation: level `Error`, stage `cp.workspace_recovery.error`, msg `<error message>, duration <milliseconds>ms`
+- Workspace recovery complete: level `Info`, stage `cp.workspace_recovery.complete`, msg `nextWLogOffset <offset>, lastRecordID <recordID>, duration <milliseconds>ms`
+
+Partition and workspace recovery completion messages measure elapsed time from entry into the recovery function through its final outcome. The `recoveryDuration` helper appends `, duration <milliseconds>ms` to `msg`, using whole milliseconds, for example `123ms` or `0ms` for a sub-millisecond attempt. This is not a separate structured attribute and does not change bootstrap initial-recovery messages.
 
 ---
 

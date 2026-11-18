@@ -255,7 +255,7 @@ Alternatives:
 
 Canceled workspace results stay in the retired manager and cannot become failures
 of replacement requests. Only observed reset cancellation emits INFO
-`cp.workspace_recovery.canceled` with message `partition reset` and the application,
+`cp.workspace_recovery.canceled` with message `partition reset, duration <milliseconds>ms` and the application,
 partition, and workspace identifiers. It replaces that attempt's success or
 WLog-read-error log. Let `ReadWLog` handle cancellation during scans; check before
 context-free checkpoint reads, fallback admission, and result publication. No I/O interface,

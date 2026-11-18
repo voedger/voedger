@@ -1424,7 +1424,7 @@ func TestWorkspaceRecovery(t *testing.T) {
 			gate.allowExit()
 			require.ErrorIs(attempts[key].wait(requestCtx), context.Canceled)
 			// And each canceled recovery logs INFO once at "cp.workspace_recovery.canceled"
-			// And each log has message "partition reset", app "untill/airs-bp", partid 1, and its wsid
+			// And each log has a message starting with "partition reset, duration ", app "untill/airs-bp", partid 1, and its wsid
 			require.Equal(1, countCapturedLogLines(logCap, "level=INFO", "stage=cp.workspace_recovery.canceled",
 				`msg="partition reset, duration `, "app=untill/airs-bp", "partid=1", fmt.Sprintf("wsid=%d", key.wsid)))
 			// And canceled recoveries log neither "cp.workspace_recovery.complete" nor "cp.workspace_recovery.readwlog.error"

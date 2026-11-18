@@ -421,7 +421,7 @@ Feature: Partition and workspace recovery
         | 2       | 503 Service Unavailable   | partition 1: recovery is in progress |
       And replacement partition recovery completes before the reads return
       And each canceled recovery logs INFO once at "cp.workspace_recovery.canceled"
-      And each log has message "partition reset", app "untill/airs-bp", partid 1, and its wsid
+      And each log has a message starting with "partition reset, duration ", app "untill/airs-bp", partid 1, and its wsid
       And canceled recoveries log neither "cp.workspace_recovery.complete" nor "cp.workspace_recovery.readwlog.error"
 
     Scenario: The next request restarts recovery of the failed workspace and report the error
