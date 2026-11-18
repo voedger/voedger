@@ -119,6 +119,7 @@ const (
 	Storage_FederationCommand_Field_Owner         = "Owner"
 	Storage_FederationCommand_Field_AppName       = "AppName"
 	Storage_FederationCommand_Field_ExpectedCodes = "ExpectedCodes"
+	Storage_FederationCommand_Field_RetryOn       = "RetryOn"
 	Storage_FederationCommand_Field_NewIDs        = "NewIDs"
 	Storage_FederationCommand_Field_Result        = "Result"
 

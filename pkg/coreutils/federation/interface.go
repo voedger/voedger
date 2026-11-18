@@ -39,7 +39,11 @@ type IFederation interface {
 //
 // default VVM retry policy:
 // retries HTTP 408, 429 (respecting Retry-After), 500, 502, 503, and 504 responses;
-// each status has a one-minute retry window, with// full-jitter backoff starting at 20 milliseconds and capped at one second.
+// each status has a one-minute retry window, with full-jitter backoff starting at 20 milliseconds and capped at one second.
+//
+// Failures returned after a status retry window expires match httpu.ErrRetryExhausted
+// through errors.Is. Context termination does not carry this marker.
+// Absence of the marker does not establish that a failure is permanent.
 type IFederationWithRetry interface {
 	iFederationBase
 	dummy()

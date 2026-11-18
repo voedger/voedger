@@ -44,7 +44,6 @@ func Test_rowNullType(t *testing.T) {
 }
 
 func Test_clarifyJSONValue(t *testing.T) {
-	require := require.New(t)
 	test := newTest()
 
 	row := test.newTestRow()
@@ -69,6 +68,10 @@ func Test_clarifyJSONValue(t *testing.T) {
 		{val: float64(7.7), kind: appdef.DataKind_float64, expectedTypeKind: reflect.Float64},
 		{val: istructs.RecordID(7), kind: appdef.DataKind_RecordID, expectedTypeKind: reflect.Uint64},
 		{val: int64(7), kind: appdef.DataKind_RecordID, expectedTypeKind: reflect.Uint64},
+		{val: json.Number("127"), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8, expectedVal: int8(math.MaxInt8)},
+		{val: json.Number("-128"), kind: appdef.DataKind_int8, expectedTypeKind: reflect.Int8, expectedVal: int8(math.MinInt8)},
+		{val: json.Number("32767"), kind: appdef.DataKind_int16, expectedTypeKind: reflect.Int16, expectedVal: int16(math.MaxInt16)},
+		{val: json.Number("-32768"), kind: appdef.DataKind_int16, expectedTypeKind: reflect.Int16, expectedVal: int16(math.MinInt16)},
 		{val: json.Number("7"), kind: appdef.DataKind_int32, expectedTypeKind: reflect.Int32, expectedVal: int32(7)},
 		{val: json.Number("7"), kind: appdef.DataKind_int64, expectedTypeKind: reflect.Int64, expectedVal: int64(7)},
 		{val: json.Number("7.7"), kind: appdef.DataKind_float32, expectedTypeKind: reflect.Float32, expectedVal: float32(7.7)},
@@ -84,6 +87,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("%T", c.val), func(t *testing.T) {
+			require := require.New(t)
 			v, err := row.clarifyJSONValue(c.val, c.kind)
 			require.NoError(err)
 			if c.expectedVal != nil {
@@ -145,6 +149,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 
 	for i, ec := range errorCases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			require := require.New(t)
 			clarifiedVal, err := row.clarifyJSONValue(ec.val, ec.kind)
 			if ec.expectedError != nil {
 				require.ErrorIs(err, ec.expectedError)
@@ -156,6 +161,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 	}
 
 	t.Run("test Record", func(t *testing.T) {
+		require := require.New(t)
 		var testRec istructs.IRecord = test.newTestCRecord(100500700)
 
 		checkRecord := func(data any) {
@@ -178,6 +184,7 @@ func Test_clarifyJSONValue(t *testing.T) {
 	})
 
 	t.Run("test Event", func(t *testing.T) {
+		require := require.New(t)
 		var testEvent istructs.IDbEvent = test.newTestEvent(100501, 100500700)
 
 		checkEvent := func(data any) {

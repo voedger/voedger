@@ -200,7 +200,16 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	if wsDesc.QName() != appdef.NullQName {
 		ownerWSID := wsDesc.AsInt64(field_OwnerWSID)
 		for _, role := range principalPayload.Roles {
-			if role.Scope != payloads.RoleScopeWorkspacesOwnedBy || role.WSID != istructs.WSID(ownerWSID) { // nolint G115
+			switch role.Scope {
+			case payloads.RoleScopeWorkspace:
+				if role.WSID != req.RequestWSID {
+					continue
+				}
+			case payloads.RoleScopeWorkspacesOwnedBy:
+				if role.WSID != istructs.WSID(ownerWSID) { // nolint G115
+					continue
+				}
+			default:
 				continue
 			}
 			prn := iauthnz.Principal{

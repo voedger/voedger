@@ -10,7 +10,7 @@ Roles:
   - Caller obtaining or refreshing a principal token through the registry and sys APIs.
 
 - `@System`
-  - Caller issuing tokens with API-token semantics (`IsAPIToken=true`) for backend integrations and trusted internal callers.
+  - Trusted caller issuing application-bound Principal Tokens with scoped grants or converting payloads to API tokens for backend integrations
 
 ## Scenarios overview
 
@@ -19,6 +19,9 @@ Roles:
 
 - **`Issue API token`**
   - `@System` uses `[API-token issuer]` to convert the supplied principal payload into an API token with exact-Workspace role grants
+
+- **`Issue regular token with an exact-Workspace grant`**
+  - `@System` uses `[IAppTokens]` to preserve a regular token's identity and existing grants while adding an exact-Workspace grant, as detailed in the issuance flow below
 
 - **`Refresh principal token`**
   - `@Client` calls `[q.sys.RefreshPrincipalToken]` with the current `[Principal Token]`; the payload is decoded, the same identity (including the captured `Login` and `Alias`) is re-encoded with the same TTL/AppQName by `[ITokens].IssueToken`, and the new token is returned. Refresh never re-resolves the login or alias and never updates the captured values.
@@ -134,6 +137,22 @@ Payload contract
   -> @System: API token
 ```
 
+### Issue regular token with an exact-Workspace grant
+
+```text
+@System
+  -> [IAppTokens].ValidateToken(current regular Principal Token, &payload)
+       -> verify application binding, signature, audience, expiry, and payload claims
+  -> require payload.IsAPIToken == false
+  -> retain Login, Alias, SubjectKind, ProfileWSID, GlobalRoles, and existing Roles
+  -> append RoleType{Scope: RoleScopeWorkspace, WSID: target Workspace, QName: granted role}
+  -> [IAppTokens].IssueToken(requested lifetime, &payload)
+       -> [ITokens]: sign for the bound application and requested lifetime
+  -> @System: regular Principal Token with IsAPIToken still false
+```
+
+This flow uses the trusted in-process token service; it adds no public issuance endpoint or Subject membership. Effective grant matching and the additional permissions retained by regular tokens are defined in [Authorization](./arch-authz.md#role-sources).
+
 ### Refresh principal token
 
 ```text
@@ -181,7 +200,8 @@ The `IsAPIToken` branch of principal composition is documented in [arch-authz.md
 
 ### Versioning and compatibility
 
-- Every token issuer in this subsystem emits only the existing scope combinations: `RoleScopeWorkspace` for API tokens and `RoleScopeWorkspacesOwnedBy` for regular tokens
+- Every trusted issuer of regular tokens with `RoleScopeWorkspace` grants requires all nodes that validate those tokens to support this combination and all refresh and enrichment nodes to preserve explicit scopes before issuance begins
+- Every API-token conversion and enrichment path retains its existing scope selection policy; trusted regular-token issuance can additionally carry exact-Workspace grants as defined by the [auth model](./context.md#principaltoken)
 - Every principal-token validation path uses the shared payload validation hook, including authentication, refresh, and enrichment
 
-The additive claim allows existing validators to ignore scope while these combinations remain unchanged. An older refresh or enrichment node can drop the claim; a newer decoder recovers the same meaning from the preserved token kind. New token-kind and scope combinations require a separate rollout after validators understand explicit scope
+Legacy tokens without a Scope claim retain the token-kind defaults specified in the payload contract. Omitting Scope remains compatible only with API-token exact-Workspace grants and regular-token owned-by grants. Dropping Scope from a regular-token exact-Workspace grant changes its meaning to owned-by; scope-preserving serialization alone is also insufficient when a validator still ignores exact-Workspace grants on regular tokens. Deploy support across the relevant validation, refresh, and enrichment nodes before issuing this combination. Incompatible nodes must not process these tokens while they remain valid, including during rollback.
