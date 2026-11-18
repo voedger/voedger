@@ -87,11 +87,11 @@ func TestWorkspaceCreationErrors(t *testing.T) {
 						require.NoError(actual)
 					} else {
 						require.ErrorIs(actual, test.expectedError)
-						if test.expectedError == httpu.ErrRetryExhausted {
+						if errors.Is(test.expectedError, httpu.ErrRetryExhausted) {
 							require.Equal(test.creationError, actual)
 						}
 					}
-					if test.expectedError == httpu.ErrRetryExhausted {
+					if errors.Is(test.expectedError, httpu.ErrRetryExhausted) {
 						// Replaying the same input must retry the command after the destination recovers.
 						fed.On("Func", creationPath, mock.Anything, mock.Anything).Return(nil, nil).Once()
 						require.NoError(invoke())
