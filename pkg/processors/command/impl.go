@@ -355,6 +355,7 @@ func getOrStart[K comparable, T any](vvmCtx context.Context, manager *recoveryMa
 // run in a goroutine by recoveryManager
 func (cmdProc *cmdProc) recoverWorkspace(vvmCtx context.Context, requestCtx context.Context, wsKey workspaceKey,
 	appStructs istructs.IAppStructs) (recovered *workspace, err error) {
+	started := time.Now()
 	recoveryCtx := newWSRecoveryCtx(requestCtx, wsKey)
 	logger.InfoCtx(recoveryCtx, "cp.workspace_recovery.start")
 	var lastRecordID istructs.RecordID
@@ -364,14 +365,16 @@ func (cmdProc *cmdProc) recoverWorkspace(vvmCtx context.Context, requestCtx cont
 		if contextErr := vvmCtx.Err(); contextErr != nil {
 			recovered, err = nil, contextErr
 			if errors.Is(context.Cause(vvmCtx), errPartitionReset) {
-				logger.InfoCtx(recoveryCtx, "cp.workspace_recovery.canceled", errPartitionReset)
+				logger.InfoCtx(recoveryCtx, "cp.workspace_recovery.canceled", errPartitionReset, recoveryDuration(started))
 				return
 			}
 		}
 		if err == nil && recovered != nil {
-			logger.InfoCtx(recoveryCtx, "cp.workspace_recovery.complete", "nextWLogOffset ", recovered.NextWLogOffset, ", lastRecordID ", lastRecordID)
+			logger.InfoCtx(recoveryCtx, "cp.workspace_recovery.complete", "nextWLogOffset ", recovered.NextWLogOffset, ", lastRecordID ", lastRecordID, recoveryDuration(started))
 		} else if err != nil && readStarted {
-			logger.ErrorCtx(recoveryCtx, "cp.workspace_recovery.readwlog.error", err)
+			logger.ErrorCtx(recoveryCtx, "cp.workspace_recovery.readwlog.error", err, recoveryDuration(started))
+		} else if err != nil {
+			logger.ErrorCtx(recoveryCtx, "cp.workspace_recovery.error", err, recoveryDuration(started))
 		}
 	}()
 	if err := vvmCtx.Err(); err != nil {
@@ -502,6 +505,10 @@ func (cmdProc *cmdProc) getHostState(_ context.Context, cmd *cmdWorkpiece) (err 
 	return nil
 }
 
+func recoveryDuration(started time.Time) string {
+	return fmt.Sprintf(", duration %dms", time.Since(started).Milliseconds())
+}
+
 func newWSRecoveryCtx(ctx context.Context, wsKey workspaceKey) context.Context {
 	return logger.WithContextAttrs(newPartRecoveryCtx(ctx, wsKey.partitionID), map[string]any{
 		logger.LogAttr_WSID: wsKey.wsid,
@@ -519,14 +526,21 @@ func newPartRecoveryCtx(ctx context.Context, partID istructs.PartitionID) contex
 
 // runs in goroutine by recoveryManager
 func (cmdProc *cmdProc) recoverPartition(vvmCtx context.Context, cmd *cmdWorkpiece) (ap *appPartition, err error) {
+	started := time.Now()
 	recoveryCtx := newPartRecoveryCtx(cmd.cmdMes.RequestCtx(), cmd.cmdMes.PartitionID())
 	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.start")
 	partitionKey := partitionKey{appQName: cmd.cmdMes.AppQName(), partitionID: cmd.cmdMes.PartitionID()}
 	appID := cmd.appStructs.ClusterAppID()
 	ap = newAppPartition(vvmCtx, cmdProc.workspaceRecoveryHooks)
 	defer func(partition *appPartition) {
+		if contextErr := vvmCtx.Err(); contextErr != nil {
+			ap, err = nil, contextErr
+		}
 		if err != nil {
 			partition.cancelWorkspaceRecovery(err)
+			logger.ErrorCtx(recoveryCtx, "cp.partition_recovery.error", err, recoveryDuration(started))
+		} else {
+			logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "nextPLogOffset ", ap.nextPLogOffset, ", workspaces {}", recoveryDuration(started))
 		}
 	}(ap)
 	ap.clusterAppID = appID
@@ -558,7 +572,6 @@ func (cmdProc *cmdProc) recoverPartition(vvmCtx context.Context, cmd *cmdWorkpie
 	}
 
 	// Workspace recovery starts on a later command, after this partition is published.
-	logger.InfoCtx(recoveryCtx, "cp.partition_recovery.complete", "nextPLogOffset ", ap.nextPLogOffset, ", workspaces {}")
 	return ap, nil
 }
 

@@ -6,6 +6,7 @@
 package commandprocessor
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 
@@ -15,6 +16,34 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
+
+func TestRecoveryLogsDurationOnCheckpointFailure(t *testing.T) {
+	require := require.New(t)
+	for _, kind := range []testutils.OperationKind{testutils.GetPartition, testutils.GetWorkspace} {
+		stage := "cp.partition_recovery.error"
+		if kind == testutils.GetWorkspace {
+			stage = "cp.workspace_recovery.error"
+		}
+		t.Run(stage, func(t *testing.T) {
+			logs := logger.StartCapture(t, logger.LogLevelInfo)
+			storage := testutils.NewCheckpointStorageMem()
+			app := setUpRecoveryTestApp(t, withCheckpointStorage(storage))
+			defer tearDown(app)
+			expectedError := errors.New("checkpoint unavailable")
+			storage.SetError(testutils.Operation{Kind: kind, AppID: app.appStructs.ClusterAppID(), PartitionID: 1, WSID: 1}, expectedError)
+			if kind == testutils.GetWorkspace {
+				require.NoError(triggerAndWaitForRecovery(t, app, 1))
+				triggerWorkspaceRecovery(t, app, 1)
+				require.ErrorIs(app.recoveryTestControl.workspaces.wait(app.ctx, workspaceManagerKey(1)), expectedError)
+			} else {
+				require.ErrorIs(triggerAndWaitForRecovery(t, app, 1), expectedError)
+			}
+			// Failures before log scanning still report elapsed time inside the message
+			logs.HasLine("stage="+stage, "level=ERROR", `msg="checkpoint unavailable, duration `)
+			require.Regexp(`msg="checkpoint unavailable, duration [0-9]+ms"`, logs.String())
+		})
+	}
+}
 
 func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 	require := require.New(t)

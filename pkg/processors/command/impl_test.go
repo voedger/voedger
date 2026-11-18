@@ -394,10 +394,12 @@ func TestPartitionRecovery(t *testing.T) {
 			"partid=1",
 		)
 		logCap.HasLine("stage=cp.partition_recovery.complete",
+			", duration ",
 			"vapp=sys/voedger",
 			"extension=sys._Recovery",
 			"partid=1",
 		)
+		require.Regexp(`msg="nextPLogOffset [^"]*, duration [0-9]+ms"`, logCap.String())
 		logCap.HasLine(
 			"stage=cp.workspace_recovery.start",
 			"vapp=sys/voedger",
@@ -407,11 +409,13 @@ func TestPartitionRecovery(t *testing.T) {
 		)
 		logCap.HasLine(
 			"stage=cp.workspace_recovery.complete",
+			", duration ",
 			"vapp=sys/voedger",
 			"extension=sys._Recovery",
 			"partid=1",
 			"wsid=1",
 		)
+		require.Regexp(`msg="nextWLogOffset [^"]*, duration [0-9]+ms"`, logCap.String())
 	})
 
 	t.Run("partition recovery limit returns service unavailable", func(t *testing.T) {
@@ -1422,7 +1426,7 @@ func TestWorkspaceRecovery(t *testing.T) {
 			// And each canceled recovery logs INFO once at "cp.workspace_recovery.canceled"
 			// And each log has message "partition reset", app "untill/airs-bp", partid 1, and its wsid
 			require.Equal(1, countCapturedLogLines(logCap, "level=INFO", "stage=cp.workspace_recovery.canceled",
-				`msg="partition reset"`, "app=untill/airs-bp", "partid=1", fmt.Sprintf("wsid=%d", key.wsid)))
+				`msg="partition reset, duration `, "app=untill/airs-bp", "partid=1", fmt.Sprintf("wsid=%d", key.wsid)))
 			// And canceled recoveries log neither "cp.workspace_recovery.complete" nor "cp.workspace_recovery.readwlog.error"
 			require.Zero(countCapturedLogLines(logCap, "stage=cp.workspace_recovery.complete", fmt.Sprintf("wsid=%d", key.wsid)))
 			require.Zero(countCapturedLogLines(logCap, "stage=cp.workspace_recovery.readwlog.error", fmt.Sprintf("wsid=%d", key.wsid)))
