@@ -13,6 +13,6 @@ var (
 	ViewQNameWLogKnownOffsets = appdef.NewQName(appdef.SysPackage, "WLogKnownOffsets")
 )
 
-const (
-	args = "args"
-)
+const args = "args"
+
+const numWSRecoverers uint = 4

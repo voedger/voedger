@@ -17,7 +17,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -50,6 +49,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/bus"
+	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -228,6 +228,8 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 		blobprocessor.NewIRequestHandler,
 		provideIVVMAppTTLStorage,
 		storage.NewElectionsTTLStorage,
+		storage.NewRecoveryCheckpointStorage,
+		checkpoints.NewInitialRecovery,
 		provideStateOpts,
 		n10n.NewIN10NProc,
 		provideHTTPClient,
@@ -288,26 +290,14 @@ func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISched
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, time timeu.ITime, apppar appparts.IAppPartitions,
 	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
-	postWireInterfacePtrs btstrp.PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender) (BootstrapOperator, error) {
-	var clusterBuiltinApp btstrp.ClusterBuiltInApp
-	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps))
-	for _, app := range builtinApps {
-		if app.Name == istructs.AppQName_sys_cluster {
-			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
-		} else {
-			isSidecarApp := slices.ContainsFunc(sidecarApps, func(sa appparts.SidecarApp) bool {
-				return sa.Name == app.Name
-			})
-			if !isSidecarApp {
-				otherApps = append(otherApps, app)
-			}
-		}
-	}
-	if clusterBuiltinApp.Name == appdef.NullAppQName {
-		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
+	postWireInterfacePtrs btstrp.PostWireInterfacePtrs, blobHandler blobprocessor.IRequestHandler, requestSender bus.IRequestSender,
+	initialRecovery checkpoints.IInitialRecovery) (BootstrapOperator, error) {
+	clusterBuiltinApp, otherApps, err := btstrp.SplitBuiltInApps(builtinApps, sidecarApps)
+	if err != nil {
+		return nil, err
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		return btstrp.Bootstrap(federation.WithRetry(), asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens, storageProvider, postWireInterfacePtrs, blobHandler, requestSender)
+		return btstrp.Bootstrap(ctx, federation.WithRetry(), asp, time, apppar, initialRecovery, clusterBuiltinApp, otherApps, sidecarApps, itokens, storageProvider, postWireInterfacePtrs, blobHandler, requestSender)
 	}), nil
 }
 
@@ -375,10 +365,11 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[appdef.AppQName]extens
 
 func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, postWireInterfacePtrs btstrp.PostWireInterfacePtrs) istructsmem.IStatelessResources {
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, postWireInterfacePtrs btstrp.PostWireInterfacePtrs,
+	checkpointStorage checkpoints.IRecoveryCheckpointStorage) istructsmem.IStatelessResources {
 	ssr := istructsmem.NewStatelessResources()
 	sysprovide.ProvideStateless(ssr, vvmCfg.SMTPConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.Time, itokens, federation,
-		asp, atf, postWireInterfacePtrs.BlobHandler, postWireInterfacePtrs.RequestSender)
+		asp, atf, postWireInterfacePtrs.BlobHandler, postWireInterfacePtrs.RequestSender, checkpointStorage)
 	return ssr
 }
 

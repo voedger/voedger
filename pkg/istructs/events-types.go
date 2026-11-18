@@ -136,6 +136,8 @@ type IEventError interface {
 // What is kept in database
 type IPLogEvent interface {
 	IDbEvent
+	HandlingPartition() PartitionID
+	PLogOffset() Offset
 	Workspace() WSID
 	WLogOffset() Offset
 	Release()

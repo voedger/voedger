@@ -41,14 +41,6 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time timeu.ITime, sid
 			// notest
 			return err
 		}
-		wdocAppRecordID, err := uniques.GetRecordIDByUniqueCombination(args.WSID, qNameWDocApp, clusterAppStructs, map[string]interface{}{
-			Field_AppQName: appQNameStr,
-		})
-		if err != nil {
-			// notest
-			return err
-		}
-
 		numAppWSInt := args.ArgumentObject.AsInt32(Field_NumAppWorkspaces)
 		if numAppWSInt <= 0 || numAppWSInt > istructs.MaxNumAppWorkspaces {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("app workspaces number must be >0 and <%d", istructs.MaxNumAppWorkspaces))
@@ -59,32 +51,12 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time timeu.ITime, sid
 		}
 		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(numAppWSInt)      // nolint G115 checked above
 		numAppPartitionsToDeploy := istructs.NumAppPartitions(numPartitionsInt) // nolint G115 checked above
-		if wdocAppRecordID != istructs.NullRecordID {
-			kb, err := args.State.KeyBuilder(sys.Storage_Record, qNameWDocApp)
-			if err != nil {
-				// notest
-				return err
-			}
-			kb.PutRecordID(sys.Storage_Record_Field_ID, wdocAppRecordID)
-			appRec, err := args.State.MustExist(kb)
-			if err != nil {
-				// notest
-				return err
-			}
-			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))       // nolint G115 checked above
-			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces)) // nolint G115 checked above
-
-			// Check application compatibility (409)
-			if numPartitionsDeployed != numAppPartitionsToDeploy {
-				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", ErrNumPartitionsChanged.Error(),
-					appQName, numAppPartitionsToDeploy, numPartitionsDeployed))
-			}
-			if numAppWorkspacesDeployed != numAppWorkspacesToDeploy {
-				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorkspaces=%d", ErrNumAppWorkspacesChanged.Error(),
-					appQName, numAppWorkspacesToDeploy, numAppWorkspacesDeployed))
-			}
-
-			// idempotency: was deployed already and nothing changed -> do not initiaize app workspaces
+		exists, err := validateAppDeployment(clusterAppStructs, args.WSID, appQName, numAppPartitionsToDeploy, numAppWorkspacesToDeploy)
+		if err != nil {
+			return err
+		}
+		if exists {
+			// An existing compatible app needs no repeated workspace provisioning.
 			return nil
 		}
 
@@ -127,6 +99,43 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time timeu.ITime, sid
 		logger.Info(fmt.Sprintf("app %s successfully deployed: NumPartitions=%d, NumAppWorkspaces=%d", appQName, numAppPartitionsToDeploy, numAppWorkspacesToDeploy))
 		return nil
 	}
+}
+
+// validateAppDeployment protects against the case:
+// previously deployed with one amounts of partitions and app workspaces
+// now trying to deply with different amounts in the app descriptor
+func validateAppDeployment(clusterAppStructs istructs.IAppStructs, wsid istructs.WSID, appQName appdef.AppQName,
+	numPartitions istructs.NumAppPartitions, numAppWorkspaces istructs.NumAppWorkspaces) (exists bool, err error) {
+	wdocAppID, err := uniques.GetRecordIDByUniqueCombination(wsid, qNameWDocApp, clusterAppStructs, map[string]interface{}{
+		Field_AppQName: appQName.String(),
+	})
+	if err != nil {
+		// notest
+		return false, err
+	}
+	if wdocAppID == istructs.NullRecordID {
+		return false, nil
+	}
+	record, err := clusterAppStructs.Records().Get(wsid, true, wdocAppID)
+	if err != nil {
+		// notest
+		return false, err
+	}
+	if record.QName() == appdef.NullQName {
+		// notest
+		return false, istructs.ErrRecordNotFound
+	}
+	numPartitionsDeployed := istructs.NumAppPartitions(record.AsInt32(Field_NumPartitions))       // nolint G115 persisted deployment count
+	numAppWorkspacesDeployed := istructs.NumAppWorkspaces(record.AsInt32(Field_NumAppWorkspaces)) // nolint G115 persisted deployment count
+	if numPartitionsDeployed != numPartitions {
+		return false, coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
+			ErrNumPartitionsChanged.Error(), appQName, numPartitions, numPartitionsDeployed))
+	}
+	if numAppWorkspacesDeployed != numAppWorkspaces {
+		return false, coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorkspaces=%d",
+			ErrNumAppWorkspacesChanged.Error(), appQName, numAppWorkspaces, numAppWorkspacesDeployed))
+	}
+	return true, nil
 }
 
 func isSidecarApp(appQName appdef.AppQName, sidecarApps []appparts.SidecarApp) (sa appparts.SidecarApp, ok bool) {
