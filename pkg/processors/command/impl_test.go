@@ -2183,6 +2183,9 @@ func TestBorrowErrorResponseAndLogging(t *testing.T) {
 }
 
 func TestRejectedCommandsDoNotRecoverOrWrite(t *testing.T) {
+	require := require.New(t)
+	// Install capture before the fixture starts background log producers.
+	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 	parts := &failingBorrowAppParts{borrowErr: appparts.ErrNotFound}
 	app := setUpRecoveryTestApp(t, func(options *testAppOptions) {
 		options.appPartsForProcessor = func(appparts.IAppPartitions) appparts.IAppPartitions { return parts }
@@ -2190,12 +2193,12 @@ func TestRejectedCommandsDoNotRecoverOrWrite(t *testing.T) {
 	defer tearDown(app)
 	partitionID := coreutils.AppPartitionID(1, app.numAppPartitions)
 	readOffsets := func() (plog, wlog []istructs.Offset) {
-		require.NoError(t, app.appStructs.Events().ReadPLog(app.ctx, partitionID, istructs.FirstOffset,
+		require.NoError(app.appStructs.Events().ReadPLog(app.ctx, partitionID, istructs.FirstOffset,
 			istructs.ReadToTheEnd, func(offset istructs.Offset, _ istructs.IPLogEvent) error {
 				plog = append(plog, offset)
 				return nil
 			}))
-		require.NoError(t, app.appStructs.Events().ReadWLog(app.ctx, 1, istructs.FirstOffset,
+		require.NoError(app.appStructs.Events().ReadWLog(app.ctx, 1, istructs.FirstOffset,
 			istructs.ReadToTheEnd, func(offset istructs.Offset, _ istructs.IWLogEvent) error {
 				wlog = append(wlog, offset)
 				return nil
@@ -2203,19 +2206,19 @@ func TestRejectedCommandsDoNotRecoverOrWrite(t *testing.T) {
 		return
 	}
 	beforePLog, beforeWLog := readOffsets()
-	logCap := logger.StartCapture(t, logger.LogLevelVerbose)
+	logCap.Reset()
 	for range 3 {
 		meta, _, err := bus.GetCommandResponse(app.ctx, app.rawRequestSender, newCUD_3Inserts_Request(1, app))
-		require.Equal(t, http.StatusInternalServerError, meta.StatusCode)
+		require.Equal(http.StatusInternalServerError, meta.StatusCode)
 		var responseError coreutils.SysError
-		require.ErrorAs(t, err, &responseError)
-		require.Equal(t, "partition not found", responseError.Message)
+		require.ErrorAs(err, &responseError)
+		require.Equal("partition not found", responseError.Message)
 	}
 	afterPLog, afterWLog := readOffsets()
-	require.Equal(t, beforePLog, afterPLog)
-	require.Equal(t, beforeWLog, afterWLog)
-	require.Zero(t, app.recoveryTestControl.partitions.startCount(recoveryKeyForTestApp(app, 1)))
-	require.Zero(t, app.recoveryTestControl.workspaces.startCount(recoveryWorkspaceKeyForTestApp(app, 1)))
+	require.Equal(beforePLog, afterPLog)
+	require.Equal(beforeWLog, afterWLog)
+	require.Zero(app.recoveryTestControl.partitions.startCount(recoveryKeyForTestApp(app, 1)))
+	require.Zero(app.recoveryTestControl.workspaces.startCount(recoveryWorkspaceKeyForTestApp(app, 1)))
 	logCap.NotContains("cp.partition_recovery", "cp.workspace_recovery", "cp.plog_saved")
 }
 
