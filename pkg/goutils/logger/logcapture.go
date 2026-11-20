@@ -14,14 +14,18 @@ func StartCapture(t TB, level TLogLevel) ILogCaptor {
 	c := &captor{
 		t: t,
 	}
+	writersMu.Lock()
 	oldSLogOut, oldSLogErr := slogOut, slogErr
 	oldLegacyOut, oldLegacyErr := legacyOut, legacyErr
-	SetCtxWriters(c, c)
+	setCtxWritersLocked(c, c)
 	legacyOut, legacyErr = c, c
+	writersMu.Unlock()
 	restoreLevel := SetLogLevelWithRestore(level)
 	t.Cleanup(func() {
+		writersMu.Lock()
 		slogOut, slogErr = oldSLogOut, oldSLogErr
 		legacyOut, legacyErr = oldLegacyOut, oldLegacyErr
+		writersMu.Unlock()
 		restoreLevel()
 	})
 	return c

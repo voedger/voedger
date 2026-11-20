@@ -8,6 +8,7 @@ package logger
 import (
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -27,6 +28,8 @@ const (
 )
 
 var (
+	writersMu sync.RWMutex
+
 	// ctxHandlerOpts disables handler-level filtering (isEnabled() already gates all calls).
 	ctxHandlerOpts = &slog.HandlerOptions{
 		Level: slog.LevelDebug,

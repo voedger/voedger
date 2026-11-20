@@ -90,11 +90,13 @@ var legacyOut io.Writer = os.Stdout
 var legacyErr io.Writer = os.Stderr
 
 func DefaultPrintLine(level TLogLevel, line string) {
+	writersMu.RLock()
 	var w io.Writer
 	if level == LogLevelError {
 		w = legacyErr
 	} else {
 		w = legacyOut
 	}
+	writersMu.RUnlock()
 	fmt.Fprintln(w, line)
 }

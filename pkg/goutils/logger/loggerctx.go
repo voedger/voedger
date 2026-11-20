@@ -15,6 +15,12 @@ import (
 // SetCtxWriters replaces the writers used by all *Ctx logging functions.
 // Must be used in tests only: create an os.Pipe(), call SetCtxWriters, run the code, read the pipe.
 func SetCtxWriters(out, err io.Writer) {
+	writersMu.Lock()
+	defer writersMu.Unlock()
+	setCtxWritersLocked(out, err)
+}
+
+func setCtxWritersLocked(out, err io.Writer) {
 	slogOut = slog.New(slog.NewTextHandler(out, ctxHandlerOpts))
 	slogErr = slog.New(slog.NewTextHandler(err, ctxHandlerOpts))
 }
@@ -58,10 +64,12 @@ func logCtx(ctx context.Context, level TLogLevel, skipStackFrames int, stage str
 	if !isEnabled(level) {
 		return
 	}
+	writersMu.RLock()
 	log := slogOut
 	if level == LogLevelError {
 		log = slogErr
 	}
+	writersMu.RUnlock()
 	attrsFromCtx := sLogAttrsFromCtx(ctx)
 	fn, line := getFuncName(skipStackFrames)
 	attrs := make([]any, 0, len(attrsFromCtx)+2)

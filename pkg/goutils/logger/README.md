@@ -151,18 +151,18 @@ func newServer(ctx context.Context) *http.Server {
   atomic switching and restore-on-defer
   - [Level constants: logger.go#L22](logger.go#L22)
   - [Atomic level check: impl.go#L37](impl.go#L37)
-  - [Level restoration: logger.go#L36](logger.go#L36)
+  - [Level restoration: logger.go#L35](logger.go#L35)
 - **Caller tracking** - Automatic function name and line number
   in every log entry
   - [Stack frame analysis: impl.go#L42](impl.go#L42)
   - [Formatted output: impl.go#L55](impl.go#L55)
-  - [Skip frame control: logger.go#L64](logger.go#L64)
+  - [Skip frame control: logger.go#L63](logger.go#L63)
 - **Context-aware logging** - `*Ctx` functions read logging key/value
   pairs stored in `context.Context` and append them to each entry
-  - [WithContextAttrs: loggerctx.go#L23](loggerctx.go#L23)
-  - [Ctx logging functions: loggerctx.go#L31](loggerctx.go#L31)
-  - [sLogAttrsFromCtx: loggerctx.go#L87](loggerctx.go#L87)
-  - **Predefined attribute key constants** ([consts.go](consts.go#L19))
+  - [WithContextAttrs: loggerctx.go#L29](loggerctx.go#L29)
+  - [Ctx logging functions: loggerctx.go#L37](loggerctx.go#L37)
+  - [sLogAttrsFromCtx: loggerctx.go#L98](loggerctx.go#L98)
+  - **Predefined attribute key constants** ([consts.go](consts.go#L21))
 
     | Constant            | Key         | Example value |
     |---------------------|-------------|---------------|
@@ -174,19 +174,19 @@ func newServer(ctx context.Context) *http.Server {
 
 - **Output customization** - Pluggable `PrintLine` with automatic
   stderr/stdout routing per level
-  - [PrintLine hook: logger.go#L88](logger.go#L88)
-  - [DefaultPrintLine: logger.go#L93](logger.go#L93)
-- **[Performance guards](logger.go#L68)** - `IsVerbose()`,
+  - [PrintLine hook: logger.go#L87](logger.go#L87)
+  - [DefaultPrintLine: logger.go#L92](logger.go#L92)
+- **[Performance guards](logger.go#L79)** - `IsVerbose()`,
   `IsTrace()`, etc. prevent computing expensive arguments
 - **slog level mapping** - Both `Verbose` and `Trace` internal levels
   map to `slog.LevelDebug` when emitting structured log records
 - **Log capturing** - in-memory buffer that intercepts log output
   during tests; auto-restored when the test ends
   - [StartCapture: logcapture.go#L13](logcapture.go#L13)
-  - [ILogCaptor: types.go#L28](types.go#L28)
-  - [HasLine: logcapture.go#L30](logcapture.go#L30)
-  - [EventuallyHasLine: logcapture.go#L41](logcapture.go#L41)
-  - [NotContains: logcapture.go#L78](logcapture.go#L78)
+  - [ILogCaptor: types.go#L30](types.go#L30)
+  - [HasLine: logcapture.go#L34](logcapture.go#L34)
+  - [EventuallyHasLine: logcapture.go#L45](logcapture.go#L45)
+  - [NotContains: logcapture.go#L82](logcapture.go#L82)
 - **Stdlib `*log.Logger` bridge** - forward byte-oriented stdlib
   output (e.g. `http.Server.ErrorLog`) into the voedger ctx logger
   at Error level with one `Write` = one record, trailing CRLF trim,
