@@ -1,4 +1,4 @@
-# voedger: cover by tests the problematic case when impossible to recover RecorID after corrupted event
+# voedger: cover by tests the problematic case when impossible to recover RecordID after corrupted event
 
 - URL: https://untill.atlassian.net/browse/AIR-5314
 - ID: AIR-5314
