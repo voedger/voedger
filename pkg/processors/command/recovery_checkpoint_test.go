@@ -21,7 +21,7 @@ func TestPartitionRecoveryLoggingRetainsArguments(t *testing.T) {
 	require := require.New(t)
 	logs := logger.StartCapture(t, logger.LogLevelVerbose)
 	app := setUpRecoveryTestApp(t)
-	defer tearDown(app)
+	defer func() { tearDown(app) }() // Restart replaces the cancellation function and completion channel.
 	sendNoCUDCommand(t, 1, app)
 	restartCmdProc(&app)
 	logs.Reset()
