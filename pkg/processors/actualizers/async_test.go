@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -20,8 +21,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
 	"github.com/voedger/voedger/pkg/appdef/filter"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	retrier "github.com/voedger/voedger/pkg/goutils/retry"
 	"github.com/voedger/voedger/pkg/goutils/timeu"
@@ -30,6 +33,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -469,8 +473,522 @@ func getProjectorsInError(t *testing.T, metrics imetrics.IMetrics, appName appde
 	return projInErrors
 }
 
+// Observes the real reader's transition without changing notification delivery.
+type loggingPhaseBroker struct {
+	in10n.IN10nBroker
+	watching chan struct{}
+	once     sync.Once
+}
+
+func (b *loggingPhaseBroker) WatchChannel(ctx context.Context, id in10n.ChannelID, notify func(in10n.ProjectionKey, istructs.Offset)) {
+	b.once.Do(func() {
+		close(b.watching)
+	})
+	b.IN10nBroker.WatchChannel(ctx, id, notify)
+}
+
+type actualizerLoggingTest struct {
+	parts         appparts.IAppPartitions
+	app           istructs.IAppStructs
+	broker        *loggingPhaseBroker
+	filler        pLogFiller
+	ids           istructs.IIDGenerator
+	projector     appdef.QName
+	calls         atomic.Int32
+	invocationCtx chan context.Context
+	stop          func()
+}
+
+func newActualizerLoggingTest(t *testing.T, invoke func(istructs.IPLogEvent) error) *actualizerLoggingTest {
+	t.Helper()
+	return newActualizerLoggingTestWithBuffering(t, invoke, false)
+}
+
+func newActualizerLoggingTestWithBuffering(t *testing.T, invoke func(istructs.IPLogEvent) error, buffered bool) *actualizerLoggingTest {
+	t.Helper()
+	broker, cleanup := in10nmem.NewN10nBroker(in10n.Quotas{
+		Channels: 10, ChannelsPerSubject: 10, Subscriptions: 10, SubscriptionsPerSubject: 10,
+	}, timeu.NewITime())
+	t.Cleanup(cleanup)
+	f := &actualizerLoggingTest{
+		broker:        &loggingPhaseBroker{IN10nBroker: broker, watching: make(chan struct{})},
+		ids:           istructsmem.NewIDGenerator(),
+		projector:     appdef.NewQName("test", "LoggingProjector"),
+		invocationCtx: make(chan context.Context, 1),
+	}
+	cmd, args := appdef.NewQName("test", "LoggingCommand"), appdef.NewQName("test", "LoggingArgs")
+	cfg := &BasicAsyncActualizerConfig{Broker: f.broker, FlushInterval: time.Millisecond}
+	if buffered {
+		cfg.FlushInterval = 50 * time.Millisecond
+	}
+	var stop func()
+	f.parts, f.app, stop = deployTestApp(istructs.AppQName_test1_app1, 1, false, testWorkspace, testWorkspaceDescriptor,
+		func(ws appdef.IWorkspaceBuilder) {
+			ws.AddObject(args).AddField("value", appdef.DataKind_string, false)
+			ws.AddCommand(cmd).SetParam(args)
+			ws.AddCDoc(appdef.NewQName("test", "LoggingRecord")).AddField("value", appdef.DataKind_float64, false)
+			prj := ws.AddProjector(f.projector)
+			prj.Events().Add([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(cmd))
+			if !buffered {
+				prj.States().Add(sys.Storage_HTTP) // Flush each invocation so saved offsets prove completion.
+			}
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmd, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(istructs.Projector{Name: f.projector,
+				Func: func(event istructs.IPLogEvent, state istructs.IState, _ istructs.IIntents) error {
+					select {
+					case f.invocationCtx <- state.RequestContext():
+					default:
+					}
+					f.calls.Add(1)
+					if invoke != nil {
+						return invoke(event)
+					}
+					return nil
+				},
+			})
+		}, cfg)
+	f.stop = sync.OnceFunc(stop)
+	t.Cleanup(f.stop)
+	f.filler = pLogFiller{app: f.app, partition: 1, offset: 1, cmdQName: cmd,
+		fillEvent: func(event istructs.IRawEventBuilder) {
+			event.ArgumentObjectBuilder().PutString("value", "private-argument")
+			event.CUDBuilder().Create(appdef.NewQName("test", "LoggingRecord")).PutRecordID(appdef.SystemField_ID, 1)
+		},
+	}
+	return f
+}
+
+func (f *actualizerLoggingTest) createWorkspace() {
+	createWS(f.app, 1001, testWorkspace, testWorkspaceDescriptor, 1, 1, f.ids)
+	f.filler.offset = 2
+}
+
+func (f *actualizerLoggingTest) start() {
+	f.parts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
+}
+
+func (f *actualizerLoggingTest) waitOffset(require *require.Assertions, offset istructs.Offset) {
+	require.Eventually(func() bool {
+		actual, err := ActualizerOffset(f.app, 1, f.projector)
+		return err == nil && actual >= offset
+	},
+		5*time.Second, time.Millisecond)
+}
+
+func (f *actualizerLoggingTest) waitWatching(require *require.Assertions) {
+	require.Eventually(func() bool {
+		select {
+		case <-f.broker.watching:
+			return true
+		default:
+			return false
+		}
+	}, 5*time.Second, time.Millisecond)
+}
+
+func (f *actualizerLoggingTest) notify(offset istructs.Offset) {
+	f.broker.Update(in10n.ProjectionKey{App: istructs.AppQName_test1_app1, Projection: PLogUpdatesQName, WS: 1}, offset)
+}
+
+func TestAsyncProjectorEntireLogRunEnd(t *testing.T) {
+	t.Run("empty or already flushed log completes immediately", func(t *testing.T) {
+		require := require.New(t)
+		p := &asyncProjector{}
+		done := make(chan struct{})
+
+		_, err := p.DoAsync(t.Context(), &entireLogRunEnd{done: done})
+		require.NoError(err)
+		select {
+		case <-done:
+		default:
+			require.FailNow("entire log run completion was not signaled")
+		}
+		require.Nil(p.entireLogRunDone)
+	})
+	t.Run("unflushed events defer completion", func(t *testing.T) {
+		require := require.New(t)
+		p := &asyncProjector{pLogOffset: 3}
+		done := make(chan struct{})
+
+		_, err := p.DoAsync(t.Context(), &entireLogRunEnd{done: done})
+		require.NoError(err)
+		select {
+		case <-done:
+			require.FailNow("entire log run completed before flushing")
+		default:
+		}
+		require.Equal(done, p.entireLogRunDone)
+		require.Equal(istructs.Offset(3), p.pLogOffset)
+	})
+}
+
+func TestAsyncLogging(t *testing.T) {
+	t.Run("logging: scn: A new projector logs entire log run start and completion", func(t *testing.T) {
+		require := require.New(t)
+		// Given projector test.LoggingProjector belongs to test1/app1 partition 1
+		// Given a new projector has events through offset 3 and verbose logging is enabled
+		logs := logger.StartCapture(t, logger.LogLevelVerbose)
+		f := newActualizerLoggingTest(t, nil)
+		f.createWorkspace()
+		f.filler.fill(1001, f.ids)
+		f.filler.fill(1001, f.ids)
+		// When the projector finishes the entire log run from FirstOffset
+		f.start()
+		f.waitWatching(require)
+		f.waitOffset(require, 3)
+		require.Equal(int32(2), f.calls.Load())
+		// Then one INFO ap.entire_log_run.start entry is present
+		// And one INFO ap.entire_log_run.complete entry has nonnegative duration_ms
+		// And both entries identify the application, projector and partition without message text or args
+		// And neither entry includes poffset
+		requireEntireLogRunLogs(t, require, logs)
+		// And entire log run event details are absent
+		logs.NotContains("stage=ap ", "stage=ap.log_cud", "stage=ap.success", "args=", "private-argument")
+
+		// Live notifications resume detailed logging without repeating lifecycle entries.
+		offset := f.filler.fill(1001, f.ids)
+		f.notify(offset)
+		f.waitOffset(require, offset)
+		logs.EventuallyHasLine("stage=ap.success", "partid=1", fmt.Sprintf("poffset=%d", offset))
+		logs.HasLine("stage=ap ", "partid=1", "triggeredby=test.LoggingCommand", fmt.Sprintf("poffset=%d", offset))
+		logs.NotContains("args=", "private-argument")
+		requireEntireLogRunLogs(t, require, logs)
+	})
+	t.Run("logging: scn: Entire log run completion waits for pending processing", func(t *testing.T) {
+		require := require.New(t)
+		logs := logger.StartCapture(t, logger.LogLevelVerbose)
+		release := make(chan struct{})
+		var once sync.Once
+		unblock := func() { once.Do(func() { close(release) }) }
+		// Given projector test.LoggingProjector belongs to test1/app1 partition 1
+		f := newActualizerLoggingTestWithBuffering(t, func(event istructs.IPLogEvent) error {
+			if event.PLogOffset() == 3 {
+				<-release
+			}
+			return nil
+		}, true)
+		t.Cleanup(unblock) // Unblock before stopping the actualizer on assertion failure.
+		// Given a new projector has read through offset 3 but its last event is still processing
+		f.createWorkspace()
+		f.filler.fill(1001, f.ids)
+		f.filler.fill(1001, f.ids)
+		f.start()
+		require.Eventually(func() bool { return f.calls.Load() == 2 }, 5*time.Second, time.Millisecond)
+		// When the operator inspects the logs
+		actual := logs.String()
+		// Then ap.entire_log_run.start is present and ap.entire_log_run.complete is absent
+		require.Contains(actual, "stage=ap.entire_log_run.start")
+		require.NotContains(actual, "stage=ap.entire_log_run.complete")
+
+		// Releasing the last event must allow completion only after its buffered changes are flushed.
+		unblock()
+		logs.EventuallyHasLine("stage=ap.entire_log_run.complete")
+		actualOffset, err := ActualizerOffset(f.app, 1, f.projector)
+		require.NoError(err)
+		require.Equal(istructs.Offset(3), actualOffset)
+		requireEntireLogRunLogs(t, require, logs)
+		require.Equal(int32(2), f.calls.Load())
+		logs.NotContains("stage=ap ", "stage=ap.log_cud", "stage=ap.success")
+	})
+	for _, test := range []struct {
+		name  string
+		level logger.TLogLevel
+	}{
+		{name: "verbose", level: logger.LogLevelVerbose},
+		{name: "info", level: logger.LogLevelInfo},
+	} {
+		t.Run("logging: scn: An entire log run retry keeps one start and one completion: "+test.name, func(t *testing.T) {
+			require := require.New(t)
+			logs := logger.StartCapture(t, test.level)
+			// Given projector test.LoggingProjector belongs to test1/app1 partition 1
+			// Given a new projector fails its first attempt to process offset 2
+			var attempts atomic.Int32
+			f := newActualizerLoggingTest(t, func(event istructs.IPLogEvent) error {
+				if event.PLogOffset() == 2 && attempts.Add(1) == 1 {
+					return errors.New("projector failed")
+				}
+				return nil
+			})
+			f.createWorkspace()
+			f.filler.fill(1001, f.ids)
+			// When the entire log run succeeds after an automatic retry
+			f.start()
+			f.waitWatching(require)
+			f.waitOffset(require, 2)
+			require.Equal(int32(2), attempts.Load())
+			// Then one INFO ap.entire_log_run.start precedes the error and one INFO ap.entire_log_run.complete follows it
+			requireEntireLogRunLogs(t, require, logs)
+			actual := logs.String()
+			require.Less(strings.Index(actual, "stage=ap.entire_log_run.start"), strings.Index(actual, "stage=ap.error"))
+			require.Less(strings.Index(actual, "stage=ap.error"), strings.Index(actual, "stage=ap.entire_log_run.complete"))
+			// And the ERROR ap.error entry identifies the application, projector, workspace, event and offsets without args
+			logs.HasLine("level=ERROR", "stage=ap.error", "projector failed", "vapp=test1/app1", "extension=ap.test.LoggingProjector",
+				"partid=1", "wsid=1001", "woffset=0", "poffset=2", "evqname=test.LoggingCommand")
+			logs.NotContains("args=", "private-argument")
+			logs.NotContains("stage=ap ", "stage=ap.log_cud", "stage=ap.success")
+		})
+	}
+}
+
+func TestAsyncLoggingEntireLogRunTransitions(t *testing.T) {
+	t.Run("empty initial log then live events", func(t *testing.T) {
+		require := require.New(t)
+		logs := logger.StartCapture(t, logger.LogLevelVerbose)
+		f := newActualizerLoggingTest(t, nil)
+		f.start()
+		f.waitWatching(require)
+		requireEntireLogRunLogs(t, require, logs)
+		logs.NotContains("stage=ap ", "stage=ap.log_cud", "stage=ap.success", "args=", "private-argument")
+
+		f.createWorkspace()
+		offset := f.filler.fill(1001, f.ids)
+		f.notify(offset)
+		f.waitOffset(require, offset)
+		logs.EventuallyHasLine("stage=ap.success", "partid=1", fmt.Sprintf("poffset=%d", offset))
+		logs.HasLine("stage=ap ", "partid=1", "triggeredby=test.LoggingCommand", fmt.Sprintf("poffset=%d", offset))
+		logs.NotContains("args=", "private-argument")
+		requireEntireLogRunLogs(t, require, logs)
+	})
+	t.Run("stopping unfinished entire log run does not log completion", func(t *testing.T) {
+		require := require.New(t)
+		logs := logger.StartCapture(t, logger.LogLevelInfo)
+		release := make(chan struct{})
+		unblock := sync.OnceFunc(func() { close(release) })
+		f := newActualizerLoggingTest(t, func(istructs.IPLogEvent) error { <-release; return nil })
+		t.Cleanup(unblock)
+		f.createWorkspace()
+		f.filler.fill(1001, f.ids)
+		f.start()
+		require.Eventually(func() bool { return f.calls.Load() == 1 }, 5*time.Second, time.Millisecond)
+		invocationCtx := <-f.invocationCtx
+		stopped := make(chan struct{})
+		go func() {
+			defer close(stopped)
+			f.stop()
+		}()
+		require.Eventually(func() bool { return invocationCtx.Err() != nil }, 5*time.Second, time.Millisecond)
+		unblock()
+		require.Eventually(func() bool {
+			select {
+			case <-stopped:
+				return true
+			default:
+				return false
+			}
+		}, 5*time.Second, time.Millisecond)
+		logs.HasLine("stage=ap.entire_log_run.start")
+		logs.NotContains("stage=ap.entire_log_run.complete")
+	})
+	t.Run("entire log run completes when all events are skipped", func(t *testing.T) {
+		require := require.New(t)
+		logs := logger.StartCapture(t, logger.LogLevelInfo)
+		f := newActualizerLoggingTest(t, nil)
+		f.createWorkspace() // Workspace creation does not trigger this projector.
+		f.start()
+		f.waitWatching(require)
+		requireEntireLogRunLogs(t, require, logs)
+		require.Zero(f.calls.Load())
+		actual, err := ActualizerOffset(f.app, 1, f.projector)
+		require.NoError(err)
+		require.Equal(istructs.NullOffset, actual) // The marker must not force a checkpoint.
+	})
+	t.Run("entire log run stays quiet across read batches", func(t *testing.T) {
+		require := require.New(t)
+		logs := logger.StartCapture(t, logger.LogLevelVerbose)
+		f := newActualizerLoggingTest(t, nil)
+		f.createWorkspace()
+		for range plogReadBatchSize {
+			f.filler.fill(1001, f.ids)
+		}
+		f.start()
+		logs.EventuallyHasLine("stage=ap.entire_log_run.complete")
+		expectedOffset := istructs.FirstOffset + istructs.Offset(plogReadBatchSize)
+		f.waitOffset(require, expectedOffset)
+		require.Equal(int32(plogReadBatchSize), f.calls.Load())
+		requireEntireLogRunLogs(t, require, logs)
+		logs.NotContains("stage=ap ", "stage=ap.log_cud", "stage=ap.success", "args=")
+	})
+}
+
+func requireEntireLogRunLogs(t *testing.T, require *require.Assertions, logs logger.ILogCaptor) {
+	t.Helper()
+	logs.HasLine("level=INFO", "stage=ap.entire_log_run.start")
+	logs.HasLine("level=INFO", "stage=ap.entire_log_run.complete")
+	require.Equal(1, strings.Count(logs.String(), "stage=ap.entire_log_run.start"))
+	require.Equal(1, strings.Count(logs.String(), "stage=ap.entire_log_run.complete"))
+	for line := range strings.SplitSeq(logs.String(), "\n") {
+		if !strings.Contains(line, "stage=ap.entire_log_run.") {
+			continue
+		}
+		require.Contains(line, "vapp=test1/app1")
+		require.Contains(line, "extension=ap.test.LoggingProjector")
+		require.Contains(line, "partid=1")
+		require.Contains(line, `msg=""`)
+		require.NotContains(line, "args=")
+		require.NotContains(line, "wsid=")
+		require.NotContains(line, "woffset=")
+		require.NotContains(line, "poffset=")
+		require.NotContains(line, "evqname=")
+		if strings.Contains(line, "stage=ap.entire_log_run.complete") {
+			require.Regexp(`\bduration_ms=\d+(\s|$)`, line)
+		} else {
+			require.NotContains(line, "duration_ms=")
+		}
+	}
+}
+
+func TestAsyncLoggingErrorsAndRetry(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		saved istructs.Offset
+		live  bool
+	}{
+		{name: "saved offset", saved: 1},
+		{name: "live events", live: true},
+	} {
+		for _, level := range []logger.TLogLevel{logger.LogLevelVerbose, logger.LogLevelInfo} {
+			t.Run(fmt.Sprintf("%s level %d", test.name, level), func(t *testing.T) {
+				require := require.New(t)
+				logs := logger.StartCapture(t, level)
+				var attempts atomic.Int32
+				f := newActualizerLoggingTest(t, func(istructs.IPLogEvent) error {
+					if attempts.Add(1) == 1 {
+						return errors.New("projector failed")
+					}
+					return nil
+				})
+				f.createWorkspace()
+				if test.live {
+					f.start()
+					f.waitWatching(require)
+					logs.EventuallyHasLine("stage=ap.entire_log_run.complete")
+				} else {
+					require.NoError(storeProjectorOffset(f.app, 1, f.projector, test.saved))
+				}
+				offset := f.filler.fill(1001, f.ids)
+				if test.live {
+					f.notify(offset)
+				} else {
+					f.start()
+				}
+				f.waitOffset(require, offset)
+				require.Equal(int32(2), attempts.Load())
+				expectedStarts := 1
+				if test.saved != istructs.NullOffset {
+					expectedStarts = 0
+					logs.NotContains("stage=ap.entire_log_run.complete")
+				} else {
+					logs.EventuallyHasLine("stage=ap.entire_log_run.complete")
+					requireEntireLogRunLogs(t, require, logs)
+				}
+				require.Equal(expectedStarts, strings.Count(logs.String(), "stage=ap.entire_log_run.start"))
+				logs.HasLine("level=ERROR", "stage=ap.error", "projector failed", "vapp=test1/app1", "extension=ap.test.LoggingProjector",
+					"partid=1", "wsid=1001", "woffset=0", "poffset=2", "evqname=test.LoggingCommand")
+				logs.NotContains("args=", "private-argument")
+				if level == logger.LogLevelInfo {
+					logs.NotContains("stage=ap ", "stage=ap.success")
+				} else if !test.live {
+					logs.EventuallyHasLine("stage=ap.success", "poffset=2")
+				} else {
+					logs.HasLine("stage=ap ", "poffset=2", "triggeredby=test.LoggingCommand")
+				}
+			})
+		}
+	}
+}
+
+func TestAsyncDetailLoggingFailureRetainsEventContext(t *testing.T) {
+	require := require.New(t)
+	logs := logger.StartCapture(t, logger.LogLevelVerbose)
+	f := newActualizerLoggingTest(t, nil)
+	f.createWorkspace()
+	require.NoError(storeProjectorOffset(f.app, 1, f.projector, 1))
+	f.filler.fillEvent = func(event istructs.IRawEventBuilder) {
+		event.ArgumentObjectBuilder().PutString("value", "private-argument")
+		row := event.CUDBuilder().Create(appdef.NewQName("test", "LoggingRecord"))
+		row.PutRecordID(appdef.SystemField_ID, 1)
+		row.PutFloat64("value", math.NaN()) // Valid binary value that JSON logging cannot serialize.
+	}
+	f.filler.fill(1001, f.ids)
+	f.start()
+	logs.EventuallyHasLine("stage=ap.error", "unsupported value: NaN", "vapp=test1/app1",
+		"extension=ap.test.LoggingProjector", "wsid=1001", "woffset=0", "poffset=2", "evqname=test.LoggingCommand")
+	require.Zero(f.calls.Load())
+	logs.NotContains("args=", "private-argument")
+}
+
+func TestAsyncLoggingRetryAfterPartialEntireLogRun(t *testing.T) {
+	require := require.New(t)
+	logs := logger.StartCapture(t, logger.LogLevelVerbose)
+	var attempts atomic.Int32
+	f := newActualizerLoggingTest(t, func(event istructs.IPLogEvent) error {
+		if event.PLogOffset() == 3 && attempts.Add(1) == 1 {
+			return errors.New("projector failed after saving offset 2")
+		}
+		return nil
+	})
+	f.createWorkspace()
+	f.filler.fill(1001, f.ids)
+	f.filler.fill(1001, f.ids)
+	f.start()
+	logs.EventuallyHasLine("stage=ap.entire_log_run.complete")
+	f.waitOffset(require, 3)
+	require.Equal(int32(3), f.calls.Load()) // Offset 2 is saved and is not invoked again on retry.
+	require.Equal(int32(2), attempts.Load())
+	requireEntireLogRunLogs(t, require, logs)
+	logs.HasLine("stage=ap.error", "projector failed after saving offset 2", "poffset=3")
+	logs.HasLine("stage=ap ", "triggeredby=test.LoggingCommand", "poffset=3")
+	logs.HasLine("stage=ap.success", "poffset=3")
+	logs.NotContains("args=", "private-argument")
+	for line := range strings.SplitSeq(logs.String(), "\n") {
+		if strings.Contains(line, "stage=ap ") || strings.Contains(line, "stage=ap.log_cud") || strings.Contains(line, "stage=ap.success") {
+			require.Contains(line, "poffset=3") // Initial processing stays quiet; saved-offset retry uses normal logging.
+		}
+	}
+}
+
+func TestAsyncBorrowFailureRetainsEventContext(t *testing.T) {
+	for _, level := range []logger.TLogLevel{logger.LogLevelVerbose, logger.LogLevelInfo} {
+		t.Run(fmt.Sprint(level), func(t *testing.T) {
+			require := require.New(t)
+			logs := logger.StartCapture(t, level)
+			adb := builder.New()
+			adb.AddPackage("test", "test.com/test")
+			ws := adb.AddWorkspace(testWorkspace)
+			ws.AddCommand(testQName)
+			ws.AddProjector(incrementorName).Events().Add([]appdef.OperationKind{appdef.OperationKind_Execute}, filter.QNames(testQName))
+			prj := appdef.Projector(adb.MustBuild().Type, incrementorName)
+			expected := errors.New("partition unavailable")
+			ctx := logger.WithContextAttrs(t.Context(), map[string]any{"vapp": "test1/app1", "extension": "ap.test.Projector"})
+			parts := &ctxFailingAppParts{failOnCtx: ctx, failErr: expected}
+			p := &asyncProjector{iProjector: prj, appParts: parts}
+			event := &coreutils.MockPLogEvent{}
+			event.On("QName").Return(testQName)
+			event.On("Workspace").Return(istructs.WSID(1001))
+			event.On("WLogOffset").Return(istructs.Offset(7))
+			event.On("Release").Return().Once()
+			w := &workpiece{event: event, pLogOffset: 19, logCtx: ctx, entireLogRun: true}
+			_, err := p.DoAsync(ctx, w)
+			require.ErrorIs(err, expected)
+			act := &asyncActualizer{}
+			act.Prepare(ctx)
+			pipelineErr := pipeline.WireAsyncOperator("Projector", p).NewError(err, w, "test")
+			retry, err := act.retrierCfg.OnError(1, time.Millisecond, pipelineErr)
+			require.NoError(err)
+			require.True(retry)
+			logs.HasLine("stage=ap.error", "partition unavailable", "vapp=test1/app1", "extension=ap.test.Projector",
+				"wsid=1001", "woffset=7", "poffset=19", "evqname="+testQName.String())
+			logs.NotContains("args=")
+			event.AssertNotCalled(t, "ArgumentObject")
+			event.AssertExpectations(t)
+		})
+	}
+}
+
 func Test_AsynchronousActualizer_Logs(t *testing.T) {
-	t.Run("execute projector logs args all cuds and success", func(t *testing.T) {
+	t.Run("execute projector logs all cuds and success without arguments", func(t *testing.T) {
 		require := require.New(t)
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
 
@@ -533,10 +1051,12 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 		}
 		topOffset := f.fill(1001, idGen)
 
+		require.NoError(storeProjectorOffset(appStructs, partitionNr, projectorQName, 1))
 		appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-		for getActualizerOffset(require, appStructs, partitionNr, projectorQName) < topOffset {
-			time.Sleep(time.Microsecond)
-		}
+		require.Eventually(func() bool {
+			actual, err := ActualizerOffset(appStructs, partitionNr, projectorQName)
+			return err == nil && actual >= topOffset
+		}, 5*time.Second, time.Millisecond)
 
 		logCap.HasLine("stage=ap",
 			fmt.Sprintf("vapp=%s", appName),
@@ -544,17 +1064,18 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 			"wsid=1001", "woffset=",
 			fmt.Sprintf("poffset=%d", topOffset),
 			fmt.Sprintf("evqname=%s", cmdQName),
-			"args={", `\"name\":\"hello\"`,
+
 			fmt.Sprintf("triggeredby=%s", cmdQName),
 		)
-		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQName1), "op=create",
+		logCap.HasLine("stage=ap.log_cud", "partid=1", fmt.Sprintf("rectype=%s", recQName1), "op=create",
 			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQName1))
-		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQName2), "op=create",
+		logCap.HasLine("stage=ap.log_cud", "partid=1", fmt.Sprintf("rectype=%s", recQName2), "op=create",
 			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQName2))
 		require.Equal(2, strings.Count(logCap.String(), "op=create"))
 		require.Equal(2, strings.Count(logCap.String(), "newfields="))
 		logCap.NotContains("oldfields=")
-		logCap.HasLine("stage=ap.success")
+		logCap.EventuallyHasLine("stage=ap.success")
+		logCap.NotContains("args=")
 	})
 
 	t.Run("record projector logs only triggering cuds", func(t *testing.T) {
@@ -616,19 +1137,22 @@ func Test_AsynchronousActualizer_Logs(t *testing.T) {
 		}
 		topOffset := f.fill(1001, idGen)
 
+		require.NoError(storeProjectorOffset(appStructs, partitionNr, projectorQName, 1))
 		appParts.DeployAppPartitions(appName, []istructs.PartitionID{partitionNr})
-		for getActualizerOffset(require, appStructs, partitionNr, projectorQName) < topOffset {
-			time.Sleep(time.Microsecond)
-		}
+		require.Eventually(func() bool {
+			actual, err := ActualizerOffset(appStructs, partitionNr, projectorQName)
+			return err == nil && actual >= topOffset
+		}, 5*time.Second, time.Millisecond)
 
-		logCap.HasLine("stage=ap", "args={}", fmt.Sprintf("triggeredby=%s", recQNameLogged))
+		logCap.HasLine("stage=ap", fmt.Sprintf("triggeredby=%s", recQNameLogged))
 		logCap.HasLine("stage=ap.log_cud", fmt.Sprintf("rectype=%s", recQNameLogged), "op=create",
 			`\"sys.IsActive\":true`, fmt.Sprintf(`\"sys.QName\":\"%s\"`, recQNameLogged))
 		logCap.NotContains(fmt.Sprintf("rectype=%s", recQNameSkipped))
 		require.Equal(1, strings.Count(logCap.String(), "op=create"))
 		require.Equal(1, strings.Count(logCap.String(), "newfields="))
 		logCap.NotContains("oldfields=")
-		logCap.HasLine("stage=ap.success")
+		logCap.EventuallyHasLine("stage=ap.success")
+		logCap.NotContains("args=")
 	})
 }
 

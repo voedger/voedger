@@ -2601,6 +2601,16 @@ func setUp(t *testing.T, prepare func(wsb appdef.IWorkspaceBuilder, cfg *istruct
 	}
 }
 
+func TestCommandLoggingRetainsArguments(t *testing.T) {
+	require := require.New(t)
+	logs := logger.StartCapture(t, logger.LogLevelVerbose)
+	app := setUpRecoveryTestApp(t)
+	defer tearDown(app)
+	response := sendNoCUDCommand(t, 1, app)
+	require.NotEmpty(response)
+	logs.HasLine("stage=cp.plog_saved", "evqname=sys.TestNoCUD", "woffset=", "poffset=", "args=", `\"Marker\":1`)
+}
+
 func TestLogEventAndCUDs(t *testing.T) {
 	testQName := appdef.NewQName("test", "Article")
 

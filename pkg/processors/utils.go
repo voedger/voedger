@@ -131,29 +131,48 @@ func SetPrincipalsForAnonymousOnlyFunc(appDef appdef.IAppDef, funcQName appdef.Q
 	return false
 }
 
-// returns logCtx enriched by `woffset`, `poffset`, `evqname` log attribs
-// returns initial logCtx if verbose level is off
-func LogEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent, pLogOffset istructs.Offset, appDef appdef.IAppDef,
-	skipStackFrames int, stage string, perCUDLogCallback func(istructs.ICUDRow) (bool, string, error), eventMessageAdds string) (enrichedCtx context.Context, err error) {
-	if !logger.IsVerbose() {
-		return logCtx, nil
-	}
-	enrichedCtx = logger.WithContextAttrs(logCtx, map[string]any{
+// WithEventLogAttrs preserves event identity independently of detail logging.
+func WithEventLogAttrs(logCtx context.Context, event istructs.IPLogEvent, pLogOffset istructs.Offset) context.Context {
+	return logger.WithContextAttrs(logCtx, map[string]any{
 		"woffset": event.WLogOffset(),
 		"poffset": pLogOffset,
 		"evqname": event.QName(),
 	})
-	argsJSON := []byte("{}")
-	if event.ArgumentObject() != nil && event.ArgumentObject().QName() != appdef.NullQName {
-		argsJSON, err = json.Marshal(coreutils.ObjectToMap(event.ArgumentObject(), appDef))
-		if err != nil {
-			// notest
-			return nil, err
-		}
+}
+
+// returns logCtx enriched by `woffset`, `poffset`, `evqname` log attribs
+// returns initial logCtx if verbose level is off
+func LogEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent, pLogOffset istructs.Offset, appDef appdef.IAppDef,
+	skipStackFrames int, stage string, perCUDLogCallback func(istructs.ICUDRow) (bool, string, error), eventMessageAdds string) (enrichedCtx context.Context, err error) {
+	return logEventAndCUDs(logCtx, event, pLogOffset, appDef, skipStackFrames+1, stage, perCUDLogCallback, eventMessageAdds, true)
+}
+
+// LogEventAndCUDsWithoutArgs logs event details without accessing argument payloads.
+func LogEventAndCUDsWithoutArgs(logCtx context.Context, event istructs.IPLogEvent, pLogOffset istructs.Offset, appDef appdef.IAppDef,
+	skipStackFrames int, stage string, perCUDLogCallback func(istructs.ICUDRow) (bool, string, error), eventMessageAdds string) (context.Context, error) {
+	return logEventAndCUDs(logCtx, event, pLogOffset, appDef, skipStackFrames+1, stage, perCUDLogCallback, eventMessageAdds, false)
+}
+
+func logEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent, pLogOffset istructs.Offset, appDef appdef.IAppDef,
+	skipStackFrames int, stage string, perCUDLogCallback func(istructs.ICUDRow) (bool, string, error), eventMessageAdds string, logArgs bool) (enrichedCtx context.Context, err error) {
+	if !logger.IsVerbose() {
+		return logCtx, nil
 	}
-	msg := fmt.Sprintf("args=%s", argsJSON)
-	if len(eventMessageAdds) > 0 {
-		msg += ", " + eventMessageAdds
+	enrichedCtx = WithEventLogAttrs(logCtx, event, pLogOffset)
+	msg := eventMessageAdds
+	if logArgs {
+		argsJSON := []byte("{}")
+		if args := event.ArgumentObject(); args != nil && args.QName() != appdef.NullQName {
+			argsJSON, err = json.Marshal(coreutils.ObjectToMap(args, appDef))
+			if err != nil {
+				// notest
+				return nil, err
+			}
+		}
+		msg = fmt.Sprintf("args=%s", argsJSON)
+		if len(eventMessageAdds) > 0 {
+			msg += ", " + eventMessageAdds
+		}
 	}
 	logger.LogCtx(enrichedCtx, skipStackFrames+1, logger.LogLevelVerbose, stage, msg)
 	for cud := range event.CUDs {

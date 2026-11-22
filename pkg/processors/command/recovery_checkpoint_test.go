@@ -17,6 +17,19 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+func TestPartitionRecoveryLoggingRetainsArguments(t *testing.T) {
+	require := require.New(t)
+	logs := logger.StartCapture(t, logger.LogLevelVerbose)
+	app := setUpRecoveryTestApp(t)
+	defer tearDown(app)
+	sendNoCUDCommand(t, 1, app)
+	restartCmdProc(&app)
+	logs.Reset()
+	require.NoError(triggerAndWaitForRecovery(t, app, 1))
+	logs.HasLine("stage=cp.partition_recovery.reapply", "evqname=sys.TestNoCUD",
+		"woffset=", "poffset=", "args=", `\"Marker\":1`)
+}
+
 func TestRecoveryLogsDurationOnCheckpointFailure(t *testing.T) {
 	require := require.New(t)
 	for _, kind := range []testutils.OperationKind{testutils.GetPartition, testutils.GetWorkspace} {

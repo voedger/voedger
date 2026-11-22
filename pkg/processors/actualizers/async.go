@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	retrier "github.com/voedger/voedger/pkg/goutils/retry"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
@@ -30,13 +31,43 @@ import (
 )
 
 type workpiece struct {
-	event      istructs.IPLogEvent
-	pLogOffset istructs.Offset
-	logCtx     context.Context
+	event        istructs.IPLogEvent
+	pLogOffset   istructs.Offset
+	logCtx       context.Context
+	entireLogRun bool // Captured when queued; entire log run events omit verbose details.
 }
 
 func (w *workpiece) Release() {
 	w.event.Release()
+}
+
+// entireLogRunEnd marks the last startup event so completion waits for processing and flushing.
+type entireLogRunEnd struct {
+	done chan struct{}
+}
+
+func (*entireLogRunEnd) Release() {}
+
+type entireLogRunProgress struct {
+	tm        timeu.ITime
+	startedAt time.Time
+	completed bool
+}
+
+func (e *entireLogRunProgress) start(logCtx context.Context) {
+	e.startedAt = e.tm.Now()
+	logger.InfoCtx(logCtx, "ap.entire_log_run.start")
+}
+
+func (e *entireLogRunProgress) complete(logCtx context.Context) {
+	if e.completed || logCtx.Err() != nil {
+		return
+	}
+	logCtx = logger.WithContextAttrs(logCtx, map[string]any{
+		"duration_ms": e.tm.Now().Sub(e.startedAt).Milliseconds(),
+	})
+	logger.InfoCtx(logCtx, "ap.entire_log_run.complete")
+	e.completed = true
 }
 
 type (
@@ -68,6 +99,7 @@ type asyncActualizer struct {
 	appParts                  appparts.IAppPartitions
 	retrierCfg                retrier.Config
 	channelCleanup            func()
+	entireLogRunProgress      *entireLogRunProgress // Not nil for new projectors only. Retained across retries of this projector runtime.
 }
 
 func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
@@ -242,7 +274,15 @@ func (a *asyncActualizer) finit() {
 }
 
 func (a *asyncActualizer) keepReading(ctx context.Context) error {
+	// a.offset is read first on init()
+	if a.offset == istructs.NullOffset && a.entireLogRunProgress == nil {
+		a.entireLogRunProgress = &entireLogRunProgress{tm: timeu.NewITime()}
+		a.entireLogRunProgress.start(ctx)
+	}
 	if err := a.readPlogToTheEnd(ctx); err != nil {
+		return err
+	}
+	if err := a.waitForEntireLogRunCompletion(ctx); err != nil || ctx.Err() != nil {
 		return err
 	}
 	a.conf.Broker.WatchChannel(a.n10nWatchChannelCtx, a.conf.channel, func(_ in10n.ProjectionKey, offset istructs.Offset) {
@@ -262,11 +302,36 @@ func (a *asyncActualizer) keepReading(ctx context.Context) error {
 	return nil
 }
 
-func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+func (a *asyncActualizer) waitForEntireLogRunCompletion(ctx context.Context) error {
+	if a.entireLogRunProgress == nil || a.entireLogRunProgress.completed {
+		return nil
+	}
+	// Reading only queues events. A fresh signal per attempt prevents a failed retry from signaling completion.
+	done := make(chan struct{})
+	if err := a.pipeline.SendAsync(&entireLogRunEnd{done: done}); err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
+		return err
+	}
+	select {
+	case <-done:
+		a.entireLogRunProgress.complete(a.n10nWatchChannelCtx)
+	case <-a.n10nWatchChannelCtx.Done():
+		if ctx.Err() != nil {
+			return nil
+		}
+		return context.Cause(a.n10nWatchChannelCtx)
+	}
+	return nil
+}
+
+func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.Offset, event istructs.IPLogEvent, entireLogRun bool) (err error) {
 	work := &workpiece{
-		event:      event,
-		pLogOffset: pLogOffset,
-		logCtx:     ctx,
+		event:        event,
+		pLogOffset:   pLogOffset,
+		logCtx:       ctx,
+		entireLogRun: entireLogRun,
 	}
 
 	err = a.pipeline.SendAsync(work)
@@ -279,7 +344,7 @@ func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.O
 	return nil
 }
 
-func (a *asyncActualizer) readPlogByBatches(ctx context.Context, readBatch readPLogBatch) error {
+func (a *asyncActualizer) readPlogByBatches(ctx context.Context, entireLogRun bool, readBatch readPLogBatch) error {
 	for ctx.Err() == nil {
 		if err := readBatch(&a.plogBatch); err != nil {
 			return err
@@ -288,7 +353,7 @@ func (a *asyncActualizer) readPlogByBatches(ctx context.Context, readBatch readP
 			break
 		}
 		for _, e := range a.plogBatch {
-			if err := a.handleEvent(ctx, e.Offset, e.IPLogEvent); err != nil {
+			if err := a.handleEvent(ctx, e.Offset, e.IPLogEvent, entireLogRun); err != nil {
 				return err
 			}
 			if ctx.Err() != nil {
@@ -304,7 +369,9 @@ func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPa
 }
 
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
-	return a.readPlogByBatches(ctx, func(batch *plogBatch) (err error) {
+	// Snapshot the starting offset before reading advances it across batches.
+	entireLogRun := a.offset == istructs.NullOffset
+	return a.readPlogByBatches(ctx, entireLogRun, func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
 		ap, err := a.borrowAppPart(ctx)
@@ -330,7 +397,7 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 }
 
 func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istructs.Offset) error {
-	return a.readPlogByBatches(ctx, func(batch *plogBatch) (err error) {
+	return a.readPlogByBatches(ctx, false, func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
 		ap, err := a.borrowAppPart(ctx)
@@ -392,6 +459,7 @@ type asyncProjector struct {
 	nonBuffered           bool
 	appParts              appparts.IAppPartitions
 	borrowedPartition     appparts.IAppPartition
+	entireLogRunDone      chan struct{} // Owned by the pipeline goroutine; cleared after a successful flush.
 }
 
 // DoAsync is executed for every event of a given partition.
@@ -400,6 +468,16 @@ type asyncProjector struct {
 //   - the projector is triggered by the event.
 func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (pipeline.IWorkpiece, error) {
 	defer work.Release()
+	if end, ok := work.(*entireLogRunEnd); ok {
+		// Queue ordering guarantees earlier events are processed; NullOffset means none await flushing.
+		if p.pLogOffset == istructs.NullOffset {
+			close(end.done)
+		} else {
+			// Let the normal flush close the signal without forcing an extra flush or checkpoint.
+			p.entireLogRunDone = end.done
+		}
+		return nil, nil
+	}
 	w := work.(*workpiece)
 
 	p.event = w.event
@@ -413,10 +491,11 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		return nil, nil
 	}
 
-	// ctx here contains vapp and extension attribs already
+	// ctx here contains vapp, extension and partid attribs already
 	w.logCtx = logger.WithContextAttrs(w.logCtx, map[string]any{
 		logger.LogAttr_WSID: w.event.Workspace(),
 	})
+	w.logCtx = processors.WithEventLogAttrs(w.logCtx, w.event, w.pLogOffset)
 
 	if err := p.borrowAppPart(ctx); err != nil {
 		return nil, err
@@ -434,10 +513,12 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		return nil, nil
 	}
 
-	if w.logCtx, err = logEventAndCUDs(w.logCtx, w.event, w.pLogOffset,
-		p.borrowedPartition.AppStructs().AppDef(), triggeredByQName); err != nil {
-		// notest
-		return nil, err
+	if !w.entireLogRun {
+		// new projector run -> do not log each event
+		if _, err = logEventAndCUDs(w.logCtx, w.event, w.pLogOffset,
+			p.borrowedPartition.AppStructs().AppDef(), triggeredByQName); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := p.borrowedPartition.Invoke(w.logCtx, p.name, p.state, p.state); err != nil {
@@ -456,7 +537,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 			return nil, err
 		}
 	}
-	if logger.IsVerbose() {
+	if !w.entireLogRun && logger.IsVerbose() {
 		logger.VerboseCtx(w.logCtx, "ap.success")
 	}
 
@@ -471,7 +552,7 @@ func logEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent,
 	triggeredByKind := appDef.Type(triggeredByQName).Kind()
 	triggeredByFunc := appdef.TypeKind_Functions.Contains(triggeredByKind)
 	triggeredByODoc := triggeredByKind == appdef.TypeKind_ODoc || triggeredByKind == appdef.TypeKind_ORecord
-	return processors.LogEventAndCUDs(logCtx, event, pLogOffset, appDef, 2, "ap",
+	return processors.LogEventAndCUDsWithoutArgs(logCtx, event, pLogOffset, appDef, 2, "ap",
 		func(cud istructs.ICUDRow) (bool, string, error) {
 			return triggeredByFunc || triggeredByODoc || cud.QName() == triggeredByQName, "", nil
 		},
@@ -578,6 +659,11 @@ func (p *asyncProjector) flush() (err error) {
 		} else { // state not changed
 			p.projInErrAddr.Increase(0)
 		}
+	}
+	if err == nil && p.entireLogRunDone != nil {
+		// Wake the reader only after persistence succeeds, then disable signaling for live events.
+		close(p.entireLogRunDone)
+		p.entireLogRunDone = nil
 	}
 	return err
 }
