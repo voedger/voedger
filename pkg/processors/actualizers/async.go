@@ -41,18 +41,7 @@ func (w *workpiece) Release() {
 	w.event.Release()
 }
 
-// entireLogRunEnd marks the last startup event so completion waits for processing and flushing.
-type entireLogRunEnd struct {
-	done chan struct{}
-}
-
 func (*entireLogRunEnd) Release() {}
-
-type entireLogRunProgress struct {
-	tm        timeu.ITime
-	startedAt time.Time
-	completed bool
-}
 
 func (e *entireLogRunProgress) start(logCtx context.Context) {
 	e.startedAt = e.tm.Now()
@@ -103,6 +92,9 @@ type asyncActualizer struct {
 }
 
 func (a *asyncActualizer) Prepare(vvmCtx context.Context) {
+	if a.conf.Time == nil {
+		a.conf.Time = timeu.NewITime()
+	}
 	if a.conf.IntentsLimit == 0 {
 		a.conf.IntentsLimit = defaultIntentsLimit
 	}
@@ -276,7 +268,7 @@ func (a *asyncActualizer) finit() {
 func (a *asyncActualizer) keepReading(ctx context.Context) error {
 	// a.offset is read first on init()
 	if a.offset == istructs.NullOffset && a.entireLogRunProgress == nil {
-		a.entireLogRunProgress = &entireLogRunProgress{tm: timeu.NewITime()}
+		a.entireLogRunProgress = &entireLogRunProgress{tm: a.conf.Time}
 		a.entireLogRunProgress.start(ctx)
 	}
 	if err := a.readPlogToTheEnd(ctx); err != nil {
@@ -310,7 +302,7 @@ func (a *asyncActualizer) waitForEntireLogRunCompletion(ctx context.Context) err
 	done := make(chan struct{})
 	if err := a.pipeline.SendAsync(&entireLogRunEnd{done: done}); err != nil {
 		if ctx.Err() != nil {
-			return nil
+			return nil //nolint:nilerr // Graceful shutdown must not trigger retry error logging.
 		}
 		return err
 	}
@@ -319,7 +311,7 @@ func (a *asyncActualizer) waitForEntireLogRunCompletion(ctx context.Context) err
 		a.entireLogRunProgress.complete(a.n10nWatchChannelCtx)
 	case <-a.n10nWatchChannelCtx.Done():
 		if ctx.Err() != nil {
-			return nil
+			return nil //nolint:nilerr // Graceful shutdown must not trigger retry error logging.
 		}
 		return context.Cause(a.n10nWatchChannelCtx)
 	}

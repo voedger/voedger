@@ -323,6 +323,7 @@ func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, appTokensFactory paylo
 
 func provideBasicAsyncActualizerConfig(
 	vvm processors.VVMName,
+	time timeu.ITime,
 	secretReader isecrets.ISecretReader,
 	tokens itokens.ITokens,
 	metrics imetrics.IMetrics,
@@ -334,6 +335,7 @@ func provideBasicAsyncActualizerConfig(
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
+		Time:          time,
 		SecretReader:  secretReader,
 		Tokens:        tokens,
 		Metrics:       metrics,
