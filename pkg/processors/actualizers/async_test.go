@@ -16,6 +16,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -657,40 +658,44 @@ func TestAsyncLogging(t *testing.T) {
 		requireEntireLogRunLogs(t, require, logs)
 	})
 	t.Run("logging: scn: Entire log run completion waits for pending processing", func(t *testing.T) {
-		require := require.New(t)
-		logs := logger.StartCapture(t, logger.LogLevelVerbose)
-		release := make(chan struct{})
-		var once sync.Once
-		unblock := func() { once.Do(func() { close(release) }) }
-		// Given projector test.LoggingProjector belongs to test1/app1 partition 1
-		f := newActualizerLoggingTestWithBuffering(t, func(event istructs.IPLogEvent) error {
-			if event.PLogOffset() == 3 {
-				<-release
-			}
-			return nil
-		}, true)
-		t.Cleanup(unblock) // Unblock before stopping the actualizer on assertion failure.
-		// Given a new projector has read through offset 3 but its last event is still processing
-		f.createWorkspace()
-		f.filler.fill(1001, f.ids)
-		f.filler.fill(1001, f.ids)
-		f.start()
-		require.Eventually(func() bool { return f.calls.Load() == 2 }, 5*time.Second, time.Millisecond)
-		// When the operator inspects the logs
-		actual := logs.String()
-		// Then ap.entire_log_run.start is present and ap.entire_log_run.complete is absent
-		require.Contains(actual, "stage=ap.entire_log_run.start")
-		require.NotContains(actual, "stage=ap.entire_log_run.complete")
+		synctest.Test(t, func(t *testing.T) {
+			require := require.New(t)
+			logs := logger.StartCapture(t, logger.LogLevelVerbose)
+			release := make(chan struct{})
+			var once sync.Once
+			unblock := func() { once.Do(func() { close(release) }) }
+			// Given projector test.LoggingProjector belongs to test1/app1 partition 1
+			f := newActualizerLoggingTestWithBuffering(t, func(event istructs.IPLogEvent) error {
+				if event.PLogOffset() == 3 {
+					<-release
+				}
+				return nil
+			}, true)
+			t.Cleanup(unblock) // Unblock before stopping the actualizer on assertion failure.
+			// Given a new projector has read through offset 3 but its last event is still processing
+			f.createWorkspace()
+			f.filler.fill(1001, f.ids)
+			f.filler.fill(1001, f.ids)
+			f.start()
+			require.Eventually(func() bool { return f.calls.Load() == 2 }, 5*time.Second, time.Millisecond)
+			// Let the reader reach EOF and settle while the final invocation remains blocked.
+			synctest.Wait()
+			// When the operator inspects the logs
+			actual := logs.String()
+			// Then ap.entire_log_run.start is present and ap.entire_log_run.complete is absent
+			require.Contains(actual, "stage=ap.entire_log_run.start")
+			require.NotContains(actual, "stage=ap.entire_log_run.complete")
 
-		// Releasing the last event must allow completion only after its buffered changes are flushed.
-		unblock()
-		logs.EventuallyHasLine("stage=ap.entire_log_run.complete")
-		actualOffset, err := ActualizerOffset(f.app, 1, f.projector)
-		require.NoError(err)
-		require.Equal(istructs.Offset(3), actualOffset)
-		requireEntireLogRunLogs(t, require, logs)
-		require.Equal(int32(2), f.calls.Load())
-		logs.NotContains("stage=ap ", "stage=ap.log_cud", "stage=ap.success")
+			// Releasing the last event must allow completion only after its buffered changes are flushed.
+			unblock()
+			logs.EventuallyHasLine("stage=ap.entire_log_run.complete")
+			actualOffset, err := ActualizerOffset(f.app, 1, f.projector)
+			require.NoError(err)
+			require.Equal(istructs.Offset(3), actualOffset)
+			requireEntireLogRunLogs(t, require, logs)
+			require.Equal(int32(2), f.calls.Load())
+			logs.NotContains("stage=ap ", "stage=ap.log_cud", "stage=ap.success")
+		})
 	})
 	for _, test := range []struct {
 		name  string

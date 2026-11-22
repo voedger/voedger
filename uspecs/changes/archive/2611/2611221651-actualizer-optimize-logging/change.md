@@ -107,6 +107,18 @@ References:
 - [x] update: [internal/actualizers/actualizers.go](../../../../../pkg/appparts/internal/actualizers/actualizers.go)
   - Add: the partition ID to the context created by `PartitionActualizers.startNews()` so lifecycle and event logs inherit `partid`
 
+- [x] update: [processors/actualizers/interface.go](../../../../../pkg/processors/actualizers/interface.go)
+  - Add: `BasicAsyncActualizerConfig.Time` to receive the VVM clock, with real time as the default when omitted
+
+- [x] update: [processors/actualizers/types.go](../../../../../pkg/processors/actualizers/types.go)
+  - Declare: `entireLogRunProgress` with its clock, start time, and completion status, and `entireLogRunEnd` with its completion channel
+
+- [x] update: [pkg/vvm/provide.go](../../../../../pkg/vvm/provide.go)
+  - Inject: the VVM `timeu.ITime` into the basic asynchronous actualizer configuration
+
+- [x] update: [pkg/vvm/wire_gen.go](../../../../../pkg/vvm/wire_gen.go)
+  - Regenerate: Wire wiring to pass `VVMConfig.Time` to the actualizer configuration provider
+
 - [x] update: [processors/actualizers/async.go](../../../../../pkg/processors/actualizers/async.go)
   - capture: `entireLogRun` once per startup read before offsets advance, pass it through all batches, and attach it to each queued workpiece without a separate mutable actualizer flag
   - apply: suppression only to startup reads from FirstOffset; notification-driven reads and saved-offset resumption use normal logging, with policy recalculated on retry
@@ -114,6 +126,8 @@ References:
   - enrich: the workpiece context before partition borrowing and workspace checks, and retain it for invocation and error reporting even when detail logging is skipped or fails
   - omit: argument logging for asynchronous actualizers and bypass event, CUD, and success detail emission for suppressed workpieces according to the [async projector design](../../../../specs/prod/apps/logging--td.md#async-projectors)
   - preserve: event and partition release, intent application, flushing, offset persistence, retry, cancellation, and error metrics; signal completion through an end-of-log marker only for pending entire log runs, using a fresh channel on retry and clearing the signal after a successful flush
+  - Use: the configured VVM clock for entire log run start time and elapsed duration; initialize real time in `Prepare()` only when no clock is supplied
+  - Document: intentional nil returns on parent cancellation with `nilerr` suppressions so graceful shutdown does not produce retry error logs
 
 - [x] verify: format and validate the affected packages
   - run: `gofmt` on changed Go files and `git diff --check`

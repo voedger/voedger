@@ -377,9 +377,11 @@ Attributes:
 - Only while an entire log run is pending, enqueue an end-of-log marker after the startup events and wait for its one-shot completion channel or cancellation. Pipeline ordering ensures the marker is handled after all earlier events. The projector closes the channel immediately if those events have already been flushed or the log is empty; otherwise it retains the channel until the next successful flush and then clears it. This forces no extra flush or checkpoint and requires no shared offset tracking
 - Each retry of a pending entire log run uses a fresh marker and completion channel. Ordinary projectors and completed entire log runs allocate neither; the projector stores no entire log run logging progress
 - Use the inherited actualizer context in `start()` and add only `duration_ms` in `complete()`; keep lifecycle contexts separate from event contexts
+- Measure start time and elapsed duration with `BasicAsyncActualizerConfig.Time`, injected from `VVMConfig.Time`; `Prepare()` supplies real time only when the clock is omitted
 - Use the existing `logger.InfoCtx` without message arguments for both lifecycle entries; the standard formatter emits `msg=""`, and neither entry includes `args` or `poffset`
 - Emit each lifecycle entry once per projector/partition runtime, retaining the start time and completion status across retries; a runtime resuming from a saved nonzero offset emits neither entry
 - An empty initial log still emits start and completion; a failed or canceled entire log run emits no completion until a subsequent attempt successfully finishes
+- While waiting for entire log run completion, suppress parent cancellation errors for graceful shutdown; propagate pipeline failures for retry and preserve their diagnostic logging
 - A projector resuming from a saved nonzero offset uses normal logging during startup catch-up; a retry that still starts from `FirstOffset` uses the entire log run policy again
 - Capture `entireLogRun` in each workpiece before enqueueing it and keep it immutable thereafter; the pipeline must not infer the event's logging policy from the runtime's entire log run completion state
 - Once startup reading reaches the log end, events queued by notification-driven reads use normal logging, even if there were no initial events; events already queued for an entire log run remain quiet until processed
