@@ -374,28 +374,30 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
-	t.Run("recovery: scn: The recovery checkpoint projector overwrites the initial recovery checkpoint without changing numbers issued by the next insert", func(t *testing.T) {
+	t.Run("recovery: scn: The recovery checkpoint projector overwrites the initial recovery checkpoint without changing numbers issued by the next insert: tail recovery", func(t *testing.T) {
 		const (
 			projectedCheckpoint = istructs.Offset(200)
 			pLogTail            = istructs.Offset(250)
 		)
 
 		// Given the PLog contains events through offset 250
-		// And workspace 1 represents "Orders" with last WLog offset 14 and last allocated ordinary record ID 200005
+		// And workspace "Orders" in that partition has last WLog offset 14 and last allocated ordinary record ID 200005
 		app, storage := newCheckpointCommandAppWithPLogTail(t, 14, pLogTail)
 		partitionKey := partitionManagerKeyForWSID(1)
-		// And sys.ApplyRecoveryCheckpoint has overwritten the initial partition checkpoint with lastPLogOffset 200
+		// The checkpoint-writes layer establishes the projector result consumed by recovery.
 		storage.ForcePutPartitionCheckpoint(t, app.appStructs.ClusterAppID(), partitionKey.partitionID,
 			checkpoints.PartitionCheckpoint{LastPLogOffset: projectedCheckpoint})
 
-		// When the Command processor restarts and an ordinary record is inserted into workspace 1,
-		// retrying "503 Service Unavailable" responses
+		// When the following lifecycle occurs in order:
+		// | order | action                                                                                             |
+		// | 2     | VAOperator restarts the VVM                                                                        |
+		// | 3     | VAOperator inserts one ordinary record into "Orders", retrying "503 Service Unavailable" responses |
 		restartCmdProc(app)
 		app.recoveryTestControl.pLogReads.reset(partitionKey)
 		app.recoveryTestControl.wLogReads.reset(workspaceManagerKey(1))
 		response := sendCUDWithBody(t, 1, *app, emptyRecoveryInsert)
 
-		// Then Partition recovery calls ReadPLog once from offset 200 through the log end
+		// And Partition recovery calls ReadPLog once from offset 200 through the log end
 		require.Equal([]logReadFromTo{{offset: projectedCheckpoint, count: istructs.ReadToTheEnd}},
 			app.recoveryTestControl.pLogReads.values(partitionKey))
 		// And the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006

@@ -18,30 +18,44 @@ import (
 )
 
 func TestApplyRecoveryCheckpointUpdatesPLogCheckpointEachHundredthEvent(t *testing.T) {
-	require := require.New(t)
-	appID := istructs.ClusterApps[istructs.AppQName_test1_app1]
-	partitionID := istructs.PartitionID(4)
-	storage := testutils.NewCheckpointStorageMem()
-	storage.ForcePutPartitionCheckpoint(t, appID, partitionID,
-		checkpoints.PartitionCheckpoint{LastPLogOffset: 250})
-	projector := checkpoints.ApplyRecoveryCheckpoint(storage)
-	state := newIState(t)
-	for _, offset := range []istructs.Offset{99, 100, 101, 200, 250} {
-		event := newIPLogEvent(t, offset)
-		if offset%100 == 0 {
-			event.On("HandlingPartition").Return(partitionID)
-		}
-		require.NoError(projector(event, state, nil))
-	}
+	t.Run("recovery: scn: The recovery checkpoint projector overwrites the initial recovery checkpoint without changing numbers issued by the next insert: checkpoint writes", func(t *testing.T) {
+		require := require.New(t)
+		appID := istructs.ClusterApps[istructs.AppQName_test1_app1]
+		partitionID := istructs.PartitionID(4)
+		storage := testutils.NewCheckpointStorageMem()
 
-	require.Equal([]testutils.Operation{
-		{Kind: testutils.PutPartition, AppID: appID, PartitionID: partitionID,
-			Partition: checkpoints.PartitionCheckpoint{LastPLogOffset: 100}},
-		{Kind: testutils.PutPartition, AppID: appID, PartitionID: partitionID,
-			Partition: checkpoints.PartitionCheckpoint{LastPLogOffset: 200}},
-	}, storage.SuccessfulWrites())
-	require.Equal(checkpoints.PartitionCheckpoint{LastPLogOffset: 200},
-		storage.RequirePartitionCheckpoint(t, appID, partitionID))
+		// And initial recovery stored partition checkpoint lastPLogOffset 250
+		// And sys.ApplyRecoveryCheckpoint has not run before
+		storage.ForcePutPartitionCheckpoint(t, appID, partitionID,
+			checkpoints.PartitionCheckpoint{LastPLogOffset: 250})
+		projector := checkpoints.ApplyRecoveryCheckpoint(storage)
+		state := newIState(t)
+
+		// When the following lifecycle occurs in order:
+		// | order | action                                                                                             |
+		// | 1     | sys.ApplyRecoveryCheckpoint processes the PLog from FirstOffset through offset 250                 |
+		for _, offset := range []istructs.Offset{99, 100, 101, 200, 250} {
+			event := newIPLogEvent(t, offset)
+			if offset%100 == 0 {
+				event.On("HandlingPartition").Return(partitionID)
+			}
+			require.NoError(projector(event, state, nil))
+		}
+
+		// Then partition checkpoint writes are:
+		// | processed PLog offset | stored lastPLogOffset |
+		// | 100                   | 100                   |
+		// | 200                   | 200                   |
+		require.Equal([]testutils.Operation{
+			{Kind: testutils.PutPartition, AppID: appID, PartitionID: partitionID,
+				Partition: checkpoints.PartitionCheckpoint{LastPLogOffset: 100}},
+			{Kind: testutils.PutPartition, AppID: appID, PartitionID: partitionID,
+				Partition: checkpoints.PartitionCheckpoint{LastPLogOffset: 200}},
+		}, storage.SuccessfulWrites())
+		// And the stored partition checkpoint is lastPLogOffset 200
+		require.Equal(checkpoints.PartitionCheckpoint{LastPLogOffset: 200},
+			storage.RequirePartitionCheckpoint(t, appID, partitionID))
+	})
 }
 
 func TestApplyRecoveryCheckpointWritesOnlyIDBearingWLogOffsets(t *testing.T) {
