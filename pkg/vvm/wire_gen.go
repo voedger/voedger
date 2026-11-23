@@ -130,7 +130,7 @@ func wireVVM(vvmCtx context.Context, vvmConfig *VVMConfig) (*VVM, func(), error)
 	stateOpts := provideStateOpts()
 	iEmailSender := vvmConfig.EmailSender
 	ihttpClient, cleanup3 := provideHTTPClient()
-	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, stateOpts, iEmailSender, ihttpClient)
+	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iTime, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, stateOpts, iEmailSender, ihttpClient)
 	iActualizerRunner := actualizers.ProvideActualizers(basicAsyncActualizerConfig)
 	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
 		VvmName:      vvmName,
@@ -395,6 +395,7 @@ func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, appTokensFactory paylo
 
 func provideBasicAsyncActualizerConfig(
 	vvm processors.VVMName,
+	time timeu.ITime,
 	secretReader isecrets.ISecretReader,
 	tokens itokens.ITokens, metrics2 imetrics.IMetrics,
 
@@ -406,6 +407,7 @@ func provideBasicAsyncActualizerConfig(
 ) actualizers.BasicAsyncActualizerConfig {
 	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
+		Time:          time,
 		SecretReader:  secretReader,
 		Tokens:        tokens,
 		Metrics:       metrics2,

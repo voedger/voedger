@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/httpu"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -26,6 +27,7 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 
 type BasicAsyncActualizerConfig struct {
 	VvmName string
+	Time    timeu.ITime // VVM clock; defaults to real time when omitted.
 
 	SecretReader isecrets.ISecretReader
 	Tokens       itokens.ITokens

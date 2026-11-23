@@ -362,27 +362,78 @@ The event is already logged by the command processor (`cp.plog_saved`), so there
 
 Attributes:
 
-- `vapp` and `extension` attribs are set on app partition deployment on start new actualizers stage. `Extension` is `ap.<projector QName>`
-  **Event processing:**
+- `vapp`, `extension`, and `partid` attributes are set in `PartitionActualizers.startNews()` during app partition deployment and inherited by child log contexts. `extension` is `ap.<projector QName>` and `partid` is the partition ID
+- Each event's context retains inherited attributes and adds `wsid` from the event workspace and `woffset`, `poffset`, and `evqname` through [event log context enrichment](#event-log-context)
+- Enrichment runs before partition borrowing, workspace checks, and projector invocation, independently of log level and entire log run suppression
+- Store the enriched context in the pipeline workpiece and pass it to projector invocation and subsequent logging; never add event argument payloads to it
 
-Stage is `ap`
+**Entire log run policy:**
+
+- At each actualizer initialization, including retries, read the persisted projector offset using `ActualizerOffset()`; `istructs.NullOffset` means the next read begins at `istructs.FirstOffset`
+- For that initialization, suppress routine per-event verbose logging for events queued by the startup `readPlogToTheEnd()` phase only when the starting offset is `istructs.NullOffset`
+- Keep `entireLogRunProgress` as the actualizer's only stored entire log run lifecycle state; derive `entireLogRun` once from the starting offset for each startup read and pass it through all batches to queued workpieces, while notification reads always pass false
+- Before the first suppressed startup read, emit one Info entry at `ap.entire_log_run.start` with context tags `vapp`, `extension=ap.<projector QName>`, and `partid`; this stage identifies the quiet entire log run
+- After startup reading reaches the end, the actualizer calls `waitForEntireLogRunCompletion()` to wait for the end-of-log marker's one-shot completion signal after successful flushing before watching live notifications. Its `entireLogRunProgress.complete()` emits one Info entry at `ap.entire_log_run.complete` with the same identity tags and nonnegative `duration_ms` measured since `start()`, including retry delays
+- Only while an entire log run is pending, enqueue an end-of-log marker after the startup events and wait for its one-shot completion channel or cancellation. Pipeline ordering ensures the marker is handled after all earlier events. The projector closes the channel immediately if those events have already been flushed or the log is empty; otherwise it retains the channel until the next successful flush and then clears it. This forces no extra flush or checkpoint and requires no shared offset tracking
+- Each retry of a pending entire log run uses a fresh marker and completion channel. Ordinary projectors and completed entire log runs allocate neither; the projector stores no entire log run logging progress
+- Use the inherited actualizer context in `start()` and add only `duration_ms` in `complete()`; keep lifecycle contexts separate from event contexts
+- Measure start time and elapsed duration with `BasicAsyncActualizerConfig.Time`, injected from `VVMConfig.Time`; `Prepare()` supplies real time only when the clock is omitted
+- Use the existing `logger.InfoCtx` without message arguments for both lifecycle entries; the standard formatter emits `msg=""`, and neither entry includes `args` or `poffset`
+- Emit each lifecycle entry once per projector/partition runtime, retaining the start time and completion status across retries; a runtime resuming from a saved nonzero offset emits neither entry
+- An empty initial log still emits start and completion; a failed or canceled entire log run emits no completion until a subsequent attempt successfully finishes
+- While waiting for entire log run completion, suppress parent cancellation errors for graceful shutdown; propagate pipeline failures for retry and preserve their diagnostic logging
+- A projector resuming from a saved nonzero offset uses normal logging during startup catch-up; a retry that still starts from `FirstOffset` uses the entire log run policy again
+- Capture `entireLogRun` in each workpiece before enqueueing it and keep it immutable thereafter; the pipeline must not infer the event's logging policy from the runtime's entire log run completion state
+- Once startup reading reaches the log end, events queued by notification-driven reads use normal logging, even if there were no initial events; events already queued for an entire log run remain quiet until processed
+- During a quiet entire log run, omit the event detail entry at `ap`, CUD detail entries at `ap.log_cud`, and the success entry at `ap.success`; skip their payload serialization as well
+- This policy does not suppress error reporting or logging explicitly performed by projector extensions; preserve event selection, invocation, intent application, flushing, and offset semantics
+
+**Event processing:**
 
 - Determines if the projector triggered by the current event via `ProjectorEvent()`
-- Adds `wsid` to log context in `DoAsync()` when processing event
-- Calls `processors.LogEventAndCUDs("ap")` (see [LogEventAndCUDs](#logeventandcuds)):
+- For a triggered projector defined in the event's workspace, when verbose logging is enabled and the workpiece is not suppressed, calls [LogEventAndCUDs](#logeventandcuds) with stage `ap` and argument logging disabled:
   - `perCUDCallback`: returns `shouldLog=true` for all CUDs when triggered by a function or ODoc/ORecord; for other triggers only CUDs matching the trigger QName; `msgAdds` is empty
   - `eventMessageAdds`: `triggeredby=<QName>`
-- Constructs event context - merge the context got from `processors.LogEventAndCUDs` and the ctx with `vapp` and `extension` attribs
-- Stores the event context in the pipeline workpiece to use it on error logging
-- Logs success: level `Verbose`, stage `ap.success`, msg (empty)
+- The event message is exactly `triggeredby=<QName>`, without an `args` prefix, empty argument placeholder, or leading separator; CUD filtering and field messages remain unchanged outside a quiet entire log run
+- Logs success only when the workpiece is not suppressed: level `Verbose`, stage `ap.success`, msg (empty)
 
 **Error handling:**
 
-Done in `retryercfg.OnError()` handler
+Done in the actualizer's retrier `OnError` handler:
 
-- Logs the error: level `Error`, stage `ap.error`, msg `<error message>`
-  - the error is pipeline.IPipelineErr -> the context is taken from the workpiece (the one created in `DoAsync` with wsid)
-  - otherwise -> the context is `readCtx.ctx`
+- For a `pipeline.IErrorPipeline` with an event workpiece, logs level `Error`, stage `ap.error`, msg `<error message>`, using that workpiece's enriched context
+- Event errors retain `vapp`, `extension`, `partid`, `wsid`, `woffset`, `poffset`, `evqname`, and other inherited tags even during a quiet entire log run and when verbose logging is disabled; argument payloads are neither serialized nor appended by the actualizer
+- Preserve the workpiece's enriched context if detail logging fails; never overwrite it with a nil context returned on an error path
+- Errors without an event workpiece use the actualizer's base context with `extension=sys._Actualizer`, level `Error`, stage `actualizer.error`, msg `<error message>`; event-specific tags are not fabricated when no event is available
+- Retry, cancellation, and projector error metrics retain their existing behavior
+
+**Verification:**
+
+Extend the [actualizer execution tests](../../../../pkg/processors/actualizers/async_test.go) to exercise the real read, queue, invocation, and retry paths with captured logs. Confirm projector invocation or persisted projection results and saved-offset progress before asserting that per-event details are absent during an entire log run.
+
+| Case                                                                                         | Required evidence                                                                                                                     |
+|----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| New projector processes multiple events from FirstOffset                                       | Processing completes with no `ap`, `ap.log_cud`, or `ap.success` detail entries for processed events                                   |
+| Entire log run transitions to notification-driven processing, including an empty initial log | New matching events emit normal trigger, filtered CUD, and success entries without `args`                                             |
+| Pipeline processing lags behind startup reading                                              | Queued entire log run events remain quiet and completion waits for their successful flush                                                      |
+| Existing projector resumes from a saved offset                                               | Matching catch-up events retain normal verbose details without `args`                                                                 |
+| Event processing fails during an entire log run or live processing at Verbose and Info levels           | The same `ap.error` entry carries the expected error and all applicable event context tags, without argument payloads                 |
+| Partition borrowing or workspace validation fails before projector invocation                | The `ap.error` entry still carries the failing event's context tags without arguments                                                 |
+| Failed processing retries                                                                    | Error diagnostics remain available, processing eventually succeeds, and each initialization follows the persisted-offset policy above |
+
+Retain function-trigger and record-trigger CUD filtering coverage outside a quiet entire log run. Verify that the [command-processing logging tests](../../../../pkg/processors/command/impl_test.go) and partition-recovery logging retain argument payloads and their existing stages.
+
+Map the three [entire log run logging scenarios](logging.feature) to named Go subtests:
+
+- A new projector logs entire log run start and completion
+- Entire log run completion waits for pending processing
+- An entire log run retry keeps one start and one completion
+
+Assert that start and completion have the specified level and tags with an empty message and no `args`, appear once through live processing and retries at Verbose and Info levels, and are absent for saved-offset resumption. Verify that event-specific tags do not leak into lifecycle contexts and only completion includes duration. Hold the final entire log run event while the reader reaches the end to prove completion waits for processing and verify the saved offset when buffered completion is logged.
+
+Empty-log and cancellation behavior remains covered by existing Go regression tests, without separate Gherkin scenarios.
+
+Verify that a failed entire log run which has already saved an offset retries with normal event logging while retaining one start and one completion entry for the runtime.
 
 ### Blob Processor
 
@@ -652,30 +703,34 @@ Ensures consistent attribute naming across all components.
 
 Component-specific attribute keys used only within a single package (e.g. `blobid`, `ownerqname`, `ownerfield`, `ownerid`, `channelid`, `projectionkey`) are defined as local string constants within their respective packages, not in `logger/consts.go`.
 
+### Event log context
+
+Share event context enrichment in the [processor logging utilities](../../../../pkg/processors/utils.go), separately from message emission:
+
+- Derive `woffset` from `event.WLogOffset()`, `poffset` from the supplied PLog offset, and `evqname` from `event.QName()`
+- Preserve inherited attributes using `logger.WithContextAttrs()`
+- Do not check the log level, emit messages, read argument objects, or serialize payloads
+- Async actualizers use this enrichment independently before processing can fail; the shared detail logger reuses it when emitting verbose details
+
 ### LogEventAndCUDs
 
-**[processors.LogEventAndCUDs](../../../../pkg/processors/utils.go#L101)**
-
-```go
-func LogEventAndCUDs(logCtx context.Context, event istructs.IPLogEvent,
-    pLogOffset istructs.Offset, appDef appdef.IAppDef,
-    skipStackFrames int, stage string,
-    perCUDLogCallback func(istructs.ICUDRow) (bool, string, error),
-    eventMessageAdds string) (enrichedCtx context.Context, err error)
-```
+**[processors.LogEventAndCUDs](../../../../pkg/processors/utils.go)**
 
 Shared utility for logging PLog events and their CUDs with consistent context enrichment. Used by command processor and async actualizers.
 
 - Does nothing and returns `logCtx` unchanged if `!logger.IsVerbose()`
-- Enriches context with `woffset`, `poffset`, `evqname` attributes
-- Logs event arguments as JSON at Verbose level: stage `<stage>`, msg `args={...}{eventMessageAdds}`
+- Uses [event log context enrichment](#event-log-context) for verbose detail entries; callers needing context when verbose logging is disabled enrich it independently
+- Accepts an explicit argument-logging choice from the caller, independently of CUD filtering and event message additions
+- With argument logging enabled, serializes arguments as before and emits stage `<stage>`, msg `args={...}`, appending `, <eventMessageAdds>` only when additions are nonempty
+- With argument logging disabled, never reads or serializes `event.ArgumentObject()` and emits stage `<stage>`, msg `<eventMessageAdds>` without an `args` field or leading separator
+- Command processing at `cp.plog_saved` and partition recovery at `cp.partition_recovery.reapply` enable argument logging; async actualizers disable it
 - For each CUD:
   - Calls `perCUDLogCallback` to get `shouldLog`, `msgAdds`, `err`
   - If `err != nil`, returns the error
   - If `shouldLog` is false, skips the CUD
   - Enriches context with `rectype`, `recid`, `op`
   - Logs new fields as JSON at Verbose level: stage `<stage>.log_cud`, msg `newfields={...}{msgAdds}`
-- Returns the context enriched with `woffset`, `poffset`, `evqname`; callers must use it for subsequent logging
+- On success at verbose level, returns the enriched context for subsequent logging; on failure, async actualizers retain their independently enriched workpiece context for error reporting
 
 **Parameters:**
 
@@ -683,6 +738,7 @@ Shared utility for logging PLog events and their CUDs with consistent context en
 - `skipStackFrames`: call-stack frames to skip for the correct `src` attribute
 - `perCUDLogCallback`: per-CUD filter; `shouldLog` — whether to log this CUD; `msgAdds` — text appended to the `newfields` message
 - `eventMessageAdds`: extra text appended to the pre-CUD event log message (e.g. `triggeredby=<QName>` for actualizers, empty for command processor)
+- Argument-logging choice: controls only argument access, serialization, and inclusion in the event message; does not control context enrichment or CUD messages
 - `plogOffset`: used as the `poffset` context attribute
 - `appDef`: used to marshal CUD field values to JSON
 - `event`: source of `woffset`, event arguments, and CUDs

@@ -7,7 +7,10 @@
 package actualizers
 
 import (
+	"time"
+
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/timeu"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -57,4 +60,15 @@ func ProjectorEvent(prj appdef.IProjector, event istructs.IPLogEvent) (triggered
 		}
 	}
 	return appdef.NullQName
+}
+
+type entireLogRunProgress struct {
+	tm        timeu.ITime
+	startedAt time.Time
+	completed bool
+}
+
+// entireLogRunEnd marks the last startup event so completion waits for processing and flushing.
+type entireLogRunEnd struct {
+	done chan struct{}
 }
