@@ -151,6 +151,27 @@ Feature: Partition and workspace recovery
       When VAOperator starts the VVM again and initial recovery of partition 1 succeeds
       Then inserting an ordinary record into Billing, retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
 
+  Rule: Recovery checkpoint projector
+
+    Scenario: The recovery checkpoint projector overwrites the initial recovery checkpoint without changing numbers issued by the next insert
+      Given the PLog contains events through offset 250
+      And initial recovery stored partition checkpoint lastPLogOffset 250
+      And sys.ApplyRecoveryCheckpoint has not run before
+      And workspace "Orders" in that partition has last WLog offset 14 and last allocated ordinary record ID 200005
+      When the following lifecycle occurs in order:
+        | order | action                                                                                             |
+        | 1     | sys.ApplyRecoveryCheckpoint processes the PLog from FirstOffset through offset 250                 |
+        | 2     | VAOperator restarts the VVM                                                                        |
+        | 3     | VAOperator inserts one ordinary record into "Orders", retrying "503 Service Unavailable" responses |
+      Then partition checkpoint writes are:
+        | processed PLog offset | stored lastPLogOffset |
+        | 100                   | 100                   |
+        | 200                   | 200                   |
+      And the stored partition checkpoint is lastPLogOffset 200
+      And Partition recovery calls ReadPLog once from offset 200 through the log end
+      And the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+      And the insert writes the next PLog event at offset 251
+
   Rule: Partition recovery orchestration
 
     Scenario: At least the first two command requests to a partition and workspace return 503 after initial recovery
