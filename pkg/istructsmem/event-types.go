@@ -173,6 +173,7 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 		return ErrUnknownCodec(codec)
 	}
 
+	ev.isStored = true
 	return nil
 }
 

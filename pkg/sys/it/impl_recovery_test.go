@@ -42,6 +42,7 @@ import (
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
 	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
+	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
 	vvmstorage "github.com/voedger/voedger/pkg/vvm/storage"
 )
 
@@ -154,6 +155,160 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 		checkNextWorkspaceSequence(vit, workspace1, expectedWS1Numbers)
 		checkNextWorkspaceSequence(vit, workspace2, expectedWS2Numbers)
 	}
+}
+
+func TestCorruptedPLogRecordReplayAfterRestart(t *testing.T) {
+	t.Run("recovery: scn: Replaying records from a corrupted final PLog event after restart panics", func(t *testing.T) {
+		require := require.New(t)
+		// Given the final PLog event of a deployed partition belongs to workspace "Orders"
+		cfg := recoveryVITConfig()
+		vit := it.NewVIT(t, &cfg)
+		defer vit.TearDown()
+		appQName := istructs.AppQName_test1_app1
+		owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
+		ws := vit.CreateWorkspace(it.SimpleWSParams("Orders"), owner)
+		tail := vit.PostWS(ws, "c.sys.CUD", singleDoc)
+		partitionID, err := vit.IAppPartitions.AppWorkspacePartitionID(appQName, ws.WSID)
+		require.NoError(err)
+		appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+		require.NoError(err)
+		waitForActualizerFlush(t, appStructs, partitionID)
+		lastPLogOffset := getLastPLogOffset(t, vit, appQName, partitionID)
+		checkLastPLogEvent(t, vit, appQName, partitionID, ws.WSID, lastPLogOffset, tail.CurrentWLogOffset)
+
+		// And VAOperator has marked that event as corrupted
+		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+		body := fmt.Sprintf(`{"args":{"Query":"update corrupted test1.app1.%d.sys.PLog.%d"}}`, partitionID, lastPLogOffset)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			httpu.WithAuthorizeBy(sysPrn.Token))
+		// And the VVM has restarted and the server has become ready
+		require.NoError(vit.RestartVVM())
+
+		appStructs, err = vit.IAppStructsProvider.BuiltIn(appQName)
+		require.NoError(err)
+		var events []istructs.IPLogEvent
+		err = appStructs.Events().ReadPLog(t.Context(), partitionID, lastPLogOffset, istructs.ReadToTheEnd,
+			func(_ istructs.Offset, event istructs.IPLogEvent) error {
+				t.Cleanup(event.Release)
+				events = append(events, event)
+				return nil
+			})
+		require.NoError(err)
+		require.Len(events, 1, "the corrupted event must remain the partition tail")
+		event := events[0]
+		require.Equal(lastPLogOffset, event.PLogOffset())
+		require.Equal(ws.WSID, event.Workspace())
+		require.Equal(tail.CurrentWLogOffset, event.WLogOffset())
+		require.Equal(istructs.QNameForCorruptedData, event.QName())
+		require.False(event.Error().ValidEvent())
+
+		reapplier := appStructs.GetEventReapplier(event)
+		// When the final PLog event's records are replayed
+		// Then record replay panics with "event is not valid: can not apply not valid event: corrupted data:"
+		require.PanicsWithError("event is not valid: can not apply not valid event: corrupted data:", func() {
+			_ = reapplier.ApplyRecords()
+		})
+	})
+}
+
+func TestWorkspaceRecoveryAfterWLogCorruption(t *testing.T) {
+	t.Run("recovery: scn: An insert fails after recovery when the last ID-bearing WLog event is corrupted", func(t *testing.T) {
+		require := require.New(t)
+		// Given sequence trust level is 0 (do not trust new record writes)
+		cfg := recoveryVITConfig()
+		vit := it.NewVIT(t, &cfg)
+		defer vit.TearDown()
+		require.Equal(istructs.SequencesTrustLevel_0, vit.SequencesTrustLevel)
+
+		// And workspace "Orders" has this complete WLog history before corruption:
+		// | WLog offset | command                  | allocated ordinary record ID |
+		// | 1 through 3 | Workspace initialization | none                         |
+		// | 4           | Ordinary record insert   | 200001                       |
+		// | 5           | Ordinary record insert   | 200002                       |
+		// | 6           | Non-ID-bearing command   | none                         |
+		appQName := istructs.AppQName_test1_app1
+		owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
+		ws := vit.CreateWorkspace(it.SimpleWSParams("Orders"), owner)
+		first := vit.PostWS(ws, "c.sys.CUD", singleDoc)
+		require.Equal(istructs.Offset(4), first.CurrentWLogOffset)
+		require.Equal(map[string]istructs.RecordID{"1": 200001}, first.NewIDs)
+		last := vit.PostWS(ws, "c.sys.CUD", singleDoc)
+		require.Equal(istructs.Offset(5), last.CurrentWLogOffset)
+		require.Equal(map[string]istructs.RecordID{"1": 200002}, last.NewIDs)
+		tail := vit.PostWS(ws, nonIDBearingCommand, "{}")
+		require.Equal(istructs.Offset(6), tail.CurrentWLogOffset)
+		require.Empty(tail.NewIDs)
+		appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+		require.NoError(err)
+		var offsets []istructs.Offset
+		var allocatedIDs []istructs.RecordID
+		err = appStructs.Events().ReadWLog(t.Context(), ws.WSID, istructs.FirstOffset, istructs.ReadToTheEnd,
+			func(offset istructs.Offset, event istructs.IWLogEvent) error {
+				defer event.Release()
+				offsets = append(offsets, offset)
+				allocatedIDs = append(allocatedIDs, checkpoints.HighestNewRecordID(event))
+				return nil
+			})
+		require.NoError(err)
+		require.Equal([]istructs.Offset{1, 2, 3, 4, 5, 6}, offsets)
+		require.Equal([]istructs.RecordID{0, 0, 0, 200001, 200002, 0}, allocatedIDs)
+
+		partitionID, err := vit.IAppPartitions.AppWorkspacePartitionID(appQName, ws.WSID)
+		require.NoError(err)
+		waitForActualizerFlush(t, appStructs, partitionID)
+		// And its partition's last PLog event before restart is the event at WLog offset 6 in "Orders"
+		checkLastPLogEvent(t, vit, appQName, partitionID, ws.WSID,
+			getLastPLogOffset(t, vit, appQName, partitionID), tail.CurrentWLogOffset)
+
+		// And VAOperator has marked WLog event 5 in "Orders" as corrupted
+		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+		body := fmt.Sprintf(`{"args":{"Query":"update corrupted test1.app1.%d.sys.WLog.%d"}}`, ws.WSID, last.CurrentWLogOffset)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			httpu.WithAuthorizeBy(sysPrn.Token))
+		corruptedQuery := fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where Offset = %d"},"elements":[{"fields":["Result"]}]}`,
+			last.CurrentWLogOffset)
+		checkCorruptedEvent(require, vit.PostWS(ws, "q.sys.SqlQuery", corruptedQuery))
+
+		// And ordinary record 200002 remains stored in "Orders"
+		original, err := appStructs.Records().Get(ws.WSID, true, 200002)
+		require.NoError(err)
+		require.Equal(istructs.RecordID(200002), original.ID())
+		require.Equal(int32(3), original.AsInt32("FldRoot"))
+
+		// And the VVM has restarted and completed partition and workspace recovery for "Orders"
+		require.NoError(vit.RestartVVM())
+		// Finish recovery without consuming the ID needed to reproduce the collision.
+		ready := vit.PostWS(ws, nonIDBearingCommand, "{}")
+		require.Empty(ready.NewIDs)
+		require.Equal(istructs.SequencesTrustLevel_0, vit.SequencesTrustLevel)
+		checkCorruptedEvent(require, vit.PostWS(ws, "q.sys.SqlQuery", corruptedQuery))
+		appStructs, err = vit.IAppStructsProvider.BuiltIn(appQName)
+		require.NoError(err)
+		persisted, err := appStructs.Records().Get(ws.WSID, true, 200002)
+		require.NoError(err)
+		require.Equal(istructs.RecordID(200002), persisted.ID())
+		require.Equal(int32(3), persisted.AsInt32("FldRoot"))
+
+		// And no events after WLog offset 5 in "Orders" allocate ordinary record IDs
+		allocatedIDs = nil
+		err = appStructs.Events().ReadWLog(t.Context(), ws.WSID, last.CurrentWLogOffset+1, istructs.ReadToTheEnd,
+			func(_ istructs.Offset, event istructs.IWLogEvent) error {
+				defer event.Release()
+				allocatedIDs = append(allocatedIDs, checkpoints.HighestNewRecordID(event))
+				return nil
+			})
+		require.NoError(err)
+		require.Equal([]istructs.RecordID{0, 0}, allocatedIDs)
+
+		// When VAOperator inserts one ordinary record into "Orders" without automatic retries
+		response := vit.PostWS(ws, "c.sys.CUD", singleDoc, httpu.WithNoRetryPolicy(), httpu.Expect500())
+		// Then the insert returns "500 Internal Server Error"
+		require.Equal(http.StatusInternalServerError, response.HTTPResp.StatusCode)
+		// And the response error contains "sequences violation"
+		var responseError coreutils.SysError
+		require.ErrorAs(response.SysError, &responseError)
+		require.Contains(responseError.Message, "sequences violation")
+	})
 }
 
 func TestODocArgumentRecordIDsAreRespectedAfterRestart(t *testing.T) {

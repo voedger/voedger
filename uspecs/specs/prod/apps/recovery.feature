@@ -2,7 +2,9 @@ Feature: Partition and workspace recovery
 
   VAOperator starts or restarts a VVM without losing the next partition-log
   offset, workspace-log offset, or workspace record ID, even when recovery
-  checkpoints are absent, valid, or invalid.
+  checkpoints are absent, valid, or invalid, provided the logs retain the
+  required allocation information. Marking the last ID-bearing WLog event as
+  corrupted can remove that information even when its records remain stored.
 
   Bootstrap isolates an initial-checkpoint failure to its partition: other
   partition attempts finish and bootstrap continues. The server becomes ready
@@ -278,6 +280,13 @@ Feature: Partition and workspace recovery
         | lastPLogOffset 0 |
         | lastPLogOffset 5 |
 
+    Scenario: Replaying records from a corrupted final PLog event after restart panics
+      Given the final PLog event of a deployed partition belongs to workspace "Orders"
+      And VAOperator has marked that event as corrupted
+      And the VVM has restarted and the server has become ready
+      When the final PLog event's records are replayed
+      Then record replay panics with "event is not valid: can not apply not valid event: corrupted data:"
+
   Rule: Workspace recovery
 
     An absent or zero workspace checkpoint starts one scan at FirstOffset.
@@ -345,6 +354,23 @@ Feature: Partition and workspace recovery
         | wlogIDBearingOffset 12 pointing to a CUD-free event          |
         | wlogIDBearingOffset 13 pointing to a singleton-only event    |
         | wlogIDBearingOffset 14 pointing to an existing-record update |
+
+    Scenario: An insert fails after recovery when the last ID-bearing WLog event is corrupted
+      Given sequence trust level is 0 (do not trust new record writes)
+      And workspace "Orders" has this complete WLog history before corruption:
+        | WLog offset | command                  | allocated ordinary record ID |
+        | 1 through 3 | Workspace initialization | none                         |
+        | 4           | Ordinary record insert   | 200001                       |
+        | 5           | Ordinary record insert   | 200002                       |
+        | 6           | Non-ID-bearing command   | none                         |
+      And its partition's last PLog event before restart is the event at WLog offset 6 in "Orders"
+      And VAOperator has marked WLog event 5 in "Orders" as corrupted
+      And ordinary record 200002 remains stored in "Orders"
+      And no events after WLog offset 5 in "Orders" allocate ordinary record IDs
+      And the VVM has restarted and completed partition and workspace recovery for "Orders"
+      When VAOperator inserts one ordinary record into "Orders" without automatic retries
+      Then the insert returns "500 Internal Server Error"
+      And the response error contains "sequences violation"
 
   Rule: Empty WLog
 
