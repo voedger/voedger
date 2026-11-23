@@ -280,6 +280,13 @@ Feature: Partition and workspace recovery
         | lastPLogOffset 0 |
         | lastPLogOffset 5 |
 
+    Scenario: Replaying records from a corrupted final PLog event after restart panics
+      Given the final PLog event of a deployed partition belongs to workspace "Orders"
+      And VAOperator has marked that event as corrupted
+      And the VVM has restarted and the server has become ready
+      When the final PLog event's records are replayed
+      Then record replay panics with "event is not valid: can not apply not valid event: corrupted data:"
+
   Rule: Workspace recovery
 
     An absent or zero workspace checkpoint starts one scan at FirstOffset.

@@ -157,6 +157,60 @@ func TestWorkspaceSequencesAfterRecovery(t *testing.T) {
 	}
 }
 
+func TestCorruptedPLogRecordReplayAfterRestart(t *testing.T) {
+	t.Run("recovery: scn: Replaying records from a corrupted final PLog event after restart panics", func(t *testing.T) {
+		require := require.New(t)
+		// Given the final PLog event of a deployed partition belongs to workspace "Orders"
+		cfg := recoveryVITConfig()
+		vit := it.NewVIT(t, &cfg)
+		defer vit.TearDown()
+		appQName := istructs.AppQName_test1_app1
+		owner := vit.GetPrincipal(appQName, recoveryTestLoginName)
+		ws := vit.CreateWorkspace(it.SimpleWSParams("Orders"), owner)
+		tail := vit.PostWS(ws, "c.sys.CUD", singleDoc)
+		partitionID, err := vit.IAppPartitions.AppWorkspacePartitionID(appQName, ws.WSID)
+		require.NoError(err)
+		appStructs, err := vit.IAppStructsProvider.BuiltIn(appQName)
+		require.NoError(err)
+		waitForActualizerFlush(t, appStructs, partitionID)
+		lastPLogOffset := getLastPLogOffset(t, vit, appQName, partitionID)
+		checkLastPLogEvent(t, vit, appQName, partitionID, ws.WSID, lastPLogOffset, tail.CurrentWLogOffset)
+
+		// And VAOperator has marked that event as corrupted
+		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+		body := fmt.Sprintf(`{"args":{"Query":"update corrupted test1.app1.%d.sys.PLog.%d"}}`, partitionID, lastPLogOffset)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			httpu.WithAuthorizeBy(sysPrn.Token))
+		// And the VVM has restarted and the server has become ready
+		require.NoError(vit.RestartVVM())
+
+		appStructs, err = vit.IAppStructsProvider.BuiltIn(appQName)
+		require.NoError(err)
+		var events []istructs.IPLogEvent
+		err = appStructs.Events().ReadPLog(t.Context(), partitionID, lastPLogOffset, istructs.ReadToTheEnd,
+			func(_ istructs.Offset, event istructs.IPLogEvent) error {
+				t.Cleanup(event.Release)
+				events = append(events, event)
+				return nil
+			})
+		require.NoError(err)
+		require.Len(events, 1, "the corrupted event must remain the partition tail")
+		event := events[0]
+		require.Equal(lastPLogOffset, event.PLogOffset())
+		require.Equal(ws.WSID, event.Workspace())
+		require.Equal(tail.CurrentWLogOffset, event.WLogOffset())
+		require.Equal(istructs.QNameForCorruptedData, event.QName())
+		require.False(event.Error().ValidEvent())
+
+		reapplier := appStructs.GetEventReapplier(event)
+		// When the final PLog event's records are replayed
+		// Then record replay panics with "event is not valid: can not apply not valid event: corrupted data:"
+		require.PanicsWithError("event is not valid: can not apply not valid event: corrupted data:", func() {
+			_ = reapplier.ApplyRecords()
+		})
+	})
+}
+
 func TestWorkspaceRecoveryAfterWLogCorruption(t *testing.T) {
 	t.Run("recovery: scn: An insert fails after recovery when the last ID-bearing WLog event is corrupted", func(t *testing.T) {
 		require := require.New(t)
