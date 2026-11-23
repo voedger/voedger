@@ -374,9 +374,45 @@ func TestRecoveryCheckpointBasicUsage(t *testing.T) {
 		require.Len(response["NewIDs"], 1)
 	})
 
+	t.Run("recovery: scn: The recovery checkpoint projector overwrites the initial recovery checkpoint without changing numbers issued by the next insert", func(t *testing.T) {
+		const (
+			projectedCheckpoint = istructs.Offset(200)
+			pLogTail            = istructs.Offset(250)
+		)
+
+		// Given the PLog contains events through offset 250
+		// And workspace 1 represents "Orders" with last WLog offset 14 and last allocated ordinary record ID 200005
+		app, storage := newCheckpointCommandAppWithPLogTail(t, 14, pLogTail)
+		partitionKey := partitionManagerKeyForWSID(1)
+		// And sys.ApplyRecoveryCheckpoint has overwritten the initial partition checkpoint with lastPLogOffset 200
+		storage.ForcePutPartitionCheckpoint(t, app.appStructs.ClusterAppID(), partitionKey.partitionID,
+			checkpoints.PartitionCheckpoint{LastPLogOffset: projectedCheckpoint})
+
+		// When the Command processor restarts and an ordinary record is inserted into workspace 1,
+		// retrying "503 Service Unavailable" responses
+		restartCmdProc(app)
+		app.recoveryTestControl.pLogReads.reset(partitionKey)
+		app.recoveryTestControl.wLogReads.reset(workspaceManagerKey(1))
+		response := sendCUDWithBody(t, 1, *app, emptyRecoveryInsert)
+
+		// Then Partition recovery calls ReadPLog once from offset 200 through the log end
+		require.Equal([]logReadFromTo{{offset: projectedCheckpoint, count: istructs.ReadToTheEnd}},
+			app.recoveryTestControl.pLogReads.values(partitionKey))
+		// And the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+		requireIssuedNumbers(t, response, 15, 200006)
+		require.Len(response["NewIDs"], 1)
+		// And the insert writes the next PLog event at offset 251
+		require.Equal(istructs.Offset(251), nextPLogOffset(t, app.appStructs, partitionKey.partitionID)-1)
+	})
 }
 
 func newCheckpointCommandApp(t *testing.T, lastWLogOffset istructs.Offset) (*testApp, *testutils.CheckpointStorage) {
+	t.Helper()
+	return newCheckpointCommandAppWithPLogTail(t, lastWLogOffset, 50)
+}
+
+func newCheckpointCommandAppWithPLogTail(t *testing.T, lastWLogOffset,
+	pLogTail istructs.Offset) (*testApp, *testutils.CheckpointStorage) {
 	t.Helper()
 	require := require.New(t)
 	storage := testutils.NewCheckpointStorageMem()
@@ -384,9 +420,12 @@ func newCheckpointCommandApp(t *testing.T, lastWLogOffset istructs.Offset) (*tes
 	t.Cleanup(func() { tearDown(app) })
 	prepareRecoveryCheckpointWLog(t, app, 1, lastWLogOffset)
 	key := partitionManagerKeyForWSID(1)
-	for range 51 - nextPLogOffset(t, app.appStructs, key.partitionID) {
+	nextOffset := nextPLogOffset(t, app.appStructs, key.partitionID)
+	require.LessOrEqual(nextOffset, pLogTail+1)
+	for nextOffset <= pLogTail {
 		sendNoCUDCommand(t, 3, app)
+		nextOffset++
 	}
-	require.Equal(istructs.Offset(51), nextPLogOffset(t, app.appStructs, key.partitionID))
+	require.Equal(pLogTail+1, nextPLogOffset(t, app.appStructs, key.partitionID))
 	return &app, storage
 }

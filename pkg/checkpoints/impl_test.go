@@ -19,31 +19,29 @@ import (
 
 func TestApplyRecoveryCheckpointUpdatesPLogCheckpointEachHundredthEvent(t *testing.T) {
 	require := require.New(t)
-	storage := testutils.NewMockStorage(t)
+	appID := istructs.ClusterApps[istructs.AppQName_test1_app1]
+	partitionID := istructs.PartitionID(4)
+	storage := testutils.NewCheckpointStorageMem()
+	storage.ForcePutPartitionCheckpoint(t, appID, partitionID,
+		checkpoints.PartitionCheckpoint{LastPLogOffset: 250})
 	projector := checkpoints.ApplyRecoveryCheckpoint(storage)
 	state := newIState(t)
-	event := newIPLogEvent(t, 99)
+	for _, offset := range []istructs.Offset{99, 100, 101, 200, 250} {
+		event := newIPLogEvent(t, offset)
+		if offset%100 == 0 {
+			event.On("HandlingPartition").Return(partitionID)
+		}
+		require.NoError(projector(event, state, nil))
+	}
 
-	require.NoError(projector(event, state, nil))
-	storage.AssertNotCalled(t, "PutPartitionCheckpoint", mock.Anything, mock.Anything, mock.Anything)
-	storage.AssertNotCalled(t, "PutWorkspaceCheckpoint", mock.Anything, mock.Anything, mock.Anything)
-
-	event = newIPLogEvent(t, 100)
-	event.On("HandlingPartition").Return(istructs.PartitionID(4))
-	storage.On("PutPartitionCheckpoint", istructs.ClusterApps[istructs.AppQName_test1_app1],
-		istructs.PartitionID(4), checkpoints.PartitionCheckpoint{LastPLogOffset: 100}).Return(nil).Once()
-	require.NoError(projector(event, state, nil))
-	storage.AssertExpectations(t)
-
-	event = newIPLogEvent(t, 101)
-	require.NoError(projector(event, state, nil))
-	storage.AssertNumberOfCalls(t, "PutPartitionCheckpoint", 1)
-
-	event = newIPLogEvent(t, 200)
-	event.On("HandlingPartition").Return(istructs.PartitionID(4))
-	storage.On("PutPartitionCheckpoint", istructs.ClusterApps[istructs.AppQName_test1_app1],
-		istructs.PartitionID(4), checkpoints.PartitionCheckpoint{LastPLogOffset: 200}).Return(nil).Once()
-	require.NoError(projector(event, state, nil))
+	require.Equal([]testutils.Operation{
+		{Kind: testutils.PutPartition, AppID: appID, PartitionID: partitionID,
+			Partition: checkpoints.PartitionCheckpoint{LastPLogOffset: 100}},
+		{Kind: testutils.PutPartition, AppID: appID, PartitionID: partitionID,
+			Partition: checkpoints.PartitionCheckpoint{LastPLogOffset: 200}},
+	}, storage.SuccessfulWrites())
+	require.Equal(checkpoints.PartitionCheckpoint{LastPLogOffset: 200},
+		storage.RequirePartitionCheckpoint(t, appID, partitionID))
 }
 
 func TestApplyRecoveryCheckpointWritesOnlyIDBearingWLogOffsets(t *testing.T) {
