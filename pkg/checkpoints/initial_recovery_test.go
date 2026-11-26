@@ -15,13 +15,125 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appdef/builder"
+	"github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/checkpoints"
 	"github.com/voedger/voedger/pkg/checkpoints/testutils"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
+	"github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 )
 
 const testClusterAppID istructs.ClusterAppID = 7
+
+var recoveryTestCommand = appdef.NewQName(appdef.SysPackage, "TestCommand")
+
+func recoveryTestApps(storage istorage.IAppStorageProvider) istructs.IAppStructsProvider {
+	def := builder.New()
+	ws := def.AlterWorkspace(appdef.SysWorkspaceQName)
+	ws.AddProjector(checkpoints.QNameApplyRecoveryCheckpoint)
+	ws.AddCommand(recoveryTestCommand)
+	configs := istructsmem.AppConfigsType{}
+	cfg := configs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, def)
+	cfg.SetNumAppWorkspaces(1)
+	cfg.Resources.Add(istructsmem.NewCommandFunction(recoveryTestCommand, istructsmem.NullCommandExec))
+	return istructsmem.Provide(configs, payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), storage, istructs.SequencesTrustLevel_0, nil)
+}
+
+func TestInitialRecoveryProjectorPosition(t *testing.T) {
+	const scenario = "recovery: scn: Initial recovery sets the position of sys.ApplyRecoveryCheckpoint to the recovered PLog tail before the actualizer starts: "
+	const tail istructs.Offset = 250
+	for _, tc := range []struct {
+		name     string
+		plogTail istructs.Offset
+		saved    *istructs.Offset
+		marker   *istructs.Offset
+		expected istructs.Offset
+	}{
+		// Given the PLog ends at offset 250 and the partition checkpoint is absent
+		// And the saved position of sys.ApplyRecoveryCheckpoint before initial recovery is <position>
+		// | position    |
+		// | absent      |
+		// position = absent
+		{scenario + "absent", tail, nil, nil, tail},
+		// | position    |
+		// | 0           |
+		// position = 0
+		{scenario + "0", tail, new(istructs.NullOffset), nil, tail},
+		// | position    |
+		// | FirstOffset |
+		// position = FirstOffset
+		{scenario + "FirstOffset", tail, new(istructs.FirstOffset), nil, tail},
+		{"one-event PLog", 1, nil, nil, 1},
+		{"established position", tail, new(istructs.Offset(2)), nil, 2},
+		{"position ahead of tail", 3, new(istructs.Offset(10)), nil, 10},
+		{"empty PLog", 0, nil, nil, istructs.NullOffset},
+		{"existing zero marker", 3, new(istructs.FirstOffset), new(istructs.NullOffset), istructs.FirstOffset},
+		{"existing nonzero marker", 3, new(istructs.FirstOffset), new(istructs.Offset(3)), istructs.FirstOffset},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require := require.New(t)
+			stores := provider.Provide(mem.Provide(testingu.MockTime))
+			cache := istoragecache.Provide(1<<20, stores, imetrics.Provide(), "test", testingu.MockTime)
+			apps := recoveryTestApps(cache)
+			app, err := apps.BuiltIn(istructs.AppQName_test1_app1)
+			require.NoError(err)
+			appendRecoveryEvents(require, app.Events(), tc.plogTail)
+			if tc.saved != nil {
+				view := sys.ProjectionOffsetsView
+				records := app.ViewRecords()
+				key := records.KeyBuilder(view.Name)
+				key.PutInt32(view.Fields.Partition, 0)
+				key.PutQName(view.Fields.Projector, checkpoints.QNameApplyRecoveryCheckpoint)
+				value := records.NewValueBuilder(view.Name)
+				value.PutInt64(view.Fields.Offset, int64(*tc.saved))
+				require.NoError(records.Put(istructs.NullWSID, key, value))
+			}
+			storage := testutils.NewCheckpointStorageMem()
+			if tc.marker != nil {
+				require.NoError(storage.PutPartitionCheckpoint(app.ClusterAppID(), 0, checkpoints.PartitionCheckpoint{LastPLogOffset: *tc.marker}))
+			}
+			// Warm the same lookup the actualizer uses so a stale cached offset is observable.
+			_, err = actualizers.ActualizerOffset(app, 0, checkpoints.QNameApplyRecoveryCheckpoint)
+			require.NoError(err)
+
+			// When initial recovery completes successfully for this partition
+			recovery := checkpoints.NewInitialRecovery(apps, storage)
+			_, failed, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 1)
+			require.NoError(err)
+			require.Empty(failed)
+
+			actual, err := actualizers.ActualizerOffset(app, 0, checkpoints.QNameApplyRecoveryCheckpoint)
+			require.NoError(err)
+			require.Equal(tc.expected, actual)
+		})
+	}
+}
+
+func appendRecoveryEvents(require *require.Assertions, events istructs.IEvents, tail istructs.Offset) {
+	ids := istructsmem.NewIDGenerator()
+	for i := range tail {
+		offset := i + istructs.FirstOffset
+		b := events.GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+			Workspace: 10, PLogOffset: offset, WLogOffset: offset, QName: recoveryTestCommand,
+		})
+		raw, err := b.BuildRawEvent()
+		require.NoError(err)
+		event, err := events.PutPlog(raw, nil, ids)
+		require.NoError(err)
+		event.Release()
+	}
+}
 
 func TestInitialRecoveryOverlapsScansWithinWorkerLimit(t *testing.T) {
 	require := require.New(t)
@@ -52,7 +164,7 @@ func TestInitialRecoveryOverlapsScansWithinWorkerLimit(t *testing.T) {
 				mu.Unlock()
 			}).Return(nil).Once()
 		}
-		recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, reads.events), storage)
+		recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, testClusterAppID, reads.events), storage)
 		go func() {
 			actualDeployable, actualFailed, actualError = recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 5)
 		}()
@@ -95,7 +207,7 @@ func TestInitialRecoveryComputesMissingCheckpoints(t *testing.T) {
 		storage := testutils.NewCheckpointStorageMem()
 		storage.ForcePutPartitionCheckpoint(t, appID, 0, checkpoints.PartitionCheckpoint{LastPLogOffset: 20})
 
-		recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(appID, plog.events), storage)
+		recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, appID, plog.events), storage)
 
 		deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), appQName, partitionCount)
 		require.NoError(t, err)
@@ -151,7 +263,7 @@ func TestInitialRecoveryUsesTheLatestIDBearingEvent(t *testing.T) {
 		newMockPLogEvent(4, 11, 9, newMockCUDRow(istructs.FirstUserRecordID, false)),
 	)
 	storage := testutils.NewCheckpointStorageMem()
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(appID, plog.events), storage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, appID, plog.events), storage)
 
 	// Run the recovery.
 	deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 1)
@@ -234,7 +346,7 @@ func TestInitialRecoveryContinuesAfterPartitionFailures(t *testing.T) {
 			if test.configureStorage != nil {
 				test.configureStorage(storage)
 			}
-			recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(appID, reads.events), storage)
+			recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, appID, reads.events), storage)
 
 			// Run initial recovery.
 			deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 2)
@@ -285,7 +397,7 @@ func TestInitialRecoveryRetriesOnlyIncompletePartitions(t *testing.T) {
 	plog.setEvents(0, errors.New("temporary read failure"), plogEvent)
 	checkpointStorage := testutils.NewCheckpointStorageMem()
 	checkpointStorage.ForcePutPartitionCheckpoint(t, appID, 1, checkpoints.PartitionCheckpoint{})
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(appID, plog.events), checkpointStorage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, appID, plog.events), checkpointStorage)
 
 	// Run initial recovery and check that the failedParts partition remains incomplete.
 	deployableParts, failedParts, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 2)
@@ -323,7 +435,7 @@ func TestInitialRecoveryHonorsCancellationBeforeScheduling(t *testing.T) {
 	appID := testClusterAppID
 	plog := newMockPLog(t)
 	checkpointStorage := testutils.NewCheckpointStorageMem()
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(appID, plog.events), checkpointStorage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, appID, plog.events), checkpointStorage)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
@@ -341,7 +453,7 @@ func TestInitialRecoveryHasNoRuntimeRecoveryOrPublicationSideEffects(t *testing.
 	plog := newMockPLog(t)
 	plog.setEvents(0, nil, newMockPLogEvent(1, 10, 1))
 	CheckpointStorage := testutils.NewCheckpointStorageMem()
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(appID, plog.events), CheckpointStorage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, appID, plog.events), CheckpointStorage)
 
 	deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 1)
 	require.NoError(t, err)
@@ -362,7 +474,7 @@ func TestInitialRecoveryAcceptsPresentZeroCheckpoints(t *testing.T) {
 	for partitionID := range istructs.PartitionID(3) {
 		checkpointStorage.ForcePutPartitionCheckpoint(t, testClusterAppID, partitionID, checkpoints.PartitionCheckpoint{})
 	}
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, plog.events), checkpointStorage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, testClusterAppID, plog.events), checkpointStorage)
 	deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 3)
 	require.NoError(t, err)
 	checkInitialRecoveryResult(t, 3, deployable, failed)
@@ -378,7 +490,7 @@ func TestInitialRecoveryCheckpointReadFailureExcludesPresentMarker(t *testing.T)
 	checkpointStorage.ForcePutPartitionCheckpoint(t, testClusterAppID, 0, checkpoints.PartitionCheckpoint{LastPLogOffset: 42})
 	injectedErr := errors.New("checkpoint unavailable")
 	checkpointStorage.SetError(testutils.Operation{Kind: testutils.GetPartition, AppID: testClusterAppID, PartitionID: 0}, injectedErr)
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, plog.events), checkpointStorage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, testClusterAppID, plog.events), checkpointStorage)
 	deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 1)
 	require.NoError(t, err)
 	checkInitialRecoveryResult(t, 1, deployable, failed)
@@ -396,7 +508,7 @@ func TestInitialRecoveryReturnsEveryPartitionFailure(t *testing.T) {
 	for partitionID := range istructs.PartitionID(3) {
 		plog.setEvents(partitionID, injectedErr)
 	}
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, plog.events), storage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, testClusterAppID, plog.events), storage)
 	deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), istructs.AppQName_test1_app1, 3)
 	require.NoError(t, err)
 	checkInitialRecoveryResult(t, 3, deployable, failed)
@@ -447,7 +559,7 @@ func TestInitialRecoveryJoinsAttemptsOnCancellation(t *testing.T) {
 		close(started)
 		<-ctx.Done()
 	}).Return(context.Canceled).Once()
-	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(testClusterAppID, reads.events), storage)
+	recovery := checkpoints.NewInitialRecovery(newMockAppStructsProvider(t, testClusterAppID, reads.events), storage)
 	done := make(chan error, 1)
 	go func() {
 		_, _, err := recovery.InitializeCheckpoints(ctx, istructs.AppQName_test1_app1, 2)
@@ -466,11 +578,16 @@ func TestInitialRecoveryJoinsAttemptsOnCancellation(t *testing.T) {
 	require.False(t, ok)
 }
 
-func newMockAppStructsProvider(appID istructs.ClusterAppID, events istructs.IEvents) *coreutils.MockAppStructsProvider {
+func newMockAppStructsProvider(t *testing.T, appID istructs.ClusterAppID, events istructs.IEvents) *coreutils.MockAppStructsProvider {
+	t.Helper()
+	require := require.New(t)
+	app, err := recoveryTestApps(provider.Provide(mem.Provide(testingu.MockTime))).BuiltIn(istructs.AppQName_test1_app1)
+	require.NoError(err)
 	asp := &coreutils.MockAppStructsProvider{}
 	appStructs := &coreutils.MockAppStructs{}
 	appStructs.On("ClusterAppID").Return(appID)
 	appStructs.On("Events").Return(events)
+	appStructs.On("ViewRecords").Return(app.ViewRecords())
 	asp.On("BuiltIn", mock.Anything).Return(appStructs, nil)
 	return asp
 }

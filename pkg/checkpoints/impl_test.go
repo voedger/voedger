@@ -24,8 +24,7 @@ func TestApplyRecoveryCheckpointUpdatesPLogCheckpointEachHundredthEvent(t *testi
 		partitionID := istructs.PartitionID(4)
 		storage := testutils.NewCheckpointStorageMem()
 
-		// And initial recovery stored partition checkpoint lastPLogOffset 250
-		// And sys.ApplyRecoveryCheckpoint has not run before
+		// Initial recovery completed at 250 with the established projector still at position 2.
 		storage.ForcePutPartitionCheckpoint(t, appID, partitionID,
 			checkpoints.PartitionCheckpoint{LastPLogOffset: 250})
 		projector := checkpoints.ApplyRecoveryCheckpoint(storage)
@@ -33,16 +32,14 @@ func TestApplyRecoveryCheckpointUpdatesPLogCheckpointEachHundredthEvent(t *testi
 
 		// When the following lifecycle occurs in order:
 		// | order | action                                                                                             |
-		// | 1     | sys.ApplyRecoveryCheckpoint processes the PLog from FirstOffset through offset 250                 |
-		for _, offset := range []istructs.Offset{99, 100, 101, 200, 250} {
+		// | 2     | sys.ApplyRecoveryCheckpoint catches up through PLog offset 250                                     |
+		for offset := istructs.Offset(3); offset <= 250; offset++ {
 			event := newIPLogEvent(t, offset)
-			if offset%100 == 0 {
-				event.On("HandlingPartition").Return(partitionID)
-			}
+			event.On("HandlingPartition").Return(partitionID).Maybe()
 			require.NoError(projector(event, state, nil))
 		}
 
-		// Then partition checkpoint writes are:
+		// And the projector's partition checkpoint writes during catch-up are:
 		// | processed PLog offset | stored lastPLogOffset |
 		// | 100                   | 100                   |
 		// | 200                   | 200                   |

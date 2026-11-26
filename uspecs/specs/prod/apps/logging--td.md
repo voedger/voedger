@@ -129,6 +129,11 @@ component-local `app=<appQName>` attribute. Every per-partition entry also uses
   and before partition attempts are scheduled: level `Info`, stage
   `bootstrap.initial_recovery.start`, msg
   `partitions <numPartitions>, workers <workerLimit>`
+- When the saved projector position is missing, `0`, or `FirstOffset` (`1`),
+  initial recovery logs once immediately after a successful position write and
+  before writing the partition completion marker. Level `Info`, stage
+  `bootstrap.initial_recovery`, msg `ap.sys.ApplyRecoveryCheckpoint offset set to %d`,
+  where `%d` is the newly stored PLog offset
 - A missing partition is initialized successfully: level `Info`, stage
   `bootstrap.initial_recovery.partition.complete`, msg
   `lastPLogOffset <offset>, workspaceCheckpoints <count>`
@@ -136,7 +141,8 @@ component-local `app=<appQName>` attribute. Every per-partition entry also uses
   `IInitialRecovery.InitializeCheckpoints`: level `Error`, stage
   `bootstrap.initial_recovery.error`, msg `<operation>: <error message>`, where
   `<operation>` is one of `get partition checkpoint`, `read PLog`,
-  `put workspace checkpoint`, or `put partition checkpoint`
+  `put workspace checkpoint`, `read projector position`, `write projector position`,
+  or `put partition checkpoint`
 - Application initialization completes after every scheduled attempt has
   finished: level `Info`, stage `bootstrap.initial_recovery.complete`, msg
   `initialized <count>, skipped <count>, failed <count>`

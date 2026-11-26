@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	appdefsys "github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -613,8 +614,7 @@ func (p *asyncProjector) savePosition() error {
 		return e
 	}
 	key.PutInt64(sys.Storage_View_Field_WSID, int64(istructs.NullWSID))
-	key.PutInt32(partitionFld, int32(p.partitionID))
-	key.PutQName(projectorNameFld, p.name)
+	appdefsys.ProjectionOffsetsView.SetKeyFields(key, p.partitionID, p.name)
 	value, e := p.state.NewValue(key)
 	if e != nil {
 		return e
@@ -678,16 +678,6 @@ func (h *asyncErrorHandler) OnError(_ context.Context, err error) {
 	h.cancelN10NWatchChannelCtx(err)
 }
 
-func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName) (offset istructs.Offset, err error) {
-	key := appStructs.ViewRecords().KeyBuilder(qnameProjectionOffsets)
-	key.PutInt32(partitionFld, int32(partition))
-	key.PutQName(projectorNameFld, projectorName)
-	value, err := appStructs.ViewRecords().Get(istructs.NullWSID, key)
-	if errors.Is(err, istructs.ErrRecordNotFound) {
-		return istructs.NullOffset, nil
-	}
-	if err != nil {
-		return istructs.NullOffset, err
-	}
-	return istructs.Offset(value.AsInt64(offsetFld)), err // nolint G115
+func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName) (istructs.Offset, error) {
+	return appdefsys.ProjectionOffsetsView.Get(appStructs.ViewRecords(), partition, projectorName)
 }
