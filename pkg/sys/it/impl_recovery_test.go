@@ -8,6 +8,7 @@ package sys_it
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -683,76 +684,30 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 		logs.NotContains("stage=cp.partition_recovery.start", "stage=cp.workspace_recovery.start")
 	})
 
-	t.Run("recovery: scn: Initial recovery failures are logged while the server becomes ready: partition 1", func(t *testing.T) {
-		// | failed_partitions      | checkpoint_state                    |
-		// | partition 1            | present for partitions 0 and 2 only |
-		errInjector := newPLogReadFailure()
-		cfg := recoveryVITConfigWithStorageHooks(errInjector, true)
-		failed := []istructs.PartitionID{1}
-		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-		vit := it.NewVIT(t, &cfg)
-		defer vit.TearDown()
-		owner := vit.GetPrincipal(istructs.AppQName_test1_app1, recoveryTestLoginName)
-		workspaces := make([]*it.AppWorkspace, 3)
-		for partitionID := range workspaces {
-			workspaces[partitionID] = createWorkspacesInPartition(t, vit, owner, istructs.PartitionID(partitionID), 1)[0]
-			vit.PostWS(workspaces[partitionID], "c.sys.CUD", cudBody1Doc)
-		}
-		// When VAOperator starts the VVM
-		require.NoError(vit.RestartVVM(it.WithAfterStop(func(storage it.RestartStorage) {
-			// Given application "test1/app1" declares partition IDs 0 through 2 with no stored partition checkpoints
-			removeAppPartitionCheckpoints(t, storage, istructs.NumAppPartitions(3))
-			// And initial recovery fails for <failed_partitions> with "PLog read failed"
-			// failed_partitions = partition 1
-			errInjector.failPLogReads(failed)
-			logCap.Reset()
-		})))
-		// Then partition checkpoints are <checkpoint_state>
-		// checkpoint_state = present for partitions 0 and 2 only
-		requirePartitionCheckpointPresence(t, vit, failed)
-		// And initial-recovery error "PLog read failed" is logged for <failed_partitions>
-		// failed_partitions = partition 1
-		requireInitialRecoveryFailureLogs(t, logCap, failed)
-		// And the server becomes ready
-		require.NotNil(vit.VoedgerVM)
-	})
-
-	t.Run("recovery: scn: Initial recovery failures are logged while the server becomes ready: partitions 0 through 2", func(t *testing.T) {
-		// | failed_partitions      | checkpoint_state                    |
-		// | partitions 0 through 2 | absent for every partition          |
-		errInjector := newPLogReadFailure()
-		cfg := recoveryVITConfigWithStorageHooks(errInjector, true)
-		failed := []istructs.PartitionID{0, 1, 2}
-		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-		vit := it.NewVIT(t, &cfg)
-		defer vit.TearDown()
-		owner := vit.GetPrincipal(istructs.AppQName_test1_app1, recoveryTestLoginName)
-		workspaces := make([]*it.AppWorkspace, 3)
-		for partitionID := range workspaces {
-			workspaces[partitionID] = createWorkspacesInPartition(t, vit, owner, istructs.PartitionID(partitionID), 1)[0]
-			vit.PostWS(workspaces[partitionID], "c.sys.CUD", cudBody1Doc)
-		}
-		// When VAOperator starts the VVM
-		require.NoError(vit.RestartVVM(it.WithAfterStop(func(storage it.RestartStorage) {
-			// Given application "test1/app1" declares partition IDs 0 through 2 with no stored partition checkpoints
-			removeAppPartitionCheckpoints(t, storage, istructs.NumAppPartitions(3))
-			// And initial recovery fails for <failed_partitions> with "PLog read failed"
-			// failed_partitions = partitions 0 through 2
-			errInjector.failPLogReads(failed)
-			logCap.Reset()
-		})))
-		// Then partition checkpoints are <checkpoint_state>
-		// checkpoint_state = absent for every partition
-		requirePartitionCheckpointPresence(t, vit, failed)
-		// And initial-recovery error "PLog read failed" is logged for <failed_partitions>
-		// failed_partitions = partitions 0 through 2
-		requireInitialRecoveryFailureLogs(t, logCap, failed)
-		// And the server becomes ready
-		require.NotNil(vit.VoedgerVM)
-	})
+	for _, tc := range []struct {
+		operation, partitions string
+		failed                []istructs.PartitionID
+	}{
+		// | operation                | failed_partitions      | cause               |
+		// | read PLog                | partition 1            | PLog read failed    |
+		{"read PLog", "partition 1", []istructs.PartitionID{1}},
+		// | operation                | failed_partitions      | cause               |
+		// | read PLog                | partitions 0 through 2 | PLog read failed    |
+		{"read PLog", "partitions 0 through 2", []istructs.PartitionID{0, 1, 2}},
+		// | operation                | failed_partitions      | cause               |
+		// | read projector position  | partition 1            | storage unavailable |
+		{"read projector position", "partition 1", []istructs.PartitionID{1}},
+		// | operation                | failed_partitions      | cause               |
+		// | write projector position | partition 1            | storage unavailable |
+		{"write projector position", "partition 1", []istructs.PartitionID{1}},
+	} {
+		t.Run("recovery: scn: Initial recovery failures are logged while the server becomes ready: "+tc.operation+" "+tc.partitions, func(t *testing.T) {
+			startWithFailedInitialRecovery(t, tc.operation, tc.failed)
+		})
+	}
 
 	t.Run("recovery: scn: Commands return 500 on a partition whose initial recovery failed", func(t *testing.T) {
-		errInjector := newPLogReadFailure()
+		errInjector := newRecoveryStorageFaults()
 		cfg := recoveryVITConfigWithStorageHooks(errInjector, true)
 		appQName := istructs.AppQName_test1_app1
 		vit := it.NewVIT(t, &cfg)
@@ -778,7 +733,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	t.Run("recovery: scn: The router receives the full partition count from the application descriptor despite initial recovery failures: partition 1", func(t *testing.T) {
 		// | failed_partitions      |
 		// | partition 1            |
-		errInjector := newPLogReadFailure()
+		errInjector := newRecoveryStorageFaults()
 		writes := newAppLogWriteRecorder()
 		cfg := recoveryVITConfigWithStorageHooks(errInjector, false, recoveryStorageObservers{appLogWrites: writes})
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
@@ -809,7 +764,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	t.Run("recovery: scn: The router receives the full partition count from the application descriptor despite initial recovery failures: all partitions", func(t *testing.T) {
 		// | failed_partitions      |
 		// | partitions 0 through 2 |
-		errInjector := newPLogReadFailure()
+		errInjector := newRecoveryStorageFaults()
 		writes := newAppLogWriteRecorder()
 		cfg := recoveryVITConfigWithStorageHooks(errInjector, false, recoveryStorageObservers{appLogWrites: writes})
 		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
@@ -838,7 +793,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: A changed app descriptor partition count causes panic", func(t *testing.T) {
-		errInjector := newPLogReadFailure()
+		errInjector := newRecoveryStorageFaults()
 		writes := newAppLogWriteRecorder()
 		cfg := recoveryVITConfigWithStorageHooks(errInjector, false, recoveryStorageObservers{appLogWrites: writes})
 		vit := it.NewVIT(t, &cfg)
@@ -851,7 +806,7 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 	})
 
 	t.Run("recovery: scn: VVM launch fails with an error on failure of the initial recovery of a partition of the Cluster app", func(t *testing.T) {
-		errInjector := newPLogReadFailure()
+		errInjector := newRecoveryStorageFaults()
 		// Given initial recovery fails for the cluster application's sole partition
 		errInjector.failPLogReads([]istructs.PartitionID{0})
 		cfg := vvm.GetTestVVMCfg(httpu.LocalhostIP)
@@ -885,41 +840,23 @@ func TestRecoveryFromCheckpoints(t *testing.T) {
 		require.ErrorIs(err, appparts.ErrNotFound)
 	})
 
-	t.Run("recovery: scn: A later bootstrap deploys a previously failed partition after successful initial recovery", func(t *testing.T) {
-		errInjector := newPLogReadFailure()
-		cfg := recoveryVITConfigWithStorageHooks(errInjector, true)
-		logCap := logger.StartCapture(t, logger.LogLevelVerbose)
-		vit := it.NewVIT(t, &cfg)
-		defer vit.TearDown()
-		// And workspace Billing in partition 1 has last WLog offset 14 and last allocated ordinary record ID 200005
-		owner := vit.GetPrincipal(istructs.AppQName_test1_app1, recoveryTestLoginName)
-		billing := createWorkspacesInPartition(t, vit, owner, 1, 1)[0]
-		for id := istructs.FirstUserRecordID; id <= 200005; id++ {
-			response := vit.PostWS(billing, "c.sys.CUD", singleDoc)
-			require.Equal(id, response.NewID())
-		}
-		fillWLogWithNonIDBearingEvents(t, vit, billing, 14)
-		appStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
-		require.NoError(err)
-		waitForActualizerFlush(t, appStructs, 1)
-		require.Equal(istructs.Offset(14), getLastWLogOffset(t, vit, billing))
-		// Given initial recovery of partition 1 of application "test1/app1" failed on the previous VVM start
-		require.NoError(vit.RestartVVM(it.WithAfterStop(func(storage it.RestartStorage) {
-			removeAppPartitionCheckpoints(t, storage, 3)
-			errInjector.failPLogReads([]istructs.PartitionID{1})
-			logCap.Reset()
-		})))
-		logCap.HasLine("stage=bootstrap.initial_recovery.error", "app=test1/app1", "partid=1", "PLog read failed")
-		// When VAOperator starts the VVM again and initial recovery of partition 1 succeeds
-		require.NoError(vit.RestartVVM(it.WithAfterStop(func(_ it.RestartStorage) {
-			errInjector.resolve()
-		})))
-		// Then inserting an ordinary record into Billing, retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
-		response := vit.PostWS(billing, "c.sys.CUD", singleDoc)
-		require.Equal(http.StatusOK, response.HTTPResp.StatusCode)
-		require.Equal(istructs.Offset(15), response.CurrentWLogOffset)
-		require.Equal(map[string]istructs.RecordID{"1": 200006}, response.NewIDs)
-	})
+	for _, operation := range []string{
+		// | operation                |
+		// | read PLog                |
+		"read PLog",
+		// | operation                |
+		// | read projector position  |
+		"read projector position",
+		// | operation                |
+		// | write projector position |
+		"write projector position",
+	} {
+		t.Run("recovery: scn: A later bootstrap deploys a previously failed partition after successful initial recovery: "+operation, func(t *testing.T) {
+			testInitialRecoveryRetry(t, operation)
+		})
+	}
+
+	t.Run("recovery: scn: The first insert after partition deployment receives the next record ID and WLog offset", testInsertAfterCheckpointProjectorDeployment)
 
 	t.Run("recovery: scn: Invalid partition checkpoint causes PLog read out from beginning: checkpoint 1000000", func(t *testing.T) {
 		// | plog            | lastPLogOffset | lastWLogOffset | lastRecordID |
@@ -1412,14 +1349,21 @@ func newRecoveryCheckpointFixture(t *testing.T, scope checkpointType, kind check
 
 func (f *recoveryCheckpointFixture) restart() {
 	f.t.Helper()
+	f.restartWithProjectorPosition(testOffsetPLogTail)
+}
+
+func (f *recoveryCheckpointFixture) restartWithProjectorPosition(offset istructs.Offset) {
+	f.t.Helper()
 	require := require.New(f.t)
 	appQName := f.workspace.AppQName()
+	position := recoveryProjectorRow(f.t, require, f.appStructs, f.partitionID, offset)
 	require.NoError(f.vit.RestartVVM(it.WithAfterStop(func(storage it.RestartStorage) {
-		moveActualizerToPLogEnd(f.t, f.appStructs, f.partitionID)
+		appStorage := storage.AppStorage(f.t, appQName)
+		require.NoError(appStorage.Put(position.PKey, position.CCols, position.Value))
 		checkpointAppStorage := storage.AppStorage(f.t, istructs.AppQName_sys_vvm)
 		checkpointStorage := vvmstorage.NewRecoveryCheckpointStorage(checkpointAppStorage)
 		setCheckpoint(f.t, checkpointStorage, checkpointAppStorage,
-			storage.AppStorage(f.t, appQName), istructs.ClusterApps[appQName], f.partitionID,
+			appStorage, istructs.ClusterApps[appQName], f.partitionID,
 			f.expected.wsid, f.scope, f.kind)
 		f.logs.Reset()
 	})))
@@ -1490,15 +1434,19 @@ func waitForActualizerFlush(t *testing.T, appStructs istructs.IAppStructs, parti
 	}
 }
 
-func moveActualizerToPLogEnd(t *testing.T, appStructs istructs.IAppStructs, partitionID istructs.PartitionID) {
+func recoveryProjectorRow(t *testing.T, require *require.Assertions, appStructs istructs.IAppStructs, partitionID istructs.PartitionID, offset istructs.Offset) istorage.BatchItem {
 	t.Helper()
 	view := appdefsys.ProjectionOffsetsView
 	key := appStructs.ViewRecords().KeyBuilder(view.Name)
 	key.PutInt32(view.Fields.Partition, int32(partitionID))
 	key.PutQName(view.Fields.Projector, checkpoints.QNameApplyRecoveryCheckpoint)
 	value := appStructs.ViewRecords().NewValueBuilder(view.Name)
-	value.PutInt64(view.Fields.Offset, int64(testOffsetPLogTail))
-	require.NoError(t, appStructs.ViewRecords().Put(istructs.NullWSID, key, value))
+	value.PutInt64(view.Fields.Offset, int64(offset))
+	pKey, columns, err := key.ToBytes(istructs.NullWSID)
+	require.NoError(err)
+	data, err := value.ToBytes()
+	require.NoError(err)
+	return istorage.BatchItem{PKey: pKey, CCols: columns, Value: data}
 }
 
 func fillWLogWithNonIDBearingEvents(t *testing.T, vit *it.VIT, workspace *it.AppWorkspace, tail istructs.Offset) {
@@ -1537,7 +1485,7 @@ type recoveryStorageObservers struct {
 	appLogWrites     *logWriteRecorder
 }
 
-func recoveryVITConfigWithStorageHooks(errInjector *pLogReadErrorInjector, withUser bool, observers ...recoveryStorageObservers) it.VITConfig {
+func recoveryVITConfigWithStorageHooks(errInjector *recoveryStorageFaults, withUser bool, observers ...recoveryStorageObservers) it.VITConfig {
 	appQName := istructs.AppQName_test1_app1
 	var observation recoveryStorageObservers
 	if len(observers) > 0 {
@@ -1695,12 +1643,155 @@ func requirePartitionCheckpointPresence(t *testing.T, vit *it.VIT, failed []istr
 	}
 }
 
-func requireInitialRecoveryFailureLogs(t *testing.T, logs logger.ILogCaptor, failed []istructs.PartitionID) {
+// Prepare real PLogs and restart with faults confined to the selected storage rows.
+func startWithFailedInitialRecovery(t *testing.T, operation string, failed []istructs.PartitionID) (*it.VIT, *recoveryStorageFaults, *it.AppWorkspace) {
 	t.Helper()
-	for _, id := range failed {
-		logs.HasLine("stage=bootstrap.initial_recovery.error", "app=test1/app1",
-			fmt.Sprintf("partid=%d", id), "read PLog", "PLog read failed")
+	require := require.New(t)
+	faults := newRecoveryStorageFaults()
+	cfg := recoveryVITConfigWithStorageHooks(faults, true)
+	logs := logger.StartCapture(t, logger.LogLevelInfo)
+	vit := it.NewVIT(t, &cfg)
+	t.Cleanup(vit.TearDown)
+	appName := istructs.AppQName_test1_app1
+	app, err := vit.IAppStructsProvider.BuiltIn(appName)
+	require.NoError(err)
+	owner := vit.GetPrincipal(appName, recoveryTestLoginName)
+	var billing *it.AppWorkspace
+	var rows []istorage.BatchItem
+	for id := range istructs.PartitionID(3) {
+		ws := createWorkspacesInPartition(t, vit, owner, id, 1)[0]
+		if id == 1 {
+			// And workspace Billing in partition 1 has last WLog offset 14 and last allocated ordinary record ID 200005
+			billing = ws
+			for recordID := istructs.FirstUserRecordID; recordID <= 200005; recordID++ {
+				require.Equal(recordID, vit.PostWS(ws, "c.sys.CUD", singleDoc).NewID())
+			}
+			fillWLogWithNonIDBearingEvents(t, vit, ws, 14)
+		}
+		waitForActualizerFlush(t, app, id)
+		rows = append(rows, recoveryProjectorRow(t, require, app, id, 0))
 	}
+	// When VAOperator starts the VVM
+	require.NoError(vit.RestartVVM(it.WithAfterStop(func(storage it.RestartStorage) {
+		// Given application "test1/app1" declares partition IDs 0 through 2 with no stored partition checkpoints
+		removeAppPartitionCheckpoints(t, storage, 3)
+		// And each partition has a nonempty PLog and no saved position for sys.ApplyRecoveryCheckpoint
+		store := storage.AppStorage(t, appName)
+		for _, row := range rows {
+			var data []byte
+			exists, err := store.Get(row.PKey, row.CCols, &data)
+			require.NoError(err)
+			if exists {
+				deleted, err := store.CompareAndDelete(row.PKey, row.CCols, data)
+				require.NoError(err)
+				require.True(deleted)
+			}
+		}
+		// And the initial recovery operation "<operation>" fails for <failed_partitions> with "<cause>"
+		if operation == "read PLog" {
+			faults.failPLogReads(failed)
+		} else {
+			faults.failPosition(operation, rows[1])
+		}
+		logs.Reset()
+	})))
+	// Then each failed partition is undeployed and has no partition checkpoint
+	// And each remaining partition is deployed with a partition checkpoint
+	requirePartitionCheckpointPresence(t, vit, failed)
+	deployed := deployedPartitionIDs(t, vit)
+	for id := range istructs.PartitionID(3) {
+		require.Equal(!slices.Contains(failed, id), slices.Contains(deployed, id), "partition %d", id)
+	}
+	// And for each failed partition an ERROR log at stage "bootstrap.initial_recovery.error" identifies app "test1/app1" and its partition ID
+	// And the log message identifies "<operation>" and contains "<cause>"
+	cause := "storage unavailable"
+	if operation == "read PLog" {
+		cause = "PLog read failed"
+	}
+	for _, id := range failed {
+		var failures []string
+		for line := range strings.Lines(logs.String()) {
+			if strings.Contains(line, "stage=bootstrap.initial_recovery.error") && strings.Contains(line, "app=test1/app1") && strings.Contains(line, fmt.Sprintf("partid=%d", id)) {
+				failures = append(failures, line)
+			}
+		}
+		require.Len(failures, 1)
+		require.Contains(failures[0], "level=ERROR")
+		require.Contains(failures[0], operation)
+		require.Contains(failures[0], cause)
+	}
+	// And the server becomes ready
+	require.NotNil(vit.VoedgerVM)
+	return vit, faults, billing
+}
+
+func testInitialRecoveryRetry(t *testing.T, operation string) {
+	t.Helper()
+	require := require.New(t)
+	// Given initial recovery of partition 1 of application "test1/app1" failed during "<operation>" on the previous VVM start
+	vit, faults, billing := startWithFailedInitialRecovery(t, operation, []istructs.PartitionID{1})
+	appName := billing.AppQName()
+	app, err := vit.IAppStructsProvider.BuiltIn(appName)
+	require.NoError(err)
+	row := recoveryProjectorRow(t, require, app, 1, 0)
+	// When VAOperator starts the VVM again
+	require.NoError(vit.RestartVVM(it.WithAfterStop(func(storage it.RestartStorage) {
+		// And the storage failure has been resolved
+		faults.resolve()
+		// And the partition checkpoint and the saved position for sys.ApplyRecoveryCheckpoint are absent
+		var data []byte
+		exists, err := storage.AppStorage(t, appName).Get(row.PKey, row.CCols, &data)
+		require.NoError(err)
+		require.False(exists)
+	})))
+	// Then partition 1 is deployed with a partition checkpoint
+	requirePartitionCheckpointPresence(t, vit, nil)
+	require.Contains(deployedPartitionIDs(t, vit), istructs.PartitionID(1))
+	// And a client inserts one ordinary record into Billing after readiness, retrying "503 Service Unavailable" responses
+	response := vit.PostWS(billing, "c.sys.CUD", singleDoc)
+	// And the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+	require.Equal(http.StatusOK, response.HTTPResp.StatusCode)
+	require.Equal(istructs.Offset(15), response.CurrentWLogOffset)
+	require.Equal(map[string]istructs.RecordID{"1": 200006}, response.NewIDs)
+}
+
+func testInsertAfterCheckpointProjectorDeployment(t *testing.T) {
+	require := require.New(t)
+	// And workspace "Orders" in that partition has last WLog offset 14 and last allocated ordinary record ID 200005
+	f := newRecoveryCheckpointFixture(t, checkpointTypePartition, checkpointAbsent)
+	appName := f.workspace.AppQName()
+	fillPLogWithNonIDBearingEvents(t, f.vit, appName, f.partitionID, f.workspace.Owner, 250)
+	require.Equal(istructs.Offset(250), getLastPLogOffset(t, f.vit, appName, f.partitionID))
+	// Given initial recovery completed at PLog offset 250 and the partition was deployed with sys.ApplyRecoveryCheckpoint at position 250
+	f.restartWithProjectorPosition(250)
+	app, err := f.vit.IAppStructsProvider.BuiltIn(appName)
+	require.NoError(err)
+	offset, err := actualizers.ActualizerOffset(app, f.partitionID, checkpoints.QNameApplyRecoveryCheckpoint)
+	require.NoError(err)
+	require.Equal(istructs.Offset(250), offset)
+	// When a client submits the partition's first command to insert one ordinary record into "Orders", retrying "503 Service Unavailable" responses
+	response := f.vit.PostWS(f.workspace, "c.sys.CUD", singleDoc)
+	// Then the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+	require.Equal(http.StatusOK, response.HTTPResp.StatusCode)
+	require.Equal(istructs.Offset(15), response.CurrentWLogOffset)
+	require.Equal(map[string]istructs.RecordID{"1": 200006}, response.NewIDs)
+	// And the insert appends PLog event 251
+	checkLastPLogEvent(t, f.vit, appName, f.partitionID, f.workspace.WSID, 251, 15)
+	// And the workspace checkpoint for "Orders" eventually advances to wlogIDBearingOffset 15
+	store, err := f.vit.IAppStorageProvider.AppStorage(istructs.AppQName_sys_vvm)
+	require.NoError(err)
+	pKey, columns := vvmstorage.WorkspaceCheckpointKey(app.ClusterAppID(), f.workspace.WSID)
+	// A range read sees the projector's write even if a previous poll saw the old value.
+	require.Eventually(func() bool {
+		var checkpoint checkpoints.WorkspaceCheckpoint
+		err := store.Read(t.Context(), pKey, columns, nil, func(cc, data []byte) error {
+			if bytes.Equal(cc, columns) {
+				return json.Unmarshal(data, &checkpoint)
+			}
+			return nil
+		})
+		return err == nil && checkpoint.WLogIDBearingOffset == 15
+	}, 10*time.Second, 10*time.Millisecond)
 }
 
 func removeAppPartitionCheckpoints(t *testing.T, storage it.RestartStorage, numPartitions istructs.NumAppPartitions) {
@@ -1741,7 +1832,7 @@ func containsPartition(partitions []istructs.PartitionID, target istructs.Partit
 
 type readErrorInjectingAndWriteRecordingStorageFactory struct {
 	istorage.IAppStorageFactory
-	errInjector      *pLogReadErrorInjector
+	errInjector      *recoveryStorageFaults
 	appStoragePrefix string // Defaults to test1app1; selects the application whose PLog reads can fail.
 	sysVVMRecorder   *sysVVMWriteRecorder
 	appLogRecorder   *logWriteRecorder
@@ -1762,7 +1853,7 @@ func (f *readErrorInjectingAndWriteRecordingStorageFactory) AppStorage(appName i
 	if f.appLogRecorder != nil {
 		storage = &appLogWriteRecorderStorage{IAppStorage: storage, logRecorder: f.appLogRecorder}
 	}
-	return &pLogReadFailureStorage{IAppStorage: storage, errInjector: f.errInjector}, nil
+	return &recoveryFaultStorage{IAppStorage: storage, errInjector: f.errInjector}, nil
 }
 
 type logWriteKind string
@@ -1846,12 +1937,12 @@ func (s *appLogWriteRecorderStorage) PutBatch(items []istorage.BatchItem) error 
 	return s.IAppStorage.PutBatch(items)
 }
 
-type pLogReadFailureStorage struct {
+type recoveryFaultStorage struct {
 	istorage.IAppStorage
-	errInjector *pLogReadErrorInjector
+	errInjector *recoveryStorageFaults
 }
 
-func (s *pLogReadFailureStorage) Read(ctx context.Context, pKey, startCCols, finishCCols []byte,
+func (s *recoveryFaultStorage) Read(ctx context.Context, pKey, startCCols, finishCCols []byte,
 	callback istorage.ReadCallback) error {
 	if err := s.errInjector.shouldFailRead(pKey); err != nil {
 		return err
@@ -1859,23 +1950,45 @@ func (s *pLogReadFailureStorage) Read(ctx context.Context, pKey, startCCols, fin
 	return s.IAppStorage.Read(ctx, pKey, startCCols, finishCCols, callback)
 }
 
-// pLogReadErrorInjector controls only the storage dependency:
-//
-//	failPLogReads(ids) -> selected PLog keys return an error
-//	                  -> unrelated reads use real storage
-//	resolve()         -> all reads use real storage
-//
-// Resolving storage does not deploy excluded partitions; only a later bootstrap can.
-type pLogReadErrorInjector struct {
+func (s *recoveryFaultStorage) Get(key, columns []byte, data *[]byte) (bool, error) {
+	if s.errInjector.failsPosition("read projector position", key, columns) {
+		return false, errors.New("storage unavailable")
+	}
+	return s.IAppStorage.Get(key, columns, data)
+}
+
+func (s *recoveryFaultStorage) Put(key, columns, data []byte) error {
+	if s.errInjector.failsPosition("write projector position", key, columns) {
+		return errors.New("storage unavailable")
+	}
+	return s.IAppStorage.Put(key, columns, data)
+}
+
+// Faults target a selected PLog or an exact projector position row.
+type recoveryStorageFaults struct {
 	mu                  sync.Mutex
 	plogEventKeysToFail map[string]bool // reads by these keys will be failed
+	positionOperation   string
+	positionRow         istorage.BatchItem
 }
 
-func newPLogReadFailure() *pLogReadErrorInjector {
-	return &pLogReadErrorInjector{plogEventKeysToFail: map[string]bool{}}
+func (c *recoveryStorageFaults) failPosition(operation string, row istorage.BatchItem) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.positionOperation, c.positionRow = operation, row
 }
 
-func (c *pLogReadErrorInjector) failPLogReads(ids []istructs.PartitionID) {
+func (c *recoveryStorageFaults) failsPosition(operation string, key, columns []byte) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.positionOperation == operation && bytes.Equal(key, c.positionRow.PKey) && bytes.Equal(columns, c.positionRow.CCols)
+}
+
+func newRecoveryStorageFaults() *recoveryStorageFaults {
+	return &recoveryStorageFaults{plogEventKeysToFail: map[string]bool{}}
+}
+
+func (c *recoveryStorageFaults) failPLogReads(ids []istructs.PartitionID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for _, id := range ids {
@@ -1884,7 +1997,7 @@ func (c *pLogReadErrorInjector) failPLogReads(ids []istructs.PartitionID) {
 	}
 }
 
-func (c *pLogReadErrorInjector) shouldFailRead(key []byte) error {
+func (c *recoveryStorageFaults) shouldFailRead(key []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.plogEventKeysToFail[string(key)] {
@@ -1894,10 +2007,11 @@ func (c *pLogReadErrorInjector) shouldFailRead(key []byte) error {
 }
 
 // should not be named e.g. reset() since `resolve` term is in Gherkin scenarios
-func (c *pLogReadErrorInjector) resolve() {
+func (c *recoveryStorageFaults) resolve() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	clear(c.plogEventKeysToFail)
+	c.positionOperation = ""
 }
 
 // Record successful sys/vvm writes so tests can check checkpoint persistence order.

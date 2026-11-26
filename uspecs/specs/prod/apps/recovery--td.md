@@ -25,8 +25,8 @@ Normal offset and identifier issuance is specified separately in
   checkpoints pointing to the latest ID-bearing WLog events,
   or zero when none exist. It does not publish runtime partition or workspace state.
 - **Initial-recovery completion marker**: presence of a partition checkpoint,
-  including a zero-valued one. Workspace checkpoints derived from a partition
-  are stored before this marker.
+  including a zero-valued one. Initial recovery writes this marker after all
+  workspace checkpoints and any required projector position update
 - **Deployable partition**: a declared partition whose existing completion marker was
   read successfully or whose missing checkpoints were reconstructed and
   persisted successfully by the current initial-recovery invocation.
@@ -77,6 +77,8 @@ Request recovery
     v
 Checkpointing
     |
+    +-- [Async actualizer]
+    +-- [(sys.projectionOffsets)]
     +-- [Recovery checkpoint projector]
     +-- [(Recovery checkpoint storage)]
     |
@@ -120,20 +122,26 @@ Application operations
     from the returned IDs; collected partition errors can still be logged.
   - Obtains the application's event storage and uses `checkpoints.WorkerLimit`,
     sampled from `runtime.GOMAXPROCS(0)` at package initialization. A present
-    partition checkpoint, including zero, makes that
-    partition deployable without scanning or rewriting it. Each missing partition
+    partition checkpoint, including zero, makes that partition deployable
+    without a PLog scan or a projector position lookup. Each missing partition
     is scheduled concurrently under this shared CPU bound and reads its PLog
     sequentially from `FirstOffset` through the actual log end. The attempt
     retains the final PLog offset and latest ID-bearing WLog offset for every
     WSID encountered.
-  - It stores a workspace checkpoint for every encountered WSID, using zero when
-    no eligible ID-bearing event was found, and stores the partition checkpoint last,
-    using zero for an empty PLog. The partition is added to the deployable IDs
-    only after all these writes succeed. A failed reconstruction writes no
-    completion marker and is repeated on a later bootstrap.
-  - Every partition checkpoint-read, PLog-read, or checkpoint-write error omits
-    that ID from the deployable slice and adds it to the error map, retaining
-    the failed operation and wrapping the underlying cause. Concurrent attempts
+  - After a nonempty scan, persist the workspace checkpoints for all encountered
+    WSIDs, using zero where no eligible ID-bearing event was found. Then read
+    the position of `sys.ApplyRecoveryCheckpoint` from `[(sys.projectionOffsets)]`.
+    If the position is absent, `0`, or `FirstOffset`, write the last scanned
+    PLog offset to that row. Preserve any greater position. Write the partition
+    checkpoint last and return the ID as deployable only after that write succeeds
+  - For an empty PLog, write a zero partition checkpoint and skip the projector
+    position lookup and write
+  - A position read or write failure leaves the partition undeployed with its
+    completion marker absent. If the position write succeeds but the marker
+    write fails, the next bootstrap rescans the PLog and applies the same rule
+    to the position already in the view
+  - If a storage operation fails, omit that partition ID from the deployable
+    slice and return its failed operation and wrapped cause in the error map. Concurrent attempts
     collect their outcomes safely; the returned map is complete once all
     scheduled attempts finish. A checkpoint-read failure never authorizes
     deployment, even if a stored marker might exist. Partition-failure logging
@@ -229,6 +237,25 @@ Application operations
   - impl: [pkg/istructsmem/idgenerator.go](../../../../pkg/istructsmem/idgenerator.go)
 
 ### Checkpointing
+
+- `[Async actualizer]`
+  - Partition deployment starts the actualizer. It reads the saved projector
+    position and begins reading the PLog at `position + 1`. An absent row
+    yields `NullOffset` and starts the read at `FirstOffset`
+  - impl: [pkg/processors/actualizers/async.go](../../../../pkg/processors/actualizers/async.go)
+
+- `[(sys.projectionOffsets)]`
+  - Initial recovery and the actualizer share the same position lookup in the
+    application's view records. Both address the row in `istructs.NullWSID`
+    with partition key `partition` (partition ID) and clustering column
+    `projector` (projector QName). The `offset` field holds the last covered
+    PLog offset
+  - Initial recovery writes through `ViewRecords().Put` on the registered
+    application's storage instance. With caching enabled, a successful write
+    replaces the cached value or cached miss after the backing store accepts
+    the write and before recovery publishes the partition completion marker.
+    A separate call to the caching provider's `AppStorage` creates a separate cache
+  - decl: [pkg/appdef/sys/sys.go](../../../../pkg/appdef/sys/sys.go)
 
 - `[Recovery checkpoint projector]`
   - The single built-in asynchronous `sys.ApplyRecoveryCheckpoint` stores a
@@ -342,10 +369,11 @@ Initial recovery does not fail in this scenario.
   -> [Checkpoint initial recovery]: InitializeCheckpoints(application, 3)
       -> [(Recovery checkpoint storage)]: partition 0 present -> skip
       -> [Application events]: scan complete PLogs for missing partitions 1 and 2
-      -> [(Recovery checkpoint storage)]: partition 1 workspace checkpoints 10=6, 11=0
-      -> [(Recovery checkpoint storage)]: partition 1 checkpoint=50 (completion marker)
-      -> [(Recovery checkpoint storage)]: partition 2 checkpoint=0 (empty completion marker)
+      -> [(Recovery checkpoint storage)]: persist workspace checkpoints for partitions 1 and 2
+      -> [(sys.projectionOffsets)]: apply the position rule for each scanned partition
+      -> [(Recovery checkpoint storage)]: write each partition's completion marker
       - return deployable IDs [0, 1, 2], empty error map, nil
+      - partition 0 still has its saved sys.ApplyRecoveryCheckpoint position of FirstOffset
   -> [App partitions engine]: DeployAppPartitions(application, [0, 1, 2])
 ```
 
@@ -357,7 +385,8 @@ relative ordering of different partition attempts is unconstrained.
 ```text
 [Checkpoint initial recovery]
   -> scheduled missing partitions, bounded by package-initialized WorkerLimit
-      -> [Application events]: one or every PLog scan fails
+      -> [Application events]: a PLog scan fails for one or every partition
+      or -> [(sys.projectionOffsets)]: the position read or write fails for one partition
       - collect each partition-scoped failure in the error map; write no marker for it
       - let every sibling attempt finish; wait for all scheduled attempts
   -> [Bootstrap operator]: return deployable IDs, partition-error map, nil
@@ -452,13 +481,71 @@ partition 0. Its first `VoedgerVM.Launch` returns a closed problem context.
       - return 200 with CurrentWLogOffset=15 and new ordinary record ID=200006
 ```
 
+### Recovery checkpoint projector
+
+#### Initial recovery sets the position of sys.ApplyRecoveryCheckpoint to the recovered PLog tail before the actualizer starts
+
+```text
+[Checkpoint initial recovery]
+  -> [Application events]: recover the partition through PLog offset 250
+  -> [(Recovery checkpoint storage)]: persist workspace checkpoints
+  -> [(sys.projectionOffsets)]: read absent, 0, or FirstOffset for sys.ApplyRecoveryCheckpoint, then store 250
+  - emit INFO bootstrap.initial_recovery with message "ap.sys.ApplyRecoveryCheckpoint offset set to 250"
+  -> [(Recovery checkpoint storage)]: store lastPLogOffset 250 as the completion marker
+  - return the partition as deployable
+```
+
+Use the registered application's cache throughout the test. Before initial
+recovery, look up the projector position with the row absent, at zero, or at
+`FirstOffset` in separate cases. Immediately after `InitializeCheckpoints`
+returns, before calling `DeployAppPartitions`, verify that `ActualizerOffset`
+on the same application returns the recovered PLog tail of 250.
+
+#### The first insert after partition deployment receives the next record ID and WLog offset
+
+```text
+*Client
+  -> [Command processor]: insert an ordinary record into Orders, retrying 503 during runtime recovery
+      -> [Partition recovery manager]: recover from lastPLogOffset 250
+      -> [Workspace recovery manager]: recover WLog tail 14 and last ordinary record ID 200005
+      -> [Application events]: append PLog event 251 with WLog offset 15
+      - return 200 OK with CurrentWLogOffset 15 and new record ID 200006
+[Async actualizer]
+  -> [Recovery checkpoint projector]: process the local insert at 251
+      -> [(Recovery checkpoint storage)]: store wlogIDBearingOffset 15 for Orders
+```
+
+#### The recovery checkpoint projector overwrites the initial recovery checkpoint without changing numbers issued by the next insert
+
+```text
+[Checkpoint initial recovery]
+  -> [(sys.projectionOffsets)]: preserve the established position 2 after scanning through 250
+  -> [(Recovery checkpoint storage)]: store lastPLogOffset 250
+[Async actualizer]
+  -> [Recovery checkpoint projector]: catch up through 250
+      -> [(Recovery checkpoint storage)]: write lastPLogOffset 100, then 200
+*Client
+  -> [Command processor]: after restart, insert into Orders, retrying 503 during runtime recovery
+      -> [Partition recovery manager]: recover using the stored partition checkpoint of 200
+      - append PLog event 251 and return WLog offset 15 and ordinary record ID 200006
+```
+
+#### Initial recovery marks an empty partition complete without creating a projector position
+
+```text
+[Checkpoint initial recovery]
+  -> [Application events]: scan the empty PLog
+  -> [(Recovery checkpoint storage)]: store lastPLogOffset 0
+  - the projector position remains absent
+```
+
 ### Partition recovery orchestration
 
 #### At least the first two command requests to a partition and workspace return 503 after initial recovery
 
 ```text
 [Bootstrap operator]
-  -> [Checkpoint initial recovery]: persist missing checkpoints only
+  -> [Checkpoint initial recovery]: finish persistent checkpoint and projector position initialization
   -> [App partitions engine]: deploy partition workers; server ready
 *Client
   -> [Command processor]: first command, without retries -> 503
@@ -888,8 +975,8 @@ sequenceDiagram
 - Every initial-recovery error map entry is logged once by `[Bootstrap operator]`
   through `bootstrap.initial_recovery.error`, identifying the application and
   partition. The initializer returns partition errors without logging them again.
-  Each error identifies a partition-checkpoint-read, PLog-read,
-  workspace-checkpoint-write, or partition-checkpoint-write failure.
+  The message identifies the failed operation and its underlying cause.
+  The operation names are listed in [bootstrap logging](./logging--td.md#application-deployment).
   The application completion log is emitted only after every scheduled attempt
   has finished.
 - Every undeployed-partition rejection uses the standard not-found message
@@ -914,8 +1001,9 @@ Partition and workspace recovery functions append elapsed whole milliseconds to 
   events after the checkpoint therefore increase workspace recovery time without
   changing record-ID state.
 - Every checkpoint-storage write is last-write-wins. Initial recovery establishes
-  missing completion markers; the asynchronous projector advances checkpoints;
-  request-driven recovery never writes them.
+  missing completion markers. A projector catching up from an established
+  position can replace a checkpoint with an earlier offset. Request-driven
+  recovery only reads the checkpoints
 
 ### Testing
 
@@ -929,7 +1017,7 @@ Partition and workspace recovery functions append elapsed whole milliseconds to 
 - Internal command tests preserve partition and workspace orchestration
   coverage using deterministic recovery gates and injected failures
 - Empty-log command fixtures seed only system workspace records
-- The empty-partition case in "Normal initial partition recovery" is covered by
+- Empty-PLog scans and zero partition markers are covered by the
   [initial-recovery tests](../../../../pkg/checkpoints/initial_recovery_test.go).
   VIT provisioning creates both PLog and WLog events; those tests use an
   unprovisioned mock partition rather than deleting a provisioned partition's PLog.

@@ -94,7 +94,7 @@ State
 
 - `[Checkpoint initial recovery]`
   - `checkpoints.IInitialRecovery.InitializeCheckpoints(ctx, appQName, numPartitions)` returns `([]istructs.PartitionID, map[istructs.PartitionID]error, error)`: deployable IDs, operation-specific errors keyed by failed partition ID, and an optional fatal app-structures setup or context error. With a nil fatal error, the slice and map are disjoint and cover `0..numPartitions-1` exactly once. An empty slice and complete failure map with a nil fatal error are valid.
-  - Initializes persistent checkpoints only, not runtime sequence state. Checkpoint calculation, completion-marker persistence, wrapped error details, and cancellation behavior are specified in [Initial recovery](./recovery--td.md#initial-recovery). Partition-failure logging belongs to `[Bootstrap operator]`.
+  - Persists recovery checkpoints and any required position update for `sys.ApplyRecoveryCheckpoint` before returning the partition for deployment. The actualizer reads that position when `[DeployAppPartitions]` starts it. Commands trigger runtime sequence recovery later. See the [bootstrap recovery rules](./recovery--td.md#bootstrap) for offset selection, completion markers, and failures
   - decl: [pkg/checkpoints/types.go](../../../../pkg/checkpoints/types.go)
 
 ### Cluster app
@@ -237,10 +237,11 @@ persisted descriptor.
       - present completion marker, including zero -> add ID to deployable IDs
       - process missing partitions with at most worker-limit attempts in flight:
           scan each PLog sequentially from FirstOffset through actual log end
-          persist workspace checkpoints before partition completion marker
+          persist workspace checkpoints and any required projector position update
+          write the partition completion marker last
           successful reconstruction -> add ID to deployable IDs
-      - checkpoint-read, scan, or write failure -> add operation-wrapped error to map;
-          omit failed ID; do not cancel siblings
+      - storage read or write failure -> record the failed operation and cause,
+          omit the failed ID and continue sibling attempts
       - wait for every scheduled attempt
       - setup failure before scheduling or context cancellation -> fatal error
       - return deployable IDs, partition-error map, fatal setup/context error or nil

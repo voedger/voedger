@@ -79,17 +79,18 @@ Feature: Partition and workspace recovery
 
     Scenario: Normal initial partition recovery
       Given an application declares partition IDs 0 through 2
-      And partition 0 has a stored partition checkpoint
+      And partition 0 has a stored partition checkpoint at its PLog end
+      And the saved position of sys.ApplyRecoveryCheckpoint in partition 0 is FirstOffset
       And partitions 1 and 2 have no stored partition checkpoints
       And each partition is populated with a workspace having this history:
         | partition ID | workspace | last WLog offset | last allocated ordinary record ID |
         | 0            | Orders    | 7                | 200003                            |
         | 1            | Billing   | 14               | 200005                            |
         | 2            | Inventory | 20               | 200009                            |
-      And VAOperator has started the VVM
-      And initial recovery does not fail
-      When a client inserts one ordinary record into each workspace, retrying "503 Service Unavailable" responses
-      Then each command eventually returns "200 OK"
+      When VAOperator starts the VVM and initial recovery succeeds
+      And after partition deployment a client inserts one ordinary record into each workspace, retrying "503 Service Unavailable" responses
+      Then immediately after initial recovery, before the actualizer starts, the saved position of sys.ApplyRecoveryCheckpoint in partition 0 is still FirstOffset
+      And each command eventually returns "200 OK"
       And the successful command responses contain:
         | workspace | CurrentWLogOffset | new ordinary record ID |
         | Orders    | 8                 | 200004                 |
@@ -98,16 +99,22 @@ Feature: Partition and workspace recovery
 
     Scenario Outline: Initial recovery failures are logged while the server becomes ready
       Given application "test1/app1" declares partition IDs 0 through 2 with no stored partition checkpoints
-      And initial recovery fails for <failed_partitions> with "PLog read failed"
+      And each partition has a nonempty PLog and no saved position for sys.ApplyRecoveryCheckpoint
+      And the initial recovery operation "<operation>" fails for <failed_partitions> with "<cause>"
       When VAOperator starts the VVM
-      Then partition checkpoints are <checkpoint_state>
-      And initial-recovery error "PLog read failed" is logged for <failed_partitions>
+      Then each failed partition is undeployed and has no partition checkpoint
+      And each remaining partition is deployed with a partition checkpoint
+      And for each failed partition an ERROR log at stage "bootstrap.initial_recovery.error" identifies app "test1/app1" and its partition ID
+      And the log message identifies "<operation>" and contains "<cause>"
+      And no failed partition has an INFO log at stage "bootstrap.initial_recovery" with a message starting with "ap.sys.ApplyRecoveryCheckpoint offset set to"
       And the server becomes ready
 
       Examples:
-        | failed_partitions      | checkpoint_state                    |
-        | partition 1            | present for partitions 0 and 2 only |
-        | partitions 0 through 2 | absent for every partition          |
+        | operation                | failed_partitions      | cause               |
+        | read PLog                | partition 1            | PLog read failed    |
+        | read PLog                | partitions 0 through 2 | PLog read failed    |
+        | read projector position  | partition 1            | storage unavailable |
+        | write projector position | partition 1            | storage unavailable |
 
     Scenario: Commands return 500 on a partition whose initial recovery failed
       Given application "test1/app1" declares partition IDs 0 through 2 with no stored partition checkpoints
@@ -145,32 +152,73 @@ Feature: Partition and workspace recovery
       When VAOperator starts the VVM
       Then VVM launch fails with an error
 
-    Scenario: A later bootstrap deploys a previously failed partition after successful initial recovery
-      Given initial recovery of partition 1 of application "test1/app1" failed on the previous VVM start
+    Scenario Outline: A later bootstrap deploys a previously failed partition after successful initial recovery
+      Given initial recovery of partition 1 of application "test1/app1" failed during "<operation>" on the previous VVM start
+      And the partition checkpoint and the saved position for sys.ApplyRecoveryCheckpoint are absent
       And workspace Billing in partition 1 has last WLog offset 14 and last allocated ordinary record ID 200005
-      When VAOperator starts the VVM again and initial recovery of partition 1 succeeds
-      Then inserting an ordinary record into Billing, retrying "503 Service Unavailable" responses, returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+      And the storage failure has been resolved
+      When VAOperator starts the VVM again
+      And a client inserts one ordinary record into Billing after readiness, retrying "503 Service Unavailable" responses
+      Then partition 1 is deployed with a partition checkpoint
+      And the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+
+      Examples:
+        | operation                |
+        | read PLog                |
+        | read projector position  |
+        | write projector position |
 
   Rule: Recovery checkpoint projector
 
+    Scenario Outline: Initial recovery sets the position of sys.ApplyRecoveryCheckpoint to the recovered PLog tail before the actualizer starts
+      Given the PLog ends at offset 250 and the partition checkpoint is absent
+      And the saved position of sys.ApplyRecoveryCheckpoint before initial recovery is <position>
+      When initial recovery completes successfully for this partition
+      Then immediately after initial recovery, before the actualizer starts, the saved position of sys.ApplyRecoveryCheckpoint is 250
+      And the position lookup used by the actualizer returns 250 for this projector and partition
+      And the partition checkpoint has lastPLogOffset 250
+      And exactly one INFO log for this application and partition at stage "bootstrap.initial_recovery" has message "ap.sys.ApplyRecoveryCheckpoint offset set to 250"
+
+      Examples:
+        | position    |
+        | absent      |
+        | 0           |
+        | FirstOffset |
+
+    Scenario: The first insert after partition deployment receives the next record ID and WLog offset
+      Given initial recovery completed at PLog offset 250 and the partition was deployed with sys.ApplyRecoveryCheckpoint at position 250
+      And workspace "Orders" in that partition has last WLog offset 14 and last allocated ordinary record ID 200005
+      When a client submits the partition's first command to insert one ordinary record into "Orders", retrying "503 Service Unavailable" responses
+      Then the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
+      And the insert appends PLog event 251
+      And the workspace checkpoint for "Orders" eventually advances to wlogIDBearingOffset 15
+
     Scenario: The recovery checkpoint projector overwrites the initial recovery checkpoint without changing numbers issued by the next insert
-      Given the PLog contains events through offset 250
-      And initial recovery stored partition checkpoint lastPLogOffset 250
-      And sys.ApplyRecoveryCheckpoint has not run before
+      Given the PLog ends at offset 250 and the partition checkpoint is absent
+      And the saved position of sys.ApplyRecoveryCheckpoint is 2
       And workspace "Orders" in that partition has last WLog offset 14 and last allocated ordinary record ID 200005
       When the following lifecycle occurs in order:
         | order | action                                                                                             |
-        | 1     | sys.ApplyRecoveryCheckpoint processes the PLog from FirstOffset through offset 250                 |
-        | 2     | VAOperator restarts the VVM                                                                        |
-        | 3     | VAOperator inserts one ordinary record into "Orders", retrying "503 Service Unavailable" responses |
-      Then partition checkpoint writes are:
+        | 1     | VAOperator starts the VVM and initial recovery succeeds                                            |
+        | 2     | sys.ApplyRecoveryCheckpoint catches up through PLog offset 250                                     |
+        | 3     | VAOperator restarts the VVM                                                                        |
+        | 4     | VAOperator inserts one ordinary record into "Orders", retrying "503 Service Unavailable" responses |
+      Then immediately after initial recovery, before the actualizer starts, the saved position of sys.ApplyRecoveryCheckpoint is still 2 and the partition checkpoint has lastPLogOffset 250
+      And this partition has no INFO log at stage "bootstrap.initial_recovery" with a message starting with "ap.sys.ApplyRecoveryCheckpoint offset set to"
+      And the projector's partition checkpoint writes during catch-up are:
         | processed PLog offset | stored lastPLogOffset |
         | 100                   | 100                   |
         | 200                   | 200                   |
       And the stored partition checkpoint is lastPLogOffset 200
-      And Partition recovery calls ReadPLog once from offset 200 through the log end
       And the insert returns "200 OK" with CurrentWLogOffset 15 and new ordinary record ID 200006
       And the insert writes the next PLog event at offset 251
+
+    Scenario: Initial recovery marks an empty partition complete without creating a projector position
+      Given the PLog is empty and the partition checkpoint is absent
+      And sys.ApplyRecoveryCheckpoint has no saved position
+      When VAOperator starts the VVM
+      Then the stored partition checkpoint is lastPLogOffset 0
+      And the saved position of sys.ApplyRecoveryCheckpoint is absent
 
   Rule: Partition recovery orchestration
 

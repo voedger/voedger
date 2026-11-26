@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	appdefsys "github.com/voedger/voedger/pkg/appdef/sys"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
@@ -115,17 +116,39 @@ func (r *initialRecovery) initializeCheckpoints(ctx context.Context, app istruct
 			return false, &WorkspaceCheckpointError{WSID: wsid, Err: err}
 		}
 	}
+	if tail := partitionCheckpoint.LastPLogOffset; tail != istructs.NullOffset {
+		if err := initializeCheckpointProjectorOffset(ctx, app.ViewRecords(), partitionID, tail); err != nil {
+			return false, err
+		}
+	}
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
-	// The partition marker must be the final write so retries cannot skip an
-	// incomplete set of workspace checkpoints.
+	// The marker makes the partition deployable on the next bootstrap, so write it last.
 	if err := r.storage.PutPartitionCheckpoint(appID, partitionID, partitionCheckpoint); err != nil {
 		return false, fmt.Errorf("put partition checkpoint: %w", err)
 	}
 	logger.InfoCtx(ctx, "bootstrap.initial_recovery.partition.complete",
 		fmt.Sprintf("lastPLogOffset %d, workspaceCheckpoints stored %d", partitionCheckpoint.LastPLogOffset, len(workspaceCheckpoints)))
 	return false, nil
+}
+
+func initializeCheckpointProjectorOffset(ctx context.Context, records istructs.IViewRecords, partitionID istructs.PartitionID, tail istructs.Offset) error {
+	saved, err := appdefsys.ProjectionOffsetsView.Get(records, partitionID, QNameApplyRecoveryCheckpoint)
+	if err != nil {
+		return fmt.Errorf("read projector position: %w", err)
+	}
+	if saved > istructs.FirstOffset {
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := appdefsys.ProjectionOffsetsView.Put(records, partitionID, QNameApplyRecoveryCheckpoint, tail); err != nil {
+		return fmt.Errorf("write projector position: %w", err)
+	}
+	logger.InfoCtx(ctx, "bootstrap.initial_recovery", fmt.Sprintf("ap.%s offset set to %d", QNameApplyRecoveryCheckpoint, tail))
+	return nil
 }
 
 func (e *WorkspaceCheckpointError) Error() string {
