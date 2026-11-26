@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
@@ -59,7 +60,12 @@ func cdocsAuthorizeResult(_ context.Context, qw *queryWork) (err error) {
 	}
 	var requestedFields []string
 	if qw.queryParams.Constraints != nil && len(qw.queryParams.Constraints.Keys) != 0 {
-		requestedFields = qw.queryParams.Constraints.Keys
+		requestedFields = slices.Clone(qw.queryParams.Constraints.Keys)
+		for i, key := range requestedFields {
+			if parts := splitPath(key); len(parts) == 1 {
+				requestedFields[i] = parts[0]
+			}
+		}
 	} else {
 		for _, field := range qw.iDoc.Fields() {
 			requestedFields = append(requestedFields, field.Name())

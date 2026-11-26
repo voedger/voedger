@@ -892,6 +892,7 @@ ALTERABLE WORKSPACE test_wsWS (
 	GRANT SELECT ON VIEW DailyIdxSmall TO sys.WorkspaceOwner;
 	GRANT SELECT ON VIEW Clients TO sys.WorkspaceOwner;
 	GRANT SELECT(Year, Month, Day, offs) ON VIEW DailyIdx TO LimitedAccessRole;
+	GRANT SELECT(name) ON TABLE category TO LimitedAccessRole;
 
 	GRANT EXECUTE ON QUERY QryVoid TO sys.WorkspaceOwner;
 	GRANT EXECUTE ON QUERY TestQryRawArg TO sys.WorkspaceOwner;
@@ -912,4 +913,5 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	REVOKE SELECT(BlobReadDenied) ON TABLE DocWithBLOB FROM sys.WorkspaceOwner;
 	REVOKE SELECT(sys.ID) ON TABLE TestCDocSysIDRevoked FROM sys.WorkspaceOwner;
+	REVOKE SELECT(sys.ID) ON TABLE category FROM LimitedAccessRole;
 );
