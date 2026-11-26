@@ -389,6 +389,44 @@ func checkInitialRecoveryResult(t *testing.T, numPartitions int, deployable []is
 	require.Len(t, seen, numPartitions, "every declared partition must have exactly one outcome")
 }
 
+func TestInitialRecoveryRetriesFailedPartitionMarkerWithSavedProjectorOffset(t *testing.T) {
+	require := require.New(t)
+	const partitionID istructs.PartitionID = 0
+	const tail istructs.Offset = 2
+	appName := istructs.AppQName_test1_app1
+	apps := recoveryTestApps(provider.Provide(mem.Provide(testingu.MockTime)))
+	app, err := apps.BuiltIn(appName)
+	require.NoError(err)
+	appendRecoveryEvents(require, app.Events(), tail)
+
+	storage := testutils.NewCheckpointStorageMem()
+	putMarker := testutils.Operation{Kind: testutils.PutPartition, AppID: app.ClusterAppID(), PartitionID: partitionID}
+	markerErr := errors.New("partition marker write failed")
+	storage.SetError(putMarker, markerErr)
+	recovery := checkpoints.NewInitialRecovery(apps, storage)
+	deployable, failed, err := recovery.InitializeCheckpoints(t.Context(), appName, 1)
+	require.NoError(err)
+	require.ErrorIs(failed[partitionID], markerErr)
+	require.Empty(deployable)
+	_, present, err := storage.GetPartitionCheckpoint(app.ClusterAppID(), partitionID)
+	require.NoError(err)
+	require.False(present)
+	offset, err := actualizers.ActualizerOffset(app, partitionID, checkpoints.QNameApplyRecoveryCheckpoint)
+	require.NoError(err)
+	require.Equal(tail, offset, "projector offset after the marker write failed")
+
+	storage.SetError(putMarker, nil)
+	retry := checkpoints.NewInitialRecovery(apps, storage)
+	deployable, failed, err = retry.InitializeCheckpoints(t.Context(), appName, 1)
+	require.NoError(err)
+	require.Empty(failed)
+	require.Equal([]istructs.PartitionID{partitionID}, deployable)
+	require.Equal(tail, storage.RequirePartitionCheckpoint(t, app.ClusterAppID(), partitionID).LastPLogOffset)
+	offset, err = actualizers.ActualizerOffset(app, partitionID, checkpoints.QNameApplyRecoveryCheckpoint)
+	require.NoError(err)
+	require.Equal(tail, offset)
+}
+
 func TestInitialRecoveryRetriesOnlyIncompletePartitions(t *testing.T) {
 	// Set partition 0 to fail during its first PLog read.
 	appID := testClusterAppID
