@@ -8,6 +8,7 @@ package sys_it
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"testing"
@@ -2438,22 +2439,53 @@ func TestOpenAPI(t *testing.T) {
 
 // [~server.apiv2.docs/it.TestQueryProcessor2_CDocs~impl]
 func TestQueryProcessor2_CDocs(t *testing.T) {
-	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws3")
 	_, ids := prepareDailyIdx(t, vit, ws)
+	categoryPath := fmt.Sprintf("api/v2/apps/test1/app1/workspaces/%d/cdocs/%s", ws.WSID, url.PathEscape(it.QNameApp1_CDocCategory.String()))
+	idAndNamePath := categoryPath + "?keys=%22sys.ID%22,name"
+	expectedIDAndName := fmt.Sprintf(`{"results":[{"sys.ID":%d,"name":"Awesome food"}]}`, ids["1"])
+
+	tokenForRole := func(require *require.Assertions, roleName string) string {
+		nonOwner := vit.GetPrincipal(ws.AppQName(), it.TestEmail2)
+		appStructs, err := vit.IAppStructsProvider.BuiltIn(ws.AppQName())
+		require.NoError(err)
+		token, err := iauthnzimpl.IssueAPIToken(appStructs.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("app1pkg", roleName)}, ws.WSID, payloads.PrincipalPayload{
+			Login:       nonOwner.Name,
+			SubjectKind: istructs.SubjectKind_User,
+			ProfileWSID: nonOwner.ProfileWSID,
+		})
+		require.NoError(err)
+		return token
+	}
 
 	t.Run("Read documents", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s`, ws.WSID, it.QNameApp1_CDocCategory), httpu.WithAuthorizeBy(ws.Owner.Token))
+		require := require.New(t)
+		resp := vit.GET(categoryPath, httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[{"name":"Awesome food","sys.ID":%d,"sys.IsActive":true,"sys.QName":"app1pkg.category"}]}`, ids["1"]), resp.Body)
 	})
 	t.Run("Read documents and use keys constraint", func(t *testing.T) {
-		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys=name,"sys.ID"`, ws.WSID, it.QNameApp1_CDocCategory), httpu.WithAuthorizeBy(ws.Owner.Token))
-		require.JSONEq(fmt.Sprintf(`{"results":[{"name":"Awesome food","sys.ID":%d}]}`, ids["1"]), resp.Body)
+		require := require.New(t)
+		resp := vit.GET(categoryPath+`?keys=name,"sys.ID"`, httpu.WithAuthorizeBy(ws.Owner.Token))
+		require.JSONEq(expectedIDAndName, resp.Body)
+	})
+	t.Run("Non-owner can read the quoted document ID and name", func(t *testing.T) {
+		require := require.New(t)
+		token := tokenForRole(require, "ApiRole")
+		resp := vit.GET(idAndNamePath, httpu.WithAuthorizeBy(token), httpu.WithExpectedCode(http.StatusOK))
+		require.JSONEq(expectedIDAndName, resp.Body)
+	})
+	t.Run("Non-owner can read the name but is denied the revoked document ID", func(t *testing.T) {
+		require := require.New(t)
+		token := tokenForRole(require, "LimitedAccessRole")
+		resp := vit.GET(categoryPath+"?keys=name", httpu.WithAuthorizeBy(token), httpu.WithExpectedCode(http.StatusOK))
+		require.JSONEq(`{"results":[{"name":"Awesome food"}]}`, resp.Body)
+		vit.GET(idAndNamePath, httpu.WithAuthorizeBy(token), httpu.Expect403())
 	})
 	t.Run("Read documents and use keys, order, skip and limit constraints", func(t *testing.T) {
+		require := require.New(t)
 		resp := vit.GET(fmt.Sprintf(`api/v2/apps/test1/app1/workspaces/%d/cdocs/%s?keys="sys.ID",Year,Month,Day&order=-Month&skip=6&limit=10`, ws.WSID, it.QNameApp1_CDocDaily), httpu.WithAuthorizeBy(ws.Owner.Token))
 		require.JSONEq(fmt.Sprintf(`{"results":[
 				{"Day":4,"Month":4,"Year":2023,"sys.ID":%[1]d},
