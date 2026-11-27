@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 
+	bytespool "github.com/valyala/bytebufferpool"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -413,10 +415,10 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 
 // getStoredEvent returns one reader-owned reference, or nil if the key is absent.
 func (e *appEventsType) getStoredEvent(pKey, cCols []byte) (*eventType, error) {
-	data := e.app.config.eventBuffers.get()
+	data := bytespool.Get()
 	ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
 	if err != nil || !ok {
-		e.app.config.eventBuffers.put(data)
+		bytespool.Put(data)
 		return nil, err
 	}
 	event := newEvent(e.app.config)

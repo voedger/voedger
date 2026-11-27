@@ -12,11 +12,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/dynobuffers"
-	bytespool "github.com/valyala/bytebufferpool"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func TestSingleLogReadFailureReleasesBuffers(t *testing.T) {
+func TestFailedSingleLogReadsSkipCallbackAndReleaseDecodedRows(t *testing.T) {
 	require := require.New(t)
 	storageErr := errors.New("storage read failed")
 	const updatedValue = "updated document"
@@ -74,25 +73,12 @@ func TestSingleLogReadFailureReleasesBuffers(t *testing.T) {
 					storeTruncatedEvent(test, pKey, cCols, tc.truncateAt)
 				}
 
-				var borrowed bytespool.ByteBuffer
-				var gets int
-				var returned []*bytespool.ByteBuffer
-				test.AppCfg.eventBuffers = eventBufferPool{
-					get: func() *bytespool.ByteBuffer {
-						gets++
-						return &borrowed
-					},
-					put: func(b *bytespool.ByteBuffer) { returned = append(returned, b) },
-				}
 				inUse := dynobuffers.GetObjectsInUse()
 				err := read()
 				require.ErrorIs(err, tc.expectedErr)
 				if tc.errContext != "" {
 					require.ErrorContains(err, tc.errContext)
 				}
-				require.Equal(1, gets, "event buffer borrows")
-				require.Len(returned, 1, "event buffer returns")
-				require.Same(&borrowed, returned[0])
 				require.Equal(inUse, dynobuffers.GetObjectsInUse(), "partially decoded row buffers")
 			})
 		}

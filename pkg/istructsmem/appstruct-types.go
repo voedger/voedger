@@ -6,8 +6,6 @@
 package istructsmem
 
 import (
-	bytespool "github.com/valyala/bytebufferpool"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -59,8 +57,7 @@ type AppConfigType struct {
 	// Application configuration parameters
 	Params AppConfigParams
 
-	dynoSchemes  *dynobuf.DynoBufSchemes
-	eventBuffers eventBufferPool
+	dynoSchemes *dynobuf.DynoBufSchemes
 
 	storage          istorage.IAppStorage // will be initialized on prepare()
 	versions         *vers.Versions
@@ -82,7 +79,6 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 		Name:             name,
 		ClusterAppID:     id,
 		Params:           makeAppConfigParams(),
-		eventBuffers:     eventBufferPool{get: bytespool.Get, put: bytespool.Put},
 		syncProjectors:   make(istructs.Projectors),
 		asyncProjectors:  make(istructs.Projectors),
 		numAppWorkspaces: wsCount,
