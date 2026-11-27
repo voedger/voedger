@@ -22,6 +22,11 @@ import (
 
 type recordFunc func(rec *recordType) error
 
+type eventBufferPool struct {
+	get func() *bytespool.ByteBuffer
+	put func(*bytespool.ByteBuffer)
+}
+
 // Implements event structure
 //
 //	# Implemented interfaces:
@@ -220,7 +225,7 @@ func (ev *eventType) setName(n appdef.QName) {
 //   - Must be called *after* event validation. Overwise function may panic!
 func (ev *eventType) storeToBytes() []byte {
 	if ev.buffer == nil {
-		ev.buffer = bytespool.Get()
+		ev.buffer = ev.appCfg.eventBuffers.get()
 		buf := bytes.NewBuffer(ev.buffer.B)
 		utils.WriteByte(buf, codec_LastVersion)
 		storeEvent(ev, buf)
@@ -300,7 +305,7 @@ func (ev *eventType) Free() {
 	ev.argUnlObj.release()
 	ev.cud.release()
 	if ev.buffer != nil {
-		bytespool.Put(ev.buffer)
+		ev.appCfg.eventBuffers.put(ev.buffer)
 		ev.buffer = nil
 	}
 }
