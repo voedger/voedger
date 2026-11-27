@@ -25,22 +25,17 @@ import (
 )
 
 func TestEventBuilder(t *testing.T) {
-	testEventBuilderCore(t, true)
+	require := require.New(t)
+	testEventBuilderCore(t, require, newTest())
 }
 
 func TestEventBuilderNoCache(t *testing.T) {
-	testEventBuilderCore(t, false)
+	require := require.New(t)
+	testEventBuilderCore(t, require, newTestWithPLogCacheSize(0))
 }
 
-func testEventBuilderCore(t *testing.T, cachedPLog bool) {
-	require := require.New(t)
-	test := newTest()
-
-	if !cachedPLog {
-		// switch off plog cache
-		test.AppCfg.Params.PLogEventCacheSize = 0
-	}
-
+func testEventBuilderCore(t *testing.T, require *require.Require, test *testEnvironment) {
+	t.Helper()
 	app := test.AppStructs
 
 	var rawEvent istructs.IRawEvent
@@ -184,11 +179,11 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 		require.NotEqual(istructs.NullRecordID, idR)
 	})
 
-	t.Run("III. Read event from PLog & PLog and reads CUD demo", func(t *testing.T) {
+	t.Run("III. Read event from PLog and WLog and read CUDs", func(t *testing.T) {
 
 		t.Run("should be ok to read PLog", func(t *testing.T) {
-			check := func(event istructs.IPLogEvent, err error) {
-				require.NoError(err)
+			check := func(t *testing.T, event istructs.IPLogEvent) {
+				t.Helper()
 				require.NotNil(event)
 
 				test.testDBEvent(t, event)
@@ -204,12 +199,13 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				var event istructs.IPLogEvent
 				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs, 1,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						t.Cleanup(ev.Release)
 						require.Equal(test.plogOfs, plogOffset)
 						event = ev
 						return nil
 					})
-				defer event.Release()
-				check(event, err)
+				require.NoError(err)
+				check(t, event)
 			})
 
 			t.Run("test sequential plog reading", func(t *testing.T) {
@@ -221,7 +217,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 						switch ev.QName() {
 						case test.saleCmdName:
 							require.Equal(test.plogOfs, plogOffset)
-							check(ev, err)
+							check(t, ev)
 						case test.changeCmdName:
 							require.Equal(test.plogOfs+1, plogOffset)
 						default:
@@ -235,29 +231,22 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 		})
 
 		t.Run("should be no events if read other PLog partition", func(t *testing.T) {
-
-			t.Run("test single record reading", func(t *testing.T) {
-				var event istructs.IPLogEvent
-				err := app.Events().ReadPLog(context.Background(), test.partition+1, test.plogOfs, 1,
-					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
-						require.Fail("should be no events if read other PLog partition")
-						event = ev
-						return nil
-					})
+			checkEmpty := func(t *testing.T, count int) {
+				t.Helper()
+				var offsets []istructs.Offset
+				err := app.Events().ReadPLog(t.Context(), test.partition+1, test.plogOfs, count, func(offset istructs.Offset, event istructs.IPLogEvent) error {
+					event.Release()
+					offsets = append(offsets, offset)
+					return nil
+				})
 				require.NoError(err)
-				require.Nil(event)
+				require.Empty(offsets)
+			}
+			t.Run("single event", func(t *testing.T) {
+				checkEmpty(t, 1)
 			})
-
-			t.Run("test sequential reading", func(t *testing.T) {
-				var event istructs.IPLogEvent
-				err := app.Events().ReadPLog(context.Background(), test.partition+1, test.plogOfs, istructs.ReadToTheEnd,
-					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
-						require.Fail("should be no events if read other PLog partition")
-						event = ev
-						return nil
-					})
-				require.NoError(err)
-				require.Nil(event)
+			t.Run("sequential read", func(t *testing.T) {
+				checkEmpty(t, istructs.ReadToTheEnd)
 			})
 		})
 
@@ -279,43 +268,36 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			})
 
 			t.Run("test sequential reading", func(t *testing.T) {
-				var event istructs.IWLogEvent
-				err := app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs, 1,
-					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) (err error) {
-						require.Equal(test.wlogOfs, wlogOffset)
-						event = ev
+				var offsets []istructs.Offset
+				err := app.Events().ReadWLog(t.Context(), test.workspace, test.wlogOfs, istructs.ReadToTheEnd,
+					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) error {
+						defer ev.Release()
+						offsets = append(offsets, wlogOffset)
+						test.testDBEvent(t, ev)
 						return nil
 					})
-
 				require.NoError(err)
-				require.NotNil(event)
-				defer event.Release()
-				test.testDBEvent(t, event)
+				require.Equal([]istructs.Offset{test.wlogOfs}, offsets)
 			})
 		})
 
 		t.Run("should be no event if read WLog from other WSID", func(t *testing.T) {
-
-			t.Run("test single record reading", func(t *testing.T) {
-				var wLogEvent istructs.IWLogEvent
-				err := app.Events().ReadWLog(context.Background(), test.workspace+1, test.wlogOfs, 1,
-					func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-						require.Fail("should be no event if read WLog from other WSID")
-						return nil
-					})
+			checkEmpty := func(t *testing.T, count int) {
+				t.Helper()
+				var offsets []istructs.Offset
+				err := app.Events().ReadWLog(t.Context(), test.workspace+1, test.wlogOfs, count, func(offset istructs.Offset, event istructs.IWLogEvent) error {
+					event.Release()
+					offsets = append(offsets, offset)
+					return nil
+				})
 				require.NoError(err)
-				require.Nil(wLogEvent)
+				require.Empty(offsets)
+			}
+			t.Run("single event", func(t *testing.T) {
+				checkEmpty(t, 1)
 			})
-
-			t.Run("test sequential reading", func(t *testing.T) {
-				var wLogEvent istructs.IWLogEvent
-				err := app.Events().ReadWLog(context.Background(), test.workspace+1, test.wlogOfs, istructs.ReadToTheEnd,
-					func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-						require.Fail("should be no event if read WLog from other WSID")
-						return nil
-					})
-				require.NoError(err)
-				require.Nil(wLogEvent)
+			t.Run("sequential read", func(t *testing.T) {
+				checkEmpty(t, istructs.ReadToTheEnd)
 			})
 		})
 
@@ -415,30 +397,24 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 	t.Run("VIII. Read event from PLog & WLog and reads CUD", func(t *testing.T) {
 
-		checkEvent := func(event istructs.IDbEvent, err error) {
-			require.NoError(err)
+		checkEvent := func(t *testing.T, event istructs.IDbEvent) {
+			t.Helper()
 			require.NotNil(event)
-
-			t.Run("test PLog event CUDs", func(t *testing.T) {
-				cudCount := 0
-				for rec := range event.CUDs {
-					if rec.QName() == test.tablePhotos {
-						require.False(rec.IsNew())
-						require.False(rec.IsActivated())
-						require.False(rec.IsDeactivated())
-						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
-						require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
-					}
-					if rec.QName() == test.tablePhotoRems {
-						require.False(rec.IsNew())
-						require.False(rec.IsActivated())
-						require.False(rec.IsDeactivated())
-						require.Equal(changedRems, rec.AsString(test.remarkIdent))
-					}
-					cudCount++
+			var tables []appdef.QName
+			for rec := range event.CUDs {
+				tables = append(tables, rec.QName())
+				require.False(rec.IsNew())
+				require.False(rec.IsActivated())
+				require.False(rec.IsDeactivated())
+				switch rec.QName() {
+				case test.tablePhotos:
+					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
+					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
+				case test.tablePhotoRems:
+					require.Equal(changedRems, rec.AsString(test.remarkIdent))
 				}
-				require.Equal(2, cudCount)
-			})
+			}
+			require.ElementsMatch([]appdef.QName{test.tablePhotos, test.tablePhotoRems}, tables)
 		}
 
 		t.Run("should be ok to read PLog", func(t *testing.T) {
@@ -447,24 +423,27 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				var event istructs.IPLogEvent
 				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs+1, 1,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						t.Cleanup(ev.Release)
 						require.Equal(test.plogOfs+1, plogOffset)
 						event = ev
 						return nil
 					})
-				defer event.Release()
-				checkEvent(event, err)
+				require.NoError(err)
+				checkEvent(t, event)
 			})
 
 			t.Run("test sequential reading", func(t *testing.T) {
-				var event istructs.IPLogEvent
+				readCount := 0
 				err := app.Events().ReadPLog(context.Background(), test.partition, test.plogOfs+1, istructs.ReadToTheEnd,
 					func(plogOffset istructs.Offset, ev istructs.IPLogEvent) (err error) {
+						defer ev.Release()
 						require.Equal(test.plogOfs+1, plogOffset)
-						event = ev
+						checkEvent(t, ev)
+						readCount++
 						return nil
 					})
-				defer event.Release() // not necessary
-				checkEvent(event, err)
+				require.NoError(err)
+				require.Equal(1, readCount)
 			})
 		})
 
@@ -474,24 +453,27 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				var event istructs.IWLogEvent
 				err := app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs+1, 1,
 					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) (err error) {
+						t.Cleanup(ev.Release)
 						require.Equal(test.wlogOfs+1, wlogOffset)
 						event = ev
 						return nil
 					})
-				defer event.Release()
-				checkEvent(event, err)
+				require.NoError(err)
+				checkEvent(t, event)
 			})
 
 			t.Run("test sequential reading", func(t *testing.T) {
-				var event istructs.IWLogEvent
+				readCount := 0
 				err := app.Events().ReadWLog(context.Background(), test.workspace, test.wlogOfs+1, istructs.ReadToTheEnd,
 					func(wlogOffset istructs.Offset, ev istructs.IWLogEvent) (err error) {
+						defer ev.Release()
 						require.Equal(test.wlogOfs+1, wlogOffset)
-						event = ev
+						checkEvent(t, ev)
+						readCount++
 						return nil
 					})
-				defer event.Release() // not necessary
-				checkEvent(event, err)
+				require.NoError(err)
+				require.Equal(1, readCount)
 			})
 		})
 

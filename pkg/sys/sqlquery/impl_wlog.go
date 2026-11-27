@@ -23,6 +23,7 @@ func readWlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, c
 		}
 	}
 	return appStructs.Events().ReadWLog(ctx, wsid, offset, count, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		defer event.Release()
 		data := make(map[string]interface{})
 
 		if f.filter("WlogOffset") {

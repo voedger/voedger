@@ -148,8 +148,10 @@ type IEvents interface {
 	PutWlog(IPLogEvent) error
 
 	// @ConcurrentAccess R
-	// consts.ReadToTheEnd can be used for the toReadCount parameter
+	// Use ReadToTheEnd to read the remaining events. Each callback owns its
+	// event and must release it after use
 	ReadPLog(ctx context.Context, partition PartitionID, offset Offset, toReadCount int, cb PLogEventsReaderCallback) (err error)
+	// ReadWLog transfers one event reference to the callback per row, like ReadPLog.
 	ReadWLog(ctx context.Context, workspace WSID, offset Offset, toReadCount int, cb WLogEventsReaderCallback) (err error)
 
 	// Find wlog offset by ORecord id in records registry.

@@ -11,20 +11,19 @@ import (
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 )
 
-// oldApi is optional, to allow re-usage
+// Provide returns a safe state API for one invocation. It can reuse an API
+// returned by an earlier call.
 func Provide(state state.IState, oldAPI safe.IStateSafeAPI) safe.IStateSafeAPI {
 	if oldAPI != nil {
 		// reuse
 		ss := oldAPI.(*safeState)
+		ss.Release()
 		ss.state = state
 		if len(ss.keys) > 0 {
 			ss.keys = make([]istructs.IKey, 0, keysCapacity)
 		}
 		if len(ss.keyBuilders) > 0 {
 			ss.keyBuilders = make([]istructs.IStateKeyBuilder, 0, keysBuildersCapacity)
-		}
-		if len(ss.values) > 0 {
-			ss.values = make([]istructs.IStateValue, 0, valuesCapacity)
 		}
 		if len(ss.valueBuilders) > 0 {
 			ss.valueBuilders = make([]istructs.IStateValueBuilder, 0, valueBuildersCapacity)

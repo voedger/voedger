@@ -266,6 +266,7 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 		rec := newRecord(ev.cud.appCfg)
 		rec.isNew = true
 		if err := loadEventCUD(rec, codecVer, buf); err != nil {
+			rec.release()
 			return enrichError(err, "CUD new row")
 		}
 		ev.cud.creates = append(ev.cud.creates, rec)
@@ -278,6 +279,7 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 	for ; count > 0; count-- {
 		upd := newUpdateRec(ev.cud.appCfg, newRecord(ev.cud.appCfg))
 		if err := loadEventCUD(&upd.changes, codecVer, buf); err != nil {
+			upd.release()
 			return enrichError(err, "CUD updated row")
 		}
 		id := upd.changes.ID()
@@ -287,6 +289,9 @@ func loadEventCUDs(ev *eventType, codecVer byte, buf *bytes.Buffer) (err error) 
 		// — upd.originRec is partially constructed, not full filled!
 		// — upd.result is null record, not applicable to store!
 		// it is very important for calling code to reread upd.originRec and recall upd.build() to obtain correct upd.result
+		if previous := ev.cud.updates[id]; previous != nil {
+			previous.release()
+		}
 		ev.cud.updates[id] = &upd
 	}
 
@@ -345,6 +350,7 @@ func loadObject(o *objectType, codecVer byte, buf *bytes.Buffer) (err error) {
 	for i := range count {
 		child := newObject(o.appCfg, appdef.NullQName, o)
 		if err := loadObject(child, codecVer, buf); err != nil {
+			child.release()
 			return enrichError(err, "%v child[%d]", o, i)
 		}
 		o.child = append(o.child, child)

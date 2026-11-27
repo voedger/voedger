@@ -6,7 +6,6 @@
 package istructsmem
 
 import (
-	"context"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -227,6 +226,7 @@ func TestEventReapplier(t *testing.T) {
 
 	pLogEvent, err := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
 	require.NoError(err)
+	defer pLogEvent.Release()
 
 	err = app.Records().Apply(pLogEvent)
 	require.NoError(err)
@@ -234,33 +234,28 @@ func TestEventReapplier(t *testing.T) {
 	err = app.Events().PutWlog(pLogEvent)
 	require.NoError(err)
 
-	t.Run("ok to re-apply the event loaded from the db", func(t *testing.T) {
-		t.Run("plog cache", func(t *testing.T) {
-			var dbPLogEvent istructs.IPLogEvent
-			err = app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-				require.Nil(dbPLogEvent)
-				dbPLogEvent = event
-				return nil
-			})
-			require.NoError(err)
-			reapplier := app.GetEventReapplier(dbPLogEvent)
-			require.NoError(reapplier.ApplyRecords())
-			require.NoError(reapplier.PutWLog())
+	reapply := func(t *testing.T, app istructs.IAppStructs) {
+		t.Helper()
+		var loaded istructs.IPLogEvent
+		err := app.Events().ReadPLog(t.Context(), 55, 10000, 1, func(_ istructs.Offset, event istructs.IPLogEvent) error {
+			t.Cleanup(event.Release)
+			require.Nil(loaded)
+			loaded = event
+			return nil
 		})
-		t.Run("initially read from storage", func(t *testing.T) {
-			provider := Provide(appConfigs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil)
-			app, err := provider.BuiltIn(appName)
-			require.NoError(err)
-			var dbPLogEvent istructs.IPLogEvent
-			err = app.Events().ReadPLog(context.Background(), 55, 10000, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-				require.Nil(dbPLogEvent)
-				dbPLogEvent = event
-				return nil
-			})
-			require.NoError(err)
-			reapplier := app.GetEventReapplier(dbPLogEvent)
-			require.NoError(reapplier.ApplyRecords())
-			require.NoError(reapplier.PutWLog())
-		})
+		require.NoError(err)
+		require.NotNil(loaded)
+		reapplier := app.GetEventReapplier(loaded)
+		require.NoError(reapplier.ApplyRecords())
+		require.NoError(reapplier.PutWLog())
+	}
+	t.Run("reapply a cached PLog event", func(t *testing.T) {
+		reapply(t, app)
+	})
+	t.Run("reapply a PLog event read from storage", func(t *testing.T) {
+		provider := Provide(appConfigs, testTokensFactory(), storageProvider, istructs.SequencesTrustLevel_0, nil)
+		reopened, err := provider.BuiltIn(appName)
+		require.NoError(err)
+		reapply(t, reopened)
 	})
 }

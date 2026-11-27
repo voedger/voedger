@@ -244,7 +244,10 @@ var defTestEnv = testEnvironment{
 var qNameMyQName = appdef.NewQName("test", "MyQName")
 
 func newTest() *testEnvironment {
+	return newTestWithPLogCacheSize(DefaultPLogEventCacheSize)
+}
 
+func newTestWithPLogCacheSize(size int) *testEnvironment {
 	test := defTestEnv
 
 	prepareAppDef := func() appdef.IAppDefBuilder {
@@ -440,6 +443,7 @@ func newTest() *testEnvironment {
 
 	test.AppConfigs = make(AppConfigsType, 1)
 	test.AppCfg = test.AppConfigs.AddBuiltInAppConfig(test.appName, prepareAppDef())
+	test.AppCfg.Params.PLogEventCacheSize = size
 	test.AppCfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	test.AppDef = test.AppCfg.AppDef
 

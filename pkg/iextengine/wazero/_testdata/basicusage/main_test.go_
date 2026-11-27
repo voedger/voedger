@@ -26,6 +26,7 @@ func Test_CalcOrderedItems(t *testing.T) {
 		testPkg,
 		teststate.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID},
 	)
+	t.Cleanup(test.Release)
 
 	// Fill state
 	test.PutSecret("encryptionKey", []byte("idkfa"))

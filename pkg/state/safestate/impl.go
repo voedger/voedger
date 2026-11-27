@@ -19,6 +19,13 @@ type safeState struct {
 	keys          []istructs.IKey
 	values        []istructs.IStateValue
 	valueBuilders []istructs.IStateValueBuilder
+	// A WLog range handle expires with the row it came from, even when a
+	// nested callback creates it. Each handle maps back to its row.
+	//
+	//	10 (WLog row) --+
+	//	11 (CUDs) ------+--> 10
+	//	12 (CUDs[0]) ---+
+	wlogRowByHandle map[safe.TValue]safe.TValue
 }
 
 func (s *safeState) KeyBuilder(storage, entityFull string) safe.TKeyBuilder {
@@ -57,9 +64,7 @@ func (s *safeState) MustGetValue(key safe.TKeyBuilder) safe.TValue {
 	if err != nil {
 		panic(err)
 	}
-	v := safe.TValue(len(s.values))
-	s.values = append(s.values, sv)
-	return v
+	return s.addValue(sv)
 }
 
 func (s *safeState) QueryValue(key safe.TKeyBuilder) (safe.TValue, bool) {
@@ -68,9 +73,7 @@ func (s *safeState) QueryValue(key safe.TKeyBuilder) (safe.TValue, bool) {
 		panic(err)
 	}
 	if ok {
-		v := safe.TValue(len(s.values))
-		s.values = append(s.values, sv)
-		return v, true
+		return s.addValue(sv), true
 	}
 	return 0, false
 }
@@ -108,6 +111,13 @@ func (s *safeState) ReadValues(kb safe.TKeyBuilder, callback func(safe.TKey, saf
 			s.keys[safeKey] = key
 			s.values[safeValue] = value
 		}
+		if wlog, ok := value.(istructs.IStateWLogValue); ok {
+			if s.wlogRowByHandle == nil {
+				s.wlogRowByHandle = make(map[safe.TValue]safe.TValue)
+			}
+			s.wlogRowByHandle[safeValue] = safeValue
+			defer s.releaseWLogRow(safeValue, wlog)
+		}
 		callback(safeKey, safeValue)
 		return nil
 	})
@@ -115,6 +125,16 @@ func (s *safeState) ReadValues(kb safe.TKeyBuilder, callback func(safe.TKey, saf
 		panic(err)
 	}
 	// TODO: cleanup keys and values
+}
+
+func (s *safeState) releaseWLogRow(row safe.TValue, value istructs.IStateWLogValue) {
+	for handle, owner := range s.wlogRowByHandle {
+		if owner == row {
+			s.values[handle] = nil
+			delete(s.wlogRowByHandle, handle)
+		}
+	}
+	value.AsEvent().Release()
 }
 
 // Key Builder
@@ -158,11 +178,9 @@ func (s *safeState) KeyBuilderPutBool(key safe.TKeyBuilder, name string, value b
 
 // Value
 
-func (s *safeState) ValueAsValue(v safe.TValue, name string) (result safe.TValue) {
+func (s *safeState) ValueAsValue(v safe.TValue, name string) safe.TValue {
 	sv := s.value(v).AsValue(name)
-	result = safe.TValue(len(s.values))
-	s.values = append(s.values, sv)
-	return result
+	return s.addDerivedValue(v, sv)
 }
 
 func (s *safeState) ValueAsInt32(v safe.TValue, name string) int32 {
@@ -205,11 +223,9 @@ func (s *safeState) ValueLen(v safe.TValue) int {
 	return s.value(v).Length()
 }
 
-func (s *safeState) ValueGetAsValue(v safe.TValue, index int) (result safe.TValue) {
+func (s *safeState) ValueGetAsValue(v safe.TValue, index int) safe.TValue {
 	sv := s.value(v).GetAsValue(index)
-	result = safe.TValue(len(s.values))
-	s.values = append(s.values, sv)
-	return result
+	return s.addDerivedValue(v, sv)
 }
 
 func (s *safeState) ValueGetAsInt32(v safe.TValue, index int) int32 {
@@ -248,11 +264,34 @@ func (s *safeState) ValueGetAsString(v safe.TValue, index int) string {
 	return s.value(v).GetAsString(index)
 }
 
+func (s *safeState) addValue(value istructs.IStateValue) safe.TValue {
+	handle := safe.TValue(len(s.values))
+	s.values = append(s.values, value)
+	return handle
+}
+
+func (s *safeState) addDerivedValue(parent safe.TValue, value istructs.IStateValue) safe.TValue {
+	handle := s.addValue(value)
+	if row, ok := s.wlogRowByHandle[parent]; ok {
+		s.wlogRowByHandle[handle] = row
+	}
+	return handle
+}
+
 func (s *safeState) value(v safe.TValue) istructs.IStateValue {
-	if int(v) >= len(s.values) {
+	if v < 0 || int(v) >= len(s.values) || s.values[v] == nil {
 		panic(PanicIncorrectValue)
 	}
 	return s.values[v]
+}
+
+// Release releases WLog events acquired by single lookups in this invocation.
+func (s *safeState) Release() {
+	for _, value := range s.values {
+		state.ReleaseWLogEvent(value)
+	}
+	s.values = nil
+	s.wlogRowByHandle = nil
 }
 
 // Intent

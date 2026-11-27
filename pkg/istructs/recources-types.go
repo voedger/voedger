@@ -73,6 +73,9 @@ type ExecQueryArgs struct {
 	Intents IIntents
 }
 
+// IState provides access to extension state. A successful sys.WLog lookup transfers its event reference to the caller.
+// For Read, CanExistAll and MustExistAll, each callback owns the delivered
+// reference and must release it after using that row, including on error.
 type IState interface {
 	// NewKey returns a Key builder for specified storage and entity name
 	KeyBuilder(storage, entity appdef.QName) (builder IStateKeyBuilder, err error)
@@ -157,6 +160,9 @@ type IStateViewValue interface {
 	AsRecord(name string) IRecord
 }
 
+// IStateWLogValue and its nested values borrow data from the same event.
+// Call AsEvent().Release() once after the last use of the value and its children.
+// Repeated calls to AsEvent return the same reference.
 type IStateWLogValue interface {
 	AsEvent() IWLogEvent
 }

@@ -420,6 +420,7 @@ func (f *wazeroExtEngine) invoke(ctx context.Context, extension appdef.FullQName
 	}
 
 	f.safeApi = safestate.Provide(io, f.safeApi)
+	defer f.safeApi.Release()
 	f.ctx = ctx
 
 	for i := range f.pkg.allocatedBufs {

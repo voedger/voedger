@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type hostState struct {
@@ -131,40 +132,52 @@ func (s *hostState) CanExist(key istructs.IStateKeyBuilder) (value istructs.ISta
 	err = storage.GetBatch(items)
 	return items[0].Value, items[0].Value != nil, err
 }
-func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
+func (s *hostState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) error {
+	return s.getAll(keys, callback, false)
+}
+
+func (s *hostState) getAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback, mustExist bool) error {
 	batches := make(map[appdef.QName][]state.GetBatchItem)
 	for _, k := range keys {
 		batches[k.Storage()] = append(batches[k.Storage()], state.GetBatchItem{Key: k})
 	}
+	defer func() {
+		for _, item := range batches[sys.Storage_WLog] {
+			state.ReleaseWLogEvent(item.Value)
+		}
+	}()
 	for sid, batch := range batches {
-		getBatch, ok := s.withGetBatch[sid]
-		if ok { // GetBatch supported
-			err = getBatch.GetBatch(batch)
-			if err != nil {
+		getBatch := s.withGetBatch[sid]
+		get := s.withGet[sid]
+		if getBatch != nil {
+			if err := getBatch.GetBatch(batch); err != nil {
 				return err
 			}
-		} else { // GetBatch not supported
-			get, okGet := s.withGet[sid]
-			if !okGet {
-				return s.errOperationNotSupported(sid, ErrGetNotSupportedByStorage)
-			}
-			for _, item := range batch {
-				item.Value, err = get.Get(item.Key)
+		} else if get == nil {
+			return s.errOperationNotSupported(sid, ErrGetNotSupportedByStorage)
+		}
+		for i := range batch {
+			item := &batch[i]
+			if getBatch == nil {
+				value, err := get.Get(item.Key)
 				if err != nil {
 					return err
 				}
+				item.Value = value
+			}
+			if mustExist && item.Value == nil {
+				return s.err(item.Key, ErrNotExists)
 			}
 		}
 	}
-
 	for _, batch := range batches {
-		for _, item := range batch {
+		for i, item := range batch {
+			batch[i].Value = nil // The callback now owns this value, including on error.
 			if err := callback(item.Key, item.Value, item.Value != nil); err != nil {
 				return err
 			}
 		}
 	}
-
 	return nil
 }
 func (s *hostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
@@ -177,50 +190,12 @@ func (s *hostState) MustExist(key istructs.IStateKeyBuilder) (value istructs.ISt
 	}
 	return value, nil
 }
-func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
-	batches := make(map[appdef.QName][]state.GetBatchItem)
-	for _, k := range keys {
-		batches[k.Storage()] = append(batches[k.Storage()], state.GetBatchItem{Key: k})
-	}
-	for sid, batch := range batches {
-		getBatch, ok := s.withGetBatch[sid]
-		if ok { // GetBatch supported
-			err = getBatch.GetBatch(batch)
-			if err != nil {
-				return err
-			}
-			for _, item := range batch {
-				if item.Value == nil {
-					return s.err(item.Key, ErrNotExists)
-				}
-			}
-		} else { // GetBatch not supported
-			get, okGet := s.withGet[sid]
-			if !okGet {
-				return s.errOperationNotSupported(sid, ErrGetNotSupportedByStorage)
-			}
-			for _, item := range batch {
-				item.Value, err = get.Get(item.Key)
-				if err != nil {
-					return err
-				}
-				if item.Value == nil {
-					return s.err(item.Key, ErrNotExists)
-				}
-			}
-		}
-	}
-	for _, batch := range batches {
-		for _, item := range batch {
-			if err := callback(item.Key, item.Value, true); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+func (s *hostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) error {
+	return s.getAll(keys, callback, true)
 }
 func (s *hostState) MustNotExist(key istructs.IStateKeyBuilder) (err error) {
-	_, ok, err := s.CanExist(key)
+	value, ok, err := s.CanExist(key)
+	state.ReleaseWLogEvent(value)
 	if err != nil {
 		return err
 	}
@@ -238,6 +213,9 @@ func (s *hostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error
 		getBatch, ok := s.withGetBatch[sid]
 		if ok { // GetBatch supported
 			err = getBatch.GetBatch(batch)
+			for _, item := range batch {
+				state.ReleaseWLogEvent(item.Value)
+			}
 			if err != nil {
 				return err
 			}
@@ -246,18 +224,10 @@ func (s *hostState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error
 					return s.err(item.Key, ErrExists)
 				}
 			}
-		} else { // GetBatch not supported
-			get, okGet := s.withGet[sid]
-			if !okGet {
-				return s.errOperationNotSupported(sid, ErrGetNotSupportedByStorage)
-			}
+		} else {
 			for _, item := range batch {
-				item.Value, err = get.Get(item.Key)
-				if err != nil {
+				if err := s.MustNotExist(item.Key); err != nil {
 					return err
-				}
-				if item.Value != nil {
-					return s.err(item.Key, ErrNotExists)
 				}
 			}
 		}

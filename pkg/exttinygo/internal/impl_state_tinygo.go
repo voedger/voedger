@@ -16,6 +16,9 @@ const maxUint = ^uint64(0)
 
 type hostSafeStateAPI struct{}
 
+// The host releases the state values when the invocation ends.
+func (hostSafeStateAPI) Release() {}
+
 func (hostSafeStateAPI) KeyBuilder(storage, entity string) safe.TKeyBuilder {
 	return safe.TKeyBuilder(hostGetKey(uint32(uintptr(unsafe.Pointer(unsafe.StringData(storage)))), uint32(len(storage)),
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(entity)))), uint32(len(entity))))

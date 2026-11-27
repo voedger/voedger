@@ -57,6 +57,11 @@ func (s *bundledHostState) MustExist(key istructs.IStateKeyBuilder) (value istru
 }
 func (s *bundledHostState) MustExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	values := make([]istructs.IStateValue, len(keys))
+	defer func() {
+		for _, value := range values {
+			state.ReleaseWLogEvent(value)
+		}
+	}()
 	for i, k := range keys {
 		value, err := s.MustExist(k)
 		if err != nil {
@@ -65,6 +70,7 @@ func (s *bundledHostState) MustExistAll(keys []istructs.IStateKeyBuilder, callba
 		values[i] = value
 	}
 	for i, value := range values {
+		values[i] = nil // Transfer ownership before invoking the callback.
 		if err := callback(keys[i], value, true); err != nil {
 			return err
 		}
@@ -72,7 +78,8 @@ func (s *bundledHostState) MustExistAll(keys []istructs.IStateKeyBuilder, callba
 	return nil
 }
 func (s *bundledHostState) MustNotExist(key istructs.IStateKeyBuilder) (err error) {
-	_, ok, err := s.CanExist(key)
+	value, ok, err := s.CanExist(key)
+	state.ReleaseWLogEvent(value)
 	if err != nil {
 		return err
 	}

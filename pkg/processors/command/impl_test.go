@@ -2194,12 +2194,14 @@ func TestRejectedCommandsDoNotRecoverOrWrite(t *testing.T) {
 	partitionID := coreutils.AppPartitionID(1, app.numAppPartitions)
 	readOffsets := func() (plog, wlog []istructs.Offset) {
 		require.NoError(app.appStructs.Events().ReadPLog(app.ctx, partitionID, istructs.FirstOffset,
-			istructs.ReadToTheEnd, func(offset istructs.Offset, _ istructs.IPLogEvent) error {
+			istructs.ReadToTheEnd, func(offset istructs.Offset, event istructs.IPLogEvent) error {
+				event.Release()
 				plog = append(plog, offset)
 				return nil
 			}))
 		require.NoError(app.appStructs.Events().ReadWLog(app.ctx, 1, istructs.FirstOffset,
-			istructs.ReadToTheEnd, func(offset istructs.Offset, _ istructs.IWLogEvent) error {
+			istructs.ReadToTheEnd, func(offset istructs.Offset, event istructs.IWLogEvent) error {
+				event.Release()
 				wlog = append(wlog, offset)
 				return nil
 			}))

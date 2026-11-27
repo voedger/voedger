@@ -167,10 +167,15 @@ type IObject interface {
 	AsRecord() IRecord
 }
 
-// It's desirable but not necessary to call event.Release() after event using
+// PLogEventsReaderCallback owns one reference per invocation, including single-event reads.
+// Release each event exactly once after its last use, even on error. If ownership
+// is transferred (for example to a queued workpiece), the recipient releases it.
 type PLogEventsReaderCallback func(plogOffset Offset, event IPLogEvent) (err error)
 
-// It's desirable but not necessary to call event.Release() after event using
+// WLogEventsReaderCallback owns one reference per invocation, including single-event reads.
+// Release each event exactly once after its last use, even on error, or transfer
+// that responsibility to the caller receiving the event. Its bytes and child rows
+// are valid only while the reference is held.
 type WLogEventsReaderCallback func(wlogOffset Offset, event IWLogEvent) (err error)
 
 type GenericRawEventBuilderParams struct {

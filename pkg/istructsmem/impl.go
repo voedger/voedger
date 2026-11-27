@@ -312,6 +312,7 @@ func (e *appEventsType) GetORec(workspace istructs.WSID, id istructs.RecordID, w
 
 	record, found := NewNullRecord(id), false
 	err := e.app.events.ReadWLog(context.Background(), workspace, wlog, 1, func(_ istructs.Offset, event istructs.IWLogEvent) error {
+		defer event.Release()
 		if o, ok := event.ArgumentObject().(*objectType); ok {
 			if o := o.find(func(o *objectType) bool { return o.ID() == id }); o != nil {
 				// found record with id within event argument structure
@@ -412,6 +413,23 @@ func (e *appEventsType) PutWlog(ev istructs.IPLogEvent) (err error) {
 	return err
 }
 
+// getStoredEvent returns one reader-owned reference, or nil if the key is absent.
+func (e *appEventsType) getStoredEvent(pKey, cCols []byte) (*eventType, error) {
+	data := bytespool.Get()
+	ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
+	if err != nil || !ok {
+		bytespool.Put(data)
+		return nil, err
+	}
+	event := newEvent(e.app.config)
+	event.buffer = data
+	if err := event.loadFromBytes(data.B); err != nil {
+		event.Free()
+		return nil, err
+	}
+	return event, nil
+}
+
 // istructs.IEvents.ReadPLog
 func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) error {
 	switch toReadCount {
@@ -422,18 +440,11 @@ func (e *appEventsType) ReadPLog(ctx context.Context, partition istructs.Partiti
 		}
 
 		pKey, cCols := PLogEventKey(partition, offset)
-		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
-		if ok {
-			event := newEvent(e.app.config)
-			if err = event.loadFromBytes(data.B); err == nil {
-				event.buffer = data
-				err = cb(offset, event)
-			}
-		} else {
-			bytespool.Put(data)
+		event, err := e.getStoredEvent(pKey, cCols)
+		if err != nil || event == nil {
+			return err
 		}
-		return err
+		return cb(offset, event)
 	default:
 		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0
@@ -463,18 +474,11 @@ func (e *appEventsType) ReadWLog(ctx context.Context, workspace istructs.WSID, o
 	case 1:
 		// See [#292](https://github.com/voedger/voedger/issues/292)
 		pKey, cCols := WLogEventKey(workspace, offset)
-		data := bytespool.Get()
-		ok, err := e.app.config.storage.Get(pKey, cCols, &data.B)
-		if ok {
-			event := newEvent(e.app.config)
-			if err = event.loadFromBytes(data.B); err == nil {
-				event.buffer = data
-				err = cb(offset, event)
-			}
-		} else {
-			bytespool.Put(data)
+		event, err := e.getStoredEvent(pKey, cCols)
+		if err != nil || event == nil {
+			return err
 		}
-		return err
+		return cb(offset, event)
 	default:
 		return readLogParts(offset, toReadCount, func(ofsHi uint64, ofsLo1, ofsLo2 uint16) (ok bool, err error) {
 			count := 0

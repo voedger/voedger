@@ -90,32 +90,28 @@ func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) ist
 func (s *wLogStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := kb.(*wLogKeyBuilder)
 	cb := func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-		value = &wLogValue{
-			event:  event,
-			offset: wlogOffset,
-		}
+		value = &wLogValue{event: event, offset: wlogOffset}
 		return nil
 	}
 	err = s.eventsFunc().ReadWLog(s.ctx, k.wsid, k.offset, 1, cb)
-	return value, err
+	if err != nil {
+		state.ReleaseWLogEvent(value)
+		return nil, err
+	}
+	return value, nil
 }
 func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	k := kb.(*wLogKeyBuilder)
 	cb := func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-		offs := wlogOffset
 		return callback(
-			&key{data: map[string]interface{}{sys.Storage_WLog_Field_Offset: offs}},
-			&wLogValue{
-				event:  event,
-				offset: offs,
-			})
+			&key{data: map[string]interface{}{sys.Storage_WLog_Field_Offset: wlogOffset}},
+			&wLogValue{event: event, offset: wlogOffset})
 	}
 	return s.eventsFunc().ReadWLog(s.ctx, k.wsid, k.offset, k.count, cb)
 }
 
 type wLogValue struct {
 	baseStateValue
-	istructs.IStateWLogValue
 	event  istructs.IWLogEvent
 	offset istructs.Offset
 }
@@ -141,11 +137,11 @@ func (v *wLogValue) AsEvent() (event istructs.IWLogEvent) {
 }
 func (v *wLogValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_WLog_Field_CUDs {
-		sv := &cudsValue{}
-		for rec := range v.event.CUDs {
-			sv.cuds = append(sv.cuds, rec)
+		cuds := &cudsValue{}
+		for row := range v.event.CUDs {
+			cuds.cuds = append(cuds.cuds, row)
 		}
-		return sv
+		return cuds
 	}
 	if name == sys.Storage_WLog_Field_ArgumentObject {
 		arg := v.event.ArgumentObject()
