@@ -28,6 +28,7 @@ func readPlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, c
 		return err
 	}
 	return appStructs.Events().ReadPLog(ctx, partitionID, offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+		defer event.Release()
 		data := make(map[string]interface{})
 		if f.filter("PlogOffset") {
 			data["PlogOffset"] = plogOffset

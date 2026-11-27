@@ -661,6 +661,7 @@ func TestNullability_SetEmptyString(t *testing.T) {
 
 	checked := false
 	err = as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		defer event.Release()
 		for cud := range event.CUDs {
 			cud.SpecifiedValues(func(field appdef.IField, val interface{}) bool {
 				if field.Name() == "name" {
@@ -681,11 +682,14 @@ func TestNullability_SetEmptyString(t *testing.T) {
 	// string set to "" -> info about this is not stored in dynobuffer
 	// cud.ModifiedFields() calls dynobuffers.ModifiedFields() that iterates over fields that has values
 	// #2785 - istructs.ICUDRow.ModifiedFields also iterate emptied string- and bytes- fields
+	nameUpdated := false
 	err = as.Events().ReadWLog(context.Background(), ws.WSID, offsUpdate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		defer event.Release()
 		for cud := range event.CUDs {
 			for iField, fv := range cud.SpecifiedValues {
 				switch iField.Name() {
 				case "name":
+					nameUpdated = true
 					require.Empty(fv)
 				case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				default:
@@ -696,6 +700,7 @@ func TestNullability_SetEmptyString(t *testing.T) {
 		return nil
 	})
 	require.NoError(err)
+	require.True(nameUpdated, "the WLog update must include the cleared name field")
 }
 
 func TestNullability_SetEmptyObject(t *testing.T) {
@@ -713,21 +718,25 @@ func TestNullability_SetEmptyObject(t *testing.T) {
 	]}`
 	resp := vit.PostWS(ws, "c.sys.CUD", body)
 	offsCreate := resp.CurrentWLogOffset
-	fields := map[string]interface{}{}
+	checked := false
 	expectedNestedDocID := resp.NewIDs["1"]
 	err = as.Events().ReadWLog(context.Background(), ws.WSID, offsCreate, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		defer event.Release()
+		fields := map[string]interface{}{}
 		for cud := range event.CUDs {
 			cud.SpecifiedValues(func(f appdef.IField, val interface{}) bool {
 				fields[f.Name()] = val
 				return true
 			})
 		}
+		require.Len(fields, 7) // id_air_table_plan, form, sys.ID, sys,IsActive, sys.QName, sys.ParentID, sys.Container
+		require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
+		require.EqualValues(15, fields["form"])
+		checked = true
 		return nil
 	})
 	require.NoError(err)
-	require.Len(fields, 7) // id_air_table_plan, form, sys.ID, sys,IsActive, sys.QName, sys.ParentID, sys.Container
-	require.EqualValues(expectedNestedDocID, fields["id_air_table_plan"])
-	require.EqualValues(15, fields["form"])
+	require.True(checked)
 }
 
 func TestSysFieldsModification(t *testing.T) {

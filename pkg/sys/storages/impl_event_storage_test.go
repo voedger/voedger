@@ -24,9 +24,8 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func TestEventStorage_Get(t *testing.T) {
-	require := require.New(t)
-	testQName := appdef.NewQName("main", "Command")
+func storedEventFixture(t *testing.T, require *require.Assertions, testQName appdef.QName, wsid istructs.WSID) istructs.IPLogEvent {
+	t.Helper()
 
 	app := appStructs(
 		`APPLICATION test();
@@ -47,7 +46,6 @@ func TestEventStorage_Get(t *testing.T) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
 	partitionNr := istructs.PartitionID(1)
-	wsid := istructs.WSID(1)
 	offset := istructs.Offset(123)
 	tQname := appdef.NewQName("main", "t1")
 
@@ -68,15 +66,20 @@ func TestEventStorage_Get(t *testing.T) {
 	rw.PutInt32("x", 1)
 
 	rawEvent, err := reb.BuildRawEvent()
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(err)
 
 	event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(err)
+	return event
+}
 
+func TestEventStorage_Get(t *testing.T) {
+	require := require.New(t)
+	testQName := appdef.NewQName("main", "Command")
+	wsid := istructs.WSID(1)
+	tQname := appdef.NewQName("main", "t1")
+	event := storedEventFixture(t, require, testQName, wsid)
+	defer event.Release()
 	eventFunc := func() istructs.IPLogEvent {
 		return event
 	}

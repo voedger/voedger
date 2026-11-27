@@ -49,10 +49,12 @@ func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) ist
 
 		appDef := args.State.AppStructs().AppDef()
 		cb := func(_ istructs.IKey, value istructs.IStateValue) (err error) {
+			event := value.(istructs.IStateWLogValue).AsEvent()
+			defer event.Release()
 			if fo == int64(0) {
 				return nil
 			}
-			eo, err := NewEventObject(value.(istructs.IStateWLogValue).AsEvent(), appDef, f)
+			eo, err := NewEventObject(event, appDef, f)
 			if err != nil {
 				return err
 			}

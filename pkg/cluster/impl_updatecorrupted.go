@@ -15,27 +15,38 @@ import (
 )
 
 func updateCorrupted(ctx context.Context, update update, currentMillis istructs.UnixMilli) (err error) {
-	var currentEventBytes []byte
 	var wlogOffset istructs.Offset
 	var wsid istructs.WSID
 	var plogOffset istructs.Offset
 	var partitionID istructs.PartitionID
-	eventExists := false
+	var syncRawEventBuilder istructs.IRawEventBuilder
+	copySource := func(event istructs.IWLogEvent) {
+		defer event.Release()
+		syncRawEventBuilder = update.appStructs.Events().GetSyncRawEventBuilder(istructs.SyncRawEventBuilderParams{
+			EventBytes:        event.Bytes(), // The builder copies these bytes before Release returns the buffer to the pool.
+			HandlingPartition: partitionID,
+			PLogOffset:        plogOffset,
+			Workspace:         wsid,
+			WLogOffset:        wlogOffset,
+			QName:             istructs.QNameForCorruptedData,
+			RegisteredAt:      currentMillis,
+			SyncedAt:          currentMillis,
+		})
+	}
 	if update.QName == plog {
 		plogOffset = update.offset
 		partitionID = update.partitionID
 		err = update.appStructs.Events().ReadPLog(ctx, update.partitionID, update.offset, 1, func(_ istructs.Offset, event istructs.IPLogEvent) (err error) {
-			currentEventBytes = event.Bytes()
 			wlogOffset = event.WLogOffset()
 			wsid = event.Workspace()
-			eventExists = true
+			copySource(event)
 			return nil
 		})
 		if err != nil {
 			// notest
 			return err
 		}
-		if !eventExists {
+		if syncRawEventBuilder == nil {
 			return fmt.Errorf("plog event partition %d plogoffset %d does not exist", partitionID, plogOffset)
 		}
 	} else {
@@ -45,8 +56,7 @@ func updateCorrupted(ctx context.Context, update update, currentMillis istructs.
 		plogOffset = istructs.NullOffset // ok to set NullOffset on update WLog because we do not have way to know how it was stored, no IWLogEvent.PLogOffset() method
 		if partitionID, err = update.appParts.AppWorkspacePartitionID(update.AppQName, wsid); err == nil {
 			err = update.appStructs.Events().ReadWLog(ctx, wsid, wlogOffset, 1, func(_ istructs.Offset, event istructs.IWLogEvent) (err error) {
-				currentEventBytes = event.Bytes()
-				eventExists = true
+				copySource(event)
 				return nil
 			})
 		}
@@ -54,20 +64,10 @@ func updateCorrupted(ctx context.Context, update update, currentMillis istructs.
 			// notest
 			return err
 		}
-		if !eventExists {
+		if syncRawEventBuilder == nil {
 			return fmt.Errorf("wlog event partition %d wlogoffset %d wsid %d does not exist", partitionID, wlogOffset, wsid)
 		}
 	}
-	syncRawEventBuilder := update.appStructs.Events().GetSyncRawEventBuilder(istructs.SyncRawEventBuilderParams{
-		EventBytes:        currentEventBytes,
-		HandlingPartition: partitionID,
-		PLogOffset:        plogOffset,
-		Workspace:         wsid,
-		WLogOffset:        wlogOffset,
-		QName:             istructs.QNameForCorruptedData,
-		RegisteredAt:      currentMillis,
-		SyncedAt:          currentMillis,
-	})
 	syncRawEvent, err := syncRawEventBuilder.BuildRawEvent()
 	if err != nil {
 		// notest

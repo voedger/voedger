@@ -17,15 +17,16 @@ type QName safe.QName
 
 var KeyBuilder = keyBuilderImpl
 
-// QueryValue queries value. When not exists it returns exists=false and value=nil.
+// QueryValue looks up a value and reports whether it exists. A sys.WLog
+// value and its children remain valid until the extension invocation returns.
 var QueryValue = queryValueImpl
 
-// MustGetValue gets value. Panics when value is not exist
+// MustGetValue looks up a value with the same lifetime as QueryValue and panics if it is missing.
 var MustGetValue = mustGetValueImpl
 
 // ReadValues reads using partial key and returns values in callback.
 //
-// Important: key and value are not kept after callback!
+// The key, value and any values derived from the row are valid only during that callback.
 var ReadValues = readValuesImpl
 
 // UpdateValue creates intent to update a value

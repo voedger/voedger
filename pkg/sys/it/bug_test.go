@@ -161,7 +161,7 @@ func TestWSNameCausesMaxPseudoWSID(t *testing.T) {
 func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 	require := require.New(t)
 
-	cfg := getBboltVITCfg(t)
+	cfg := getBboltVITCfg(t, require)
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
@@ -190,6 +190,7 @@ func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 	var events []istructs.IWLogEvent
 	require.NoError(as.Events().ReadWLog(context.Background(), ws.WSID, istructs.FirstOffset, istructs.ReadToTheEnd,
 		func(_ istructs.Offset, event istructs.IWLogEvent) error {
+			t.Cleanup(event.Release)
 			events = append(events, event)
 			return nil
 		}))
@@ -227,16 +228,16 @@ func TestBug_BatchedLogEventsMustOwnTheirBytes(t *testing.T) {
 			}
 			return true
 		})
-		event.Release()
 	}
 	for name := range expected {
 		require.True(found[name], name)
 	}
 }
 
-func getBboltVITCfg(t *testing.T) it.VITConfig {
+func getBboltVITCfg(t *testing.T, require *require.Assertions) it.VITConfig {
+	t.Helper()
 	dbDir, err := os.MkdirTemp("", "AIR-4355") //nolint:usetesting // bbolt driver does not close the connection so t.TempDir() fails
-	require.NoError(t, err)
+	require.NoError(err)
 
 	return it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,

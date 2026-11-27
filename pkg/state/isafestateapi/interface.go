@@ -15,6 +15,10 @@ type QName struct {
 }
 
 type IStateSafeAPI interface {
+	// Release releases retained events and invalidates the current invocation's
+	// value handles. The host calls it when the invocation ends, including on error.
+	Release()
+
 	// Basic functions
 	KeyBuilder(storage, entityFullQname string) TKeyBuilder
 	MustGetValue(key TKeyBuilder) TValue

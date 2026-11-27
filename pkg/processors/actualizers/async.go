@@ -338,6 +338,16 @@ func (a *asyncActualizer) handleEvent(ctx context.Context, pLogOffset istructs.O
 }
 
 func (a *asyncActualizer) readPlogByBatches(ctx context.Context, entireLogRun bool, readBatch readPLogBatch) error {
+	// A successful send clears its slot. On early exit the batch still owns every remaining event.
+	defer func() {
+		for _, e := range a.plogBatch {
+			if e.IPLogEvent != nil {
+				e.Release()
+			}
+		}
+		clear(a.plogBatch)
+		a.plogBatch = a.plogBatch[:0]
+	}()
 	for ctx.Err() == nil {
 		if err := readBatch(&a.plogBatch); err != nil {
 			return err
@@ -345,10 +355,11 @@ func (a *asyncActualizer) readPlogByBatches(ctx context.Context, entireLogRun bo
 		if len(a.plogBatch) == 0 {
 			break
 		}
-		for _, e := range a.plogBatch {
+		for i, e := range a.plogBatch {
 			if err := a.handleEvent(ctx, e.Offset, e.IPLogEvent, entireLogRun); err != nil {
 				return err
 			}
+			a.plogBatch[i] = plogEvent{}
 			if ctx.Err() != nil {
 				return nil //nolint:nilerr // canceled
 			}

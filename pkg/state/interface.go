@@ -18,7 +18,8 @@ type IStateStorage interface {
 }
 type IWithGet interface {
 	// Get reads item from storage
-	// Nil value returned when item not found
+	// Nil value returned when item not found. The caller owns a returned
+	// IStateWLogValue and must release its event after use.
 	Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error)
 }
 type IWithGetBatch interface {
@@ -26,7 +27,8 @@ type IWithGetBatch interface {
 	GetBatch(items []GetBatchItem) (err error)
 }
 type IWithRead interface {
-	// Read reads items with callback. Can return many more than 1 item for the same get
+	// Read delivers matching items to callback. For sys.WLog, each invocation
+	// owns its row and must release the event after use.
 	Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error)
 }
 type IWithApplyBatch interface {

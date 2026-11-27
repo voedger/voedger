@@ -18,6 +18,13 @@ func SimplePartitionIDFunc(partitionID istructs.PartitionID) PartitionIDFunc {
 	return func() istructs.PartitionID { return partitionID }
 }
 
+// ReleaseWLogEvent releases the owned reference when a state reader discards a WLog value.
+func ReleaseWLogEvent(value istructs.IStateValue) {
+	if wlog, ok := value.(istructs.IStateWLogValue); ok {
+		wlog.AsEvent().Release()
+	}
+}
+
 func ReadSecret(state istructs.IState, name string) (value string, err error) {
 	kb, err := state.KeyBuilder(sys.Storage_AppSecret, sys.Storage_AppSecret)
 	if err != nil {

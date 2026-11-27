@@ -144,6 +144,87 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	require.Equal(int32(-1), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
 }
 
+type interruptBatchPipeline struct {
+	pipeline.IAsyncPipeline
+	afterFirstSend func()
+	secondSendErr  error
+	sends          int
+}
+
+func (p *interruptBatchPipeline) SendAsync(work pipeline.IWorkpiece) error {
+	p.sends++
+	if p.sends > 1 {
+		return p.secondSendErr
+	}
+	if err := p.IAsyncPipeline.SendAsync(work); err != nil {
+		return err
+	}
+	if p.afterFirstSend != nil {
+		p.afterFirstSend()
+	}
+	return nil
+}
+
+func TestInterruptedPLogBatchReleasesEachEventOnce(t *testing.T) {
+	require := require.New(t)
+	sendErr := errors.New("send failed")
+	for _, tc := range []struct {
+		name            string
+		cancelAfterSend bool
+		expectedErr     error
+	}{
+		{name: "second send fails", expectedErr: sendErr},
+		{name: "reader canceled after first send", cancelAfterSend: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+
+			// Hold the queued work until the reader has released the unsent events.
+			resume := make(chan struct{})
+			hold := pipeline.WireAsyncFunc("hold", func(_ context.Context, work pipeline.IWorkpiece) (pipeline.IWorkpiece, error) {
+				<-resume
+				return work, nil
+			})
+			p := &interruptBatchPipeline{
+				IAsyncPipeline: pipeline.NewAsyncPipeline(t.Context(), "test", hold),
+				secondSendErr:  sendErr,
+			}
+			if tc.cancelAfterSend {
+				p.afterFirstSend = cancel
+			}
+			drain := sync.OnceFunc(func() {
+				close(resume)
+				p.Close()
+			})
+			defer drain()
+
+			events := []*coreutils.MockPLogEvent{{}, {}, {}}
+			var batch plogBatch
+			for i, event := range events {
+				event.On("Release")
+				batch = append(batch, plogEvent{Offset: istructs.Offset(i + 1), IPLogEvent: event})
+			}
+			a := asyncActualizer{pipeline: p}
+			err := a.readPlogByBatches(ctx, false, func(dst *plogBatch) error {
+				*dst = batch
+				batch = nil
+				return nil
+			})
+			require.ErrorIs(err, tc.expectedErr)
+			events[0].AssertNumberOfCalls(t, "Release", 0)
+			for _, event := range events[1:] {
+				event.AssertNumberOfCalls(t, "Release", 1)
+			}
+
+			drain()
+			for _, event := range events {
+				event.AssertNumberOfCalls(t, "Release", 1)
+			}
+		})
+	}
+}
+
 func TestVSQLProjectorsAsync(t *testing.T) {
 	t.Run("vsql-projectors: scn: Projector runs after each successful command: sales.CreateOrder", func(t *testing.T) {
 		// | command                |

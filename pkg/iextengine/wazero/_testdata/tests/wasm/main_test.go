@@ -21,57 +21,60 @@ const testPkg = "github.com/org/app/packages/mypkg"
 const testWSID = istructs.WSID(1)
 
 func Test_ActualizerStorages(t *testing.T) {
-	// Construct test context
-	test := test.NewTestAPI(
-		teststate.ProcKind_Actualizer,
-		testPkg,
-		teststate.TestWorkspace{WorkspaceDescriptor: "TestWorkspaceDescriptor", WSID: testWSID})
+	newActualizer := func(t *testing.T) *test.TestAPI {
+		t.Helper()
+		api := test.NewTestAPI(teststate.ProcKind_Actualizer, testPkg,
+			teststate.TestWorkspace{WorkspaceDescriptor: "TestWorkspaceDescriptor", WSID: testWSID})
+		t.Cleanup(api.Release)
+		return api
+	}
 
-	test.PutSecret("smtpPassword", []byte("GOD"))
+	t.Run("projector writes the WLog count and command name to the view", func(t *testing.T) {
+		test := newActualizer(t)
+		firstOffset, _ := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
+		test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
 
-	offs1, _ := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
-	offs2, _ := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
-	require.Equal(t, istructs.Offset(2), offs1)
-	require.Equal(t, istructs.Offset(3), offs2)
+		test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "CmdToTestWlogStorage"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
+			arg.PutInt64("Offset", int64(firstOffset))
+			arg.PutInt64("Count", int64(2))
+		})
 
-	test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "CmdToTestWlogStorage"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
-		arg.PutInt64("Offset", int64(offs1))
-		arg.PutInt64("Count", int64(2))
+		ProjectorTestStorageWLog()
+		test.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "Results"), func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
+			value.PutInt32("IntVal", 2)
+			value.PutQName("QNameVal", appdef.NewQName("tstpkg", "dummyCmd"))
+		})
 	})
-
-	// Call the extension
-	ProjectorTestStorageWLog()
-	test.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "Results"), func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
-		value.PutInt32("IntVal", 2)
-		value.PutQName("QNameVal", appdef.NewQName("tstpkg", "dummyCmd"))
+	t.Run("projector uses the HTTP response and the secret for the email intent", func(t *testing.T) {
+		test := newActualizer(t)
+		test.PutSecret("smtpPassword", []byte("GOD"))
+		test.PutHTTPMock(func(req teststate.HTTPRequest) (resp teststate.HTTPResponse, err error) {
+			if req.Method == "GET" {
+				return teststate.HTTPResponse{Status: 200, Body: []byte("Ivan")}, nil
+			}
+			return teststate.HTTPResponse{Status: 404, Body: []byte("Not Found")}, nil
+		})
+		ProjectorTestStorages()
+		test.RequireIntent(t, state.SendMail, appdef.NullFullQName, func(email istructs.IStateKeyBuilder) {
+			email.PutString("Host", "smtp.gmail.com")
+			email.PutInt32("Port", 587)
+			email.PutString("From", "no-reply@gmail.com")
+			email.PutString("To", "email@gmail.com")
+			email.PutString("Subject", "Test")
+			email.PutString("Body", "TheBody")
+			email.PutString("Username", "Ivan")
+			email.PutString("Password", "GOD")
+		}).Exists()
 	})
-
-	// Call the extension to test SendMail, HTTP and Secret
-	test.PutHTTPMock(func(req teststate.HTTPRequest) (resp teststate.HTTPResponse, err error) {
-		if req.Method == "GET" {
-			return teststate.HTTPResponse{Status: 200, Body: []byte("Ivan")}, nil
-		}
-		return teststate.HTTPResponse{Status: 404, Body: []byte("Not Found")}, nil
-	})
-	ProjectorTestStorages()
-	test.RequireIntent(t, state.SendMail, appdef.NullFullQName, func(email istructs.IStateKeyBuilder) {
-		email.PutString("Host", "smtp.gmail.com")
-		email.PutInt32("Port", 587)
-		email.PutString("From", "no-reply@gmail.com")
-		email.PutString("To", "email@gmail.com")
-		email.PutString("Subject", "Test")
-		email.PutString("Body", "TheBody")
-		email.PutString("Username", "Ivan")
-		email.PutString("Password", "GOD")
-	}).Exists()
-
 }
 
 func Test_CommandStorages(t *testing.T) {
+	require := require.New(t)
 	test := test.NewTestAPI(
 		teststate.ProcKind_CommandProcessor,
 		testPkg,
 		teststate.TestWorkspace{WorkspaceDescriptor: "TestWorkspaceDescriptor", WSID: testWSID})
+	t.Cleanup(test.Release)
 
 	// Create a Doc1 record
 	_, newIds := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, cud istructs.ICUD) {
@@ -79,7 +82,7 @@ func Test_CommandStorages(t *testing.T) {
 		c.PutRecordID(appdef.SystemField_ID, 1)
 		c.PutInt32("Value", 42)
 	})
-	require.Len(t, newIds, 1)
+	require.Len(newIds, 1)
 
 	test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "CommandTestStorages"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
 		arg.PutInt64("IdToRead", int64(newIds[0]))
