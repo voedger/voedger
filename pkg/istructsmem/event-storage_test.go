@@ -66,7 +66,7 @@ func TestFailedSingleLogReadsSkipCallbackAndReleaseDecodedRows(t *testing.T) {
 					}
 				}
 
-				if tc.expectedErr == storageErr {
+				if errors.Is(tc.expectedErr, storageErr) {
 					test.Storage.ScheduleGetError(storageErr, pKey, cCols)
 				}
 				if tc.truncateAt != "" {
