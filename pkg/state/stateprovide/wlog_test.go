@@ -3,10 +3,6 @@
  * @author Denis Gribanov
  */
 
-/*
- * Copyright (c) 2026-present unTill Software Development Group B. V.
- */
-
 package stateprovide
 
 import (
